@@ -1,4 +1,4 @@
-This is the distribution repository for EnneadTab updated on 2025-06-05 17:33:28.
+This is the distribution repository for EnneadTab updated on 2025-06-05 18:05:50.
 
 This is the lite version of the distribution repository for a quick install, this does not contain any exe files or dll files.
 
@@ -16,4 +16,4 @@ Special thanks to Ehsan and all the pyRevit team for providing the foundation fo
 
 
 Wisdom of the day:
-This is my step ladder. I never knew my real ladder.
+Why does it take longer to get from 1st to 2nd base, than it does to get from 2nd to 3rd base? Because there's a Shortstop in between!
