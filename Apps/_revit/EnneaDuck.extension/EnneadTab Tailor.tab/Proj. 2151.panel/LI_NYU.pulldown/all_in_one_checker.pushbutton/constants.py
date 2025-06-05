@@ -1,0 +1,126 @@
+
+
+import os
+from EnneadTab import ENVIRONMENT
+
+DOC_LEVLEL_DICT = {
+    "2151_A_EA_NYULI_Hospital_EXT": [
+        "B1",
+        "L1",
+        "L2",
+        "L3",
+        "L4",
+        "L5 MEP",
+        "L6",
+        "L7",
+        "L8",
+        "L9",
+        "L10",
+        "L11",
+        "L12",
+        "L13 MEP",
+        "ROOF LEVEL"
+        ],
+    "2151_A_EA_NYU Melville_Hospital Existing":[
+        "Level 5 Finish Floor",
+        "Level 4 Finish Floor",
+        "Level 3 Finish Floor",
+        "Level 2 Finish Floor",
+        "Exisiting_Level 1 Slab (126.00)"
+    ]
+    }
+
+
+class DepartmentOption():
+    SOURCE_EXCEL = "{}\\DC\\ACCDocs\\Ennead Architects LLP\\2151_NYULI\\Project Files\\00_EA-EC Teams Files\\4_Programming\\_Public Shared\\Web Portal Only_ACTIVE.NYULI_Program_EA.EC.xlsx".format(os.getenv("USERPROFILE"))
+    
+
+    DEPARTMENT_KEY_PARA = "Area_$Department" # this is the area parameter used to lookup category
+    PROGRAM_TYPE_KEY_PARA = "Area_$Department_Program Type"
+    PROGRAM_TYPE_DETAIL_KEY_PARA = "Area_$Department_Program Type Detail"
+
+
+    # KEY = REVIT ASSIGNED DEPARTMENT, VALUE = NICKNAME USED IN CALCUATOR FAMILY AND EXCEL AND  AREADATA CLASS
+    DEPARTMENT_PARA_MAPPING = {"DIAGNOSTIC AND TREATMENT": "D&T",
+                            # "AMBULATORY CARE": "AMBULATORY CARE",
+                            "EMERGENCY DEPARTMENT": "ED",
+                            "INPATIENT CARE": "BEDS",
+                            "PUBLIC SUPPORT": "PUBLIC SUPPORT",
+                            "ADMINISTRATION AND STAFF SUPPORT": "ADMIN",
+                            "CLINICAL SUPPORT": "CLINICAL SUPPORT",
+                            "BUILDING SUPPORT": "BUILDING SUPPORT",
+                            "UNASSIGNED": "UNASSIGNED"}
+
+    # in the department area plan, if category fall into the IGNORE list, then it will not alert such discovery. This way only the mis spelled and unintentional category is alerted.
+    DEPARTMENT_IGNORE_PARA_NAMES = ["PUBLIC CIRCULATION",
+                                    "SERVICE CIRCULATION"]
+
+    PARA_TRACKER_MAPPING = {"MECHANICAL": "MERS"} # mech is not part of department calc
+    PARA_TRACKER_MAPPING.update(DEPARTMENT_PARA_MAPPING)
+
+
+    #
+    OVERALL_AREA_SCHEME_NAME = "GFA Scheme"
+    OVERALL_PARA_NAME = "GSF"
+
+    DGSF_SCHEME_NAME = "DGSF Scheme"
+
+
+
+    FACTOR_PARA_NAME = "FACTOR" #the discount value, this should be typed in in proj
+    DESIGN_SF_PARA_NAME = "DGSF TAKEOFF" 
+    ESTIMATE_SF_PARA_NAME = "DGSF ESTIMATE"
+
+    INTERNAL_PARA_NAMES = {"title":"LEVEL", "order":"order"}
+
+    FAMILY_PARA_COLLECTION = INTERNAL_PARA_NAMES.values() + [OVERALL_PARA_NAME,  DESIGN_SF_PARA_NAME, FACTOR_PARA_NAME, ESTIMATE_SF_PARA_NAME] + PARA_TRACKER_MAPPING.values() 
+    SCHEDULE_FIELD_ORDER = INTERNAL_PARA_NAMES.values() + [OVERALL_PARA_NAME,  DESIGN_SF_PARA_NAME, FACTOR_PARA_NAME, ESTIMATE_SF_PARA_NAME] + ["D&T","AMBULATORY CARE","ED","BEDS","PUBLIC SUPPORT","ADMIN","CLINICAL SUPPORT","BUILDING SUPPORT","UNASSIGNED"]
+
+
+    # in the setting file to set which level to run calc
+
+
+
+
+    
+    LEVEL_NAMES = [] # to be set in the validator
+
+    # TO-DO: this dummy will pretend to be the excel button sum
+    DUMMY_DATA_HOLDER = ["GRAND TOTAL",
+                        "PROGRAM TARGET",
+                        "DELTA"]
+
+    # thia type name collection is to contain all and exact type names for the caulator
+
+    @property
+    def TYPE_NAME_COLLECTION(self):
+        return self.LEVEL_NAMES + self.DUMMY_DATA_HOLDER
+
+
+
+
+    def __init__(self, option_name = "", department_area_scheme_name = DGSF_SCHEME_NAME):
+
+        self.is_primary = True if len(option_name) == 0 else False
+        self.formated_option_name = "Main Option" if self.is_primary else option_name
+
+        SURFIX = "" if self.is_primary else "_{}".format(option_name)
+
+        self.CALCULATOR_FAMILY_NAME = "{} AreaData Calculator{}".format(ENVIRONMENT.PLUGIN_NAME, SURFIX)
+
+
+        self.CALCULATOR_CONTAINER_VIEW_NAME = "{} Area Calculator Collection{}".format(ENVIRONMENT.PLUGIN_NAME, SURFIX)
+        self.FINAL_SCHEDULE_VIEW_NAME = "PROGRAM CATEGORY{}".format(SURFIX)
+
+        self.DEPARTMENT_AREA_SCHEME_NAME = department_area_scheme_name
+
+
+OPTION_MAIN = DepartmentOption()
+OPTION_1 = DepartmentOption("Opt1", 
+                            department_area_scheme_name="2_Midboard Department")
+
+
+
+
+if __name__ == "__main__":
+    print (OPTION_MAIN.TYPE_NAME_COLLECTION)
