@@ -1,4 +1,4 @@
-This is the distribution repository for EnneadTab updated on 2025-06-05 17:23:26.
+This is the distribution repository for EnneadTab updated on 2025-06-05 17:28:40.
 
 This is the lite version of the distribution repository for a quick install, this does not contain any exe files or dll files.
 
@@ -16,4 +16,4 @@ Special thanks to Ehsan and all the pyRevit team for providing the foundation fo
 
 
 Wisdom of the day:
-Dad, can you put my shoes on? I don't think they'll fit me.
+How do you know if there's an elephant under your bed? Your head hits the ceiling!
