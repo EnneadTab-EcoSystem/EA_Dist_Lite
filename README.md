@@ -1,19 +1,43 @@
-This is the distribution repository for EnneadTab updated on 2025-06-06 08:47:20.
+# EnneadTab Distribution Repository
 
-This is the lite version of the distribution repository for a quick install, this does not contain any exe files or dll files.
+## 📅 Last Updated
+2025-06-09 15:49:50
 
-It contains the Apps and Installation and Help-Docs folders.
+# ⚠️ LITE VERSION ⚠️
 
-It is automatically generated, not manually maintained by ANYONE.
-For support, please contact szhang@ennead.com directly.
+This is the **LITE VERSION** of the distribution repository, optimized for quick installation.
 
-Have a nice day! Hope you enjoyed using this product.
+## Excluded Content
+The following content has been removed to reduce size:
+- ❌ Most executable files (.exe) - **except installer files**
+- ❌ Dynamic link libraries (.dll)
+- ❌ CAD-related files and folders
+- ❌ Engine files and folders
+- ❌ Dump scripts
+- ❌ Dependency files
 
-Special thanks to all the users who have provided feedback and suggestions.
+## Included Installer Files
+The following essential installer files are still included:
+- ✅ EnneadTab_OS_Installer.exe
+- ✅ EnneadTab_For_Revit_Installer.exe
 
-Special thanks to Ehsan and all the pyRevit team for providing the foundation for the Revit Extension.
+For the full version with all features, please use the standard distribution.
 
+## 📦 Contents
+This repository contains:
+- 📂 Apps
+- 📂 Installation
 
+## ⚠️ Important Notes
+- This repository is **automatically generated** and not manually maintained
+- For support, please contact szhang@ennead.com directly
 
-Wisdom of the day:
-A horse walks into a bar. The bar tender says "Hey." The horse says "Sure."
+## 🙏 Acknowledgments
+- Special thanks to all users who have provided feedback and suggestions
+- Special thanks to Ehsan and the pyRevit team for providing the foundation for the Revit Extension
+
+## 💭 Wisdom of the Day
+Why are ghosts bad liars? Because you can see right through them!
+
+---
+*Have a nice day! Hope you enjoy using this product.*
