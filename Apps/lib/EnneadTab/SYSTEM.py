@@ -314,7 +314,10 @@ def purge_powershell_folder():
     2. Checks for PowerShell_transcript files inside
     3. Deletes matching folders
     4. Runs once per day using timestamp check
+    
     """
+
+    
     # Get the documents folder path
     docs_folder = ENVIRONMENT.ONE_DRIVE_DOCUMENTS_FOLDER
     if not os.path.exists(docs_folder):

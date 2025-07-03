@@ -11,6 +11,15 @@ Run it to produce a beautiful summary HTML report for your team!
 """
 import os
 import json
+import sys
+
+# Add the EnneadTab lib path to sys.path to import ENVIRONMENT
+script_dir = os.path.dirname(os.path.abspath(__file__))
+enneadtab_lib_path = os.path.join(script_dir, "..")
+if enneadtab_lib_path not in sys.path:
+    sys.path.append(enneadtab_lib_path)
+
+from ENVIRONMENT import DB_FOLDER
 
 def get_summary_data(data):
     """Aggregate counts and machine names for GPU model, RAM size, CPU model, OS version, and storage size across all machines."""
@@ -239,7 +248,8 @@ HTML_TEMPLATE = """
 
 def main():
     """Reads machine_data.json and generates a summary HTML report in the same folder."""
-    folder = "L:\\4b_Applied Computing\\EnneadTab-DB\\Shared Data Dump\\_internal reports"
+    # Use environment variable instead of hardcoded path
+    folder = os.path.join(DB_FOLDER, "Shared Data Dump", "_internal reports")
     json_path = os.path.join(folder, 'machine_data.json')
     html_path = os.path.join(folder, 'machine_report.html')
     if not os.path.exists(json_path):

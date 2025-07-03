@@ -75,6 +75,16 @@ def _secure_folder(folder):
         except Exception as e:
             print("Cannot secure folder [{}] becasue {}".format(folder, e))
 
+def _secure_folder_safe(folder):
+    """Safely create folder with better error handling for network drives"""
+    if not os.path.exists(folder):
+        try:
+            os.makedirs(folder)
+        except Exception as e:
+            # Don't print error for network drives that might not be available
+            if not folder.startswith("L:\\"):
+                print("Cannot secure folder [{}] becasue {}".format(folder, e))
+
 def _execute_map_compatible(func, iterable, *args):
     """Execute a function on each item in an iterable, compatible with both IronPython 2.7 and Python 3.
     
@@ -190,7 +200,10 @@ BACKUP_REPO_FOLDER = os.path.join(DB_FOLDER, "BackupRepo")
 ENGINE_FOLDER = os.path.join(APP_FOLDER, "_engine")
 SITE_PACKAGES_FOLDER = os.path.join(ENGINE_FOLDER, "Lib")
 # Fix: Use compatible approach for both IronPython 2.7 and Python 3
-_execute_map_compatible(_secure_folder, [L_DRIVE_HOST_FOLDER, DB_FOLDER, SHARED_DUMP_FOLDER,
+_execute_map_compatible(_secure_folder, [ECO_SYS_FOLDER, DUMP_FOLDER])
+
+# Use safer folder creation for network drives
+_execute_map_compatible(_secure_folder_safe, [L_DRIVE_HOST_FOLDER, DB_FOLDER, SHARED_DUMP_FOLDER,
                      PUBLIC_TEMP_FOLDER, STAND_ALONE_FOLDER, BACKUP_REPO_FOLDER,
                      ENGINE_FOLDER, SITE_PACKAGES_FOLDER])
 

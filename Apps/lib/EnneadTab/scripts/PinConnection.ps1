@@ -1,4 +1,17 @@
-$sharedFolder = "L:\4b_Applied Computing\EnneadTab-DB\Shared Data Dump"
+# Helper function to get EnneadTab DB folder path
+function Get-EnneadTabDBFolder {
+    $currentDate = Get-Date
+    $cutoffDate = Get-Date -Year 2025 -Month 7 -Day 15
+    $currentUser = $env:USERNAME
+    
+    if ($currentDate -ge $cutoffDate -or $currentUser -eq "szhang") {
+        return "L:\4b_Design Technology\05_EnneadTab-DB"
+    } else {
+        return "L:\4b_Applied Computing\EnneadTab-DB"
+    }
+}
+
+$sharedFolder = Join-Path (Get-EnneadTabDBFolder) "Shared Data Dump"
 $user = $env:USERNAME
 $pc = $env:COMPUTERNAME
 $file = "PINCONNECTION_${user}_${pc}.DuckPin"

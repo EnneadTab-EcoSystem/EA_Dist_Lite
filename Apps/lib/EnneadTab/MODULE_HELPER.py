@@ -4,12 +4,19 @@
 """Utilities for running functions in other Python modules, Rhino, or Revit."""
 
 import os
-import imp
 import sys
 import FOLDER
 import ENVIRONMENT
 import ERROR_HANDLE
 import NOTIFICATION
+
+# Use importlib.util instead of deprecated imp module
+try:
+    import importlib.util
+    USE_IMPORTLIB = True
+except ImportError:
+    import imp
+    USE_IMPORTLIB = False
 
 
 def run_func_in_module(module_path, func_name, *args):
@@ -21,7 +28,14 @@ def run_func_in_module(module_path, func_name, *args):
         *args: Positional arguments to pass to the function.
     """
     module_name = FOLDER.get_file_name_from_path(module_path).replace(".py", "")
-    ref_module = imp.load_source(module_name, module_path)
+    
+    if USE_IMPORTLIB:
+        spec = importlib.util.spec_from_file_location(module_name, module_path)
+        ref_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ref_module)
+    else:
+        ref_module = imp.load_source(module_name, module_path)
+    
     func = getattr(ref_module, func_name, None) or getattr(
         ref_module, module_name, None
     )
@@ -61,7 +75,12 @@ def run_revit_script(script_subfolder_or_fullpath, func_name, *args, **kwargs):
         print("File not found:\n{}".format(full_file_path))
         return
 
-    ref_module = imp.load_source("{}_script".format(func_name), full_file_path)
+    if USE_IMPORTLIB:
+        spec = importlib.util.spec_from_file_location("{}_script".format(func_name), full_file_path)
+        ref_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ref_module)
+    else:
+        ref_module = imp.load_source("{}_script".format(func_name), full_file_path)
 
     func = getattr(ref_module, func_name)
     func(*args, **kwargs)
@@ -99,7 +118,13 @@ def run_Rhino_button(locator, *args, **kwargs):
     head, tail = os.path.split(module_path)
     func_name = tail.replace(".py", "")
     module_name = FOLDER.get_file_name_from_path(module_path).replace(".py", "")
-    ref_module = imp.load_source(module_name, module_path)
+    
+    if USE_IMPORTLIB:
+        spec = importlib.util.spec_from_file_location(module_name, module_path)
+        ref_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(ref_module)
+    else:
+        ref_module = imp.load_source(module_name, module_path)
 
     func = getattr(ref_module, func_name, None)
     if func is None:

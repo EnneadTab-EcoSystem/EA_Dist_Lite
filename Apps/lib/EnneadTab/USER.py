@@ -312,7 +312,9 @@ def unit_test():
     print ("all autodesk_usernames = {}".format(autodesk_usernames))
     print ("all rhino developer emails = {}".format(get_rhino_developer_emails()))
     print ("all revit developer emails = {}".format(get_revit_developer_emails()))
+    print("current user is a developer? {}".format(IS_DEVELOPER))
 ###############
 if __name__ == "__main__":
     unit_test()
+    
 

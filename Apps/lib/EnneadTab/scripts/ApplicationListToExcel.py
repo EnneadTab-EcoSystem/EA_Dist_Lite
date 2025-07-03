@@ -5,6 +5,14 @@ import importlib.util
 import socket
 import traceback
 
+# Add the EnneadTab lib path to sys.path to import ENVIRONMENT
+script_dir = os.path.dirname(os.path.abspath(__file__))
+enneadtab_lib_path = os.path.join(script_dir, "..")
+if enneadtab_lib_path not in sys.path:
+    sys.path.append(enneadtab_lib_path)
+
+from ENVIRONMENT import DB_FOLDER, SHARED_DUMP_FOLDER
+
 def check_and_install_module(module_name):
     """Check if a module is installed, if not install it."""
     if importlib.util.find_spec(module_name) is None:
@@ -84,8 +92,8 @@ def sort_applications(apps_dict):
     return sorted_apps
 
 def read_application_json_files():
-    # Network share path where JSON files are stored
-    share_path = r"L:\4b_Applied Computing\EnneadTab-DB\Shared Data Dump"
+    # Use environment variable instead of hardcoded path
+    share_path = SHARED_DUMP_FOLDER
     
     # Check if path exists
     if not os.path.exists(share_path):
@@ -506,7 +514,8 @@ def create_excel_report(data, output_path, matches=None, unmatched_employees=Non
 
 def read_employee_names():
     """Read employee names and email usernames from the NY Employees Excel file."""
-    employee_file = r"L:\4b_Applied Computing\EnneadTab-DB\Shared Data Dump\NY Employees.xlsx"
+    # Use environment variable instead of hardcoded path
+    employee_file = os.path.join(SHARED_DUMP_FOLDER, "NY Employees.xlsx")
     
     if not os.path.exists(employee_file):
         print(f"Error: Employee file {employee_file} does not exist!")
@@ -664,7 +673,8 @@ def main(open_after = True):
     matches = None
     unmatched_employees = None
     if data:
-        output_path = r"L:\4b_Applied Computing\EnneadTab-DB\Shared Data Dump"
+        # Use environment variable instead of hardcoded path
+        output_path = SHARED_DUMP_FOLDER
         
         # Employee name comparison
         print("\n" + "="*60)

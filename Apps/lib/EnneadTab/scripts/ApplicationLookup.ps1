@@ -30,6 +30,20 @@ function Write-Log {
 }
 
 # ------------------------------------------------------------
+# Helper – Get EnneadTab DB folder path
+function Get-EnneadTabDBFolder {
+    $currentDate = Get-Date
+    $cutoffDate = Get-Date -Year 2025 -Month 7 -Day 15
+    $currentUser = $env:USERNAME
+    
+    if ($currentDate -ge $cutoffDate -or $currentUser -eq "szhang") {
+        return "L:\4b_Design Technology\05_EnneadTab-DB"
+    } else {
+        return "L:\4b_Applied Computing\EnneadTab-DB"
+    }
+}
+
+# ------------------------------------------------------------
 # Helper – Fetch installed application entries from registry
 function Get-InstalledApps {
     param(
@@ -179,13 +193,14 @@ $result = [PSCustomObject]@{
 
 # ------------------------------------------------------------
 # Write to network share
-$shareRoot = 'L:\4b_Applied Computing\EnneadTab-DB\Shared Data Dump'
-$targetFile = Join-Path -Path $shareRoot -ChildPath ("APPVERSIONLOOKUP_{0}.json" -f $env:COMPUTERNAME)
+$shareRoot = Get-EnneadTabDBFolder
+$sharedDumpFolder = Join-Path -Path $shareRoot -ChildPath "Shared Data Dump"
+$targetFile = Join-Path -Path $sharedDumpFolder -ChildPath ("APPVERSIONLOOKUP_{0}.json" -f $env:COMPUTERNAME)
 
 try {
     # Ensure directory exists
-    if (-not (Test-Path -Path $shareRoot)) {
-        New-Item -Path $shareRoot -ItemType Directory -Force | Out-Null
+    if (-not (Test-Path -Path $sharedDumpFolder)) {
+        New-Item -Path $sharedDumpFolder -ItemType Directory -Force | Out-Null
     }
 
     $result | ConvertTo-Json -Depth 3 | Out-File -FilePath $targetFile -Encoding UTF8

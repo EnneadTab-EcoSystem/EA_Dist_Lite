@@ -108,8 +108,32 @@ class ViewFilter:
     def __init__(self, views_or_view_ids = None, doc=DOC):
         
         self.doc = doc
+        
+        # Add robust document validation
+        if doc is None:
+            print("Warning: ViewFilter received null document, returning empty views list")
+            self.views = []
+            return
+            
+        # Additional validation to ensure document is valid
+        try:
+            if not hasattr(doc, "GetElement"):
+                print("Warning: ViewFilter received invalid document object, returning empty views list")
+                self.views = []
+                return
+        except:
+            print("Warning: ViewFilter document validation failed, returning empty views list")
+            self.views = []
+            return
+        
         if views_or_view_ids is None:
-            views_or_view_ids = list(DB.FilteredElementCollector(doc).OfClass(DB.View).WhereElementIsNotElementType().ToElements())
+            try:
+                views_or_view_ids = list(DB.FilteredElementCollector(doc).OfClass(DB.View).WhereElementIsNotElementType().ToElements())
+            except Exception as e:
+                print("Warning: Failed to collect views from document: {}".format(str(e)))
+                self.views = []
+                return
+                
         if len(views_or_view_ids) == 0: 
             self.views = []
             return
