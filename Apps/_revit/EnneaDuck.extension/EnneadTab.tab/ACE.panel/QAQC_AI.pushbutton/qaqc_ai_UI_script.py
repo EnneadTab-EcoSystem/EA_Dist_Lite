@@ -106,7 +106,7 @@ class AI_Report_modelessForm(WPFWindow):
 
     @ERROR_HANDLE.try_catch_error()
     def __init__(self):
-        run_exe()
+
         self.pre_actions()
         xaml_file_name = "QAQC_Reporter_ModelessForm.xaml" 
         WPFWindow.__init__(self, xaml_file_name)
@@ -269,7 +269,8 @@ class AI_Report_modelessForm(WPFWindow):
 
 
 def run_exe():
-   
+    print ("due to AI policy change, the chatbot feature is no longer avaible.")
+    return
     EXE.try_open_app('QaqcReporter')
 
 
