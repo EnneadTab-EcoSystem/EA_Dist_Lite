@@ -43,7 +43,7 @@ def set_current_user_plot_file(plot_file):
 
 
 def get_all_plot_files():
-    return ["{}\{}".format(PLOT_FILES_FOLDER, plot_file) for plot_file in FOLDER.get_filenames_in_folder(PLOT_FILES_FOLDER) if plot_file.endswith(".3dm")]
+    return ["{}\{}".format(PLOT_FILES_FOLDER, plot_file) for plot_file in os.listdir(PLOT_FILES_FOLDER) if plot_file.endswith(".3dm")]
 
 
 def get_empty_plot_files():

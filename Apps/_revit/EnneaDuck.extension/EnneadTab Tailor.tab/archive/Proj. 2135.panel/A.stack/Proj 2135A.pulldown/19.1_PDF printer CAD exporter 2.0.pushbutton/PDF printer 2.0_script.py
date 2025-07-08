@@ -1263,7 +1263,7 @@ def combine_final_pdf():
 
     import os.path as op
     list_of_filepaths = []
-    files = ARCHI_UTILITY.get_filenames_in_folder(output_folder)
+    files = os.listdir(output_folder)
     files_exported_this_round = [x[1] for x in main_log]
     for file in files:
         if ".dwg" in file.lower():
@@ -1285,7 +1285,7 @@ def dump_exported_files_to_copy_folder():
     if COPY_FOLDER is None:
         return
     import os.path as op
-    files = ARCHI_UTILITY.get_filenames_in_folder(output_folder)
+    files = os.listdir(output_folder)
     files_exported_this_round = [x[1] for x in main_log]
     for file in files:
         if file in files_exported_this_round:
