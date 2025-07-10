@@ -138,8 +138,16 @@ def lookup_unit_id(key):
     degrees
     """
     for unit_type_id in DB.UnitUtils.GetAllUnits():
-        if key == str(unit_type_id.TypeId).split("-")[0].split("unit:")[1]:
-            return unit_type_id
+        type_id_str = str(unit_type_id.TypeId)
+        # Split by "-" and get the first part
+        parts = type_id_str.split("-")
+        if len(parts) > 0:
+            first_part = parts[0]
+            # Split by "unit:" and check if it exists
+            unit_parts = first_part.split("unit:")
+            if len(unit_parts) > 1 and key == unit_parts[1]:
+                return unit_type_id
+    return None
 
 def get_scale_factor(to_unit, from_unit = "feet"):
     """

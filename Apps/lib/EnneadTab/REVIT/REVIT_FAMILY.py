@@ -199,6 +199,110 @@ def is_family_shared(family_or_family_name, doc=None):
         return False
     return family.Parameter[DB.BuiltInParameter.FAMILY_SHARED].AsInteger() == 1
 
+
+def is_family_editable(family_or_family_name, doc=None):
+    """
+    Determine if a family is editable using proper Revit API properties.
+    
+    Based on Revit API documentation:
+    - Family.IsEditable: True if the family supports editing, false otherwise
+    - Family.IsUserCreated: True if the family has been defined by the user
+    - Family.IsInPlace: True if the family is an in-place family, false if loadable
+    
+    Args:
+        family_or_family_name: Either a DB.Family object or family name string
+        doc: Revit document (optional, uses current doc if not provided)
+        
+    Returns:
+        bool: True if the family is editable, False otherwise
+        
+    References:
+        - https://www.revitapidocs.com/2026/d7d3ef05-d2bd-b770-47df-96b7fd280f9f.htm (IsEditable)
+        - https://www.revitapidocs.com/2026/074099dc-3e29-1a4b-1768-2e59f865cf10.htm (IsUserCreated)
+        - https://www.revitapidocs.com/2026/eb138fd5-6092-5257-e6e1-073013cb8582.htm (IsInPlace)
+    """
+    doc = doc or DOC
+    if isinstance(family_or_family_name, DB.Family):
+        family = family_or_family_name
+    else:
+        family = get_family_by_name(family_or_family_name, doc=doc)
+    
+    if family is None:
+        return False
+    
+    try:
+        # Check if family is editable using the proper API property
+        if hasattr(family, 'IsEditable'):
+            return family.IsEditable
+        
+        # Fallback logic for older Revit versions or edge cases
+        # Check if it's user-created (not system/internal)
+        if hasattr(family, 'IsUserCreated') and not family.IsUserCreated:
+            return False
+        
+        # Check if it's an in-place family (these are editable but complex)
+        if hasattr(family, 'IsInPlace') and family.IsInPlace:
+            return True
+        
+        # For loadable families, check if they have a category that supports editing
+        if hasattr(family, 'FamilyCategory') and family.FamilyCategory:
+            # Common editable categories
+            editable_categories = [
+                DB.BuiltInCategory.OST_Furniture,
+                DB.BuiltInCategory.OST_Doors,
+                DB.BuiltInCategory.OST_Windows,
+                DB.BuiltInCategory.OST_PlumbingFixtures,
+                DB.BuiltInCategory.OST_LightingFixtures,
+                DB.BuiltInCategory.OST_MechanicalEquipment,
+                DB.BuiltInCategory.OST_ElectricalEquipment,
+                DB.BuiltInCategory.OST_GenericModel,
+                DB.BuiltInCategory.OST_DetailComponents,
+                DB.BuiltInCategory.OST_AnnotationSymbols
+            ]
+            return family.FamilyCategory.Id.IntegerValue in [cat.IntegerValue for cat in editable_categories]
+        
+        return False
+        
+    except Exception as e:
+        ERROR_HANDLE.print_note("Error checking if family '{}' is editable: {}".format(family.Name, e))
+        return False
+
+
+def get_editable_families(doc=None):
+    """
+    Get all editable families from the document.
+    
+    Args:
+        doc: Revit document (optional, uses current doc if not provided)
+        
+    Returns:
+        list: List of DB.Family objects that are editable
+    """
+    doc = doc or DOC
+    all_families = DB.FilteredElementCollector(doc).OfClass(DB.Family).ToElements()
+    editable_families = []
+    
+    for family in all_families:
+        if family is not None and is_family_editable(family, doc):
+            editable_families.append(family)
+    
+    return editable_families
+
+
+def get_editable_family_names(doc=None):
+    """
+    Get names of all editable families from the document.
+    
+    Args:
+        doc: Revit document (optional, uses current doc if not provided)
+        
+    Returns:
+        list: List of family names that are editable
+    """
+    editable_families = get_editable_families(doc)
+    return [family.Name for family in editable_families if family.Name]
+
+
 def get_all_types_by_family_name(family_name, doc=None, return_name = False):
     doc = doc or DOC
     family = get_family_by_name(family_name, doc=doc)
