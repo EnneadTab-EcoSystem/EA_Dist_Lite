@@ -109,6 +109,17 @@ def remove_creator_mark(name):
 
 
 
+def get_unique_view_name(base_name, view_names_pool):
+    """Generate a unique view name by appending a numeric suffix if needed."""
+    if base_name not in view_names_pool:
+        return base_name
+    suffix = 1
+    while True:
+        candidate = "{}_{}".format(base_name, suffix)
+        if candidate not in view_names_pool:
+            return candidate
+        suffix += 1
+
 @ERROR_HANDLE.try_catch_error()
 def rename_views(doc, sheets, is_default_format, is_original_flavor, attempt = 0, show_log = True):
     t = DB.Transaction(doc, "Rename Views")
@@ -129,10 +140,8 @@ def rename_views(doc, sheets, is_default_format, is_original_flavor, attempt = 0
         for sheet in sheets:
             sheet_num = sheet.SheetNumber
 
-
             view_filter = REVIT_VIEW.ViewFilter(list(sheet.GetAllPlacedViews()))
             is_only_one_view = view_filter.filter_archi_views().to_count() == 1
-
 
             #for view on current sheet
             for view_id in sheet.GetAllPlacedViews():
@@ -149,15 +158,11 @@ def rename_views(doc, sheets, is_default_format, is_original_flavor, attempt = 0
                             print( "Skip view owned by {}. View Name = {}".format(current_owner, view.Name))
                         continue
 
-
-
                 if view.ViewType.ToString() in ["Legend", "Schedule"]:
                     continue
 
-                #print revit.doc.GetElement(view.ViewId).Name
                 if "{3D" in view.Name:
                     continue
-
 
                 refill_title = False
                 detail_num_para_id = DB.BuiltInParameter.VIEWPORT_DETAIL_NUMBER
@@ -165,14 +170,11 @@ def rename_views(doc, sheets, is_default_format, is_original_flavor, attempt = 0
                     view.Parameter[detail_num_para_id].Set("10")
                 detail_num = view.Parameter[detail_num_para_id].AsString() #get view detail num
 
-                
-
                 title_para_id = DB.BuiltInParameter.VIEW_DESCRIPTION
                 original_title = view.Parameter[title_para_id].AsString() #get view title
 
                 name_para_id = DB.BuiltInParameter.VIEW_NAME
                 original_name = view.Parameter[name_para_id].AsString() #get view name,if none, then use view name
-
 
                 if not(original_title):
                     new_title = original_name
@@ -180,40 +182,35 @@ def rename_views(doc, sheets, is_default_format, is_original_flavor, attempt = 0
                 else:
                     new_title = original_title
 
-
                 new_title = remove_creator_mark(new_title)
 
                 if is_default_format:
                     new_view_name = str(sheet_num) + "_" + str(detail_num) + "_" + str(new_title)
                 else:
                     new_view_name = str(detail_num) + "_" + str(sheet_num) + "_" + str(new_title)
-                #forms.alert(str(new_view_name))
-
 
                 new_view_name = remove_creator_mark(new_view_name)
 
                 if new_view_name == view.Name and new_title == original_title:
-                    #print "Skip {}".format(new_view_name)
                     continue
 
-                if new_view_name in view_names_pool:
-                    #print new_view_name
-                    failed_sheets.add(sheet)
-                    if show_log:
-                        print ("Will try to visit <{}> again to avoid using same name.".format(view.Name))
-                    view.Parameter[name_para_id].Set(new_view_name + "_Pending")
-                    #print view
-                    continue
+                # Generate a unique name if needed
+                unique_view_name = get_unique_view_name(new_view_name, view_names_pool)
+                if unique_view_name != new_view_name and show_log:
+                    print("Name conflict for '{}', using unique name '{}'".format(new_view_name, unique_view_name))
+                new_view_name = unique_view_name
+                view_names_pool.append(new_view_name)
 
                 if is_original_flavor:
                     try:
                         if str(sheet_num) + "_" + str(detail_num) + "_" in new_view_name:
                             native_view_name = new_view_name.replace(str(sheet_num) + "_" + str(detail_num) + "_" , "")
-                        if str(detail_num) + "_" + str(sheet_num) + "_" in new_view_name:
+                        elif str(detail_num) + "_" + str(sheet_num) + "_" in new_view_name:
                             native_view_name = new_view_name.replace(str(detail_num) + "_" + str(sheet_num) + "_" , "")
-
-                        while native_view_name in view_names_pool:
-                            native_view_name = native_view_name + "_OverlappingViewName"
+                        else:
+                            native_view_name = new_view_name
+                        # Ensure native_view_name is unique as well
+                        native_view_name = get_unique_view_name(native_view_name, view_names_pool)
                         print ("{}-->{}".format(new_view_name, native_view_name))
                         view.Parameter[title_para_id].Set(new_title)
                         view.Parameter[name_para_id].Set(native_view_name)
@@ -223,13 +220,11 @@ def rename_views(doc, sheets, is_default_format, is_original_flavor, attempt = 0
                             print ("Skip {} becasue {}".format(view.Name, e))
                 else:
                     try:
-                        
                         view.Parameter[title_para_id].Set(new_title)
                         view.Parameter[name_para_id].Set(new_view_name)
                     except:
                         if show_log:
                             print ("Skip {}".format(view.Name))
-                   
 
         if len(list(failed_sheets)) > 0:
             attempt += 1

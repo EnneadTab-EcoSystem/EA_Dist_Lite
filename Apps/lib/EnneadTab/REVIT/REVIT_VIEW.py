@@ -105,24 +105,29 @@ def is_focused_on_system_view():
     return False
 
 class ViewFilter:
-    def __init__(self, views_or_view_ids = None, doc=DOC):
+    def __init__(self, views_or_view_ids = None, doc=DOC, suppress_warnings=True):
         
         self.doc = doc
         
+
+        
         # Add robust document validation
         if doc is None:
-            print("Warning: ViewFilter received null document, returning empty views list")
+            if not suppress_warnings:
+                print("Warning: ViewFilter received null document, returning empty views list")
             self.views = []
             return
             
         # Additional validation to ensure document is valid
         try:
             if not hasattr(doc, "GetElement"):
-                print("Warning: ViewFilter received invalid document object, returning empty views list")
+                if not suppress_warnings:
+                    print("Warning: ViewFilter received invalid document object, returning empty views list")
                 self.views = []
                 return
         except:
-            print("Warning: ViewFilter document validation failed, returning empty views list")
+            if not suppress_warnings:
+                print("Warning: ViewFilter document validation failed, returning empty views list")
             self.views = []
             return
         
@@ -130,7 +135,8 @@ class ViewFilter:
             try:
                 views_or_view_ids = list(DB.FilteredElementCollector(doc).OfClass(DB.View).WhereElementIsNotElementType().ToElements())
             except Exception as e:
-                print("Warning: Failed to collect views from document: {}".format(str(e)))
+                if not suppress_warnings:
+                    print("Warning: Failed to collect views from document: {}".format(str(e)))
                 self.views = []
                 return
                 
