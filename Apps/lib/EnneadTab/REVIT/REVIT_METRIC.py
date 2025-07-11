@@ -361,26 +361,26 @@ def load_tasks_from_config(doc_title):
     data_file_name = "{}_{}".format(PREFIX, doc_title)
     
     try:
-        with DATA_FILE.get_data(data_file_name, is_local=True) as data_file:
-            if "config" not in data_file:
-                print("No configuration found for document: {}".format(doc_title))
-                return []
-            
-            config = data_file["config"]
-            tasks = []
-            
-            for task_name, task_config in config.items():
-                task = MetricTask(
-                    task_name=task_name,
-                    script_path=task_config["script_path"],
-                    func_name=task_config["func_name"],
-                    enabled=task_config["enabled"]
-                )
-                tasks.append(task)
-            
-            print("Loaded {} tasks from configuration".format(len(tasks)))
-            return tasks
-            
+        data_file = DATA_FILE.get_data(data_file_name, is_local=True)
+        if "config" not in data_file:
+            print("No configuration found for document: {}".format(doc_title))
+            return []
+        
+        config = data_file["config"]
+        tasks = []
+        
+        for task_name, task_config in config.items():
+            task = MetricTask(
+                task_name=task_name,
+                script_path=task_config["script_path"],
+                func_name=task_config["func_name"],
+                enabled=task_config["enabled"]
+            )
+            tasks.append(task)
+        
+        print("Loaded {} tasks from configuration".format(len(tasks)))
+        return tasks
+        
     except Exception as e:
         print("Error loading task configuration: {}".format(e))
         return []

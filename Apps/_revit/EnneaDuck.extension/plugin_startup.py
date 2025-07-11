@@ -187,6 +187,60 @@ def register_auto_update():
         pass
 
 
+def auto_open_temp_file_on_virtual7():
+    """Auto-open temp.rvt file on EANY-VIRTUAL7-1 computer with Revit 2025.
+    
+    This function checks if the current computer is EANY-VIRTUAL7-1 and if Revit version
+    is 2025 or higher. If both conditions are met, it attempts to open a specific
+    Revit file from the user's OneDrive Desktop folder.
+    """
+    if not USER.IS_DEVELOPER:
+        return
+    
+
+    
+    computer_name = ENVIRONMENT.get_computer_name()
+    revit_version = REVIT_APPLICATION.get_revit_version()
+    is_virtual7 = computer_name == "EANY-VIRTUAL7-1"
+    is_revit_2025 = REVIT_APPLICATION.is_version_at_least(2025)
+    
+
+    print("=== Auto-Open Debug Info ===")
+    print("Computer name: {}".format(computer_name))
+    print("Revit version: {}".format(revit_version))
+    print("Is EANY-VIRTUAL7-1: {}".format(is_virtual7))
+    print("Is Revit 2025+: {}".format(is_revit_2025))
+    
+    if is_virtual7 and is_revit_2025:
+        message = "Auto-open function triggered on {} with Revit {}".format(computer_name, revit_version)
+        print(message)
+        NOTIFICATION.messenger(main_text = message)
+        try:
+            target_file = r"C:\Users\szhang\OneDrive - Ennead Architects\Desktop\temp.rvt"
+            print("Target file path: {}".format(target_file))
+            print("File exists: {}".format(os.path.exists(target_file)))
+            
+            if os.path.exists(target_file):
+                print("Attempting to open file...")
+                REVIT_APPLICATION.get_uiapp().OpenAndActivateDocument(target_file)
+                success_msg = "Auto-opened temp.rvt on EANY-VIRTUAL7-1 with Revit 2025"
+                print(success_msg)
+                NOTIFICATION.messenger(main_text = success_msg)
+            else:
+                error_msg = "Target file not found: {}".format(target_file)
+                print(error_msg)
+                NOTIFICATION.messenger(main_text = error_msg)
+        except Exception as e:
+            error_msg = "Failed to auto-open file: {}".format(str(e))
+            print(error_msg)
+            print("Exception details: {}".format(traceback.format_exc()))
+            NOTIFICATION.messenger(main_text = error_msg)
+    else:
+        print("Auto-open conditions not met:")
+        print("  - Computer name match: {}".format(is_virtual7))
+        print("  - Revit version match: {}".format(is_revit_2025))
+
+
 
 
 
@@ -518,6 +572,8 @@ def EnneadTab_startup():
     register_temp_graphic_server()
     register_selection_owner_checker()
     purge_dump_folder_families()
+
+    auto_open_temp_file_on_virtual7()
 
     if USER.IS_DEVELOPER:
         NOTIFICATION.messenger(main_text = "[Developer Only] startup run ok.")

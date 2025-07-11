@@ -391,6 +391,7 @@ def purge_powershell_folder():
 
 
 def spec_report():
+    return
     """Run the PC fleet summary report."""
     try:
         import sys
@@ -404,6 +405,7 @@ def spec_report():
 
 
 def check_spec():
+    return
 
     file = os.path.join(ENVIRONMENT.SHARED_DUMP_FOLDER,"_internal reports",  "machine_data.json")
     if not os.path.exists(file):
@@ -413,7 +415,7 @@ def check_spec():
     if data is None:
         return
     if ENVIRONMENT.get_computer_name() in data:
-        chance = 0.05
+        chance = 0.0001
     else:
         chance = 0.4
 
@@ -423,15 +425,18 @@ def check_spec():
 
 
 def scan_CDrive():
+    return
     POWERSHELL.run_powershell_script("CDriveFileScanner.ps1")
     return True
 
 def get_installed_software():
+    return
     POWERSHELL.run_powershell_script("Get-InstalledSoftware.ps1")
     return True
 
 
 def move_installed_software_output_to_Xdrive():
+    return
     source_folder = "J:\Ennead Applied Computing\DUMP\installed_software"
     dest_folder = "X:\_AppliedComputing\Software List"
     if not os.path.exists(dest_folder) or not os.path.isdir(dest_folder):

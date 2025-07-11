@@ -630,10 +630,7 @@ def generate_app_documentation(debug, app):
         output = "{}\\EnneadTab_For_{}_HandBook.pdf".format(ENVIRONMENT.INSTALLATION_FOLDER, app)
         PDF.documentation2pdf(app, app_knowledge, output, tailor_count)
 
-    # import WEB
-    # output =  "rhino_knowledge_{}.html".format(time.time())
-    # WEB.documentation2html(rhino_knowledge,output)
-    # os.startfile(output)
+
 
 def write_dream():
     output = OUTPUT.Output()
