@@ -374,9 +374,13 @@ def get_computer_name():
 
         computer_name = Dns.GetHostName()
     except:
-        import socket
-
-        computer_name = socket.gethostname()
+        try:
+            import socket
+            computer_name = socket.gethostname()
+        except:
+            # Final fallback for environments without socket module (embedded Python, etc.)
+            import os
+            computer_name = os.environ.get('COMPUTERNAME', os.environ.get('HOSTNAME', 'unknown'))
 
     return computer_name
 

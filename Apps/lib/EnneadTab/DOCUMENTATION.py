@@ -239,29 +239,25 @@ def get_title_tip_from_file(lucky_file, is_random_single):
         
     module_name = FOLDER.get_file_name_from_path(lucky_file).replace(".py", "")
     try:
-        # Try imp first
-        import imp # pyright: ignore
-        ref_module = imp.load_source(module_name, lucky_file)
-    except (ImportError, AttributeError):
+        # Use importlib.util instead of deprecated imp module
         try:
-            # Try importlib.resources as second option
-            from importlib import resources
-            spec = resources.spec_from_file_location(module_name, lucky_file)
-            ref_module = resources.module_from_spec(spec)
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(module_name, lucky_file)
+            ref_module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(ref_module)
-        except (ImportError, AttributeError):
+        except ImportError:
+            # Fallback to imp for IronPython 2.7 compatibility
             try:
-                # Try importlib.util as third option
-                import importlib.util
-                spec = importlib.util.spec_from_file_location(module_name, lucky_file)
-                ref_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(ref_module)
-            except Exception as e:
-                if USER.IS_DEVELOPER:
-                    print ("\n\nDeveloper visible only logging:")
-                    print (ERROR_HANDLE.get_alternative_traceback())
-                    print ("The lucky file is: {}".format(lucky_file))
-                return module_name, None, icon_path
+                import imp # pyright: ignore
+                ref_module = imp.load_source(module_name, lucky_file)
+            except ImportError:
+                # Final fallback for environments without imp
+                import types
+                import io
+                with io.open(lucky_file, 'r', encoding='utf-8') as f:
+                    code = f.read()
+                ref_module = types.ModuleType(module_name)
+                exec(code, ref_module.__dict__)
     except Exception as e:
         if USER.IS_DEVELOPER:
             print ("\n\nDeveloper visible only logging:")

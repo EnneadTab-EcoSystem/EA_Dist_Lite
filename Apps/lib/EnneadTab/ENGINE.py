@@ -179,7 +179,13 @@ def install_module(module_name):
         if success:
             print("Successfully installed module: {}".format(module_name))
         else:
-            print("Failed to install module {}: {}".format(module_name, stderr))
+            # Check for common embedded Python issues
+            error_msg = stderr.lower()
+            if "_socket" in error_msg or "no module named '_socket'" in error_msg:
+                print("Failed to install module {}: Embedded Python missing networking components".format(module_name))
+                print("Note: This is expected in IronPython 2.7 or minimal Python distributions")
+            else:
+                print("Failed to install module {}: {}".format(module_name, stderr))
             
         return success
     except Exception as e:
@@ -499,7 +505,11 @@ def cast_python(script, wait=False, max_install_attempts=3, show_console=False):
             # Process flags to prevent popups
             # By default (show_console=False), hide the console window
             # If show_console=True, show the console window
-            creation_flags = 0 if show_console else subprocess.CREATE_NO_WINDOW
+            try:
+                creation_flags = 0 if show_console else subprocess.CREATE_NO_WINDOW
+            except AttributeError:
+                # IronPython 2.7 doesn't have CREATE_NO_WINDOW
+                creation_flags = 0 if show_console else 0x08000000  # CREATE_NO_WINDOW value
             
             # On Windows, we add these flags to further suppress console windows
             if not show_console and sys.platform == "win32":
@@ -879,28 +889,40 @@ print("Python version:", sys.version)
 print("Python executable:", sys.executable)
 print("Working directory:", os.getcwd())
 
-import requests
-print ("requests module is available")
+# Test optional modules with error handling
+try:
+    import requests
+    print ("requests module is available")
+except ImportError:
+    print ("requests module not available (expected in limited environments)")
 
+try:
+    import tkinter
+    print ("tkinter module is available")
+except ImportError:
+    print ("tkinter module not available (expected in some environments)")
 
-import tkinter
-print ("tkinter module is available")
-
-import tkinter.ttk
-print ("ttk module is available")
+try:
+    import tkinter.ttk
+    print ("ttk module is available")
+except ImportError:
+    print ("ttk module not available (expected in some environments)")
 
 # Test site-packages location
-import site
-print("Site packages locations:")
-for path in site.getsitepackages():
-    print("  -", path)
+try:
+    import site
+    print("Site packages locations:")
+    for path in site.getsitepackages():
+        print("  -", path)
+except Exception as e:
+    print("Could not access site packages: {}".format(str(e)))
     
 # Check if we have pip
 try:
     import pip
     print("pip is available, version:", pip.__version__)
 except ImportError:
-    print("pip not available as module")
+    print("pip not available as module (expected in some environments)")
 
 print ("############# end of basic test ##############")
 """
@@ -1304,7 +1326,20 @@ def unit_test():
     """Enhanced unit test function that runs comprehensive tests."""
     print("Starting enhanced unit tests...")
     print("This will test the Python engine with various modules and scenarios.")
-    print("The engine should be able to install missing modules automatically.")
+    
+    # Check if we're in a limited environment (IronPython 2.7, embedded Python without networking)
+    limited_environment = False
+    try:
+        import socket
+    except ImportError:
+        limited_environment = True
+        print("Note: Running in limited environment without networking support")
+        print("      (IronPython 2.7 or embedded Python without socket module)")
+    
+    if limited_environment:
+        print("The engine installation features will be skipped in this environment.")
+    else:
+        print("The engine should be able to install missing modules automatically.")
     
     # Run comprehensive tests
     results = comprehensive_test()

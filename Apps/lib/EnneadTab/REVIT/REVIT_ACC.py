@@ -572,7 +572,7 @@ class ACC_PROJECT_RUNNER:
                 self.is_busy = False
                 return False
 
-    def run_an_idle_job(self, year_version = None, debug: bool = False):
+    def run_an_idle_job(self, year_version = None, debug = False):
         """Find and execute an idle job matching the specified Revit version.
         
         Args:
@@ -689,7 +689,7 @@ class ACC_PROJECT_RUNNER:
             
         return False
 
-def batch_run_projects(debug: bool = False):
+def batch_run_projects(debug = False):
     """Run a batch of ACC projects with specified Revit version.
     
     This function:

@@ -42,13 +42,13 @@ EnneadTab的本质是帮助人们。
 __package_name__ = "EnneadTab"
 __version__  = "3.0"
 """
-To avoid custom encoding issues, ensure the following is not present:
-    if hasattr(sys, "setdefaultencoding"):
-        reload(sys) 
-    sys.setdefaultencoding('utf-8')
+EnneadTab Package Information
 
-This code can cause encoding failures, so it's best to avoid it. Got it?!
+This package is designed to be compatible with both IronPython 2.7 and Python 3.x environments.
+All modules handle encoding properly without needing to manipulate sys.setdefaultencoding.
 
+Note: Do not use reload(sys) or sys.setdefaultencoding('utf-8') as these can cause 
+encoding failures in IronPython environments.
 """
 import os
 import sys

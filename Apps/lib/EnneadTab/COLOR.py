@@ -317,11 +317,9 @@ def get_color_template_data(template = None):
         department_data = _gather_data(raw_data, key_column = 0, is_zero_indexed = is_zero_indexed)
         program_data = _gather_data(raw_data, key_column = 3, is_zero_indexed = is_zero_indexed)
 
-        # import pprint
-        # print ("department_data")
-        # pprint.pprint(department_data, indent = 4)
-        # print ("\n\nprogram_data")
-        # pprint.pprint(program_data, indent = 4)
+        # Debug output (uncomment for development)
+        # pprint.pprint(department_data, indent=4)
+        # pprint.pprint(program_data, indent=4)
 
             
         return {"department_color_map": department_data, "program_color_map": program_data}

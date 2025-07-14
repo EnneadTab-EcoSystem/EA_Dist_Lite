@@ -55,7 +55,7 @@ def prank_ph():
     if is_hate_fun():
         return
     
-    icon = '{}\prank\pornhub.png'.format(FOLDER.get_folder_path_from_path(__file__))
+    icon = '{}\\prank\\pornhub.png'.format(FOLDER.get_folder_path_from_path(__file__))
    
     NOTIFICATION.messenger(sub_text="Please login again at www.pornhub.com",
                         main_text="{} videos failed to download.".format(random.randint(2,6)),

@@ -15,8 +15,14 @@ try:
     import importlib.util
     USE_IMPORTLIB = True
 except ImportError:
-    import imp
-    USE_IMPORTLIB = False
+    try:
+        import imp
+        USE_IMPORTLIB = False
+    except ImportError:
+        # Neither importlib.util nor imp available
+        import types
+        import io
+        USE_IMPORTLIB = None
 
 
 def run_func_in_module(module_path, func_name, *args):
@@ -33,8 +39,14 @@ def run_func_in_module(module_path, func_name, *args):
         spec = importlib.util.spec_from_file_location(module_name, module_path)
         ref_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(ref_module)
-    else:
+    elif USE_IMPORTLIB is False:
         ref_module = imp.load_source(module_name, module_path)
+    else:
+        # Final fallback for environments without imp or importlib.util
+        with io.open(module_path, 'r', encoding='utf-8') as f:
+            code = f.read()
+        ref_module = types.ModuleType(module_name)
+        exec(code, ref_module.__dict__)
     
     func = getattr(ref_module, func_name, None) or getattr(
         ref_module, module_name, None
@@ -123,8 +135,14 @@ def run_Rhino_button(locator, *args, **kwargs):
         spec = importlib.util.spec_from_file_location(module_name, module_path)
         ref_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(ref_module)
-    else:
+    elif USE_IMPORTLIB is False:
         ref_module = imp.load_source(module_name, module_path)
+    else:
+        # Final fallback for environments without imp or importlib.util
+        with io.open(module_path, 'r', encoding='utf-8') as f:
+            code = f.read()
+        ref_module = types.ModuleType(module_name)
+        exec(code, ref_module.__dict__)
 
     func = getattr(ref_module, func_name, None)
     if func is None:

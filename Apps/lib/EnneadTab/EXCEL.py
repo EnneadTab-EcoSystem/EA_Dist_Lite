@@ -1097,9 +1097,8 @@ def update_excel_data(existing_excel,
     header_dict = flip_dict(header_dict)
     existing_data_parsed = parse_excel_data(existing_data, key_name, header_row, ignore_keywords)
 
+    # Debug output (uncomment for development)
     # pprint.pprint(existing_data_parsed)
-    # for k, v in existing_data_parsed.items():
-    #     print (k, v._row_number)
     # pprint.pprint(header_dict)
 
 
@@ -1287,8 +1286,7 @@ if __name__ == "__main__":
                           "Keynote Extended DB", data, "KEYNOTE ID", 
                           ignore_keywords=["Category", "Branch"], open_after=sheet == sheets[-1])
 
-    # # print (data)
-    # import pprint
+    # Debug output (uncomment for development)
     # pprint.pprint(data)
     # for item in data.values():
     #     print ("###############")

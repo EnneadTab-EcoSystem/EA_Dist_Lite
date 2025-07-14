@@ -437,8 +437,8 @@ def get_installed_software():
 
 def move_installed_software_output_to_Xdrive():
     return
-    source_folder = "J:\Ennead Applied Computing\DUMP\installed_software"
-    dest_folder = "X:\_AppliedComputing\Software List"
+    source_folder = "J:\\Ennead Applied Computing\\DUMP\\installed_software"
+    dest_folder = "X:\\_AppliedComputing\\Software List"
     if not os.path.exists(dest_folder) or not os.path.isdir(dest_folder):
         return False
     

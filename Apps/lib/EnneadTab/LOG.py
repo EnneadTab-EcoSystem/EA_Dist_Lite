@@ -23,6 +23,7 @@ Note:
 import time
 from contextlib import contextmanager
 import io
+import pprint  # For pretty printing log data
 
 import USER
 import TIME
@@ -144,8 +145,6 @@ def read_log(user_name=USER.USER_NAME):
     """
     data = DATA_FILE.get_data(LOG_FILE_NAME)
     print("Printing user log from <{}>".format(user_name))
-    import pprint
-
     pprint.pprint(data, indent=4)
 
 

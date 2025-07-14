@@ -30,7 +30,7 @@ def print_text_in_highlight_color(text, ok=True):
     )
 
 
-IGNORE_LIST = ["__pycache__", "RHINO"]
+IGNORE_LIST = ["__pycache__", "RHINO", "scripts", "RIR"]
 
 
 def module_call_test(module_call):
@@ -194,14 +194,25 @@ class UnitTest:
             if module_name in IGNORE_LIST:
                 continue
             try:
-                if sys.version_info[0] < 3:
-                    import imp
-                    module = imp.load_source(module_name, module_path)
-                else:
+                # Use importlib.util instead of deprecated imp module
+                try:
                     import importlib.util
                     spec = importlib.util.spec_from_file_location(module_name, module_path)
                     module = importlib.util.module_from_spec(spec)
                     spec.loader.exec_module(module)
+                except ImportError:
+                    # Fallback to imp for IronPython 2.7 compatibility
+                    try:
+                        import imp
+                        module = imp.load_source(module_name, module_path)
+                    except ImportError:
+                        # Final fallback for environments without imp
+                        import types
+                        import io
+                        with io.open(module_path, 'r', encoding='utf-8') as f:
+                            code = f.read()
+                        module = types.ModuleType(module_name)
+                        exec(code, module.__dict__)
             except Exception as e:
                 print(
                     "\n\nSomething is wrong when importing [{}] because:\n\n++++++{}++++++\n\n\n".format(

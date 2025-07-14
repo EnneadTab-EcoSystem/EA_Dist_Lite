@@ -43,12 +43,12 @@ def is_github_connection_ok():
 
 def updater_for_shanghai():
     """
-    Updates the distribution repository for Shanghai by copying from BACKUPFOLDER into ECO_SYS_FOLDER\EA_Dist in a s indepdendet thread.
+    Updates the distribution repository for Shanghai by copying from BACKUPFOLDER into ECO_SYS_FOLDER\\EA_Dist in a s indepdendet thread.
     This is to avoid blocking the main thread. the copy thread will survice even if the main caller is terminated 
     """
     def copy_from_backup_to_dist():
         """
-        Copies all files from BACKUPFOLDER into ECO_SYS_FOLDER\EA_Dist
+        Copies all files from BACKUPFOLDER into ECO_SYS_FOLDER\\EA_Dist
         """
         ERROR_HANDLE.print_note("Checking backup folder: {}".format(ENVIRONMENT.BACKUP_REPO_FOLDER))
         if not os.path.exists(os.path.join(ENVIRONMENT.BACKUP_REPO_FOLDER)):
