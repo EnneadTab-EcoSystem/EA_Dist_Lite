@@ -19,6 +19,31 @@ _recent_exe_calls = {}
 # Maximum number of calls allowed per second (2 calls per second)
 _MAX_CALLS_PER_SECOND = 2
 
+def _is_rate_limited(exe_name):
+    """Check if an executable is currently rate limited.
+    
+    Args:
+        exe_name (str): Name of the executable to check
+        
+    Returns:
+        bool: True if rate limited, False otherwise
+    """
+    global _recent_exe_calls
+    
+    exe_key = exe_name.lower().replace(".exe", "")
+    current_time = time.time()
+    
+    if exe_key in _recent_exe_calls:
+        recent_calls = _recent_exe_calls[exe_key]
+        # Remove calls older than 1 second
+        recent_calls = [t for t in recent_calls if current_time - t < 1.0]
+        
+        # If too many recent calls, rate limited
+        if len(recent_calls) >= _MAX_CALLS_PER_SECOND:
+            return True
+            
+    return False
+
 
 def open_document_file(file_path):
     """Open a document file using the system's default application.
@@ -155,9 +180,15 @@ def try_open_app(exe_name, legacy_name = None, safe_open = False, depth = 0):
         
         # If too many recent calls, prevent this call
         if len(recent_calls) >= _MAX_CALLS_PER_SECOND:
-            ERROR_HANDLE.print_note("Rate limit reached for: {}. Maximum {} calls per second allowed.".format(
-                exe_name, _MAX_CALLS_PER_SECOND))
-            return False
+            # Instead of returning False, wait a bit and try again
+            time.sleep(0.5)  # Wait 500ms
+            current_time = time.time()
+            # Clean up old calls again after waiting
+            recent_calls = [t for t in recent_calls if current_time - t < 1.0]
+            if len(recent_calls) >= _MAX_CALLS_PER_SECOND:
+                ERROR_HANDLE.print_note("Rate limit reached for: {}. Maximum {} calls per second allowed.".format(
+                    exe_name, _MAX_CALLS_PER_SECOND))
+                return False
             
         # Update the call history
         _recent_exe_calls[exe_key] = recent_calls + [current_time]

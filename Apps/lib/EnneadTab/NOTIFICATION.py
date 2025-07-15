@@ -148,8 +148,13 @@ def messenger(main_text,
 
     DATA_FILE.set_data(data, "messenger_data")
 
-    if not EXE.try_open_app("Messenger"):
-        print (main_text)
+    result = EXE.try_open_app("Messenger")
+    if not result:
+        # Check if this might be due to rate limiting
+        if EXE._is_rate_limited("Messenger"):
+            print("Messenger is temporarily rate limited. Message: {}".format(main_text))
+        else:
+            print("Messenger failed to start. Message: {}".format(main_text))
 
 
 def duck_pop(main_text=None):

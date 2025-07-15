@@ -456,11 +456,12 @@ class ModernChatUI:
         self.set_status("Thinking...")
         self.send_button.config(state='disabled')
         
-        threading.Thread(
+        thread = threading.Thread(
             target=self.get_ai_response,
-            args=(message,),
-            daemon=True
-        ).start()
+            args=(message,)
+        )
+        thread.daemon = True
+        thread.start()
         
     def get_ai_response(self, message):
         """Get a response from the AI agent."""

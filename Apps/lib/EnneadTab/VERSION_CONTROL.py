@@ -93,7 +93,8 @@ def updater_for_shanghai():
         except Exception as e:
            ERROR_HANDLE.print_note("Error during update: {}".format(traceback.format_exc()))
 
-    thread = threading.Thread(target=copy_from_backup_to_dist, daemon=False)
+    thread = threading.Thread(target=copy_from_backup_to_dist)
+    thread.daemon = False
     thread.start()
     return True
 

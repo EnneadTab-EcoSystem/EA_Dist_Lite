@@ -1158,6 +1158,15 @@
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false
     },
+    "Tailor.tab\\children_palace_massing.button\\children_palace_massing_left.py": {
+        "script": "Tailor.tab\\children_palace_massing.button\\children_palace_massing_left.py",
+        "icon": null,
+        "alias": "ChildrenPalaceMassing",
+        "doc": "This button does ChildrenPalaceMassing when left click",
+        "tab": "Tailor.tab",
+        "tab_icon": "Tailor.tab\\icon.png",
+        "is_popular": false
+    },
     "Tailor.tab\\export_without_crv.button\\export_without_crv_left.py": {
         "script": "Tailor.tab\\export_without_crv.button\\export_without_crv_left.py",
         "icon": null,

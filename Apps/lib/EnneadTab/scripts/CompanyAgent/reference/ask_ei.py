@@ -699,7 +699,9 @@ class ModernChatUI:
                 self.root.after(0, lambda: self.update_button.configure(state='normal'))
                 self.root.after(0, lambda: self.set_status("Ready"))
         
-        threading.Thread(target=init, daemon=True).start()
+        thread = threading.Thread(target=init)
+        thread.daemon = True
+        thread.start()
 
     def update_knowledge(self):
         """Update the knowledge base."""
@@ -724,7 +726,9 @@ class ModernChatUI:
                 self.root.after(0, lambda: self.update_button.configure(state='normal'))
                 self.root.after(0, lambda: self.set_status("Ready"))
         
-        threading.Thread(target=update, daemon=True).start()
+        thread = threading.Thread(target=update)
+        thread.daemon = True
+        thread.start()
 
     def handle_return(self, event):
         """Handle Return key press."""
@@ -860,7 +864,9 @@ class ModernChatUI:
         self.add_message("You", message)
         
         # Get response in a separate thread
-        threading.Thread(target=self.get_ai_response, args=(message,), daemon=True).start()
+        thread = threading.Thread(target=self.get_ai_response, args=(message,))
+        thread.daemon = True
+        thread.start()
         
     def get_ai_response(self, message):
         """Get AI response in a separate thread."""

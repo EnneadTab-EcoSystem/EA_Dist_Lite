@@ -149,12 +149,20 @@ class EA_GFA_Conduit(Rhino.Display.DisplayConduit):
 
     @try_catch_error
     def PostDrawObjects(self, e):
+        # Additional safety check for display object
+        if e is None or e.Display is None:
+            return
+            
         if self.current_objs != get_current_objs():
             self.reset_conduit_data(None)
 
         if not self.cached_data:
-            self.data = [(x, get_area_and_crv_geo_from_layer(x))   for x in get_schedule_layers()]
-            self.cached_data = self.data[:]
+            try:
+                self.data = [(x, get_area_and_crv_geo_from_layer(x))   for x in get_schedule_layers()]
+                self.cached_data = self.data[:]
+            except Exception as ex:
+                print("Error getting schedule layers data: {}".format(str(ex)))
+                return
         else:
             self.data = self.cached_data
 
@@ -171,22 +179,31 @@ class EA_GFA_Conduit(Rhino.Display.DisplayConduit):
             thickness = 10
 
             for edge in edges:
-                e.Display.DrawCurve(edge, color, thickness)
+                try:
+                    if edge is not None:
+                        e.Display.DrawCurve(edge, color, thickness)
+                except Exception as ex:
+                    print("Error drawing edge in layer {}: {}".format(layer, str(ex)))
+                    continue
 
             for face in faces:
-                abstract_face = Rhino.Geometry.AreaMassProperties.Compute(face)
-                if abstract_face:
-                    area = abstract_face.Area
-                    text = convert_area_to_good_unit(area)
-                    
-                    factor =  self.layer_factor(layer)
-                    if factor != 1:
-                        text = text + " x {} = {}".format(factor, convert_area_to_good_unit(area * factor))
-                    
-                    pt3D = Rhino.Geometry.AreaMassProperties.Compute(face).Centroid
-                    e.Display.DrawDot(pt3D, text, color, System.Drawing.Color.White)
-                else:
-                    print ("!!! Check for geo cleanness in layer: " + layer)
+                try:
+                    abstract_face = Rhino.Geometry.AreaMassProperties.Compute(face)
+                    if abstract_face:
+                        area = abstract_face.Area
+                        text = convert_area_to_good_unit(area)
+                        
+                        factor =  self.layer_factor(layer)
+                        if factor != 1:
+                            text = text + " x {} = {}".format(factor, convert_area_to_good_unit(area * factor))
+                        
+                        pt3D = abstract_face.Centroid
+                        e.Display.DrawDot(pt3D, text, color, System.Drawing.Color.White)
+                    else:
+                        print ("!!! Check for geo cleanness in layer: " + layer)
+                except Exception as ex:
+                    print ("!!! Error processing face in layer {}: {}".format(layer, str(ex)))
+                    continue
 
     def layer_factor(self, layer):
         # if layer name contain syntax such as 'abcd{0.5}' or 'xyz{0}', extract 0.5 and 0 as the factor.
@@ -202,6 +219,9 @@ class EA_GFA_Conduit(Rhino.Display.DisplayConduit):
     
     @try_catch_error
     def DrawForeground(self, e):
+        # Additional safety check for display object
+        if e is None or e.Display is None:
+            return
 
 
 
@@ -215,6 +235,11 @@ class EA_GFA_Conduit(Rhino.Display.DisplayConduit):
         position_X_offset = 20
         position_Y_offset = 40
         size = 40
+        
+        # Check if viewport exists and has bounds
+        if e.Viewport is None or e.Viewport.Bounds is None:
+            return
+            
         bounds = e.Viewport.Bounds
         pt = Rhino.Geometry.Point2d(bounds.Left + position_X_offset, bounds.Top + position_Y_offset)
 
@@ -230,7 +255,10 @@ class EA_GFA_Conduit(Rhino.Display.DisplayConduit):
         
         text = "Ennead GFA Schedule Mode"
         e.Display.Draw2dText(text, color, pt, False, size)
-        recent_time_text = TIME.get_formatted_time(sc.sticky["reset_timestamp"])
+        
+        # Safe access to sticky data
+        reset_timestamp = sc.sticky.get("reset_timestamp", time.time())
+        recent_time_text = TIME.get_formatted_time(reset_timestamp)
         recent_time_text = "Last data cache update: " + recent_time_text
         pt = Rhino.Geometry.Point2d(pt[0], pt[1] + 35)
         e.Display.Draw2dText(recent_time_text, color, pt, False, 10)
@@ -447,61 +475,111 @@ def purge_layer_and_sub_layers(root_layer):
 
 
 def merge_as_crv_bool_union(breps):
-    crvs = [x.Loops[0].To3dCurve() for x in breps]
-    factors = [1, 1.5]
-    for factor in factors:
-        union_crvs = Rhino.Geometry.Curve.CreateBooleanUnion(crvs, sc.doc.ModelAbsoluteTolerance * factor)
-        if union_crvs:
-            union_breps = Rhino.Geometry.Brep.CreatePlanarBreps (union_crvs)
-            return union_breps
-    # print ("Failed to boolean union as Curve. Returning original breps.")
-    return None
+    try:
+        crvs = []
+        for x in breps:
+            try:
+                if x.Loops.Count > 0:
+                    crv = x.Loops[0].To3dCurve()
+                    if crv:
+                        crvs.append(crv)
+            except Exception as ex:
+                print("Error getting curve from brep: {}".format(str(ex)))
+                continue
+                
+        if not crvs:
+            return None
+            
+        factors = [1, 1.5]
+        for factor in factors:
+            try:
+                union_crvs = Rhino.Geometry.Curve.CreateBooleanUnion(crvs, sc.doc.ModelAbsoluteTolerance * factor)
+                if union_crvs:
+                    union_breps = Rhino.Geometry.Brep.CreatePlanarBreps (union_crvs)
+                    return union_breps
+            except Exception as ex:
+                print("Error in curve boolean union with factor {}: {}".format(factor, str(ex)))
+                continue
+        # print ("Failed to boolean union as Curve. Returning original breps.")
+        return None
+    except Exception as ex:
+        print("Error in merge_as_crv_bool_union: {}".format(str(ex)))
+        return None
 
 def merge_coplaner_srf(breps):
-    for brep in breps:
-        param = rs.SurfaceClosestPoint(brep, RHINO_OBJ_DATA.get_center(brep))
-        normal = rs.SurfaceNormal(brep, param)
-        if normal[2] < 0:
-            brep.Flip()
+    try:
+        for brep in breps:
+            try:
+                param = rs.SurfaceClosestPoint(brep, RHINO_OBJ_DATA.get_center(brep))
+                normal = rs.SurfaceNormal(brep, param)
+                if normal[2] < 0:
+                    brep.Flip()
+            except Exception as ex:
+                print("Error processing brep in merge_coplaner_srf: {}".format(str(ex)))
+                continue
 
-    # print ("original breps: ", breps)
-    factors = [1, 1.5]
-    for factor in factors:
-        union_breps = Rhino.Geometry.Brep.CreateBooleanUnion(breps, sc.doc.ModelAbsoluteTolerance * factor, False)
-        if union_breps:
-            # print ("unioined breps: ", union_breps)
-            break
-    else:
-        # print ("Failed to boolean union as Brep. Trying as Curve.")
-        union_breps = merge_as_crv_bool_union(breps)
-        if not union_breps:
-            note = " #Warning! Cannot merge coplanar faces. Check your geometry cleanness."
-            return breps, note
-    #print breps
-    for brep in union_breps:
-        success = brep.MergeCoplanarFaces(sc.doc.ModelAbsoluteTolerance, sc.doc.ModelAngleToleranceRadians * 1.5)
-        if not success:
-            success = brep.MergeCoplanarFaces(sc.doc.ModelAbsoluteTolerance * 1.5, sc.doc.ModelAngleToleranceRadians * 3)
+        # print ("original breps: ", breps)
+        factors = [1, 1.5]
+        for factor in factors:
+            try:
+                union_breps = Rhino.Geometry.Brep.CreateBooleanUnion(breps, sc.doc.ModelAbsoluteTolerance * factor, False)
+                if union_breps:
+                    # print ("unioined breps: ", union_breps)
+                    break
+            except Exception as ex:
+                print("Error in boolean union with factor {}: {}".format(factor, str(ex)))
+                continue
+        else:
+            # print ("Failed to boolean union as Brep. Trying as Curve.")
+            try:
+                union_breps = merge_as_crv_bool_union(breps)
+                if not union_breps:
+                    note = " #Warning! Cannot merge coplanar faces. Check your geometry cleanness."
+                    return breps, note
+            except Exception as ex:
+                print("Error in merge_as_crv_bool_union: {}".format(str(ex)))
+                note = " #Warning! Cannot merge coplanar faces. Check your geometry cleanness."
+                return breps, note
+        #print breps
+        for brep in union_breps:
+            try:
+                success = brep.MergeCoplanarFaces(sc.doc.ModelAbsoluteTolerance, sc.doc.ModelAngleToleranceRadians * 1.5)
+                if not success:
+                    success = brep.MergeCoplanarFaces(sc.doc.ModelAbsoluteTolerance * 1.5, sc.doc.ModelAngleToleranceRadians * 3)
+            except Exception as ex:
+                print("Error merging coplanar faces: {}".format(str(ex)))
+                continue
 
-    return union_breps, None
+        return union_breps, None
+    except Exception as ex:
+        print("Error in merge_coplaner_srf: {}".format(str(ex)))
+        return breps, " #Warning! Error in merge_coplaner_srf."
 
 # @lru_cache(maxsize=None)
 def get_merged_data(faces):
     height_dict = dict()
     for face in faces:
-        face = face.DuplicateFace (False)# this step turn brepface to brep
-        z = rs.SurfaceAreaCentroid(face)[0][2]
+        try:
+            face = face.DuplicateFace (False)# this step turn brepface to brep
+            centroid_data = rs.SurfaceAreaCentroid(face)
+            if not centroid_data or not centroid_data[0]:
+                print("Warning: Could not get centroid for face")
+                continue
+            z = centroid_data[0][2]
 
-        """
-        need to put all 'similar' height to same key
-        """
-        for h_key in height_dict.keys():
-            if abs(h_key - z) < sc.doc.ModelAbsoluteTolerance * 1.5:
-                height_dict[h_key].append(face)
-                break
-        else:
-            h_key = z
-            height_dict[h_key] = [face]
+            """
+            need to put all 'similar' height to same key
+            """
+            for h_key in height_dict.keys():
+                if abs(h_key - z) < sc.doc.ModelAbsoluteTolerance * 1.5:
+                    height_dict[h_key].append(face)
+                    break
+            else:
+                h_key = z
+                height_dict[h_key] = [face]
+        except Exception as ex:
+            print("Error processing face in get_merged_data: {}".format(str(ex)))
+            continue
 
         """
         if height_dict.has_key(h_key):
@@ -511,12 +589,16 @@ def get_merged_data(faces):
         """
     main_note = None
     for h_key, faces in height_dict.items():
-        #faces = [brepface_to_brep(x) for x in faces]
-        #height_dict[h_key] = merge_coplaner_srf(rs.BooleanUnion(faces, delete_input = False))
-        faces, note = merge_coplaner_srf(faces)
-        if note:
-            main_note = note
-        height_dict[h_key] = faces
+        try:
+            #faces = [brepface_to_brep(x) for x in faces]
+            #height_dict[h_key] = merge_coplaner_srf(rs.BooleanUnion(faces, delete_input = False))
+            faces, note = merge_coplaner_srf(faces)
+            if note:
+                main_note = note
+            height_dict[h_key] = faces
+        except Exception as ex:
+            print("Error merging faces at height {}: {}".format(h_key, str(ex)))
+            continue
 
     out_faces = []
     for faces in height_dict.values():
@@ -524,12 +606,16 @@ def get_merged_data(faces):
     sum = 0
     out_crvs = []
     for face in out_faces:
-        abstract_face = Rhino.Geometry.AreaMassProperties.Compute(face)
-        if abstract_face:
-            sum += abstract_face.Area
-        else:
-            main_note = " #Warning!! Check your geometry cleanness."
-        out_crvs.extend(face.Edges )
+        try:
+            abstract_face = Rhino.Geometry.AreaMassProperties.Compute(face)
+            if abstract_face:
+                sum += abstract_face.Area
+            else:
+                main_note = " #Warning!! Check your geometry cleanness."
+            out_crvs.extend(face.Edges )
+        except Exception as ex:
+            print("Error computing area for face: {}".format(str(ex)))
+            continue
 
 
     return sum, out_crvs, out_faces, main_note
@@ -637,22 +723,28 @@ def get_area_and_crv_geo_from_layer(layer):
 
         for face in faces:
             #print face
-            if is_facing_down(face, allow_facing_up = is_single_face):
-                #print "get down face"
+            try:
+                if is_facing_down(face, allow_facing_up = is_single_face):
+                    #print "get down face"
 
-                sum_area += Rhino.Geometry.AreaMassProperties.Compute(face).Area
+                    area_props = Rhino.Geometry.AreaMassProperties.Compute(face)
+                    if area_props:
+                        sum_area += area_props.Area
 
-                #get crv geo but not add to doc
-                crv_geo = get_crv_geo_from_surface(brep, face)
+                    #get crv geo but not add to doc
+                    crv_geo = get_crv_geo_from_surface(brep, face)
 
-                crvs.extend(crv_geo)
+                    crvs.extend(crv_geo)
 
-                #face_geo = get_face_geo_from_face(brep, face)
-                #print 123
-                #print face
-                #print face_geo
-                #print 321
-                out_faces.append(face)
+                    #face_geo = get_face_geo_from_face(brep, face)
+                    #print 123
+                    #print face
+                    #print face_geo
+                    #print 321
+                    out_faces.append(face)
+            except Exception as ex:
+                print("Error processing face in layer {}: {}".format(layer, str(ex)))
+                continue
 
 
 
@@ -679,35 +771,43 @@ def get_face_geo_from_face(brep, face):
 
 
 def get_crv_geo_from_surface(brep, face):
-    edge_ids = face.AdjacentEdges()
-    #print edge_ids
-    #print brep.Edges
-    edges = [brep.Edges[x].EdgeCurve for x in list(edge_ids)]
-    #print edges
-    tolerance = sc.doc.ModelAbsoluteTolerance * 2.1
-    joined_crvs = Rhino.Geometry.Curve.JoinCurves(edges, tolerance)
-    return  joined_crvs
+    try:
+        edge_ids = face.AdjacentEdges()
+        #print edge_ids
+        #print brep.Edges
+        edges = [brep.Edges[x].EdgeCurve for x in list(edge_ids)]
+        #print edges
+        tolerance = sc.doc.ModelAbsoluteTolerance * 2.1
+        joined_crvs = Rhino.Geometry.Curve.JoinCurves(edges, tolerance)
+        return joined_crvs if joined_crvs else []
+    except Exception as ex:
+        print("Error getting curve geometry from surface: {}".format(str(ex)))
+        return []
 
 def is_facing_down(face, allow_facing_up = False):
-    param = rs.SurfaceClosestPoint(face, RHINO_OBJ_DATA.get_center(face))
-    normal = rs.SurfaceNormal(face, param)
-    #print normal
-    Z_down = [0,0,-1]
-    #print rs.VectorAngle(normal, Z_down)
-    #print rs.VectorCrossProduct(normal, Z_down)
-    t = 0.001
+    try:
+        param = rs.SurfaceClosestPoint(face, RHINO_OBJ_DATA.get_center(face))
+        normal = rs.SurfaceNormal(face, param)
+        #print normal
+        Z_down = [0,0,-1]
+        #print rs.VectorAngle(normal, Z_down)
+        #print rs.VectorCrossProduct(normal, Z_down)
+        t = 0.001
 
-    # make quick check for upfacing single surface
-    if allow_facing_up:
-        Z_up = [0,0,1]
-        if -t < rs.VectorAngle(normal, Z_up) < t:
+        # make quick check for upfacing single surface
+        if allow_facing_up:
+            Z_up = [0,0,1]
+            if -t < rs.VectorAngle(normal, Z_up) < t:
+                return True
+
+        if -t < rs.VectorAngle(normal, Z_down) < t:
             return True
-
-    if -t < rs.VectorAngle(normal, Z_down) < t:
-        return True
-    #if rs.VectorCrossProduct(normal, Z_down) < 0:
-        #return False
-    return False
+        #if rs.VectorCrossProduct(normal, Z_down) < 0:
+            #return False
+        return False
+    except Exception as ex:
+        print("Error checking face orientation: {}".format(str(ex)))
+        return False
 
 
 

@@ -1197,7 +1197,9 @@ class ModernChatUI:
         self.root.update()
         
         # Get response in a separate thread
-        threading.Thread(target=self.get_ai_response, args=(question,), daemon=True).start()
+        thread = threading.Thread(target=self.get_ai_response, args=(question,))
+        thread.daemon = True
+        thread.start()
     
     def on_frame_configure(self, event=None):
         """Reset the scroll region to encompass the inner frame"""
@@ -1335,7 +1337,9 @@ class ModernChatUI:
         self.root.update()
         
         # Get response in a separate thread
-        threading.Thread(target=self.get_ai_response, args=(message,), daemon=True).start()
+        thread = threading.Thread(target=self.get_ai_response, args=(message,))
+        thread.daemon = True
+        thread.start()
     
     def get_ai_response(self, message):
         """Get AI response in a separate thread."""
@@ -1527,7 +1531,9 @@ class ModernChatUI:
         self.root.update()
         
         # Run in separate thread
-        threading.Thread(target=lambda: self._update_knowledge_thread(focus_query), daemon=True).start()
+        thread = threading.Thread(target=lambda: self._update_knowledge_thread(focus_query))
+        thread.daemon = True
+        thread.start()
     
     def _update_knowledge_thread(self, focus_query=None):
         """Background thread for updating knowledge."""
