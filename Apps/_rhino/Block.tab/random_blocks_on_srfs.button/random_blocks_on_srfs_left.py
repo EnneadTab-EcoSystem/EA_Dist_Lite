@@ -27,7 +27,7 @@ import time
 import Eto # pyright: ignore
 
 
-from EnneadTab import DATA_FILE, NOTIFICATION, SOUND, TIME, LOG, ERROR_HANDLE
+from EnneadTab import DATA_FILE, NOTIFICATION, SOUND, TIME, LOG, ERROR_HANDLE, ENVIRONMENT
 from EnneadTab.RHINO import RHINO_UI, RHINO_FORMS
 
 FORM_KEY = 'SCATTER_BLOCK_ON_SRF_modeless_form'
