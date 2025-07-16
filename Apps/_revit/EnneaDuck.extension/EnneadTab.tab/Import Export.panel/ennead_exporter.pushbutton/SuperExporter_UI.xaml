@@ -31,7 +31,7 @@
                 <RowDefinition/>
             </Grid.RowDefinitions>
             <StackPanel Grid.Column="1" Grid.Row="0" Grid.ColumnSpan="1">
-                <TextBlock Text="[Super Exporter][RVT 2022+]" FontSize="16" FontWeight="Bold"/>
+                <TextBlock Text="Super Exporter" FontSize="16" FontWeight="Bold"/>
                 <Button Content="Show features." Click="show_feature_Clicked" FontSize="9" BorderBrush="#FF707070" Foreground="#FF7B7B7B" Background="{x:Null}" FontWeight="Bold">
                     <Button.Resources>
                         <Style TargetType="Border">
@@ -43,7 +43,7 @@
 
             </StackPanel>
             <StackPanel Grid.Column="3" Margin="0,0,0,5">
-                <TextBlock Text="Note: Support for 2021 and before dropped." x:Name="note" FontSize="9" TextWrapping="Wrap"/>
+                
 
                 <TextBlock Text="Debug Output:" x:Name="debug_panel" FontSize="9" TextWrapping="Wrap"/>
             </StackPanel>

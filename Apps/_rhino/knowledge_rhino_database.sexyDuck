@@ -1153,7 +1153,7 @@
         "script": "Tailor.tab\\2425_replace_blocks.button\\2425_replace_blocks_left.py",
         "icon": null,
         "alias": "2425ReplaceBlocks",
-        "doc": "This button does 2425ReplaceBlocks when left click",
+        "doc": "Block Replacement Tool for 2425 Project\n\nReplaces blocks between Twinmotion and Enscape versions based on Excel mapping data.\nFeatures:\n- Supports bidirectional block replacement (Twinmotion \u2194 Enscape)\n- Uses Excel mapping file for block name relationships\n- Processes entire document with progress tracking\n- Maintains block transformations and properties\n- Provides user selection for replacement direction\n- Automatically redraws viewport after replacement\n\nReplacement Options:\n1. Twinmotion block \u2192 Enscape block\n2. Enscape block \u2192 Twinmotion block\n\nExcel Mapping:\n- Reads from 'enscape_twinmotion_block_mapping.xlsx'\n- Uses 'EnneadTab Helper' worksheet\n- Maps block names in columns A and B\n- Supports multiple block mappings\n\nWorkflow:\n1. User selects replacement direction\n2. Reads block mapping from Excel file\n3. Iterates through mapping data\n4. Replaces blocks using RHINO_BLOCK utility\n5. Redraws viewport to show changes\n\nUsage:\n- Select replacement direction when prompted\n- Tool processes all mapped blocks automatically\n- Maintains block positions and transformations\n- Provides completion feedback",
         "tab": "Tailor.tab",
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false
@@ -1162,7 +1162,7 @@
         "script": "Tailor.tab\\children_palace_massing.button\\children_palace_massing_left.py",
         "icon": null,
         "alias": "ChildrenPalaceMassing",
-        "doc": "This button does ChildrenPalaceMassing when left click",
+        "doc": "Children Palace Massing Tool\n\nCreates solid massing geometry from wall, roof, and base layers for Children Palace project.\nFeatures:\n- Processes massing layers (massing_1, massing_2, etc.) with sublayers (wall, roof, base)\n- Creates solid geometry from closure shapes and moves them horizontally\n- Generates area shapes by intersecting solids with level planes\n- Creates planar surfaces from intersection curves for GFA calculations\n- Organizes output into 'Updated Geo' and 'Slab[GFA]' layers\n\nUsage:\n1. Ensure massing layers exist with wall/roof/base sublayers\n2. Place level reference points on 'Levels' layer\n3. Run tool to generate massing solids and area calculations",
         "tab": "Tailor.tab",
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false
@@ -1171,7 +1171,7 @@
         "script": "Tailor.tab\\export_without_crv.button\\export_without_crv_left.py",
         "icon": null,
         "alias": "ExportWithoutCrv_1643",
-        "doc": "Export the rhino file as dwg but solidate all blocks and remove all crvs.",
+        "doc": "Export Tool for 1643 Project - Solids Only\n\nExports Rhino file as DWG with all blocks exploded and curves removed.\nFeatures:\n- Explodes all block instances to individual geometry\n- Removes all curve objects from export\n- Keeps only solid geometry for CAD export\n- Handles nested block instances automatically\n- Provides progress tracking for large files\n- Supports project-specific file naming\n\nWorkflow:\n1. Collects all block instances in the document\n2. Explodes blocks to individual geometry objects\n3. Filters out curves and block references\n4. Selects only solid geometry for export\n5. Exports as DWG with \"2007 Solids\" scheme\n6. Cleans up temporary exploded geometry\n\nFile Naming:\n- MotherBabyLobby.3dm \u2192 TempStudy_MotherBabyLobby.dwg\n- Other files \u2192 TempStudy.dwg\n\nUsage:\n- Run tool to prepare geometry for CAD export\n- Only solid geometry will be exported\n- Curves and blocks are automatically removed\n- Provides completion notification",
         "tab": "Tailor.tab",
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false
@@ -1180,7 +1180,7 @@
         "script": "Tailor.tab\\pattern_maker.button\\pattern_maker_left.py",
         "icon": null,
         "alias": "2128_PatternMaker",
-        "doc": "This button does PatternMaker when left click",
+        "doc": "Pattern Maker Tool for 2128 Project\n\nCreates randomized patterns by replacing blocks based on type definitions and distribution algorithms.\nFeatures:\n- Supports multiple pattern generation algorithms (random, gradient, excel-based)\n- Uses type definitions with color coding and ratio controls\n- Sorts blocks by UV position on reference surface\n- Supports header blocks with special treatment\n- Provides multiple distribution options for pattern variety\n\nType Definitions:\n- A1, C1, D2, D4, D7 with specific colors and ratios\n- Rank-based positioning for gradient effects\n- Color-coded block identification\n\nPattern Options:\n1. True Random: Pure random distribution\n2. Random with Gradient: Bottom-to-top gradient effect\n3. Random with Double Gradient: Paired row patterns\n4. Excel-based: Pattern from spreadsheet data\n\nUsage:\n1. Place blocks on reference surface layer\n2. Select blocks to pattern\n3. Choose distribution algorithm\n4. Tool replaces blocks based on pattern rules",
         "tab": "Tailor.tab",
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false
@@ -1189,7 +1189,7 @@
         "script": "Tailor.tab\\register_mirror.button\\register_mirror_left.py",
         "icon": null,
         "alias": "RegisterMirror",
-        "doc": "Help Jazzy to register mirror command shortcut with and without copy",
+        "doc": "Mirror Command Shortcut Registration Tool\n\nRegisters keyboard shortcuts for mirror commands with and without copy options.\nFeatures:\n- Registers F1 key for mirror with copy (_mirror _copy=Yes)\n- Registers F2 key for mirror without copy (_mirror _copy=No)\n- Uses Rhino alias system for persistent shortcuts\n- Provides user notification of successful registration\n- Designed for efficient mirror operations in modeling workflow\n\nShortcuts:\n- F1: Mirror with copy (creates duplicate objects)\n- F2: Mirror without copy (moves existing objects)\n\nUsage:\n- Run tool to register shortcuts\n- Use F1/F2 keys for quick mirror operations\n- Shortcuts persist across Rhino sessions\n- Provides feedback on successful registration",
         "tab": "Tailor.tab",
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false
@@ -1198,7 +1198,7 @@
         "script": "Tailor.tab\\relocate_file.button\\relocate_left.py",
         "icon": null,
         "alias": "RelocateAll_1643",
-        "doc": "Batch relocation tool for Rhino content.\n\nFeatures:\n- Relocates all cameras and models to new Revit location\n- Maintains relative positions and orientations\n- Preserves camera views and model relationships\n- Automatically updates all named views",
+        "doc": "Batch Relocation Tool for 1643 Project\n\nRelocates all Rhino content (objects, cameras, named views) to new project coordinates.\nFeatures:\n- Moves all objects from world origin to new base point (440,160,0)\n- Updates all named views and camera positions\n- Maintains relative positions and orientations\n- Preserves camera-target relationships\n- Automatically updates view transformations\n- Plays completion sound notification\n\nWorkflow:\n1. Calculates vector from world origin to new base point\n2. Moves all objects in the document\n3. Updates all named views with new camera positions\n4. Redraws viewport to reflect changes\n5. Provides audio feedback on completion\n\nUsage:\n- Run tool to relocate entire project to new coordinates\n- All content moves together maintaining spatial relationships\n- Named views are automatically updated for new location",
         "tab": "Tailor.tab",
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false
@@ -1207,7 +1207,7 @@
         "script": "Tailor.tab\\stack_enscape.button\\stack_enscape_left.py",
         "icon": "Tailor.tab\\stack_enscape.button\\icon.png",
         "alias": "Stack PSD",
-        "doc": "Stack PSD files",
+        "doc": "Stack PSD Files Tool\n\nAutomates the process of stacking and combining PSD files for rendering workflows.\nFeatures:\n- Processes glass and chrome version renderings\n- Creates layered PSD compositions with proper blend modes\n- Handles special camera views (cam 13, cam 17) with background templates\n- Exports final compositions as high-quality JPG files\n- Supports multiple study variations (angled_frame, sawtooth, solar_panel, etc.)\n\nWorkflow:\n1. Prepares data by matching glass/chrome version pairs\n2. Processes each pair through Photoshop automation\n3. Applies appropriate blend modes and adjustments\n4. Saves as PSD and exports as JPG for presentation",
         "tab": "Tailor.tab",
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false
@@ -1216,7 +1216,7 @@
         "script": "Tailor.tab\\stack_enscape.button\\move_img_right.py",
         "icon": "Tailor.tab\\stack_enscape.button\\icon.png",
         "alias": "MoveImg_1643",
-        "doc": "Move all the images to new location",
+        "doc": "Image Relocation Tool for 1643 Project\n\nLaunches the file organizer GUI for relocating rendering images between study versions.\nFeatures:\n- Opens interactive file organizer interface\n- Supports study selection (angled_frame, sawtooth, solar_panel, etc.)\n- Handles glass/chrome version organization\n- Automates file cleanup and relocation\n- Maintains project-specific folder structure\n\nUsage:\n- Right-click to open file organizer GUI\n- Select target study and version\n- Automatically relocates PNG files to appropriate folders",
         "tab": "Tailor.tab",
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false
@@ -1225,7 +1225,7 @@
         "script": "Tailor.tab\\xiong_an_facade_hori.button\\xiong_an_facade_hori_left.py",
         "icon": null,
         "alias": "2419_Facade move",
-        "doc": "xxxxxxxxxxxxxxxxxxxxx",
+        "doc": "Xiong'an Facade Movement Tool\n\nProcesses facade curves to extract specific points for facade movement operations.\nFeatures:\n- Works with Grasshopper input/output for facade geometry\n- Extracts points at 20% and 80% along curve domains\n- Handles curve parameterization for facade manipulation\n- Supports multiple curve sets for batch processing\n- Designed for Xiong'an project facade studies\n\nUsage:\n- Input: Two sets of curves (crv_set_1, crv_set_2)\n- Output: Points at 20% and 80% positions along curves\n- Designed for facade movement and positioning workflows",
         "tab": "Tailor.tab",
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false

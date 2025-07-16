@@ -1,6 +1,38 @@
 
 __title__ = "2425ReplaceBlocks"
-__doc__ = "This button does 2425ReplaceBlocks when left click"
+__doc__ = """Block Replacement Tool for 2425 Project
+
+Replaces blocks between Twinmotion and Enscape versions based on Excel mapping data.
+Features:
+- Supports bidirectional block replacement (Twinmotion ↔ Enscape)
+- Uses Excel mapping file for block name relationships
+- Processes entire document with progress tracking
+- Maintains block transformations and properties
+- Provides user selection for replacement direction
+- Automatically redraws viewport after replacement
+
+Replacement Options:
+1. Twinmotion block → Enscape block
+2. Enscape block → Twinmotion block
+
+Excel Mapping:
+- Reads from 'enscape_twinmotion_block_mapping.xlsx'
+- Uses 'EnneadTab Helper' worksheet
+- Maps block names in columns A and B
+- Supports multiple block mappings
+
+Workflow:
+1. User selects replacement direction
+2. Reads block mapping from Excel file
+3. Iterates through mapping data
+4. Replaces blocks using RHINO_BLOCK utility
+5. Redraws viewport to show changes
+
+Usage:
+- Select replacement direction when prompted
+- Tool processes all mapped blocks automatically
+- Maintains block positions and transformations
+- Provides completion feedback"""
 
 import rhinoscriptsyntax as rs
 from EnneadTab import ERROR_HANDLE, LOG, EXCEL

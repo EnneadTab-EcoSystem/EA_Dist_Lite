@@ -1,3 +1,19 @@
+"""Miro Preparation Tool for Image Stitching
+
+Prepares and stitches rendering images for Miro board presentations.
+Features:
+- Processes multiple study variations (angled_frame, sawtooth, solar_panel, etc.)
+- Stitches images horizontally with configurable gaps
+- Resizes images to consistent height for uniform presentation
+- Creates transparent background for overlay compatibility
+- Saves stitched images with study-specific naming
+
+Workflow:
+1. Cleans temporary Miro folder
+2. Copies JPG files from study folders
+3. Stitches images horizontally with gaps
+4. Resizes to target height while maintaining aspect ratio
+5. Saves as PNG with transparency for Miro import"""
 
 import os
 import shutil

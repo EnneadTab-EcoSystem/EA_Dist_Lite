@@ -1,7 +1,20 @@
 # -*- coding: utf-8 -*-
 
 __title__ = "ChildrenPalaceMassing"
-__doc__ = "This button does ChildrenPalaceMassing when left click"
+__doc__ = """Children Palace Massing Tool
+
+Creates solid massing geometry from wall, roof, and base layers for Children Palace project.
+Features:
+- Processes massing layers (massing_1, massing_2, etc.) with sublayers (wall, roof, base)
+- Creates solid geometry from closure shapes and moves them horizontally
+- Generates area shapes by intersecting solids with level planes
+- Creates planar surfaces from intersection curves for GFA calculations
+- Organizes output into 'Updated Geo' and 'Slab[GFA]' layers
+
+Usage:
+1. Ensure massing layers exist with wall/roof/base sublayers
+2. Place level reference points on 'Levels' layer
+3. Run tool to generate massing solids and area calculations"""
 
 
 import System

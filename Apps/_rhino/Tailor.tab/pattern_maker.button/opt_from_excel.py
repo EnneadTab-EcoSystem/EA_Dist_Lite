@@ -1,3 +1,31 @@
+"""Excel-Based Pattern Generator
+
+Generates patterns from Excel spreadsheet data with color validation and pattern expansion.
+Features:
+- Reads pattern data from Excel files with color information
+- Validates color consistency between Excel and type definitions
+- Supports header blocks with special processing zones
+- Expands patterns to fill requested grid dimensions
+- Handles pattern repetition for larger grids
+- Provides error reporting for data inconsistencies
+
+Excel Processing:
+- Reads from 'Tile Study.xlsx' with multiple worksheet options
+- Validates cell colors against TYPE_DEFINITIONS
+- Processes different zones for regular vs header blocks
+- Flips patterns upside down for correct orientation
+- Shifts header patterns by 58 columns for alignment
+
+Pattern Options:
+- option 1.1: Standard pattern processing
+- option 1.2: Pattern with header block support
+- option 2.1: Alternative pattern configuration
+
+Returns:
+- dict: Key is (x,y) tuple, value is type string
+- Pattern repeats to fill requested dimensions
+- Includes validation warnings for data issues"""
+
 import random
 import sys
 sys.path.append("C:\\Users\\szhang\\design-repo\\EnneadTab-OS\\Apps\\lib")

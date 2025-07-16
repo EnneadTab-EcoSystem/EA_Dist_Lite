@@ -1,11 +1,26 @@
 __title__ = "RelocateAll_1643"
-__doc__ = """Batch relocation tool for Rhino content.
+__doc__ = """Batch Relocation Tool for 1643 Project
 
+Relocates all Rhino content (objects, cameras, named views) to new project coordinates.
 Features:
-- Relocates all cameras and models to new Revit location
+- Moves all objects from world origin to new base point (440,160,0)
+- Updates all named views and camera positions
 - Maintains relative positions and orientations
-- Preserves camera views and model relationships
-- Automatically updates all named views"""
+- Preserves camera-target relationships
+- Automatically updates view transformations
+- Plays completion sound notification
+
+Workflow:
+1. Calculates vector from world origin to new base point
+2. Moves all objects in the document
+3. Updates all named views with new camera positions
+4. Redraws viewport to reflect changes
+5. Provides audio feedback on completion
+
+Usage:
+- Run tool to relocate entire project to new coordinates
+- All content moves together maintaining spatial relationships
+- Named views are automatically updated for new location"""
 
 import rhinoscriptsyntax as rs
 import Rhino # pyright: ignore

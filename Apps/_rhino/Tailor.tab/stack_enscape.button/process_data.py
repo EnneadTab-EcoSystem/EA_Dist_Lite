@@ -1,3 +1,26 @@
+"""Photoshop Processing Tool for Rendering Compositions
+
+Automates Photoshop operations to create layered PSD compositions from glass/chrome rendering pairs.
+Features:
+- Opens and processes glass/chrome version image pairs
+- Applies appropriate blend modes (Screen, Lighten) for layering
+- Handles special camera views with background templates
+- Creates adjustment layers for brightness modifications
+- Exports high-quality JPG files for presentation
+- Supports multiple study variations with automated workflow
+
+Blend Modes:
+- Screen (9): For lightening effects
+- Lighten (8): For selective lightening
+- Pass (0): No blend mode change
+
+Workflow:
+1. Opens glass version as base layer
+2. Adds chrome version with appropriate blend mode
+3. Applies brightness adjustments for specific views
+4. Saves as PSD and exports as JPG
+5. Closes documents to free memory"""
+
 import os
 import win32com.client
 import sys

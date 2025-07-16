@@ -1,3 +1,19 @@
+"""File Organizer Tool for Rendering Management
+
+A GUI application for organizing and relocating rendering images between different study versions.
+Features:
+- Interactive study selection (angled_frame, sawtooth, solar_panel, etc.)
+- Version selection (glass version vs chrome version)
+- Automatic file relocation and cleanup
+- Maintains study order based on usage frequency
+- Supports PNG file management for rendering workflows
+
+Usage:
+1. Select study name from available options
+2. Choose glass or chrome version
+3. Click 'Relocate Images!' to move files to appropriate folders
+4. Files are automatically cleaned and organized in target directories"""
+
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox

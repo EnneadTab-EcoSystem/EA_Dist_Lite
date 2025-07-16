@@ -4080,10 +4080,74 @@ EA_RebaseFile</script>
         <locale_1033>2425ReplaceBlocks</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>This button does 2425ReplaceBlocks when left click</locale_1033>
+        <locale_1033>Block Replacement Tool for 2425 Project
+
+Replaces blocks between Twinmotion and Enscape versions based on Excel mapping data.
+Features:
+- Supports bidirectional block replacement (Twinmotion ↔ Enscape)
+- Uses Excel mapping file for block name relationships
+- Processes entire document with progress tracking
+- Maintains block transformations and properties
+- Provides user selection for replacement direction
+- Automatically redraws viewport after replacement
+
+Replacement Options:
+1. Twinmotion block → Enscape block
+2. Enscape block → Twinmotion block
+
+Excel Mapping:
+- Reads from 'enscape_twinmotion_block_mapping.xlsx'
+- Uses 'EnneadTab Helper' worksheet
+- Maps block names in columns A and B
+- Supports multiple block mappings
+
+Workflow:
+1. User selects replacement direction
+2. Reads block mapping from Excel file
+3. Iterates through mapping data
+4. Replaces blocks using RHINO_BLOCK utility
+5. Redraws viewport to show changes
+
+Usage:
+- Select replacement direction when prompted
+- Tool processes all mapped blocks automatically
+- Maintains block positions and transformations
+- Provides completion feedback</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>This button does 2425ReplaceBlocks when left click</locale_1033>
+        <locale_1033>Block Replacement Tool for 2425 Project
+
+Replaces blocks between Twinmotion and Enscape versions based on Excel mapping data.
+Features:
+- Supports bidirectional block replacement (Twinmotion ↔ Enscape)
+- Uses Excel mapping file for block name relationships
+- Processes entire document with progress tracking
+- Maintains block transformations and properties
+- Provides user selection for replacement direction
+- Automatically redraws viewport after replacement
+
+Replacement Options:
+1. Twinmotion block → Enscape block
+2. Enscape block → Twinmotion block
+
+Excel Mapping:
+- Reads from 'enscape_twinmotion_block_mapping.xlsx'
+- Uses 'EnneadTab Helper' worksheet
+- Maps block names in columns A and B
+- Supports multiple block mappings
+
+Workflow:
+1. User selects replacement direction
+2. Reads block mapping from Excel file
+3. Iterates through mapping data
+4. Replaces blocks using RHINO_BLOCK utility
+5. Redraws viewport to show changes
+
+Usage:
+- Select replacement direction when prompted
+- Tool processes all mapped blocks automatically
+- Maintains block positions and transformations
+- Provides completion feedback</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>2425ReplaceBlocks</locale_1033>
@@ -4099,10 +4163,36 @@ EA_2425ReplaceBlocks</script>
         <locale_1033>ChildrenPalaceMassing</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>This button does ChildrenPalaceMassing when left click</locale_1033>
+        <locale_1033>Children Palace Massing Tool
+
+Creates solid massing geometry from wall, roof, and base layers for Children Palace project.
+Features:
+- Processes massing layers (massing_1, massing_2, etc.) with sublayers (wall, roof, base)
+- Creates solid geometry from closure shapes and moves them horizontally
+- Generates area shapes by intersecting solids with level planes
+- Creates planar surfaces from intersection curves for GFA calculations
+- Organizes output into 'Updated Geo' and 'Slab[GFA]' layers
+
+Usage:
+1. Ensure massing layers exist with wall/roof/base sublayers
+2. Place level reference points on 'Levels' layer
+3. Run tool to generate massing solids and area calculations</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>This button does ChildrenPalaceMassing when left click</locale_1033>
+        <locale_1033>Children Palace Massing Tool
+
+Creates solid massing geometry from wall, roof, and base layers for Children Palace project.
+Features:
+- Processes massing layers (massing_1, massing_2, etc.) with sublayers (wall, roof, base)
+- Creates solid geometry from closure shapes and moves them horizontally
+- Generates area shapes by intersecting solids with level planes
+- Creates planar surfaces from intersection curves for GFA calculations
+- Organizes output into 'Updated Geo' and 'Slab[GFA]' layers
+
+Usage:
+1. Ensure massing layers exist with wall/roof/base sublayers
+2. Place level reference points on 'Levels' layer
+3. Run tool to generate massing solids and area calculations</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>ChildrenPalaceMassing</locale_1033>
@@ -4118,10 +4208,64 @@ EA_ChildrenPalaceMassing</script>
         <locale_1033>ExportWithoutCrv_1643</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>Export the rhino file as dwg but solidate all blocks and remove all crvs.</locale_1033>
+        <locale_1033>Export Tool for 1643 Project - Solids Only
+
+Exports Rhino file as DWG with all blocks exploded and curves removed.
+Features:
+- Explodes all block instances to individual geometry
+- Removes all curve objects from export
+- Keeps only solid geometry for CAD export
+- Handles nested block instances automatically
+- Provides progress tracking for large files
+- Supports project-specific file naming
+
+Workflow:
+1. Collects all block instances in the document
+2. Explodes blocks to individual geometry objects
+3. Filters out curves and block references
+4. Selects only solid geometry for export
+5. Exports as DWG with &quot;2007 Solids&quot; scheme
+6. Cleans up temporary exploded geometry
+
+File Naming:
+- MotherBabyLobby.3dm → TempStudy_MotherBabyLobby.dwg
+- Other files → TempStudy.dwg
+
+Usage:
+- Run tool to prepare geometry for CAD export
+- Only solid geometry will be exported
+- Curves and blocks are automatically removed
+- Provides completion notification</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>Export the rhino file as dwg but solidate all blocks and remove all crvs.</locale_1033>
+        <locale_1033>Export Tool for 1643 Project - Solids Only
+
+Exports Rhino file as DWG with all blocks exploded and curves removed.
+Features:
+- Explodes all block instances to individual geometry
+- Removes all curve objects from export
+- Keeps only solid geometry for CAD export
+- Handles nested block instances automatically
+- Provides progress tracking for large files
+- Supports project-specific file naming
+
+Workflow:
+1. Collects all block instances in the document
+2. Explodes blocks to individual geometry objects
+3. Filters out curves and block references
+4. Selects only solid geometry for export
+5. Exports as DWG with &quot;2007 Solids&quot; scheme
+6. Cleans up temporary exploded geometry
+
+File Naming:
+- MotherBabyLobby.3dm → TempStudy_MotherBabyLobby.dwg
+- Other files → TempStudy.dwg
+
+Usage:
+- Run tool to prepare geometry for CAD export
+- Only solid geometry will be exported
+- Curves and blocks are automatically removed
+- Provides completion notification</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>ExportWithoutCrv_1643</locale_1033>
@@ -4137,10 +4281,60 @@ EA_ExportWithoutCrv_1643</script>
         <locale_1033>2128_PatternMaker</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>This button does PatternMaker when left click</locale_1033>
+        <locale_1033>Pattern Maker Tool for 2128 Project
+
+Creates randomized patterns by replacing blocks based on type definitions and distribution algorithms.
+Features:
+- Supports multiple pattern generation algorithms (random, gradient, excel-based)
+- Uses type definitions with color coding and ratio controls
+- Sorts blocks by UV position on reference surface
+- Supports header blocks with special treatment
+- Provides multiple distribution options for pattern variety
+
+Type Definitions:
+- A1, C1, D2, D4, D7 with specific colors and ratios
+- Rank-based positioning for gradient effects
+- Color-coded block identification
+
+Pattern Options:
+1. True Random: Pure random distribution
+2. Random with Gradient: Bottom-to-top gradient effect
+3. Random with Double Gradient: Paired row patterns
+4. Excel-based: Pattern from spreadsheet data
+
+Usage:
+1. Place blocks on reference surface layer
+2. Select blocks to pattern
+3. Choose distribution algorithm
+4. Tool replaces blocks based on pattern rules</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>This button does PatternMaker when left click</locale_1033>
+        <locale_1033>Pattern Maker Tool for 2128 Project
+
+Creates randomized patterns by replacing blocks based on type definitions and distribution algorithms.
+Features:
+- Supports multiple pattern generation algorithms (random, gradient, excel-based)
+- Uses type definitions with color coding and ratio controls
+- Sorts blocks by UV position on reference surface
+- Supports header blocks with special treatment
+- Provides multiple distribution options for pattern variety
+
+Type Definitions:
+- A1, C1, D2, D4, D7 with specific colors and ratios
+- Rank-based positioning for gradient effects
+- Color-coded block identification
+
+Pattern Options:
+1. True Random: Pure random distribution
+2. Random with Gradient: Bottom-to-top gradient effect
+3. Random with Double Gradient: Paired row patterns
+4. Excel-based: Pattern from spreadsheet data
+
+Usage:
+1. Place blocks on reference surface layer
+2. Select blocks to pattern
+3. Choose distribution algorithm
+4. Tool replaces blocks based on pattern rules</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>2128_PatternMaker</locale_1033>
@@ -4156,10 +4350,46 @@ EA_2128_PatternMaker</script>
         <locale_1033>RegisterMirror</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>Help Jazzy to register mirror command shortcut with and without copy</locale_1033>
+        <locale_1033>Mirror Command Shortcut Registration Tool
+
+Registers keyboard shortcuts for mirror commands with and without copy options.
+Features:
+- Registers F1 key for mirror with copy (_mirror _copy=Yes)
+- Registers F2 key for mirror without copy (_mirror _copy=No)
+- Uses Rhino alias system for persistent shortcuts
+- Provides user notification of successful registration
+- Designed for efficient mirror operations in modeling workflow
+
+Shortcuts:
+- F1: Mirror with copy (creates duplicate objects)
+- F2: Mirror without copy (moves existing objects)
+
+Usage:
+- Run tool to register shortcuts
+- Use F1/F2 keys for quick mirror operations
+- Shortcuts persist across Rhino sessions
+- Provides feedback on successful registration</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>Help Jazzy to register mirror command shortcut with and without copy</locale_1033>
+        <locale_1033>Mirror Command Shortcut Registration Tool
+
+Registers keyboard shortcuts for mirror commands with and without copy options.
+Features:
+- Registers F1 key for mirror with copy (_mirror _copy=Yes)
+- Registers F2 key for mirror without copy (_mirror _copy=No)
+- Uses Rhino alias system for persistent shortcuts
+- Provides user notification of successful registration
+- Designed for efficient mirror operations in modeling workflow
+
+Shortcuts:
+- F1: Mirror with copy (creates duplicate objects)
+- F2: Mirror without copy (moves existing objects)
+
+Usage:
+- Run tool to register shortcuts
+- Use F1/F2 keys for quick mirror operations
+- Shortcuts persist across Rhino sessions
+- Provides feedback on successful registration</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>RegisterMirror</locale_1033>
@@ -4175,22 +4405,52 @@ EA_RegisterMirror</script>
         <locale_1033>RelocateAll_1643</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>Batch relocation tool for Rhino content.
+        <locale_1033>Batch Relocation Tool for 1643 Project
 
+Relocates all Rhino content (objects, cameras, named views) to new project coordinates.
 Features:
-- Relocates all cameras and models to new Revit location
+- Moves all objects from world origin to new base point (440,160,0)
+- Updates all named views and camera positions
 - Maintains relative positions and orientations
-- Preserves camera views and model relationships
-- Automatically updates all named views</locale_1033>
+- Preserves camera-target relationships
+- Automatically updates view transformations
+- Plays completion sound notification
+
+Workflow:
+1. Calculates vector from world origin to new base point
+2. Moves all objects in the document
+3. Updates all named views with new camera positions
+4. Redraws viewport to reflect changes
+5. Provides audio feedback on completion
+
+Usage:
+- Run tool to relocate entire project to new coordinates
+- All content moves together maintaining spatial relationships
+- Named views are automatically updated for new location</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>Batch relocation tool for Rhino content.
+        <locale_1033>Batch Relocation Tool for 1643 Project
 
+Relocates all Rhino content (objects, cameras, named views) to new project coordinates.
 Features:
-- Relocates all cameras and models to new Revit location
+- Moves all objects from world origin to new base point (440,160,0)
+- Updates all named views and camera positions
 - Maintains relative positions and orientations
-- Preserves camera views and model relationships
-- Automatically updates all named views</locale_1033>
+- Preserves camera-target relationships
+- Automatically updates view transformations
+- Plays completion sound notification
+
+Workflow:
+1. Calculates vector from world origin to new base point
+2. Moves all objects in the document
+3. Updates all named views with new camera positions
+4. Redraws viewport to reflect changes
+5. Provides audio feedback on completion
+
+Usage:
+- Run tool to relocate entire project to new coordinates
+- All content moves together maintaining spatial relationships
+- Named views are automatically updated for new location</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>RelocateAll_1643</locale_1033>
@@ -4206,10 +4466,38 @@ EA_RelocateAll_1643</script>
         <locale_1033>Stack PSD</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>Stack PSD files</locale_1033>
+        <locale_1033>Stack PSD Files Tool
+
+Automates the process of stacking and combining PSD files for rendering workflows.
+Features:
+- Processes glass and chrome version renderings
+- Creates layered PSD compositions with proper blend modes
+- Handles special camera views (cam 13, cam 17) with background templates
+- Exports final compositions as high-quality JPG files
+- Supports multiple study variations (angled_frame, sawtooth, solar_panel, etc.)
+
+Workflow:
+1. Prepares data by matching glass/chrome version pairs
+2. Processes each pair through Photoshop automation
+3. Applies appropriate blend modes and adjustments
+4. Saves as PSD and exports as JPG for presentation</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>Stack PSD files</locale_1033>
+        <locale_1033>Stack PSD Files Tool
+
+Automates the process of stacking and combining PSD files for rendering workflows.
+Features:
+- Processes glass and chrome version renderings
+- Creates layered PSD compositions with proper blend modes
+- Handles special camera views (cam 13, cam 17) with background templates
+- Exports final compositions as high-quality JPG files
+- Supports multiple study variations (angled_frame, sawtooth, solar_panel, etc.)
+
+Workflow:
+1. Prepares data by matching glass/chrome version pairs
+2. Processes each pair through Photoshop automation
+3. Applies appropriate blend modes and adjustments
+4. Saves as PSD and exports as JPG for presentation</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>Stack PSD</locale_1033>
@@ -4225,10 +4513,36 @@ EA_Stack PSD</script>
         <locale_1033>MoveImg_1643</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>Move all the images to new location</locale_1033>
+        <locale_1033>Image Relocation Tool for 1643 Project
+
+Launches the file organizer GUI for relocating rendering images between study versions.
+Features:
+- Opens interactive file organizer interface
+- Supports study selection (angled_frame, sawtooth, solar_panel, etc.)
+- Handles glass/chrome version organization
+- Automates file cleanup and relocation
+- Maintains project-specific folder structure
+
+Usage:
+- Right-click to open file organizer GUI
+- Select target study and version
+- Automatically relocates PNG files to appropriate folders</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>Move all the images to new location</locale_1033>
+        <locale_1033>Image Relocation Tool for 1643 Project
+
+Launches the file organizer GUI for relocating rendering images between study versions.
+Features:
+- Opens interactive file organizer interface
+- Supports study selection (angled_frame, sawtooth, solar_panel, etc.)
+- Handles glass/chrome version organization
+- Automates file cleanup and relocation
+- Maintains project-specific folder structure
+
+Usage:
+- Right-click to open file organizer GUI
+- Select target study and version
+- Automatically relocates PNG files to appropriate folders</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>MoveImg_1643</locale_1033>
@@ -4244,10 +4558,36 @@ EA_MoveImg_1643</script>
         <locale_1033>2419_Facade move</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>xxxxxxxxxxxxxxxxxxxxx</locale_1033>
+        <locale_1033>Xiong'an Facade Movement Tool
+
+Processes facade curves to extract specific points for facade movement operations.
+Features:
+- Works with Grasshopper input/output for facade geometry
+- Extracts points at 20% and 80% along curve domains
+- Handles curve parameterization for facade manipulation
+- Supports multiple curve sets for batch processing
+- Designed for Xiong'an project facade studies
+
+Usage:
+- Input: Two sets of curves (crv_set_1, crv_set_2)
+- Output: Points at 20% and 80% positions along curves
+- Designed for facade movement and positioning workflows</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>xxxxxxxxxxxxxxxxxxxxx</locale_1033>
+        <locale_1033>Xiong'an Facade Movement Tool
+
+Processes facade curves to extract specific points for facade movement operations.
+Features:
+- Works with Grasshopper input/output for facade geometry
+- Extracts points at 20% and 80% along curve domains
+- Handles curve parameterization for facade manipulation
+- Supports multiple curve sets for batch processing
+- Designed for Xiong'an project facade studies
+
+Usage:
+- Input: Two sets of curves (crv_set_1, crv_set_2)
+- Output: Points at 20% and 80% positions along curves
+- Designed for facade movement and positioning workflows</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>2419_Facade move</locale_1033>

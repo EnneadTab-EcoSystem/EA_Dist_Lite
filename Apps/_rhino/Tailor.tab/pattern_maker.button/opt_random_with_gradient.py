@@ -1,3 +1,30 @@
+"""Random Pattern Generator with Gradient Effect
+
+Generates patterns with bottom-to-top gradient distribution based on type rankings.
+Features:
+- Combines random distribution with spatial gradient effects
+- Uses rank_from_bm values for vertical positioning preference
+- Applies exponential scaling for strong gradient effects
+- Maintains type ratios while adding spatial bias
+- Provides detailed row-by-row distribution analysis
+
+Gradient Logic:
+- Bottom rows (0) prefer rank_from_bm=1 types
+- Top rows (max_y-2, max_y-1) prefer rank_from_bm=5 types
+- Middle rows use linear interpolation between ranks
+- Exponential scaling (a=0.35) controls gradient strength
+
+Algorithm:
+1. Calculates preferred rank for each row position
+2. Adjusts weights based on rank differences
+3. Creates weighted population for random selection
+4. Applies exponential scaling for gradient effect
+5. Reports detailed distribution analysis
+
+Returns:
+- dict: Key is (x,y) tuple, value is type string
+- Distribution shows gradient effect from bottom to top"""
+
 import random
 
 import pattern_maker_left

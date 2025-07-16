@@ -1,5 +1,30 @@
 __title__ = "2128_PatternMaker"
-__doc__ = "This button does PatternMaker when left click"
+__doc__ = """Pattern Maker Tool for 2128 Project
+
+Creates randomized patterns by replacing blocks based on type definitions and distribution algorithms.
+Features:
+- Supports multiple pattern generation algorithms (random, gradient, excel-based)
+- Uses type definitions with color coding and ratio controls
+- Sorts blocks by UV position on reference surface
+- Supports header blocks with special treatment
+- Provides multiple distribution options for pattern variety
+
+Type Definitions:
+- A1, C1, D2, D4, D7 with specific colors and ratios
+- Rank-based positioning for gradient effects
+- Color-coded block identification
+
+Pattern Options:
+1. True Random: Pure random distribution
+2. Random with Gradient: Bottom-to-top gradient effect
+3. Random with Double Gradient: Paired row patterns
+4. Excel-based: Pattern from spreadsheet data
+
+Usage:
+1. Place blocks on reference surface layer
+2. Select blocks to pattern
+3. Choose distribution algorithm
+4. Tool replaces blocks based on pattern rules"""
 
 
 from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION

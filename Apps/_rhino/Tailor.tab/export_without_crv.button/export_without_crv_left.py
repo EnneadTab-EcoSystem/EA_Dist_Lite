@@ -1,6 +1,33 @@
 
 __title__ = "ExportWithoutCrv_1643"
-__doc__ = "Export the rhino file as dwg but solidate all blocks and remove all crvs."
+__doc__ = """Export Tool for 1643 Project - Solids Only
+
+Exports Rhino file as DWG with all blocks exploded and curves removed.
+Features:
+- Explodes all block instances to individual geometry
+- Removes all curve objects from export
+- Keeps only solid geometry for CAD export
+- Handles nested block instances automatically
+- Provides progress tracking for large files
+- Supports project-specific file naming
+
+Workflow:
+1. Collects all block instances in the document
+2. Explodes blocks to individual geometry objects
+3. Filters out curves and block references
+4. Selects only solid geometry for export
+5. Exports as DWG with "2007 Solids" scheme
+6. Cleans up temporary exploded geometry
+
+File Naming:
+- MotherBabyLobby.3dm → TempStudy_MotherBabyLobby.dwg
+- Other files → TempStudy.dwg
+
+Usage:
+- Run tool to prepare geometry for CAD export
+- Only solid geometry will be exported
+- Curves and blocks are automatically removed
+- Provides completion notification"""
 
 import rhinoscriptsyntax as rs
 from EnneadTab import NOTIFICATION

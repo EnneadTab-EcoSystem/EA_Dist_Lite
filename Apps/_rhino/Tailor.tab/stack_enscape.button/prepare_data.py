@@ -1,5 +1,17 @@
+"""Data Preparation Tool for Rendering Pairs
 
+Prepares and matches glass/chrome version rendering pairs for PSD stacking workflow.
+Features:
+- Scans glass and chrome version folders for matching files
+- Matches files based on view names (last part of filename)
+- Validates file timestamps to ensure recent pairs
+- Handles placeholder files when chrome versions are missing
+- Supports multiple study variations with organized folder structure
 
+Returns:
+- List of file pairs ready for Photoshop processing
+- Each pair contains [glass_version_path, chrome_version_path]
+- Handles cases where chrome version may be missing"""
 
 import os
 

@@ -360,10 +360,21 @@ def secure_filename_in_folder(output_folder, desired_name, extension):
         str: Properly formatted filename
     """
 
-    try:
-        os.remove(os.path.join(output_folder, desired_name + extension))
-    except:
+    # For previewA and previewB files, don't try to remove them as they might be in use
+    if desired_name in ["previewA", "previewB"]:
+        # Just proceed with the rename operation, don't try to remove the target
         pass
+    else:
+        # First, try to remove the target file if it exists
+        target_file = os.path.join(output_folder, desired_name + extension)
+        try:
+            if os.path.exists(target_file):
+                os.remove(target_file)
+        except Exception as e:
+            # If we can't remove the target file, try to use a unique name
+            import time
+            unique_suffix = str(int(time.time() * 1000))[-6:]  # Last 6 digits of timestamp
+            desired_name = "{}_{}".format(desired_name, unique_suffix)
 
     # print keyword
     keyword = " - Sheet - "
@@ -391,6 +402,19 @@ def secure_filename_in_folder(output_folder, desired_name, extension):
                             file_name, e
                         )
                     )
+                    # If the target file already exists and we can't rename, try to use a unique name
+                    if "Cannot create" in str(e) and "already exists" in str(e):
+                        import time
+                        unique_suffix = str(int(time.time() * 1000))[-6:]  # Last 6 digits of timestamp
+                        new_name = "{}_{}".format(desired_name, unique_suffix)
+                        try:
+                            os.rename(
+                                os.path.join(output_folder, file_name),
+                                os.path.join(output_folder, new_name + extension),
+                            )
+                            print("Successfully renamed to {}".format(new_name + extension))
+                        except Exception as e2:
+                            print("Failed to rename with unique name: {}".format(e2))
 
 
 def wait_until_file_is_ready(file_path):

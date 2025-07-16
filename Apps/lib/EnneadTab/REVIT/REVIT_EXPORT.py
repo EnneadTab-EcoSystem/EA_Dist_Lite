@@ -373,8 +373,8 @@ def export_image(view_or_sheet, file_name_naked, output_folder, is_thumbnail = F
     opts = DB.ImageExportOptions()
     try:
         opts.FilePath = output_folder + '\\{}.jpg'.format(file_name_naked)
-    except:
-        print ("Error in export_image: {}".format(file_name_naked))
+    except Exception as e:
+        print ("Error in export_image: {} - {}".format(file_name_naked, str(e)))
         return False
     
 
@@ -417,7 +417,9 @@ def export_image(view_or_sheet, file_name_naked, output_folder, is_thumbnail = F
                 print("------**There is a file existing with same name, will attempt to save as {}**".format(file_name_naked))
 
             else:
-                print( e.message)
+                print("Export failed: {}".format(str(e)))
+                if attempt >= max_attempt:
+                    return False
 
 
     # this si still needed becasue exported image will add a -Sheet- thing in file name.

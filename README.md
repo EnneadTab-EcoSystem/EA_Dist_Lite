@@ -1,7 +1,7 @@
 # EnneadTab Distribution Repository
 
 ## 📅 Last Updated
-2025-07-15 20:18:13
+2025-07-16 14:04:54
 
 # ⚠️ LITE VERSION ⚠️
 
@@ -20,6 +20,9 @@ The following content has been removed to reduce size:
 The following essential installer files are still included:
 - ✅ EnneadTab_OS_Installer.exe
 - ✅ EnneadTab_For_Revit_Installer.exe
+- ✅ Emailer.exe
+- ✅ Messenger.exe
+- ✅ ProgressBar.exe
 
 For the full version with all features, please use the standard distribution.
 
@@ -37,7 +40,7 @@ This repository contains:
 - Special thanks to Ehsan and the pyRevit team for providing the foundation for the Revit Extension
 
 ## 💭 Wisdom of the Day
-A cannibal is someone who is fed up with people.
+I wouldn't buy anything with velcro. It's a total rip-off.
 
 ---
 *Have a nice day! Hope you enjoy using this product.*

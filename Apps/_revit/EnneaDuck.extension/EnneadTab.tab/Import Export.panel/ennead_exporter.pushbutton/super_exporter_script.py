@@ -96,6 +96,9 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
         self.initiate_dwg_setting_list_source()
 
         self.textbox_combined_pdf_name.Text = "{}_{}_Combined".format(date.today(), DOC.Title)
+        
+        # Initialize preview image system
+        self._preview_file_toggle = True  # Start with previewA
 
 
 
@@ -1116,6 +1119,8 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
 
 
     def button_close_window_Clicked(self, sender, args):
+        # Clean up preview images before closing
+        self._cleanup_old_preview_images()
         self.Close()
 
     def selective_export_Clicked(self, sender, args):
@@ -1241,27 +1246,75 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
 
 
     def update_preview_image(self, view_or_sheet):
-        """Updates the preview image for a view or sheet with improved file handling.
+        """Updates the preview image for a view or sheet using alternating preview files.
+        
+        Uses previewA and previewB to avoid file conflicts when WPF form is displaying images.
         
         Args:
             view_or_sheet: Revit ViewSheet or View object to preview
         """
         
-        preview_filename_naked = "preview_image"
-    
-        real_preview_file_exported = REVIT_EXPORT.export_image(
-                                                    view_or_sheet,
-                                                    preview_filename_naked,
-                                                    FOLDER.DUMP_FOLDER,
-                                                    is_thumbnail=True)
-        full_path = FOLDER.get_local_dump_folder_file(real_preview_file_exported)
         try:
+            # Determine which preview file to use (alternate between A and B)
+            if not hasattr(self, '_preview_file_toggle'):
+                self._preview_file_toggle = True  # Start with A
+            
+            preview_filename_naked = "previewA" if self._preview_file_toggle else "previewB"
+            
+            # Try to export the preview image with retries
+            real_preview_file_exported = None
+            for attempt in range(3):
+                real_preview_file_exported = REVIT_EXPORT.export_image(
+                                                            view_or_sheet,
+                                                            preview_filename_naked,
+                                                            FOLDER.DUMP_FOLDER,
+                                                            is_thumbnail=True)
+                
+                if real_preview_file_exported:
+                    break
+                    
+                if attempt < 2:  # Don't sleep on the last attempt
+                    import time
+                    time.sleep(0.5)  # Small delay before retry
+            
+            if not real_preview_file_exported:
+                print("Failed to export preview image for {} after 3 attempts".format(view_or_sheet.Name))
+                return
+                
+            full_path = FOLDER.get_local_dump_folder_file(real_preview_file_exported)
+            
+            if not os.path.exists(full_path):
+                print("Preview image file not found: {}".format(full_path))
+                return
+            
+            # Wait for file to be ready
+            if not FOLDER.wait_until_file_is_ready(full_path):
+                print("Preview image file not ready: {}".format(full_path))
+                return
+                
             self.set_image_source(self.preview_image, full_path)
-        except:
-            print ("Failed to set preview image: {}".format(full_path))
+            
+            # Toggle for next use
+            self._preview_file_toggle = not self._preview_file_toggle
+            
+        except Exception as e:
+            print("Failed to update preview image for {}: {}".format(view_or_sheet.Name, str(e)))
             import traceback
             ERROR_HANDLE.print_note(traceback.format_exc())
-            pass
+    
+    def _cleanup_old_preview_images(self):
+        """Clean up old preview images to prevent file conflicts."""
+        try:
+            for filename in os.listdir(FOLDER.DUMP_FOLDER):
+                if filename.startswith("previewA") or filename.startswith("previewB"):
+                    if filename.endswith(".jpg"):
+                        file_path = os.path.join(FOLDER.DUMP_FOLDER, filename)
+                        try:
+                            os.remove(file_path)
+                        except:
+                            pass  # File might be in use, skip it
+        except:
+            pass  # If cleanup fails, continue anyway
       
 
 

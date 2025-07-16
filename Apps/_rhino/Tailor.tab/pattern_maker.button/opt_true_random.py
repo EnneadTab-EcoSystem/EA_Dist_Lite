@@ -1,3 +1,23 @@
+"""True Random Pattern Generator
+
+Generates completely random patterns based on type definitions and their ratios.
+Features:
+- Pure random distribution without spatial bias
+- Respects type ratios from TYPE_DEFINITIONS
+- Creates weighted population for random selection
+- Processes entire grid without gradient effects
+- Provides uniform randomness across all positions
+
+Algorithm:
+1. Extracts types and weights from TYPE_DEFINITIONS
+2. Creates weighted population list (100x multiplier for precision)
+3. Randomly selects types for each grid position
+4. Returns location map with (x,y) coordinates and type assignments
+
+Returns:
+- dict: Key is (x,y) tuple, value is type string
+- Distribution follows TYPE_DEFINITIONS ratios exactly"""
+
 import random
 
 from pattern_maker_left import TYPE_DEFINITIONS

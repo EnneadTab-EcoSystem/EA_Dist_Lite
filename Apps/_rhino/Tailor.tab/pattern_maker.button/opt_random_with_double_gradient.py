@@ -1,3 +1,32 @@
+"""Random Pattern Generator with Double Gradient Effect
+
+Generates patterns with paired row gradient distribution for enhanced visual consistency.
+Features:
+- Creates identical patterns for adjacent row pairs (0-1, 2-3, etc.)
+- Combines random distribution with spatial gradient effects
+- Uses rank_from_bm values for vertical positioning preference
+- Applies exponential scaling for strong gradient effects
+- Provides detailed analysis of paired row consistency
+
+Double Gradient Logic:
+- Bottom row pairs prefer rank_from_bm=1 types
+- Top row pairs prefer rank_from_bm=5 types
+- Middle row pairs use linear interpolation between ranks
+- Each pair of rows shares identical pattern for consistency
+- Exponential scaling (a=0.35) controls gradient strength
+
+Algorithm:
+1. Processes rows in steps of 2 for paired treatment
+2. Calculates preferred rank for each row pair position
+3. Adjusts weights based on rank differences
+4. Creates weighted population for random selection
+5. Applies same pattern to both rows in pair
+6. Reports detailed analysis of paired consistency
+
+Returns:
+- dict: Key is (x,y) tuple, value is type string
+- Paired rows show identical patterns for visual consistency"""
+
 import random
 
 import pattern_maker_left
