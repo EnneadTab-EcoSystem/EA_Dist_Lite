@@ -170,7 +170,8 @@ def get_autodesk_user_name():
 
 IS_DEVELOPER = _is_EnneadTab_developer()
 
-
+# Remove the immediate call to update_user_log() to avoid circular dependency
+# The function will be called when needed instead of at module import time
 
 def update_user_log():
     """Record user activity timestamp in shared log file.
@@ -178,16 +179,25 @@ def update_user_log():
     Creates or updates a user-specific log file with current timestamp.
     File is stored in shared location for usage tracking.
     """
-    import DATA_FILE
-    with DATA_FILE.update_data("USER_LOG_{}".format(USER_NAME), is_local=False) as data:
-        if "log" not in data.keys():
-            data["log"] = []
-        data["log"].append(time.time())
+    # Lazy import to avoid circular dependency
+    try:
+        import DATA_FILE
+        with DATA_FILE.update_data("USER_LOG_{}".format(USER_NAME), is_local=False) as data:
+            if "log" not in data.keys():
+                data["log"] = []
+            data["log"].append(time.time())
+    except Exception as e:
+        # Silently fail if DATA_FILE is not available
+        pass
 
-try:
-    update_user_log()
-except Exception as e:
-    pass
+# Lazy initialization - only call when actually needed
+def _lazy_update_user_log():
+    """Lazy wrapper for update_user_log to avoid circular imports."""
+    try:
+        update_user_log()
+    except Exception as e:
+        pass
+
 
 def get_rhino_developer_emails():
     """Get email addresses for all Rhino developers.

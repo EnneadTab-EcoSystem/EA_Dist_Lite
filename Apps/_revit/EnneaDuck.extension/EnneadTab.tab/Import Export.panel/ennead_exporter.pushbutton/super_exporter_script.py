@@ -29,7 +29,7 @@ import HELPER
 
 
 from EnneadTab import JOKE, DATA_FILE, NOTIFICATION, SOUND, SPEAK, DOCUMENTATION
-from EnneadTab import ERROR_HANDLE, FOLDER, IMAGE, LOG
+from EnneadTab import ERROR_HANDLE, FOLDER, IMAGE, LOG, USER
 from EnneadTab.REVIT import REVIT_FORMS, REVIT_APPLICATION, REVIT_EVENT, REVIT_EXPORT, REVIT_SYNC
 from Autodesk.Revit import DB # pyright: ignore 
 from Autodesk.Revit import UI # pyright: ignore
@@ -1255,6 +1255,9 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
         """
         
         try:
+            # Clean up old preview images first
+            self._cleanup_old_preview_images()
+            
             # Determine which preview file to use (alternate between A and B)
             if not hasattr(self, '_preview_file_toggle'):
                 self._preview_file_toggle = True  # Start with A
@@ -1264,32 +1267,38 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
             # Try to export the preview image with retries
             real_preview_file_exported = None
             for attempt in range(3):
-                real_preview_file_exported = REVIT_EXPORT.export_image(
-                                                            view_or_sheet,
-                                                            preview_filename_naked,
-                                                            FOLDER.DUMP_FOLDER,
-                                                            is_thumbnail=True)
-                
-                if real_preview_file_exported:
-                    break
+                try:
+                    real_preview_file_exported = REVIT_EXPORT.export_image(
+                                                                view_or_sheet,
+                                                                preview_filename_naked,
+                                                                FOLDER.DUMP_FOLDER,
+                                                                is_thumbnail=True)
                     
-                if attempt < 2:  # Don't sleep on the last attempt
-                    import time
-                    time.sleep(0.5)  # Small delay before retry
+                    if real_preview_file_exported:
+                        break
+                        
+                    if attempt < 2:  # Don't sleep on the last attempt
+                        import time
+                        time.sleep(0.5)  # Small delay before retry
+                except Exception as e:
+                    ERROR_HANDLE.print_note("Preview export attempt {} failed: {}".format(attempt + 1, str(e)))
+                    if attempt < 2:
+                        import time
+                        time.sleep(0.5)
             
             if not real_preview_file_exported:
-                print("Failed to export preview image for {} after 3 attempts".format(view_or_sheet.Name))
+                ERROR_HANDLE.print_note("Failed to export preview image for {} after 3 attempts".format(view_or_sheet.Name))
                 return
                 
             full_path = FOLDER.get_local_dump_folder_file(real_preview_file_exported)
             
             if not os.path.exists(full_path):
-                print("Preview image file not found: {}".format(full_path))
+                ERROR_HANDLE.print_note("Preview image file not found: {}".format(full_path))
                 return
             
             # Wait for file to be ready
             if not FOLDER.wait_until_file_is_ready(full_path):
-                print("Preview image file not ready: {}".format(full_path))
+                ERROR_HANDLE.print_note("Preview image file not ready: {}".format(full_path))
                 return
                 
             self.set_image_source(self.preview_image, full_path)
@@ -1298,22 +1307,31 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
             self._preview_file_toggle = not self._preview_file_toggle
             
         except Exception as e:
-            print("Failed to update preview image for {}: {}".format(view_or_sheet.Name, str(e)))
+            ERROR_HANDLE.print_note("Failed to update preview image for {}: {}".format(view_or_sheet.Name, str(e)))
             import traceback
             ERROR_HANDLE.print_note(traceback.format_exc())
     
     def _cleanup_old_preview_images(self):
         """Clean up old preview images to prevent file conflicts."""
         try:
+            import time
+            current_time = int(time.time())
+            
             for filename in os.listdir(FOLDER.DUMP_FOLDER):
-                if filename.startswith("previewA") or filename.startswith("previewB"):
-                    if filename.endswith(".jpg"):
-                        file_path = os.path.join(FOLDER.DUMP_FOLDER, filename)
-                        try:
-                            os.remove(file_path)
-                        except:
-                            pass  # File might be in use, skip it
-        except:
+                # Only clean up preview files, not regular export files
+                if (filename.startswith("previewA") or filename.startswith("previewB")) and filename.endswith(".jpg"):
+                    file_path = os.path.join(FOLDER.DUMP_FOLDER, filename)
+                    try:
+                        # Check if file is older than 2 minutes to avoid deleting active files
+                        if os.path.exists(file_path):
+                            file_age = current_time - int(os.path.getmtime(file_path))
+                            if file_age > 120:  # 2 minutes
+                                os.remove(file_path)
+                    except Exception as e:
+                        # If removal fails, just skip it - don't try to rename
+                        pass
+        except Exception as e:
+            ERROR_HANDLE.print_note("Preview cleanup error: {}".format(str(e)))
             pass  # If cleanup fails, continue anyway
       
 

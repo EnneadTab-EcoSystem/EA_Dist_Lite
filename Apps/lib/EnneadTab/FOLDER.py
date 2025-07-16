@@ -16,17 +16,35 @@ Compatible with Python 2.7 and Python 3.x
 
 import time
 import os
+import traceback
 
-from ENVIRONMENT import DUMP_FOLDER, SHARED_DUMP_FOLDER, PLUGIN_EXTENSION
+# Try to import USER with error handling to avoid circular import warnings
+try:
+    import USER
+except Exception:
+    print ("USER import failed in FOLDER.py, {}".format(traceback.format_exc()))
+    # Create a minimal USER fallback if import fails
+    class USER_FALLBACK:
+        USER_NAME = os.environ.get("USERNAME", "unknown")
+    USER = USER_FALLBACK()
+
+# Try to import ENVIRONMENT with error handling
+try:
+    from ENVIRONMENT import DUMP_FOLDER, SHARED_DUMP_FOLDER, PLUGIN_EXTENSION
+except Exception:
+    print ("ENVIRONMENT import failed in FOLDER.py, {}".format(traceback.format_exc()))
+    # Fallback values if ENVIRONMENT import fails
+    DUMP_FOLDER = os.path.join(os.environ.get("USERPROFILE", ""), "Documents", "EnneadTab Ecosystem", "Dump")
+    SHARED_DUMP_FOLDER = DUMP_FOLDER
+    PLUGIN_EXTENSION = ".sexyDuck"
+
 try:
     import COPY
 except Exception as e:
-    print(e)
+    print ("COPY import failed in FOLDER.py: {}".format(traceback.format_exc()))
 
 
-def purge_powershell_folder():
-    """TO-DO: this is for backward compatibility, will remove after May 20 2025"""
-    pass
+
 
 
 def get_safe_copy(filepath, include_metadata=False):
@@ -166,9 +184,7 @@ def _get_internal_file_from_folder(folder, file_name):
     return os.path.join(folder, _secure_file_name(file_name))
   
 
-def get_EA_dump_folder_file(file_name):
-    """TO-DO:this is for backward compatibility, will remove after May 20 2025"""
-    return get_local_dump_folder_file(file_name)
+
 
 def get_local_dump_folder_file(file_name):
     """Get full path for file in EA dump folder.
@@ -383,38 +399,31 @@ def secure_filename_in_folder(output_folder, desired_name, extension):
         if desired_name in file_name and extension in file_name.lower():
             new_name = desired_name
 
+            # Check if target file already exists and use unique name if needed
+            target_path = os.path.join(output_folder, new_name + extension)
+            if os.path.exists(target_path):
+                import time
+                unique_suffix = str(int(time.time() * 1000))[-6:]  # Last 6 digits of timestamp
+                new_name = "{}_{}".format(desired_name, unique_suffix)
+                target_path = os.path.join(output_folder, new_name + extension)
+
             # this prefix allow longer path limit
             old_path = "\\\\?\\{}\\{}".format(output_folder, file_name)
             new_path = "\\\\?\\{}\\{}".format(output_folder, new_name + extension)
             try:
                 os.rename(old_path, new_path)
-
-            except:
+                ERROR_HANDLE.print_note("Successfully renamed to {}".format(new_name + extension))
+            except Exception as e:
                 try:
                     os.rename(
                         os.path.join(output_folder, file_name),
                         os.path.join(output_folder, new_name + extension),
                     )
-
-                except Exception as e:
-                    print(
-                        "filename clean up failed: skip {} becasue: {}".format(
-                            file_name, e
-                        )
-                    )
-                    # If the target file already exists and we can't rename, try to use a unique name
-                    if "Cannot create" in str(e) and "already exists" in str(e):
-                        import time
-                        unique_suffix = str(int(time.time() * 1000))[-6:]  # Last 6 digits of timestamp
-                        new_name = "{}_{}".format(desired_name, unique_suffix)
-                        try:
-                            os.rename(
-                                os.path.join(output_folder, file_name),
-                                os.path.join(output_folder, new_name + extension),
-                            )
-                            print("Successfully renamed to {}".format(new_name + extension))
-                        except Exception as e2:
-                            print("Failed to rename with unique name: {}".format(e2))
+                    ERROR_HANDLE.print_note("Successfully renamed to {} (fallback)".format(new_name + extension))
+                except Exception as e2:
+                    ERROR_HANDLE.print_note("filename clean up failed: skip {} becasue: {}".format(file_name, e2))
+                    # Don't try to rename again, just continue
+                    continue
 
 
 def wait_until_file_is_ready(file_path):
@@ -441,7 +450,7 @@ def wait_until_file_is_ready(file_path):
     return False
 
 
-if __name__ == "__main__":
+def unit_test():
     print( "input: test.txt, should return test.txt")
     print ("actual return: {}".format(_secure_file_name("test.txt")))
     print ("\n")
@@ -452,3 +461,8 @@ if __name__ == "__main__":
     print ("actual return: {}".format(_secure_file_name("test")))
     print ("\n")
     print( "PLUGIN_EXTENSION: {}".format(PLUGIN_EXTENSION))
+
+
+
+if __name__ == "__main__":
+    unit_test()

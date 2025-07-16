@@ -6,8 +6,33 @@ import json
 import webbrowser
 
 
-import FOLDER 
 import ENVIRONMENT
+
+# Try to import FOLDER, with a fallback mechanism
+FOLDER = None
+try:
+    import FOLDER
+    # Test if the function works
+    try:
+        test_result = FOLDER.get_local_dump_folder_file("test")
+    except:
+        FOLDER = None
+except Exception as e:
+    FOLDER = None
+
+# If FOLDER import failed, create fallback
+if FOLDER is None:
+    # Provide fallback functions that use ENVIRONMENT directly
+    class FOLDER_FALLBACK:
+        @staticmethod
+        def get_local_dump_folder_file(file_name):
+            return os.path.join(ENVIRONMENT.DUMP_FOLDER, file_name)
+        
+        @staticmethod
+        def get_shared_dump_folder_file(file_name):
+            return os.path.join(ENVIRONMENT.SHARED_DUMP_FOLDER, file_name)
+    
+    FOLDER = FOLDER_FALLBACK()
 
 import TIME 
 import IMAGE

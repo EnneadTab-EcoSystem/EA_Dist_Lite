@@ -62,10 +62,21 @@ try:
 
     import System # pyright: ignore
     from EnneadTab import NOTIFICATION, DATA_FILE, FOLDER, OUTPUT, TIME, VERSION_CONTROL
-    from EnneadTab import MODULE_HELPER, ERROR_HANDLE, USER, KEYBOARD, ENVIRONMENT, SOUND, DOCUMENTATION, LOG, IMAGE
+    from EnneadTab import MODULE_HELPER, ERROR_HANDLE, USER, ENVIRONMENT, SOUND, DOCUMENTATION, LOG, IMAGE
     from EnneadTab import JOKE, EMOJI, ENCOURAGING, HOLIDAY, EXE
     from EnneadTab.REVIT import REVIT_FORMS, REVIT_APPLICATION, REVIT_EVENT, REVIT_SELECTION
 
+    # Try to import KEYBOARD if it exists, otherwise create a fallback
+    try:
+        from EnneadTab import KEYBOARD
+    except ImportError:
+        # Create a fallback KEYBOARD module
+        class KEYBOARD_FALLBACK:
+            @staticmethod
+            def send_control_D():
+                # Fallback implementation - do nothing
+                pass
+        KEYBOARD = KEYBOARD_FALLBACK()
 
     # need below for the C drive space check
     import clr # pyright: ignore
@@ -73,7 +84,12 @@ try:
     from System.IO import DriveInfo # pyright: ignore
 
 except:
-    print (ERROR_HANDLE.get_alternative_traceback())
+    try:
+        print (ERROR_HANDLE.get_alternative_traceback())
+    except:
+        import traceback
+        print("Error during plugin startup import:")
+        print(traceback.format_exc())
 
     
 def check_minimal_version_for_enneadtab():
@@ -363,8 +379,15 @@ def purge_dump_folder_families():
     FOLDER.cleanup_folder_by_extension(FOLDER.DUMP_FOLDER, ".dwg", old_file_only=True)
 
 
+def should_register_context_menu():
+    """Check if context menu should be registered based on Revit version."""
+    try:
+        return REVIT_APPLICATION.is_version_at_least(2025)
+    except:
+        return False
 
-if REVIT_APPLICATION.is_version_at_least(2025):
+
+if should_register_context_menu():
     class EnneadTabContextMenuMaker(UI.IContextMenuCreator):
         def BuildContextMenu(self, context_menu):
             def is_enneadtab_command(command):

@@ -14,6 +14,7 @@ import os
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
+from EnneadTab import DATA_CONVERSION
 from Autodesk.Revit import DB # pyright: ignore 
 # from Autodesk.Revit import UI # pyright: ignore
 doc = __revit__.ActiveUIDocument.Document # pyright: ignore
@@ -110,7 +111,13 @@ def export_gif_from_archive():
     camera = view.GetOrientation
 
     # get a list of  files to detach, use short cut. short cut name  is date.
-    files = list(forms.pick_file(file_ext = "rvt", multi_file=True, title = "Pick the shortcut to your revit archive."))
+    files_raw = forms.pick_file(file_ext = "rvt", multi_file=True, title = "Pick the shortcut to your revit archive.")
+    
+    # Handle .NET Array[str] objects returned by forms.pick_file
+    if files_raw:
+        files = DATA_CONVERSION.safe_convert_net_array_to_list(files_raw)
+    else:
+        files = []
 
     print(files)
 

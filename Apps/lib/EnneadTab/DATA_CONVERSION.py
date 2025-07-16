@@ -95,6 +95,74 @@ def compare_list(A, B):
     shared = [x for x in A if x in B]
 
     return unique_A, unique_B, shared
+
+
+def safe_convert_net_array_to_list(net_array):
+    """
+    Safely convert .NET Array objects (like those returned by forms.pick_file) to Python lists.
+    
+    This function handles the common issue where pyrevit's forms.pick_file() returns
+    a .NET Array[str] object instead of a Python list, which can cause AttributeError
+    when trying to call .replace() or other string methods on it.
+    
+    Args:
+        net_array: The object to convert, could be a .NET Array, Python list, tuple, or other iterable
+        
+    Returns:
+        list: A Python list containing the converted items as strings
+        
+    Example:
+        >>> files_raw = forms.pick_file(multi_file=True)
+        >>> files = safe_convert_net_array_to_list(files_raw)
+        >>> # Now files is a proper Python list that can be safely used
+    """
+    if not net_array:
+        return []
+        
+    try:
+        # Handle .NET Array objects that don't have .replace() method
+        if hasattr(net_array, '__iter__') and not isinstance(net_array, (list, tuple, str, bytes)):
+            # Convert each item to string to handle any .NET string objects
+            return [str(item) for item in net_array]
+        else:
+            # Handle regular Python iterables
+            return list(net_array) if isinstance(net_array, (list, tuple)) else [net_array]
+    except Exception as e:
+        # Fallback: try to convert to string and handle as single item
+        try:
+            array_str = str(net_array)
+            if array_str and array_str != 'None':
+                return [array_str]
+            else:
+                return []
+        except:
+            # Last resort: return empty list
+            return []
+
+
+def safe_convert_to_string(obj):
+    """
+    Safely convert any object to a string, handling .NET objects that don't have .replace().
+    
+    Args:
+        obj: The object to convert to string
+        
+    Returns:
+        str: String representation of the object
+        
+    Example:
+        >>> net_array = some_net_array_object
+        >>> result = safe_convert_to_string(net_array)
+        >>> # Now result is a safe string that can be used with .replace() etc.
+    """
+    try:
+        return str(obj)
+    except:
+        # Handle .NET Array objects that don't have .replace()
+        if hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes)):
+            return "[" + ", ".join(str(item) for item in obj) + "]"
+        else:
+            return "Unable to convert to string"
 def unit_test():
     # print all the enumerations of DataType
     print("All DataType in class:")

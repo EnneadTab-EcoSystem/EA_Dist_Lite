@@ -13,6 +13,7 @@ from pyrevit import script #
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
+from EnneadTab import DATA_CONVERSION
 from Autodesk.Revit import DB # pyright: ignore 
 import os.path as op
 # from Autodesk.Revit import UI # pyright: ignore
@@ -52,7 +53,10 @@ def make_update_detail_item_from_CAD():
 
 
 
-    source_files = forms.pick_file(file_ext = "dwg", multi_file = True)
+    source_files_raw = forms.pick_file(file_ext = "dwg", multi_file = True)
+    if not source_files_raw:
+        return
+    source_files = DATA_CONVERSION.safe_convert_net_array_to_list(source_files_raw)
     opts = ["Always Override", "Let me decide one by one"]
     res = ARCHI_UTILITY.dialogue(main_text = "If encountering existing family, how should it handle?", options = opts)
     is_always_override = True

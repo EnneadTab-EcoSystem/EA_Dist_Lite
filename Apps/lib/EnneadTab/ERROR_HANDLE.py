@@ -14,16 +14,57 @@ Key Features:
 - Silent error handling options
 """
 
+import traceback
+
+# Import modules with error handling
 try:
     import ENVIRONMENT
-    import FOLDER
+except Exception as e:
+    print("Error importing ENVIRONMENT in ERROR_HANDLE.py: {}".format(traceback.format_exc()))
+    ENVIRONMENT = None
+
+try:
     import EMAIL
+except Exception as e:
+    print("Error importing EMAIL in ERROR_HANDLE.py: {}".format(traceback.format_exc()))
+    EMAIL = None
+
+try:
     import USER
+except Exception as e:
+    print("Error importing USER in ERROR_HANDLE.py: {}".format(traceback.format_exc()))
+    USER = None
+
+try:
     import TIME
+except Exception as e:
+    print("Error importing TIME in ERROR_HANDLE.py: {}".format(traceback.format_exc()))
+    TIME = None
+
+try:
     import NOTIFICATION
+except Exception as e:
+    print("Error importing NOTIFICATION in ERROR_HANDLE.py: {}".format(traceback.format_exc()))
+    NOTIFICATION = None
+
+try:
     import OUTPUT
 except Exception as e:
-    print(e)
+    print("Error importing OUTPUT in ERROR_HANDLE.py: {}".format(traceback.format_exc()))
+    OUTPUT = None
+
+try:
+    import FOLDER
+except Exception as e:
+    print("Error importing FOLDER in ERROR_HANDLE.py: {}".format(traceback.format_exc()))
+    FOLDER = None
+
+try:
+    import DATA_CONVERSION
+except Exception as e:
+    print("Error importing DATA_CONVERSION in ERROR_HANDLE.py: {}".format(traceback.format_exc()))
+    DATA_CONVERSION = None
+
 
 # Add recursion depth tracking
 _error_handler_recursion_depth = 0
@@ -104,7 +145,16 @@ def try_catch_error(is_silent=False, is_pass = False):
                     _error_handler_recursion_depth -= 1
                     return
                     
-                error_msg = str(e)
+                # Safely convert error message to string, handling Array[str] objects
+                try:
+                    if hasattr(e, '__iter__') and not isinstance(e, (str, bytes)):
+                        # Handle array-like objects by joining them
+                        error_msg = " ".join(str(item) for item in e)
+                    else:
+                        error_msg = str(e)
+                except:
+                    error_msg = "Unable to convert error to string"
+                
                 print_note(error_msg)
                 print_note("error_Wrapper func for EA Log -- Error: " + error_msg)
                 error_time = "Oops at {}\n\n".format(TIME.get_formatted_current_time())
@@ -126,8 +176,13 @@ def try_catch_error(is_silent=False, is_pass = False):
                     print_note("Cannot send email: {}".format(get_alternative_traceback()))
 
                 if not is_silent:
-                    error_file = FOLDER.get_local_dump_folder_file("error_general_log.txt")
-                    error += "\n\n######If you have " + ENVIRONMENT.PLUGIN_NAME + " UI window open, just close the original " + ENVIRONMENT.PLUGIN_NAME + " window. Do no more action, otherwise the program might crash.##########\n#########Not sure what to do? Msg Sen Zhang, you have dicovered a important bug and we need to fix it ASAP!!!!!########BTW, a local copy of the error is available at {}".format(error_file)
+                    try:
+                        error_file = FOLDER.get_local_dump_folder_file("error_general_log.txt")
+                        error += "\n\n######If you have " + ENVIRONMENT.PLUGIN_NAME + " UI window open, just close the original " + ENVIRONMENT.PLUGIN_NAME + " window. Do no more action, otherwise the program might crash.##########\n#########Not sure what to do? Msg Sen Zhang, you have dicovered a important bug and we need to fix it ASAP!!!!!########BTW, a local copy of the error is available at {}".format(error_file)
+                    except Exception as path_error:
+                        # Fallback if FOLDER is not available
+                        error_file = "error_general_log.txt"
+                        error += "\n\n######If you have " + ENVIRONMENT.PLUGIN_NAME + " UI window open, just close the original " + ENVIRONMENT.PLUGIN_NAME + " window. Do no more action, otherwise the program might crash.##########\n#########Not sure what to do? Msg Sen Zhang, you have dicovered a important bug and we need to fix it ASAP!!!!!########BTW, a local copy of the error is available at {}".format(error_file)
                     try:
                         import io
                         with io.open(error_file, "w", encoding="utf-8") as f:
@@ -135,11 +190,12 @@ def try_catch_error(is_silent=False, is_pass = False):
                     except IOError as e:
                         print_note(e)
 
-                    output = OUTPUT.get_output()
-                    output.write(error_time, OUTPUT.Style.Subtitle)
-                    output.write(error)
-                    output.insert_divider()
-                    output.plot()
+                    if OUTPUT is not None:
+                        output = OUTPUT.get_output()
+                        output.write(error_time, OUTPUT.Style.Subtitle)
+                        output.write(error)
+                        output.insert_divider()
+                        output.plot()
 
                 if ENVIRONMENT.IS_REVIT_ENVIRONMENT and not is_silent:
                     NOTIFICATION.messenger(
@@ -180,22 +236,67 @@ def print_note(*args):
         
         # If single argument, keep original behavior
         if len(args) == 1:
-            output.print_md("***[Dev Debug Only Note]***:{}".format(str(args[0])))
+            # Use utility function to safely convert to string
+            if DATA_CONVERSION:
+                arg_str = DATA_CONVERSION.safe_convert_to_string(args[0])
+            else:
+                try:
+                    arg_str = str(args[0])
+                except:
+                    # Handle .NET Array objects that don't have .replace()
+                    if hasattr(args[0], '__iter__') and not isinstance(args[0], (str, bytes)):
+                        arg_str = "[" + ", ".join(str(item) for item in args[0]) + "]"
+                    else:
+                        arg_str = "Unable to convert to string"
+            output.print_md("***[Dev Debug Only Note]***:{}".format(arg_str))
             return
             
         # For multiple arguments, print type and value for each
         output.print_md("***[Dev Debug Only Note]***")
         for arg in args:
-            output.print_md("- *{}*: {}".format(type(arg).__name__, str(arg)))
+            if DATA_CONVERSION:
+                arg_str = DATA_CONVERSION.safe_convert_to_string(arg)
+            else:
+                try:
+                    arg_str = str(arg)
+                except:
+                    # Handle .NET Array objects that don't have .replace()
+                    if hasattr(arg, '__iter__') and not isinstance(arg, (str, bytes)):
+                        arg_str = "[" + ", ".join(str(item) for item in arg) + "]"
+                    else:
+                        arg_str = "Unable to convert to string"
+            output.print_md("- *{}*: {}".format(type(arg).__name__, arg_str))
             
     except Exception as e:
         # Fallback to print if pyrevit not available
         if len(args) == 1:
-            print("[Dev Debug Only Note]:{}".format(str(args[0])))
+            if DATA_CONVERSION:
+                arg_str = DATA_CONVERSION.safe_convert_to_string(args[0])
+            else:
+                try:
+                    arg_str = str(args[0])
+                except:
+                    # Handle .NET Array objects that don't have .replace()
+                    if hasattr(args[0], '__iter__') and not isinstance(args[0], (str, bytes)):
+                        arg_str = "[" + ", ".join(str(item) for item in args[0]) + "]"
+                    else:
+                        arg_str = "Unable to convert to string"
+            print("[Dev Debug Only Note]:{}".format(arg_str))
             return
             
         print("[Dev Debug Only Note]")
         for arg in args:
-            print("- {}: {}".format(type(arg).__name__, str(arg)))
+            if DATA_CONVERSION:
+                arg_str = DATA_CONVERSION.safe_convert_to_string(arg)
+            else:
+                try:
+                    arg_str = str(arg)
+                except:
+                    # Handle .NET Array objects that don't have .replace()
+                    if hasattr(arg, '__iter__') and not isinstance(arg, (str, bytes)):
+                        arg_str = "[" + ", ".join(str(item) for item in arg) + "]"
+                    else:
+                        arg_str = "Unable to convert to string"
+            print("- {}: {}".format(type(arg).__name__, arg_str))
 
 

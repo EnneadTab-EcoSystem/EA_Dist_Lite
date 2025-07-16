@@ -4084,7 +4084,7 @@ EA_RebaseFile</script>
 
 Replaces blocks between Twinmotion and Enscape versions based on Excel mapping data.
 Features:
-- Supports bidirectional block replacement (Twinmotion ↔ Enscape)
+- Supports bidirectional block replacement (Twinmotion â†” Enscape)
 - Uses Excel mapping file for block name relationships
 - Processes entire document with progress tracking
 - Maintains block transformations and properties
@@ -4092,8 +4092,8 @@ Features:
 - Automatically redraws viewport after replacement
 
 Replacement Options:
-1. Twinmotion block → Enscape block
-2. Enscape block → Twinmotion block
+1. Twinmotion block â†’ Enscape block
+2. Enscape block â†’ Twinmotion block
 
 Excel Mapping:
 - Reads from 'enscape_twinmotion_block_mapping.xlsx'
@@ -4119,7 +4119,7 @@ Usage:
 
 Replaces blocks between Twinmotion and Enscape versions based on Excel mapping data.
 Features:
-- Supports bidirectional block replacement (Twinmotion ↔ Enscape)
+- Supports bidirectional block replacement (Twinmotion â†” Enscape)
 - Uses Excel mapping file for block name relationships
 - Processes entire document with progress tracking
 - Maintains block transformations and properties
@@ -4127,8 +4127,8 @@ Features:
 - Automatically redraws viewport after replacement
 
 Replacement Options:
-1. Twinmotion block → Enscape block
-2. Enscape block → Twinmotion block
+1. Twinmotion block â†’ Enscape block
+2. Enscape block â†’ Twinmotion block
 
 Excel Mapping:
 - Reads from 'enscape_twinmotion_block_mapping.xlsx'
@@ -4228,8 +4228,8 @@ Workflow:
 6. Cleans up temporary exploded geometry
 
 File Naming:
-- MotherBabyLobby.3dm → TempStudy_MotherBabyLobby.dwg
-- Other files → TempStudy.dwg
+- MotherBabyLobby.3dm â†’ TempStudy_MotherBabyLobby.dwg
+- Other files â†’ TempStudy.dwg
 
 Usage:
 - Run tool to prepare geometry for CAD export
@@ -4258,8 +4258,8 @@ Workflow:
 6. Cleans up temporary exploded geometry
 
 File Naming:
-- MotherBabyLobby.3dm → TempStudy_MotherBabyLobby.dwg
-- Other files → TempStudy.dwg
+- MotherBabyLobby.3dm â†’ TempStudy_MotherBabyLobby.dwg
+- Other files â†’ TempStudy.dwg
 
 Usage:
 - Run tool to prepare geometry for CAD export

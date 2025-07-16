@@ -8,7 +8,7 @@ import re
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 from EnneadTab.REVIT import REVIT_FORMS, REVIT_APPLICATION, REVIT_SYNC
-from EnneadTab import SOUND, ERROR_HANDLE, LOG, ENVIRONMENT
+from EnneadTab import SOUND, ERROR_HANDLE, LOG, ENVIRONMENT, DATA_CONVERSION
 
 uidoc = REVIT_APPLICATION.get_uidoc()
 doc = REVIT_APPLICATION.get_doc()
@@ -90,7 +90,12 @@ def pick_open_family_docs():
 
 def pick_family_from_folder(folder = None):
     if folder is None:
-        source_files = forms.pick_file(file_ext = "rfa", multi_file = True)
+        source_files_raw = forms.pick_file(file_ext = "rfa", multi_file = True)
+        # Handle .NET Array[str] objects returned by forms.pick_file
+        if source_files_raw:
+            source_files = DATA_CONVERSION.safe_convert_net_array_to_list(source_files_raw)
+        else:
+            source_files = []
     else:
         class MyOption(forms.TemplateListItem):
             @property

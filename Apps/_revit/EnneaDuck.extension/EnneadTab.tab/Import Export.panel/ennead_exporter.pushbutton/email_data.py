@@ -1,5 +1,5 @@
 from pyrevit import forms
-from EnneadTab import EMAIL
+from EnneadTab import EMAIL, DATA_CONVERSION
 
 
 class EmailData(object):
@@ -24,16 +24,16 @@ class EmailData(object):
             self.log_file_path = EXPORTER_UI.log_file_path
 
     def update_attachments(self):
-        attachments_list = forms.pick_file(file_ext = '*', restore_dir = True, multi_file = True, title = "Pick attachments")
-        if not attachments_list:
+        attachments_list_raw = forms.pick_file(file_ext = '*', restore_dir = True, multi_file = True, title = "Pick attachments")
+        if not attachments_list_raw:
             return
-        self.additional_attachments_list = attachments_list
+        self.additional_attachments_list = DATA_CONVERSION.safe_convert_net_array_to_list(attachments_list_raw)
 
     def update_embeded_image(self):
-        images_list = forms.pick_file(file_ext = '*', restore_dir = True, multi_file = True, title = "Pick images to embed in Email.")
-        if not images_list:
+        images_list_raw = forms.pick_file(file_ext = '*', restore_dir = True, multi_file = True, title = "Pick images to embed in Email.")
+        if not images_list_raw:
             return
-        self.embeded_images_list = images_list
+        self.embeded_images_list = DATA_CONVERSION.safe_convert_net_array_to_list(images_list_raw)
 
     def send(self):
         if self.additional_attachments_list:

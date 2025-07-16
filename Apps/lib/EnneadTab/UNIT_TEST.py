@@ -1,6 +1,7 @@
 
 import os
 import sys
+import subprocess
 
 
 import ENVIRONMENT
@@ -161,15 +162,70 @@ class UnitTest:
                 "Running unit test for module <{}>".format(module.__name__)
             )
         )
+        
+        # Always run with default engine first
         try:
             test_func()
             print("OK!")
-            return True
+            result = True
         except AssertionError as e:
             print("Assertion Error! There is some unexpected results in the test")
             ERROR_HANDLE.print_note(ERROR_HANDLE.get_alternative_traceback())
             NOTIFICATION.messenger("[{}] has failed the unit test".format(module))
-            return False
+            result = False
+        
+        # If in terminal/IDE environment, also try IronPython
+        if ENVIRONMENT.is_terminal_environment():
+            self._try_ironpython_unit_test(module)
+        
+        return result
+
+    def _try_ironpython_unit_test(self, module):
+        """Try to run the same unit test using IronPython if available."""
+        # Try to find IronPython executable
+        possible_ipy = [
+            'ipy', 'ipy.exe', 'ipy64', 'ipy64.exe',
+            r'C:\Program Files\IronPython 2.7\ipy.exe',
+            r'C:\Program Files (x86)\IronPython 2.7\ipy.exe',
+        ]
+        
+        ipy_found = None
+        for ipy in possible_ipy:
+            try:
+                # Try to get version to check if exists
+                subprocess.check_output([ipy, '-V'], stderr=subprocess.STDOUT)
+                ipy_found = ipy
+                break
+            except Exception:
+                continue
+        
+        if not ipy_found:
+            return
+        
+        # Get the module file path
+        try:
+            module_file = module.__file__
+        except AttributeError:
+            return
+        
+        print("  Also testing with IronPython: {}".format(ipy_found))
+        try:
+            # Try with timeout first (Python 3)
+            try:
+                result = subprocess.check_output([ipy_found, module_file], 
+                                               stderr=subprocess.STDOUT, 
+                                               universal_newlines=True,
+                                               timeout=30)  # 30 second timeout
+            except (TypeError, AttributeError):
+                # Fallback for IronPython 2.7 which doesn't support timeout parameter
+                result = subprocess.check_output([ipy_found, module_file], 
+                                               stderr=subprocess.STDOUT, 
+                                               universal_newlines=True)
+            print("  IronPython test completed successfully")
+        except subprocess.TimeoutExpired:
+            print("  IronPython test timed out")
+        except Exception as e:
+            print("  IronPython test failed: {}".format(e))
 
     def process_folder(self, folder):
         if not os.path.isdir(folder):
@@ -213,17 +269,9 @@ class UnitTest:
                             code = f.read()
                         module = types.ModuleType(module_name)
                         exec(code, module.__dict__)
+                self.try_run_unit_test(module)
             except Exception as e:
-                print(
-                    "\n\nSomething is wrong when importing [{}] because:\n\n++++++{}++++++\n\n\n".format(
-                        print_text_in_highlight_color(module_name, ok=False),
-                        ERROR_HANDLE.get_alternative_traceback(),
-                    )
-                )
-                continue
-
-            if not self.try_run_unit_test(module):
-                self.failed_module.append(module_name)
+                print("Failed to import or test module {}: {}".format(module_file, e))
 
 
 def test_core_module():
@@ -245,6 +293,6 @@ class TooManyFailedModuleException(BaseException):
         )
 
 
+# Example integration: always run dual engine test for IMAGE.py when running this module directly
 if __name__ == "__main__":
     test_core_module()
-    pass

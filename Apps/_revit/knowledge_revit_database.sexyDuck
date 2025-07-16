@@ -2834,6 +2834,15 @@
         "tab": "Tools",
         "tab_icon": null
     },
+    "EnneadTab.tab\\Tools.panel\\pim_number_fixer.pushbutton\\pim_number_fixer_script.py": {
+        "alias": "Pim Number Fixer",
+        "doc": "Sen Zhang has not writed documentation for this tool, but he should!",
+        "icon": "EnneadTab.tab\\Tools.panel\\pim_number_fixer.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\Tools.panel\\pim_number_fixer.pushbutton\\pim_number_fixer_script.py",
+        "tab": "Tools",
+        "tab_icon": null
+    },
     "EnneadTab.tab\\Tools.panel\\set_filled_region_border_line.pushbutton\\set_filled_region_border_line_script.py": {
         "alias": "Set FilledRegion Border Style",
         "doc": "Specialized filled region styling tool that allows precise control over border line appearance. Quickly apply consistent line styles to multiple filled regions simultaneously, enhancing drawing clarity and graphical standards. Works with individual selections even when regions are nested within groups by using tab-selection technique.",

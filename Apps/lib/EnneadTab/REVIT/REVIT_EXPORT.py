@@ -439,23 +439,32 @@ def export_image(view_or_sheet, file_name_naked, output_folder, is_thumbnail = F
 
         
         try:
-            IMAGE.convert_image_to_greyscale(file_path)
-            return file_name_naked + ".jpg"
-        except:
-            print ("Failed to convert image to greyscale in step 1")
+            result = IMAGE.convert_image_to_greyscale(file_path)
+            if result:
+                # result is the actual filename that was saved (might be different from original)
+                return result
+            else:
+                print("Greyscale conversion returned False")
+                return file_name_naked + ".jpg"  # Return original file if conversion fails
+        except Exception as e:
+            print("Failed to convert image to greyscale in step 1: {}".format(str(e)))
             import traceback
             ERROR_HANDLE.print_note(traceback.format_exc())
             bw_file = "{}\\{}_BW.jpg".format(output_folder, file_name_naked)
             try:
-                IMAGE.convert_image_to_greyscale(file_path, bw_file)
-                os.remove(file_path)
-                os.rename(bw_file, file_path)
-                return file_name_naked + ".jpg"
-            except:
-                print ("Failed to convert image to greyscale in step 2")
+                result = IMAGE.convert_image_to_greyscale(file_path, bw_file)
+                if result:
+                    # result is the actual filename that was saved
+                    os.remove(file_path)
+                    return result
+                else:
+                    print("Greyscale conversion step 2 returned False")
+                    return file_name_naked + ".jpg"  # Return original file if conversion fails
+            except Exception as e:
+                print("Failed to convert image to greyscale in step 2: {}".format(str(e)))
                 import traceback
                 ERROR_HANDLE.print_note(traceback.format_exc())
-                return "{}_BW.jpg".format(file_name_naked)
+                return file_name_naked + ".jpg"  # Return original file if conversion fails
     return file_name_naked + ".jpg"
 
 

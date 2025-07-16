@@ -557,12 +557,22 @@ runpy.run_path('{}', run_name='__main__')
             # If wait is True, wait for completion and capture output
             if wait:
                 try:
-                    stdout, stderr = process.communicate(timeout=300)  # 5 minute timeout
+                    # Check if TimeoutExpired is available (not in IronPython 2.7)
+                    if hasattr(subprocess, 'TimeoutExpired'):
+                        stdout, stderr = process.communicate(timeout=300)  # 5 minute timeout
+                    else:
+                        # IronPython 2.7 compatibility - no timeout support
+                        stdout, stderr = process.communicate()
                     success = process.returncode == 0
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    stdout, stderr = process.communicate()
-                    return False, stdout, "Process took too long to complete and was terminated."
+                except Exception as e:
+                    # Handle timeout or other exceptions
+                    if "TimeoutExpired" in str(e) or "timeout" in str(e).lower():
+                        process.kill()
+                        stdout, stderr = process.communicate()
+                        return False, stdout, "Process took too long to complete and was terminated."
+                    else:
+                        # Re-raise other exceptions
+                        raise e
                 
                 # If successful, return results
                 if success:
