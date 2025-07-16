@@ -10,7 +10,14 @@ import time
 import traceback
 import os
 import subprocess
-import importlib.util
+# IronPython 2.7 compatibility - use imp instead of importlib.util
+try:
+    import importlib.util
+    HAS_IMPORTLIB = True
+except ImportError:
+    import imp
+    HAS_IMPORTLIB = False
+
 from openai import OpenAI
 
 def add_path():
@@ -305,10 +312,17 @@ class TextToScriptConverter:
                     self.save_script(generated_code, func_request, is_temporary=True)
                     
                     # Execute the script
-                    spec = importlib.util.spec_from_file_location("text2script", str(self.temp_filepath))
-                    module = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(module)
-                    
+                    if HAS_IMPORTLIB:
+                        spec = importlib.util.spec_from_file_location("text2script", str(self.temp_filepath))
+                        module = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(module)
+                    else:
+                        # IronPython 2.7 compatibility for imp
+                        module_name = "text2script"
+                        module_path = str(self.temp_filepath)
+                        module_file, module_path, module_desc = imp.find_module(module_name, [os.path.dirname(module_path)])
+                        module = imp.load_module(module_name, module_file, module_path, module_desc)
+
                     if hasattr(module, 'main'):
                         module.main()
                     else:
