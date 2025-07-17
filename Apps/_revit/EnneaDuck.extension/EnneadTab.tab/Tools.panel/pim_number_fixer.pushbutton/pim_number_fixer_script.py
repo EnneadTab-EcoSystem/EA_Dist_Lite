@@ -71,17 +71,18 @@ class PimNumberFixerWindow(WPFWindow):
         # Split on "Sheet - " to get the part after it
         if "Sheet - " not in name_without_ext:
             return None
-        
+
         name_without_ext = name_without_ext.split("Sheet - ", 1)[1]
-        
-        # Find the last occurrence of " - " to properly separate sheet number and sheet name
+
+
+        # Find the first occurrence of " - " to properly separate sheet number and sheet name
         # This handles sheet numbers like "A-001" that contain dashes
-        last_dash_index = name_without_ext.rfind(" - ")
-        if last_dash_index != -1:
-            sheet_number = name_without_ext[:last_dash_index].strip()
-            sheet_name = name_without_ext[last_dash_index + 3:].strip()  # +3 to skip " - "
+        first_dash_index = name_without_ext.find(" - ")
+        if first_dash_index != -1:
+            sheet_number = name_without_ext[:first_dash_index].strip()
+            sheet_name = name_without_ext[first_dash_index + 3:].strip()  # +3 to skip " - "
             return sheet_number, sheet_name
-        
+
         return None
 
     @ERROR_HANDLE.try_catch_error()
@@ -90,6 +91,7 @@ class PimNumberFixerWindow(WPFWindow):
         if not parsed:
             return None
         sheet_number, sheet_name = parsed
+
         extension = os.path.splitext(original_filename)[1]
         new_filename = "{}-{}_{}{}".format(pim_number, sheet_number, sheet_name, extension)
         return new_filename
@@ -182,3 +184,4 @@ if __name__ == "__main__":
 
 
 
+ 
