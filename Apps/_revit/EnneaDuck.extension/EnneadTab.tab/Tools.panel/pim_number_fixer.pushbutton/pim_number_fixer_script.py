@@ -68,21 +68,20 @@ class PimNumberFixerWindow(WPFWindow):
     @ERROR_HANDLE.try_catch_error()
     def parse_filename(self, filename):
         name_without_ext = os.path.splitext(filename)[0]
-        # Split on the first dash that separates sheet number and name
-        # Accept any non-empty part before and after the first dash as sheet number and name
+        # Split on "Sheet - " to get the part after it
+        if "Sheet - " not in name_without_ext:
+            return None
+        
         name_without_ext = name_without_ext.split("Sheet - ", 1)[1]
-        parts = re.split(r'\s*-\s*', name_without_ext, maxsplit=2)
-        # Try to find the last two parts as sheet number and sheet name
-        if len(parts) >= 3:
-            # e.g. temp-Sheet - A100 - Parking Deck Floor Plan
-            sheet_number = parts[-2].strip()
-            sheet_name = parts[-1].strip()
+        
+        # Find the last occurrence of " - " to properly separate sheet number and sheet name
+        # This handles sheet numbers like "A-001" that contain dashes
+        last_dash_index = name_without_ext.rfind(" - ")
+        if last_dash_index != -1:
+            sheet_number = name_without_ext[:last_dash_index].strip()
+            sheet_name = name_without_ext[last_dash_index + 3:].strip()  # +3 to skip " - "
             return sheet_number, sheet_name
-        elif len(parts) == 2:
-            # e.g. A100 - Parking Deck Floor Plan
-            sheet_number = parts[0].strip()
-            sheet_name = parts[1].strip()
-            return sheet_number, sheet_name
+        
         return None
 
     @ERROR_HANDLE.try_catch_error()
