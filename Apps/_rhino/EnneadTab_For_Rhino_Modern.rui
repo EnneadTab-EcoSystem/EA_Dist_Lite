@@ -1627,7 +1627,7 @@ Key Features:
       <script>EA_ActivateEnneadTab
 EA_FindLayerInFiles</script>
     </macro_item>
-    <macro_item guid="00bf977b-c9b8-4b6c-9d6f-b1c8de037f31" bitmap_id="e4bbe240-7cd6-4daa-a88f-6e0597ecfd2f">
+    <macro_item guid="00bf977b-c9b8-4b6c-9d6f-b1c8de037f31" bitmap_id="dde7ee5c-765b-4e7c-82ae-a11b178f2fbe">
       <text>
         <locale_1033>ForceLayerPackage</locale_1033>
       </text>
@@ -4075,7 +4075,7 @@ Key Features:
       <script>EA_ActivateEnneadTab
 EA_RebaseFile</script>
     </macro_item>
-    <macro_item guid="4c379625-5fed-40e4-9aab-c9323b624bb0" bitmap_id="06965733-8d0d-43c6-bed4-6a1bef1a58e5">
+    <macro_item guid="4c379625-5fed-40e4-9aab-c9323b624bb0" bitmap_id="e0825153-b45d-4f82-926a-2836f0971298">
       <text>
         <locale_1033>2425ReplaceBlocks</locale_1033>
       </text>
@@ -4084,7 +4084,7 @@ EA_RebaseFile</script>
 
 Replaces blocks between Twinmotion and Enscape versions based on Excel mapping data.
 Features:
-- Supports bidirectional block replacement (Twinmotion ↔ Enscape)
+- Supports bidirectional block replacement (Twinmotion â†” Enscape)
 - Uses Excel mapping file for block name relationships
 - Processes entire document with progress tracking
 - Maintains block transformations and properties
@@ -4092,8 +4092,8 @@ Features:
 - Automatically redraws viewport after replacement
 
 Replacement Options:
-1. Twinmotion block → Enscape block
-2. Enscape block → Twinmotion block
+1. Twinmotion block â†’ Enscape block
+2. Enscape block â†’ Twinmotion block
 
 Excel Mapping:
 - Reads from 'enscape_twinmotion_block_mapping.xlsx'
@@ -4119,7 +4119,7 @@ Usage:
 
 Replaces blocks between Twinmotion and Enscape versions based on Excel mapping data.
 Features:
-- Supports bidirectional block replacement (Twinmotion ↔ Enscape)
+- Supports bidirectional block replacement (Twinmotion â†” Enscape)
 - Uses Excel mapping file for block name relationships
 - Processes entire document with progress tracking
 - Maintains block transformations and properties
@@ -4127,8 +4127,8 @@ Features:
 - Automatically redraws viewport after replacement
 
 Replacement Options:
-1. Twinmotion block → Enscape block
-2. Enscape block → Twinmotion block
+1. Twinmotion block â†’ Enscape block
+2. Enscape block â†’ Twinmotion block
 
 Excel Mapping:
 - Reads from 'enscape_twinmotion_block_mapping.xlsx'
@@ -4158,7 +4158,7 @@ Usage:
       <script>EA_ActivateEnneadTab
 EA_2425ReplaceBlocks</script>
     </macro_item>
-    <macro_item guid="87629185-ded0-4280-9772-7f507a5c8111" bitmap_id="5aa04d29-6fbb-4ce2-ade7-fe43cf28d56d">
+    <macro_item guid="87629185-ded0-4280-9772-7f507a5c8111" bitmap_id="6108add0-652b-428a-94ea-49e3d5436256">
       <text>
         <locale_1033>ChildrenPalaceMassing</locale_1033>
       </text>
@@ -4203,7 +4203,7 @@ Usage:
       <script>EA_ActivateEnneadTab
 EA_ChildrenPalaceMassing</script>
     </macro_item>
-    <macro_item guid="168370c0-18bf-4742-b4a0-7a82b40ba6c6" bitmap_id="348a111d-c830-4025-beba-469df999db02">
+    <macro_item guid="168370c0-18bf-4742-b4a0-7a82b40ba6c6" bitmap_id="46603f38-04b3-4483-9424-39bf32b42bef">
       <text>
         <locale_1033>ExportWithoutCrv_1643</locale_1033>
       </text>
@@ -4224,12 +4224,12 @@ Workflow:
 2. Explodes blocks to individual geometry objects
 3. Filters out curves and block references
 4. Selects only solid geometry for export
-5. Exports as DWG with &quot;2007 Solids&quot; scheme
+5. Exports as DWG with "2007 Solids" scheme
 6. Cleans up temporary exploded geometry
 
 File Naming:
-- MotherBabyLobby.3dm → TempStudy_MotherBabyLobby.dwg
-- Other files → TempStudy.dwg
+- MotherBabyLobby.3dm â†’ TempStudy_MotherBabyLobby.dwg
+- Other files â†’ TempStudy.dwg
 
 Usage:
 - Run tool to prepare geometry for CAD export
@@ -4254,12 +4254,12 @@ Workflow:
 2. Explodes blocks to individual geometry objects
 3. Filters out curves and block references
 4. Selects only solid geometry for export
-5. Exports as DWG with &quot;2007 Solids&quot; scheme
+5. Exports as DWG with "2007 Solids" scheme
 6. Cleans up temporary exploded geometry
 
 File Naming:
-- MotherBabyLobby.3dm → TempStudy_MotherBabyLobby.dwg
-- Other files → TempStudy.dwg
+- MotherBabyLobby.3dm â†’ TempStudy_MotherBabyLobby.dwg
+- Other files â†’ TempStudy.dwg
 
 Usage:
 - Run tool to prepare geometry for CAD export
@@ -4276,7 +4276,7 @@ Usage:
       <script>EA_ActivateEnneadTab
 EA_ExportWithoutCrv_1643</script>
     </macro_item>
-    <macro_item guid="88e6071a-834e-4831-af1b-67b44b1f13ac" bitmap_id="f114cf2d-bee6-4758-a1ec-dd2713dfa695">
+    <macro_item guid="88e6071a-834e-4831-af1b-67b44b1f13ac" bitmap_id="69da349f-7cba-4a35-a63c-75523374df33">
       <text>
         <locale_1033>2128_PatternMaker</locale_1033>
       </text>
@@ -4345,7 +4345,7 @@ Usage:
       <script>EA_ActivateEnneadTab
 EA_2128_PatternMaker</script>
     </macro_item>
-    <macro_item guid="403a008f-ce02-430f-9012-104b66c2047c" bitmap_id="128bbe24-9ee9-4deb-8baa-cc369522218a">
+    <macro_item guid="403a008f-ce02-430f-9012-104b66c2047c" bitmap_id="144df7c3-3bbf-4772-bae8-37c90b9b8477">
       <text>
         <locale_1033>RegisterMirror</locale_1033>
       </text>
@@ -4400,7 +4400,7 @@ Usage:
       <script>EA_ActivateEnneadTab
 EA_RegisterMirror</script>
     </macro_item>
-    <macro_item guid="7d65fe82-088d-4812-a352-ac01d43707bc" bitmap_id="047f37ef-5818-46c2-b05a-aa40d5d7a9b9">
+    <macro_item guid="7d65fe82-088d-4812-a352-ac01d43707bc" bitmap_id="5d61fd83-5f5c-4816-a574-67cbb42f30c3">
       <text>
         <locale_1033>RelocateAll_1643</locale_1033>
       </text>
@@ -4553,7 +4553,7 @@ Usage:
       <script>EA_ActivateEnneadTab
 EA_MoveImg_1643</script>
     </macro_item>
-    <macro_item guid="f801db6c-13db-4d5a-aef9-21147bcdc5ff" bitmap_id="7789ffd4-a9f3-4a3e-ba2a-3a1e3b855271">
+    <macro_item guid="f801db6c-13db-4d5a-aef9-21147bcdc5ff" bitmap_id="c100ce19-3ecd-43b2-87b7-5fd57691374a">
       <text>
         <locale_1033>2419_Facade move</locale_1033>
       </text>
@@ -5047,8 +5047,8 @@ Key Features:
       <script>! _-RunPythonScript (
 import os
 import sys
-common_folders = [&quot;github&quot;,&quot;dev-repo&quot;,&quot;duck-repo&quot;,&quot;design-repo&quot;]
-lib_folders = [os.path.join(os.environ['USERPROFILE'],x, &quot;EnneadTab-OS&quot;,&quot;Apps&quot;,&quot;lib&quot;,&quot;EnneadTab&quot;) for x in common_folders]
+common_folders = ["github","dev-repo","duck-repo","design-repo"]
+lib_folders = [os.path.join(os.environ['USERPROFILE'],x, "EnneadTab-OS","Apps","lib","EnneadTab") for x in common_folders]
 lib_folders.append( os.path.join(os.environ['USERPROFILE'], 'Documents','EnneadTab Ecosystem','EA_Dist','Apps','lib','EnneadTab'))
 lib_folders.append( os.path.join(os.environ['USERPROFILE'], 'Documents','EnneadTab-Ecosystem','EA_Dist','Apps','lib','EnneadTab'))
 for lib_folder in lib_folders:
@@ -5093,8 +5093,8 @@ Key Features:
       <script>! _-RunPythonScript (
 import os
 import sys
-common_folders = [&quot;github&quot;,&quot;dev-repo&quot;,&quot;duck-repo&quot;,&quot;design-repo&quot;]
-lib_folders = [os.path.join(os.environ['USERPROFILE'],x, &quot;EnneadTab-OS&quot;,&quot;Apps&quot;,&quot;lib&quot;,&quot;EnneadTab&quot;) for x in common_folders]
+common_folders = ["github","dev-repo","duck-repo","design-repo"]
+lib_folders = [os.path.join(os.environ['USERPROFILE'],x, "EnneadTab-OS","Apps","lib","EnneadTab") for x in common_folders]
 lib_folders.append( os.path.join(os.environ['USERPROFILE'], 'Documents','EnneadTab Ecosystem','EA_Dist','Apps','lib','EnneadTab'))
 lib_folders.append( os.path.join(os.environ['USERPROFILE'], 'Documents','EnneadTab-Ecosystem','EA_Dist','Apps','lib','EnneadTab'))
 for lib_folder in lib_folders:
@@ -5552,8 +5552,8 @@ Key Features:
       <script>! _-RunPythonScript (
 import os
 import sys
-common_folders = [&quot;github&quot;,&quot;dev-repo&quot;,&quot;duck-repo&quot;,&quot;design-repo&quot;]
-lib_folders = [os.path.join(os.environ['USERPROFILE'],x, &quot;EnneadTab-OS&quot;,&quot;Apps&quot;,&quot;lib&quot;,&quot;EnneadTab&quot;) for x in common_folders]
+common_folders = ["github","dev-repo","duck-repo","design-repo"]
+lib_folders = [os.path.join(os.environ['USERPROFILE'],x, "EnneadTab-OS","Apps","lib","EnneadTab") for x in common_folders]
 lib_folders.append( os.path.join(os.environ['USERPROFILE'], 'Documents','EnneadTab Ecosystem','EA_Dist','Apps','lib','EnneadTab'))
 lib_folders.append( os.path.join(os.environ['USERPROFILE'], 'Documents','EnneadTab-Ecosystem','EA_Dist','Apps','lib','EnneadTab'))
 for lib_folder in lib_folders:
@@ -5584,8 +5584,8 @@ MODULE_HELPER.run_Rhino_button('EnneadTab.menu\\self_repair.button\\self_repair_
       <script>! _-RunPythonScript (
 import os
 import sys
-common_folders = [&quot;github&quot;,&quot;dev-repo&quot;,&quot;duck-repo&quot;,&quot;design-repo&quot;]
-lib_folders = [os.path.join(os.environ['USERPROFILE'],x, &quot;EnneadTab-OS&quot;,&quot;Apps&quot;,&quot;lib&quot;,&quot;EnneadTab&quot;) for x in common_folders]
+common_folders = ["github","dev-repo","duck-repo","design-repo"]
+lib_folders = [os.path.join(os.environ['USERPROFILE'],x, "EnneadTab-OS","Apps","lib","EnneadTab") for x in common_folders]
 lib_folders.append( os.path.join(os.environ['USERPROFILE'], 'Documents','EnneadTab Ecosystem','EA_Dist','Apps','lib','EnneadTab'))
 lib_folders.append( os.path.join(os.environ['USERPROFILE'], 'Documents','EnneadTab-Ecosystem','EA_Dist','Apps','lib','EnneadTab'))
 for lib_folder in lib_folders:
@@ -5652,7 +5652,7 @@ EA_UnitTest</script>
       <bitmap_item guid="0f563d93-f0db-4722-b35d-bb6210c83629" index="18"/>
       <bitmap_item guid="fe91d123-f7d5-4513-8e40-4111f6985952" index="19"/>
       <bitmap_item guid="867edb13-4c77-41b0-919c-5d12a728c56b" index="20"/>
-      <bitmap_item guid="e4bbe240-7cd6-4daa-a88f-6e0597ecfd2f" index="21"/>
+      <bitmap_item guid="dde7ee5c-765b-4e7c-82ae-a11b178f2fbe" index="21"/>
       <bitmap_item guid="407339a2-1fe7-48b3-872e-2ec2b771d6b6" index="22"/>
       <bitmap_item guid="f2433b5b-4d31-48c3-97d7-6f7ba9aed4c6" index="23"/>
       <bitmap_item guid="be085b29-f7b7-4665-a78a-9ac672f3f875" index="24"/>
@@ -5747,15 +5747,15 @@ EA_UnitTest</script>
       <bitmap_item guid="aeab6fdd-17bd-4667-92ef-e07da55beb27" index="113"/>
       <bitmap_item guid="28564a23-c114-4a3e-a9c8-6532fb5b3a70" index="114"/>
       <bitmap_item guid="41d624e3-dbbe-4820-aa0e-9d666be8f95e" index="115"/>
-      <bitmap_item guid="06965733-8d0d-43c6-bed4-6a1bef1a58e5" index="116"/>
-      <bitmap_item guid="5aa04d29-6fbb-4ce2-ade7-fe43cf28d56d" index="117"/>
-      <bitmap_item guid="348a111d-c830-4025-beba-469df999db02" index="118"/>
-      <bitmap_item guid="f114cf2d-bee6-4758-a1ec-dd2713dfa695" index="119"/>
-      <bitmap_item guid="128bbe24-9ee9-4deb-8baa-cc369522218a" index="120"/>
-      <bitmap_item guid="047f37ef-5818-46c2-b05a-aa40d5d7a9b9" index="121"/>
+      <bitmap_item guid="e0825153-b45d-4f82-926a-2836f0971298" index="116"/>
+      <bitmap_item guid="6108add0-652b-428a-94ea-49e3d5436256" index="117"/>
+      <bitmap_item guid="46603f38-04b3-4483-9424-39bf32b42bef" index="118"/>
+      <bitmap_item guid="69da349f-7cba-4a35-a63c-75523374df33" index="119"/>
+      <bitmap_item guid="144df7c3-3bbf-4772-bae8-37c90b9b8477" index="120"/>
+      <bitmap_item guid="5d61fd83-5f5c-4816-a574-67cbb42f30c3" index="121"/>
       <bitmap_item guid="3c13b537-0f6a-449d-acd2-2a4f666f616f" index="122"/>
       <bitmap_item guid="7f17092a-8d63-4999-9d1f-4ad7dfa06940" index="123"/>
-      <bitmap_item guid="7789ffd4-a9f3-4a3e-ba2a-3a1e3b855271" index="124"/>
+      <bitmap_item guid="c100ce19-3ecd-43b2-87b7-5fd57691374a" index="124"/>
       <bitmap_item guid="a9b17235-30ff-4888-bec0-5507144f9173" index="125"/>
       <bitmap_item guid="9b3fd901-6426-4e19-8708-2e105d9e6dc8" index="126"/>
       <bitmap_item guid="487a7d6f-d6cf-4df2-b76f-eab8155a2ddd" index="127"/>
@@ -7376,7 +7376,7 @@ RU5ErkJggg==</bitmap>
       <bitmap_item guid="0f563d93-f0db-4722-b35d-bb6210c83629" index="18"/>
       <bitmap_item guid="fe91d123-f7d5-4513-8e40-4111f6985952" index="19"/>
       <bitmap_item guid="867edb13-4c77-41b0-919c-5d12a728c56b" index="20"/>
-      <bitmap_item guid="e4bbe240-7cd6-4daa-a88f-6e0597ecfd2f" index="21"/>
+      <bitmap_item guid="dde7ee5c-765b-4e7c-82ae-a11b178f2fbe" index="21"/>
       <bitmap_item guid="407339a2-1fe7-48b3-872e-2ec2b771d6b6" index="22"/>
       <bitmap_item guid="f2433b5b-4d31-48c3-97d7-6f7ba9aed4c6" index="23"/>
       <bitmap_item guid="be085b29-f7b7-4665-a78a-9ac672f3f875" index="24"/>
@@ -7471,15 +7471,15 @@ RU5ErkJggg==</bitmap>
       <bitmap_item guid="aeab6fdd-17bd-4667-92ef-e07da55beb27" index="113"/>
       <bitmap_item guid="28564a23-c114-4a3e-a9c8-6532fb5b3a70" index="114"/>
       <bitmap_item guid="41d624e3-dbbe-4820-aa0e-9d666be8f95e" index="115"/>
-      <bitmap_item guid="06965733-8d0d-43c6-bed4-6a1bef1a58e5" index="116"/>
-      <bitmap_item guid="5aa04d29-6fbb-4ce2-ade7-fe43cf28d56d" index="117"/>
-      <bitmap_item guid="348a111d-c830-4025-beba-469df999db02" index="118"/>
-      <bitmap_item guid="f114cf2d-bee6-4758-a1ec-dd2713dfa695" index="119"/>
-      <bitmap_item guid="128bbe24-9ee9-4deb-8baa-cc369522218a" index="120"/>
-      <bitmap_item guid="047f37ef-5818-46c2-b05a-aa40d5d7a9b9" index="121"/>
+      <bitmap_item guid="e0825153-b45d-4f82-926a-2836f0971298" index="116"/>
+      <bitmap_item guid="6108add0-652b-428a-94ea-49e3d5436256" index="117"/>
+      <bitmap_item guid="46603f38-04b3-4483-9424-39bf32b42bef" index="118"/>
+      <bitmap_item guid="69da349f-7cba-4a35-a63c-75523374df33" index="119"/>
+      <bitmap_item guid="144df7c3-3bbf-4772-bae8-37c90b9b8477" index="120"/>
+      <bitmap_item guid="5d61fd83-5f5c-4816-a574-67cbb42f30c3" index="121"/>
       <bitmap_item guid="3c13b537-0f6a-449d-acd2-2a4f666f616f" index="122"/>
       <bitmap_item guid="7f17092a-8d63-4999-9d1f-4ad7dfa06940" index="123"/>
-      <bitmap_item guid="7789ffd4-a9f3-4a3e-ba2a-3a1e3b855271" index="124"/>
+      <bitmap_item guid="c100ce19-3ecd-43b2-87b7-5fd57691374a" index="124"/>
       <bitmap_item guid="a9b17235-30ff-4888-bec0-5507144f9173" index="125"/>
       <bitmap_item guid="9b3fd901-6426-4e19-8708-2e105d9e6dc8" index="126"/>
       <bitmap_item guid="487a7d6f-d6cf-4df2-b76f-eab8155a2ddd" index="127"/>
@@ -10455,7 +10455,7 @@ AWgBDsS91Vr+0YJLzKxR+31iGPoiakVtgjeRfgY9w3WMyjTP63W4qf43ENA9GivOyYKanVfXrEnA
       <bitmap_item guid="0f563d93-f0db-4722-b35d-bb6210c83629" index="18"/>
       <bitmap_item guid="fe91d123-f7d5-4513-8e40-4111f6985952" index="19"/>
       <bitmap_item guid="867edb13-4c77-41b0-919c-5d12a728c56b" index="20"/>
-      <bitmap_item guid="e4bbe240-7cd6-4daa-a88f-6e0597ecfd2f" index="21"/>
+      <bitmap_item guid="dde7ee5c-765b-4e7c-82ae-a11b178f2fbe" index="21"/>
       <bitmap_item guid="407339a2-1fe7-48b3-872e-2ec2b771d6b6" index="22"/>
       <bitmap_item guid="f2433b5b-4d31-48c3-97d7-6f7ba9aed4c6" index="23"/>
       <bitmap_item guid="be085b29-f7b7-4665-a78a-9ac672f3f875" index="24"/>
@@ -10550,15 +10550,15 @@ AWgBDsS91Vr+0YJLzKxR+31iGPoiakVtgjeRfgY9w3WMyjTP63W4qf43ENA9GivOyYKanVfXrEnA
       <bitmap_item guid="aeab6fdd-17bd-4667-92ef-e07da55beb27" index="113"/>
       <bitmap_item guid="28564a23-c114-4a3e-a9c8-6532fb5b3a70" index="114"/>
       <bitmap_item guid="41d624e3-dbbe-4820-aa0e-9d666be8f95e" index="115"/>
-      <bitmap_item guid="06965733-8d0d-43c6-bed4-6a1bef1a58e5" index="116"/>
-      <bitmap_item guid="5aa04d29-6fbb-4ce2-ade7-fe43cf28d56d" index="117"/>
-      <bitmap_item guid="348a111d-c830-4025-beba-469df999db02" index="118"/>
-      <bitmap_item guid="f114cf2d-bee6-4758-a1ec-dd2713dfa695" index="119"/>
-      <bitmap_item guid="128bbe24-9ee9-4deb-8baa-cc369522218a" index="120"/>
-      <bitmap_item guid="047f37ef-5818-46c2-b05a-aa40d5d7a9b9" index="121"/>
+      <bitmap_item guid="e0825153-b45d-4f82-926a-2836f0971298" index="116"/>
+      <bitmap_item guid="6108add0-652b-428a-94ea-49e3d5436256" index="117"/>
+      <bitmap_item guid="46603f38-04b3-4483-9424-39bf32b42bef" index="118"/>
+      <bitmap_item guid="69da349f-7cba-4a35-a63c-75523374df33" index="119"/>
+      <bitmap_item guid="144df7c3-3bbf-4772-bae8-37c90b9b8477" index="120"/>
+      <bitmap_item guid="5d61fd83-5f5c-4816-a574-67cbb42f30c3" index="121"/>
       <bitmap_item guid="3c13b537-0f6a-449d-acd2-2a4f666f616f" index="122"/>
       <bitmap_item guid="7f17092a-8d63-4999-9d1f-4ad7dfa06940" index="123"/>
-      <bitmap_item guid="7789ffd4-a9f3-4a3e-ba2a-3a1e3b855271" index="124"/>
+      <bitmap_item guid="c100ce19-3ecd-43b2-87b7-5fd57691374a" index="124"/>
       <bitmap_item guid="a9b17235-30ff-4888-bec0-5507144f9173" index="125"/>
       <bitmap_item guid="9b3fd901-6426-4e19-8708-2e105d9e6dc8" index="126"/>
       <bitmap_item guid="487a7d6f-d6cf-4df2-b76f-eab8155a2ddd" index="127"/>
