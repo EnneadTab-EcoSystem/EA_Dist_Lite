@@ -1,7 +1,19 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = """
+Pim Number Fixer
+
+This tool allows users to batch rename DWG and PDF files by updating or inserting a PIM number into their filenames.
+It provides a simple UI to select files, preview the new filenames, and perform the renaming operation.
+The tool also remembers the last used PIM number for convenience.
+
+Typical use cases:
+- Standardizing file naming conventions for project documentation.
+- Quickly updating PIM numbers in multiple files after project changes.
+
+Note: This tool operates on the file system and does not require an open Revit document.
+"""
 __title__ = "Pim Number\nFixer"
 __context__ = "zero-doc"
 
