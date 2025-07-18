@@ -44,7 +44,20 @@ def pick_wall_types():
     class WallTypeOption(forms.TemplateListItem):
         @property
         def name(self):
-            return get_wall_type_name(self.item)
+            try:
+                if hasattr(self.item, "Kind"):
+                    wall_kind = self.item.Kind
+                    if wall_kind == DB.WallKind.Basic:
+                        wall_kind_str = "Basic"
+                    elif wall_kind == DB.WallKind.Curtain:
+                        wall_kind_str = "Curtain"
+                    else:
+                        wall_kind_str = str(wall_kind)
+                else:
+                    wall_kind_str = "In-Place"
+                return "[{}]{}".format(wall_kind_str, get_wall_type_name(self.item))
+            except:
+                return "[Unknown]{}".format(get_wall_type_name(self.item))
     
     wall_type_options = [WallTypeOption(wt) for wt in wall_types]
     

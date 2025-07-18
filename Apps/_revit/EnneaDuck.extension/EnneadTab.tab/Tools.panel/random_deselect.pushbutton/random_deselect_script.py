@@ -28,7 +28,7 @@ from pyrevit import forms, script
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 
-from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION
+from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION, DATA_CONVERSION
 from EnneadTab.REVIT import REVIT_SELECTION, REVIT_APPLICATION
 from Autodesk.Revit import DB, UI # pyright: ignore 
 
@@ -131,15 +131,23 @@ class Solution:
         """Perform the actual deselection operation."""
         try:
             # Clear current selection
-            uidoc.Selection.SetElementIds([])
+            uidoc.Selection.SetElementIds(DATA_CONVERSION.list_to_system_list([]))
             
             # Add back only the elements we want to keep
             if elements_to_keep:
                 element_ids = [element.Id for element in elements_to_keep]
-                uidoc.Selection.SetElementIds(element_ids)
+                print("Converting {} element IDs to .NET collection...".format(len(element_ids)))
+                
+                # Use the same pattern as REVIT_SELECTION.set_selection()
+                system_element_ids = DATA_CONVERSION.list_to_system_list([x.Id for x in elements_to_keep])
+                print("Successfully converted to .NET collection: {}".format(type(system_element_ids)))
+                
+                uidoc.Selection.SetElementIds(system_element_ids)
+                print("Selection updated successfully")
                 
         except Exception as e:
             NOTIFICATION.messenger("Error during deselection: {}".format(str(e)))
+            print("Error details: {}".format(str(e)))
             raise
 
 @LOG.log(__file__, __title__)
