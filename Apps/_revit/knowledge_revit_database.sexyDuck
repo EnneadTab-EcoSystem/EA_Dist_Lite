@@ -2897,6 +2897,15 @@
         "tab": "Tools",
         "tab_icon": null
     },
+    "EnneadTab.tab\\UI.panel\\BIM_Client.pushbutton\\bim_client_script.py": {
+        "alias": "BIM Client",
+        "doc": "BIM Client tool for managing BIM data and workflows. This tool provides a centralized interface for BIM operations and data management.",
+        "icon": "EnneadTab.tab\\UI.panel\\BIM_Client.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\UI.panel\\BIM_Client.pushbutton\\bim_client_script.py",
+        "tab": "UI",
+        "tab_icon": null
+    },
     "EnneadTab.tab\\UI.panel\\Search.pushbutton\\search_script.py": {
         "alias": "Search Command",
         "doc": "Intelligent command search engine for Revit. This powerful search utility helps you locate tools across both EnneadTab and native Revit interfaces with ranked results based on name and documentation matches. Features include visual previews of tool locations, direct activation capability, and detailed documentation display with links to help resources. Perfect for quickly accessing functions without navigating through ribbon panels or when you can't remember where tools are located.",

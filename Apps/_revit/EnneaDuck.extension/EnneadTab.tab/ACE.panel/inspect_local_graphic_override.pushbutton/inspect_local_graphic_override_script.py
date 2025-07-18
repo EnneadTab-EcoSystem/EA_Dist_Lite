@@ -13,16 +13,22 @@ from pyrevit import script #
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
-from EnneadTab.REVIT import REVIT_FORMS
+from EnneadTab.REVIT import REVIT_FORMS, REVIT_APPLICATION
 from EnneadTab import ERROR_HANDLE, LOG
 from Autodesk.Revit import DB # pyright: ignore 
 # from Autodesk.Revit import UI # pyright: ignore
-doc = __revit__.ActiveUIDocument.Document # pyright: ignore
+
+# Safe document access using REVIT_APPLICATION functions
+doc = REVIT_APPLICATION.get_doc()
 
 
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def inspect_local_graphic_override():
+    # Check if document is available
+    if doc is None:
+        print("❌ No active Revit document available. Please open a Revit document and try again.")
+        return
 
     sheets = forms.select_sheets(title = "sheets with views to check")
     if sheets is None:

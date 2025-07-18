@@ -9,3 +9,4 @@ layout:
   - pick_absolute_similar
   - ownership_inspect
   - place_views_on_sheets
+  - BIM_Client

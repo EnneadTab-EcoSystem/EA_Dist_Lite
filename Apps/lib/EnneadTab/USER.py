@@ -198,6 +198,17 @@ def _lazy_update_user_log():
     except Exception as e:
         pass
 
+def get_user_name():
+    """Get the current user's name.
+    
+    Returns the current system username. This is a simple wrapper around
+    the USER_NAME constant for consistency with other modules.
+    
+    Returns:
+        str: Current system username
+    """
+    return USER_NAME
+
 
 def get_rhino_developer_emails():
     """Get email addresses for all Rhino developers.

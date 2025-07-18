@@ -217,7 +217,7 @@ def auto_open_temp_file_on_virtual7():
     
     computer_name = ENVIRONMENT.get_computer_name()
     revit_version = REVIT_APPLICATION.get_revit_version()
-    is_virtual7 = computer_name == "EANY-VIRTUAL7-1"
+    is_virtual7 = computer_name.upper() == "EANY-VIRTUAL7-1"
     is_revit_2025 = REVIT_APPLICATION.is_version_at_least(2025)
     
 

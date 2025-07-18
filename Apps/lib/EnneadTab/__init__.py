@@ -57,6 +57,8 @@ import io
 
 __py3_marker__ = "#!python3"
 
+
+
 def get_module_files():
     """Get all Python module files in the current directory.
     
