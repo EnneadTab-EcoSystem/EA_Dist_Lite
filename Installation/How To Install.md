@@ -5,20 +5,31 @@
 
 ---
 
-
 <div align="center">
 
 ### 📖 **Official EnneadTab Wiki**
-**[Visit the Wiki →](https://Ennead-Architects-LLP.github.io/EnneadTabWiki/index.html)**
 
-<iframe 
-  src="https://Ennead-Architects-LLP.github.io/EnneadTabWiki/index.html" 
-  width="100%" 
-  height="600px" 
-  style="border: 2px solid #e1e4e8; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
-  title="EnneadTab Wiki Preview">
-  <p>Your browser doesn't support iframes. <a href="https://Ennead-Architects-LLP.github.io/EnneadTabWiki/index.html" target="_blank">Click here to open the Wiki in a new tab</a></p>
-</iframe>
+**[🌐 Visit the Wiki →](https://Ennead-Architects-LLP.github.io/EnneadTabWiki/index.html)**
+
+[![EnneadTab Wiki](https://img.shields.io/badge/EnneadTab-Wiki-blue?style=for-the-badge&logo=github)](https://Ennead-Architects-LLP.github.io/EnneadTabWiki/index.html)
+
+</div>
+
+---
+
+
+
+### **📋 What You'll Find in the Wiki:**
+- ✅ Step-by-step installation guides for all supported applications
+- ✅ Wiki documentation on tools for Revit and Rhino
+- ✅ Troubleshooting guides and common issues
+
+
+---
+
+<div align="center">
+
+
 
 </div>
 

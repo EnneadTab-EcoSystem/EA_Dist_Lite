@@ -26,3 +26,4 @@ layout:
   - inspect_cutter
   - make_template_from_current_view
   - pim_number_fixer
+  - random_deselect

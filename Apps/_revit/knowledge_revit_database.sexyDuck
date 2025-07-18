@@ -2852,6 +2852,15 @@
         "tab": "Tools",
         "tab_icon": null
     },
+    "EnneadTab.tab\\Tools.panel\\random_deselect.pushbutton\\random_deselect_script.py": {
+        "alias": "Random Deselect",
+        "doc": "Random deselection tool for Revit elements.\n\nThis tool allows you to randomly deselect a portion of your currently selected elements.\nPerfect for when you have too many elements selected and want to reduce the selection\nto a manageable subset for further operations.\n\nFeatures:\n- Uses PyRevit input slider to control percentage of elements to keep\n- Random selection ensures unbiased element reduction\n- Preserves original selection order for consistency\n- Safe operation with proper error handling\n\nUsage:\n1. Select elements you want to work with\n2. Run this tool\n3. Use the slider to set percentage of elements to keep (0-100%)\n4. Confirm to apply random deselection\n",
+        "icon": "EnneadTab.tab\\Tools.panel\\random_deselect.pushbutton\\icon.png",
+        "is_popular": true,
+        "script": "EnneadTab.tab\\Tools.panel\\random_deselect.pushbutton\\random_deselect_script.py",
+        "tab": "Tools",
+        "tab_icon": null
+    },
     "EnneadTab.tab\\Tools.panel\\set_filled_region_border_line.pushbutton\\set_filled_region_border_line_script.py": {
         "alias": "Set FilledRegion Border Style",
         "doc": "Specialized filled region styling tool that allows precise control over border line appearance. Quickly apply consistent line styles to multiple filled regions simultaneously, enhancing drawing clarity and graphical standards. Works with individual selections even when regions are nested within groups by using tab-selection technique.",
