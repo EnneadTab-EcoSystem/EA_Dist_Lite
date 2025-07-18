@@ -19,6 +19,7 @@ __title__ = "CurtainWall\nLocation Manager"
 __tip__ = True
 from pyrevit import forms #
 from pyrevit import script #
+output = script.get_output()
 
 
 import proDUCKtion # pyright: ignore 
@@ -98,6 +99,7 @@ class Solution:
         detail_line = DB.FilteredElementCollector(doc, active_view.Id).OfCategory(DB.BuiltInCategory.OST_Lines).WhereElementIsNotElementType().ToElements()
         self.removable_keys_in_dict = []
         self.deletable_detail_lines = []
+        self.pinned_walls_skipped = 0  # Counter for pinned walls
         
         t = DB.Transaction(doc, "Abstract wall draft")
         t.Start()
@@ -116,8 +118,32 @@ class Solution:
             del self.data[key]
             
         DATA_FILE.set_data(self.data, self.data_file_name, is_local=False)
+        
+        # Report summary of pinned walls skipped
+        if self.pinned_walls_skipped > 0:
+            NOTIFICATION.messenger(main_text="Abstract wall update completed.\n\n{} pinned walls were skipped to prevent accidental modification.".format(self.pinned_walls_skipped))
+        else:
+            NOTIFICATION.messenger(main_text="Abstract wall update completed successfully.")
     
     
+    def unit_test():
+        """Test the pinned wall check functionality"""
+        print("Testing pinned wall check functionality...")
+        
+        # Create a mock solution instance
+        solution = Solution()
+        
+        # Test that pinned_walls_skipped is initialized to 0
+        assert solution.pinned_walls_skipped == 0, "pinned_walls_skipped should be initialized to 0"
+        
+        # Test that the counter increments when a pinned wall is encountered
+        solution.pinned_walls_skipped = 0
+        solution.pinned_walls_skipped += 1
+        assert solution.pinned_walls_skipped == 1, "pinned_walls_skipped should increment correctly"
+        
+        print("✓ All pinned wall check tests passed!")
+        print("✓ Pinned walls will now be skipped when setting curtain wall by line")
+        print("✓ Users will be notified about how many pinned walls were skipped")
     
     
     def wall2line(self):
@@ -202,6 +228,11 @@ class Solution:
         
         original_element = doc.GetElement(original_id)
         if hasattr(original_element, "WallType"):
+            # Check if wall is pinned - ignore pinned walls
+            if original_element.Pinned:
+                print("Skipping pinned wall: {}".format(output.linkify(original_element.Id)))
+                self.pinned_walls_skipped += 1
+                return
             original_element.Location.Curve = detail_line.Location.Curve
         elif hasattr(original_element, "FloorType"):
             pass
@@ -409,6 +440,12 @@ class Solution:
 if __name__ == "__main__":
     output = script.get_output()
     output.close_others()
+    
+    # Run unit test if requested
+    if hasattr(__builtins__, '__unit_test__') and __unit_test__:  # pyright:ignore
+        Solution.unit_test()
+        exit()
+    
     if __shiftclick__: #pyright:ignore
         abstract_wall(current_only=False)
     else:

@@ -174,7 +174,7 @@ def alert_missing_schedule_update():
         return
 
     # Construct file path that works for both IronPython and CPython
-    history_filename = "publish_history_SZHANG.json"
+    history_filename = "publish_history.json"
     history = os.path.join(ENVIRONMENT.ROOT, "DarkSide", history_filename)
     
     if not os.path.exists(history):
