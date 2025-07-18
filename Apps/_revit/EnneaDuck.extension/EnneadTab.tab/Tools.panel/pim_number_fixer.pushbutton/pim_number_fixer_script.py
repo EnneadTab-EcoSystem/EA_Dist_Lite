@@ -177,11 +177,3 @@ def pim_number_fixer(doc=None):
 if __name__ == "__main__":
     # This tool can run with zero documents - it's a file system utility
     pim_number_fixer()
-
-
-
-
-
-
-
- 

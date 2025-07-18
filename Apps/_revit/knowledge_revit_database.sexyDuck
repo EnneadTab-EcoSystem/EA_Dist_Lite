@@ -2762,6 +2762,15 @@
         "tab": "Tools",
         "tab_icon": null
     },
+    "EnneadTab.tab\\Tools.panel\\disallow_wall_end_joins.pushbutton\\disallow_wall_end_joins_script.py": {
+        "alias": "Disallow Wall End Joins",
+        "doc": "Disallows wall end joins by wall type. This tool allows you to select specific wall types and disable their end joins, preventing automatic joining behavior at wall endpoints.",
+        "icon": "EnneadTab.tab\\Tools.panel\\disallow_wall_end_joins.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\Tools.panel\\disallow_wall_end_joins.pushbutton\\disallow_wall_end_joins_script.py",
+        "tab": "Tools",
+        "tab_icon": null
+    },
     "EnneadTab.tab\\Tools.panel\\general_renamer.pushbutton\\general_renamer_script.py": {
         "alias": "Super Renamer",
         "doc": "A powerful simple window that provides efficient access to a comprehensive suite of renaming functions.\n    - Add or remove prefixes for selected views with a single click\n    - Convert Views and Sheets to uppercase for consistent documentation\n    - Format view names based on detail number and sheet number with customizable patterns\n    - Rename families directly without navigating through the project browser\n    - Toggle between different naming conventions with ease\n    \nThis tool streamlines the tedious process of maintaining naming consistency throughout your project.",
