@@ -37,8 +37,6 @@ def pick_wall_types():
         NOTIFICATION.messenger("No wall types found in the document.")
         return []
     
-    # Sort wall types by name
-    wall_types = sorted(wall_types, key=lambda wt: get_wall_type_name(wt))
     
     # Create selection options using TemplateListItem
     class WallTypeOption(forms.TemplateListItem):
@@ -51,6 +49,10 @@ def pick_wall_types():
                         wall_kind_str = "Basic"
                     elif wall_kind == DB.WallKind.Curtain:
                         wall_kind_str = "Curtain"
+                    elif wall_kind == DB.WallKind.Stacked:
+                        wall_kind_str = "Stacked"
+                    elif wall_kind == DB.WallKind.Unknown:
+                        wall_kind_str = "Unknown"
                     else:
                         wall_kind_str = str(wall_kind)
                 else:
@@ -60,6 +62,8 @@ def pick_wall_types():
                 return "[Unknown]{}".format(get_wall_type_name(self.item))
     
     wall_type_options = [WallTypeOption(wt) for wt in wall_types]
+    # Sort wall types by name
+    wall_type_options = sorted(wall_type_options, key=lambda x: x.name)
     
     # Let user select wall types
     selected_wall_types = forms.SelectFromList.show(
