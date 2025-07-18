@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __doc__ = "Disallows wall end joins by wall type. This tool allows you to select specific wall types and disable their end joins, preventing automatic joining behavior at wall endpoints."
-__title__ = "Disallow Wall End Joins"
+__title__ = "Disallow Wall\nEnd Joins"
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
@@ -71,18 +71,33 @@ def get_walls_by_type(doc, wall_types):
     all_walls = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements()
     
     # Debug information
-    NOTIFICATION.messenger("Found {} total walls in document".format(len(all_walls)))
-    NOTIFICATION.messenger("Looking for walls of types: {}".format(", ".join([get_wall_type_name(wt) for wt in wall_types])))
+    print("Found {} total walls in document".format(len(all_walls)))
+    print("Looking for walls of types: {}".format(", ".join([get_wall_type_name(wt) for wt in wall_types])))
+    
+    # Create a set of selected wall type IDs for faster comparison
+    selected_type_ids = {wt.Id for wt in wall_types}
+    selected_type_names = [get_wall_type_name(wt) for wt in wall_types]
+    
+    print("Selected wall type names: {}".format(selected_type_names))
+    print("Selected wall type IDs: {}".format([str(wt.Id) for wt in wall_types]))
     
     # Filter walls by wall type
     target_walls = []
+    
     for wall in all_walls:
         wall_type_name = get_wall_type_name(wall.WallType)
-        if wall.WallType in wall_types:
+        wall_type_id = wall.WallType.Id
+        
+        # Check if this wall's type ID matches any selected type ID
+        if wall_type_id in selected_type_ids:
             target_walls.append(wall)
-            NOTIFICATION.messenger("Found wall of type: {}".format(wall_type_name))
+            print("✓ Found wall of type: {} (ID: {})".format(wall_type_name, wall_type_id))
+        else:
+            # Debug: show some wall types that don't match
+            if len(target_walls) < 5:  # Only show first few non-matches
+                print("✗ Wall type not selected: {} (ID: {})".format(wall_type_name, wall_type_id))
     
-    NOTIFICATION.messenger("Found {} walls matching selected types".format(len(target_walls)))
+    print("Found {} walls matching selected types".format(len(target_walls)))
     return target_walls
 
 
@@ -101,18 +116,27 @@ def set_wall_end_joins(walls):
     failed_count = 0
     failed_names = []
     
-    NOTIFICATION.messenger("Processing {} walls to disallow end joins...".format(len(walls)))
+    print("Processing {} walls to disallow end joins...".format(len(walls)))
     
     for wall in walls:
         try:
+            # Debug: Check wall properties before processing
+            print("Processing wall: {} (ID: {})".format(get_wall_type_name(wall.WallType), wall.Id))
+            print("  - Wall curve length: {}".format(wall.Location.Curve.GetEndPoint(1).DistanceTo(wall.Location.Curve.GetEndPoint(0))))
+            print("  - Wall height: {}".format(wall.get_Parameter(DB.BuiltInParameter.WALL_USER_HEIGHT_PARAM).AsDouble()))
+            
             # Disallow end joins for both ends of the wall (0 = start, 1 = end)
-            DB.WallJoinUtils.DisallowWallJoinAtEnd(wall, 0)  # Start end
-            DB.WallJoinUtils.DisallowWallJoinAtEnd(wall, 1)  # End end
+            DB.WallUtils.DisallowWallJoinAtEnd(wall, 0)  # Start end
+            print("  ✓ Disallowed start end")
+            DB.WallUtils.DisallowWallJoinAtEnd(wall, 1)  # End end
+            print("  ✓ Disallowed end end")
             processed_count += 1
         except Exception as e:
             failed_count += 1
             wall_name = get_wall_type_name(wall.WallType)
             failed_names.append(wall_name)
+            print("✗ Failed to disallow end joins for wall: {} (ID: {})".format(wall_name, wall.Id))
+            print("  Error: {}".format(str(e)))
             continue
     
     t.Commit()
@@ -122,7 +146,7 @@ def set_wall_end_joins(walls):
     if failed_count > 0:
         message += " Failed: {} ({}).".format(failed_count, ", ".join(failed_names[:3]) + ("..." if len(failed_names) > 3 else ""))
     
-    NOTIFICATION.messenger(message)
+    print(message)
 
 
 @LOG.log(__file__, __title__)
