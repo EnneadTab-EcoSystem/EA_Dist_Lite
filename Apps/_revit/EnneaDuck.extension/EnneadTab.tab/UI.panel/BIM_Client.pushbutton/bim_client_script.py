@@ -24,96 +24,6 @@ import subprocess
 import os
 from datetime import datetime
 
-def get_local_pip_module():
-    """Get the local pip module from dependency folder, searching for 'Apps' parent folder first."""
-    try:
-        import os
-        script_dir = os.path.dirname(__file__)
-        
-        # Find the parent folder until 'Apps' is reached
-        def find_apps_root(start_path):
-            current = os.path.abspath(start_path)
-            while True:
-                if os.path.basename(current) == "Apps":
-                    return current
-                parent = os.path.dirname(current)
-                if parent == current:
-                    # Reached the root of the filesystem
-                    return None
-                current = parent
-        
-        apps_root = find_apps_root(script_dir)
-        if apps_root:
-            dependency_path = os.path.join(apps_root, "lib", "dependency", "py3")
-        else:
-            dependency_path = None
-        
-        print(f"Looking for dependency path: {dependency_path}")
-        
-        if dependency_path and os.path.exists(dependency_path):
-            print(f"✅ Dependency path found: {dependency_path}")
-            if dependency_path not in sys.path:
-                sys.path.insert(0, dependency_path)
-                print(f"✅ Added to sys.path: {dependency_path}")
-        else:
-            print(f"❌ Dependency path not found: {dependency_path}")
-            return None
-        
-        # Try to import pip
-        import pip
-        print(f"✅ Local pip module imported successfully: {pip.__file__}")
-        return pip
-    except ImportError as e:
-        print(f"❌ Failed to import local pip module: {e}")
-        return None
-    except Exception as e:
-        print(f"❌ Error in get_local_pip_module: {e}")
-        return None
-
-def install_module_with_local_pip(module_name, python_exe):
-    """Install a module using pip, preferring system pip, then falling back to local pip via PYTHONPATH."""
-    try:
-        # First, try system pip via subprocess
-        import subprocess
-        result = subprocess.run([python_exe, "-m", "pip", "install", module_name], 
-                              capture_output=True, text=True, timeout=120)
-        if result.returncode == 0:
-            return True, "Module installed successfully using system pip"
-        else:
-            # If system pip fails, try with local pip via PYTHONPATH
-            pip = get_local_pip_module()
-            if pip is None:
-                return False, "Local pip module not available"
-            import os
-            script_dir = os.path.dirname(__file__)
-            # Use the same logic as get_local_pip_module to find dependency_path
-            def find_apps_root(start_path):
-                current = os.path.abspath(start_path)
-                while True:
-                    if os.path.basename(current) == "Apps":
-                        return current
-                    parent = os.path.dirname(current)
-                    if parent == current:
-                        return None
-                    current = parent
-            apps_root = find_apps_root(script_dir)
-            if apps_root:
-                dependency_path = os.path.join(apps_root, "lib", "dependency", "py3")
-            else:
-                dependency_path = None
-            if not dependency_path or not os.path.exists(dependency_path):
-                return False, "Local pip dependency path not found"
-            env = os.environ.copy()
-            env["PYTHONPATH"] = dependency_path + os.pathsep + env.get("PYTHONPATH", "")
-            result = subprocess.run([python_exe, "-m", "pip", "install", module_name], 
-                                  capture_output=True, text=True, timeout=120, env=env)
-            if result.returncode == 0:
-                return True, "Module installed successfully using local pip via PYTHONPATH"
-            else:
-                return False, f"Installation failed: {result.stderr}"
-    except Exception as e:
-        return False, f"Error using pip: {str(e)}"
-
 def get_pyrevit_python_executable():
     """Get the correct Python executable for PyRevit CPython mode"""
     # In PyRevit CPython mode, sys.executable points to Revit.exe
@@ -185,56 +95,48 @@ def get_pyrevit_python_executable():
 
 # Attempt to install OpenAI if not needed
 def install_openai_if_needed():
-    """Attempt to install OpenAI package if not available"""
+    """Ensure OpenAI package is available by importing from the dependency folder if not found."""
     try:
         import openai
         return True
     except ImportError:
-        try:
-            output = script.get_output()
-            output.print_md("## Installing OpenAI Package...")
-            
-            # Use the correct Python executable for PyRevit
-            python_exe = get_pyrevit_python_executable()
-            output.print_md(f"**Using Python executable:** {python_exe}")
-            
-            # First check if pip is available
+        # Try to import from dependency folder directly
+        output = script.get_output()
+        output.print_md("## Importing OpenAI from dependency folder...")
+        import os
+        import sys
+        script_dir = os.path.dirname(__file__)
+        # Find the parent folder until 'Apps' is reached
+        def find_apps_root(start_path):
+            current = os.path.abspath(start_path)
+            while True:
+                if os.path.basename(current) == "Apps":
+                    return current
+                parent = os.path.dirname(current)
+                if parent == current:
+                    # Reached the root of the filesystem
+                    return None
+                current = parent
+        apps_root = find_apps_root(script_dir)
+        if apps_root:
+            dependency_path = os.path.join(apps_root, "lib", "dependency", "py3")
+        else:
+            dependency_path = None
+        if dependency_path and os.path.exists(dependency_path):
+            if dependency_path not in sys.path:
+                sys.path.insert(0, dependency_path)
+                output.print_md(f"✅ Added dependency path to sys.path: {dependency_path}")
             try:
-                result = subprocess.run([python_exe, "-m", "pip", "--version"], 
-                                      capture_output=True, text=True, timeout=10)
-                if result.returncode != 0:
-                    output.print_md("⚠️ **Pip not available in PyRevit Python engine**")
-                    output.print_md("**Trying local pip module from dependency folder...**")
-                    
-                    # Try using local pip module
-                    success, message = install_module_with_local_pip("openai", python_exe)
-                    if success:
-                        output.print_md("✅ **OpenAI package installed successfully using local pip!**")
-                        return True
-                    else:
-                        output.print_md(f"❌ **Local pip installation failed:** {message}")
-                        output.print_md("**Alternative installation methods:**")
-                        output.print_md("1. Install packages globally using system Python")
-                        output.print_md("2. Use conda if available")
-                        output.print_md("3. Manual installation required")
-                        return False
-            except Exception as e:
-                output.print_md(f"⚠️ **Pip check failed:** {e}")
-                return False
-            
-            # Use subprocess to install openai via pip
-            result = subprocess.run([python_exe, "-m", "pip", "install", "openai"], 
-                                  capture_output=True, text=True, timeout=60)
-            
-            if result.returncode == 0:
-                output.print_md("✅ **OpenAI package installed successfully!**")
+                import openai
+                output.print_md("✅ OpenAI imported successfully from dependency folder!")
                 return True
-            else:
-                output.print_md(f"❌ **Failed to install OpenAI:** {result.stderr}")
+            except ImportError as e:
+                output.print_md(f"❌ Failed to import OpenAI from dependency folder: {e}")
+                output.print_md("**Manual installation required or check dependency folder.**")
                 return False
-        except Exception as e:
-            output = script.get_output()
-            output.print_md(f"❌ **Error installing OpenAI:** {str(e)}")
+        else:
+            output.print_md(f"❌ Dependency path not found: {dependency_path}")
+            output.print_md("**Manual installation required or check dependency folder.**")
             return False
 
 # CLR imports for Revit API (conditional for CPython compatibility)
@@ -664,22 +566,69 @@ def debug_missing_module(module_name):
         return False
 
 
+# --- BEGIN: Helper to get OpenAI API key without EnneadTab imports ---
+def get_openai_api_key_from_secret(app_name="EnneadTabAPI"):
+    """Get OpenAI API key from EA_API_KEY.secret file without EnneadTab imports."""
+    import os
+    import json
+    # Try to find the DB folder from environment variable or fallback to relative path
+    db_folder = os.environ.get("ENNEADTAB_DB_FOLDER")
+    if not db_folder:
+        # Fallback: try to find Apps/lib/EnneadTab/DB or sibling DB folder
+        script_dir = os.path.dirname(__file__)
+        # Try up to 6 levels up
+        current = script_dir
+        for _ in range(6):
+            candidate = os.path.join(current, "..", "..", "..", "lib", "EnneadTab", "DB")
+            candidate = os.path.abspath(candidate)
+            if os.path.exists(candidate):
+                db_folder = candidate
+                break
+            current = os.path.dirname(current)
+    if not db_folder or not os.path.exists(db_folder):
+        # Fallback: try L drive
+        db_folder = "L:/EnneadTab/DB"
+    secret_file = os.path.join(db_folder, "EA_API_KEY.secret")
+    if not os.path.exists(secret_file):
+        # Try local secret file in script dir
+        secret_file = os.path.join(os.path.dirname(__file__), "EA_API_KEY.secret")
+        if not os.path.exists(secret_file):
+            return None
+    try:
+        with open(secret_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        # Try to get value from specified app_name first, fallback to any key if not found
+        if app_name in data:
+            return data[app_name]
+        return next(iter(data.values()), None)
+    except Exception as e:
+        return None
+# --- END: Helper to get OpenAI API key without EnneadTab imports ---
+
+
 def test_openai_functionality():
-    """Test OpenAI functionality if available"""
+    """Test OpenAI functionality if available, using dependency folder import if needed."""
     output = script.get_output()
-    
-    # Attempt to install OpenAI if needed
+    # Attempt to import OpenAI from dependency folder if not found
     if install_openai_if_needed():
         try:
             import openai
+            # Set API key from secret file if available
+            api_key = get_openai_api_key_from_secret()
+            if api_key:
+                openai.api_key = api_key
+                output.print_md("✅ OpenAI API key loaded from secret file.")
+            else:
+                output.print_md("⚠️ OpenAI API key not found. Please check EA_API_KEY.secret.")
             output.print_md("## OpenAI Package Test")
-            output.print_md(f"✅ **OpenAI version:** {openai.__version__}")
+            output.print_md(f"✅ **OpenAI version:** {getattr(openai, '__version__', 'Unknown')}")
             output.print_md(f"✅ **OpenAI available:** Yes")
-            
             # Test basic OpenAI functionality
-            client = openai.OpenAI()
-            output.print_md("✅ **OpenAI client created successfully**")
-            
+            try:
+                client = openai.OpenAI()
+                output.print_md("✅ **OpenAI client created successfully**")
+            except Exception as e:
+                output.print_md(f"⚠️ OpenAI client creation failed: {e}")
             return True
         except Exception as e:
             output.print_md(f"❌ **OpenAI test failed:** {str(e)}")
@@ -687,54 +636,6 @@ def test_openai_functionality():
     else:
         output.print_md("❌ **OpenAI package not available**")
         return False
-
-
-def test_local_pip_module():
-    """Test the local pip module functionality"""
-    output = script.get_output()
-    
-    output.print_md("## Testing Local Pip Module")
-    
-    # Test path resolution
-    script_dir = os.path.dirname(__file__)
-    dependency_path = os.path.join(script_dir, "..", "..", "..", "..", "..", "..", "..", "..", "lib", "dependency", "py3")
-    dependency_path = os.path.abspath(dependency_path)
-    
-    output.print_md(f"**Script Directory:** {script_dir}")
-    output.print_md(f"**Dependency Path:** {dependency_path}")
-    output.print_md(f"**Path Exists:** {os.path.exists(dependency_path)}")
-    
-    if os.path.exists(dependency_path):
-        output.print_md("✅ **Dependency path found**")
-        
-        # List contents
-        try:
-            contents = os.listdir(dependency_path)
-            output.print_md(f"**Contents:** {', '.join(contents)}")
-            
-            # Check if pip directory exists
-            pip_dir = os.path.join(dependency_path, "pip")
-            if os.path.exists(pip_dir):
-                output.print_md("✅ **Pip directory found**")
-                pip_contents = os.listdir(pip_dir)
-                output.print_md(f"**Pip contents:** {', '.join(pip_contents)}")
-            else:
-                output.print_md("❌ **Pip directory not found**")
-        except Exception as e:
-            output.print_md(f"❌ **Error listing contents:** {e}")
-    else:
-        output.print_md("❌ **Dependency path not found**")
-    
-    # Test pip module import
-    pip_module = get_local_pip_module()
-    if pip_module:
-        output.print_md("✅ **Local pip module imported successfully**")
-        output.print_md(f"**Pip version:** {getattr(pip_module, '__version__', 'Unknown')}")
-        output.print_md(f"**Pip file:** {pip_module.__file__}")
-    else:
-        output.print_md("❌ **Local pip module import failed**")
-    
-    return pip_module is not None
 
 
 def main():
@@ -780,12 +681,6 @@ def main():
         test_f_string_functionality()
     except Exception as e:
         output.print_md(f"⚠️ Error in f-string test: {e}")
-    
-    # Test local pip module functionality
-    try:
-        test_local_pip_module()
-    except Exception as e:
-        output.print_md(f"⚠️ Error in local pip module test: {e}")
     
     # Test OpenAI functionality (only check/install openai, not others)
     try:
