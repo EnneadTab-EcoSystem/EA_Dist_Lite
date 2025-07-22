@@ -604,7 +604,7 @@
         "script": "Lab.tab\\anything.button\\anything_left.py",
         "icon": "Lab.tab\\anything.button\\icon.png",
         "alias": "Anything",
-        "doc": "This button does Anything, depedening what you want to quickly test without creating a new button",
+        "doc": "A sandbox utility for quick testing and prototyping in Rhino. Use this button to run experimental code snippets, debug features, or validate new ideas without creating a dedicated tool.",
         "tab": "Lab.tab",
         "tab_icon": "Lab.tab\\icon.png",
         "is_popular": false
@@ -631,7 +631,7 @@
         "script": "Lab.tab\\text2script.button\\text2script_right.py",
         "icon": "Lab.tab\\text2script.button\\icon.png",
         "alias": "Text2ScriptSetting",
-        "doc": "This button does Text2ScriptSetting when right click",
+        "doc": "Opens the settings panel for the Text2Script tool, allowing users to configure AI model preferences, API keys, and script generation options for converting natural language to Python scripts in Rhino.",
         "tab": "Lab.tab",
         "tab_icon": "Lab.tab\\icon.png",
         "is_popular": false
@@ -1063,7 +1063,7 @@
         "script": "Revit.tab\\live_selection.button\\live_selection_left.py",
         "icon": "Revit.tab\\live_selection.button\\icon.png",
         "alias": "LiveSelection",
-        "doc": "This button does LiveSelection when left click",
+        "doc": "Enables real-time selection synchronization between Rhino and Revit. Allows users to select objects in Rhino and have the selection reflected in Revit, streamlining cross-platform workflows and coordination.",
         "tab": "Revit.tab",
         "tab_icon": "Revit.tab\\icon.png",
         "is_popular": false
@@ -1153,7 +1153,7 @@
         "script": "Tailor.tab\\2425_replace_blocks.button\\2425_replace_blocks_left.py",
         "icon": null,
         "alias": "2425ReplaceBlocks",
-        "doc": "Block Replacement Tool for 2425 Project\n\nReplaces blocks between Twinmotion and Enscape versions based on Excel mapping data.\nFeatures:\n- Supports bidirectional block replacement (Twinmotion \u2194 Enscape)\n- Uses Excel mapping file for block name relationships\n- Processes entire document with progress tracking\n- Maintains block transformations and properties\n- Provides user selection for replacement direction\n- Automatically redraws viewport after replacement\n\nReplacement Options:\n1. Twinmotion block \u2192 Enscape block\n2. Enscape block \u2192 Twinmotion block\n\nExcel Mapping:\n- Reads from 'enscape_twinmotion_block_mapping.xlsx'\n- Uses 'EnneadTab Helper' worksheet\n- Maps block names in columns A and B\n- Supports multiple block mappings\n\nWorkflow:\n1. User selects replacement direction\n2. Reads block mapping from Excel file\n3. Iterates through mapping data\n4. Replaces blocks using RHINO_BLOCK utility\n5. Redraws viewport to show changes\n\nUsage:\n- Select replacement direction when prompted\n- Tool processes all mapped blocks automatically\n- Maintains block positions and transformations\n- Provides completion feedback",
+        "doc": "Block Replacement Tool for 2425 Project\n\nReplaces blocks between Twinmotion and Enscape versions based on Excel mapping data.\nFeatures:\n- Supports bidirectional block replacement (Twinmotion \u00e2\u2020\u201d Enscape)\n- Uses Excel mapping file for block name relationships\n- Processes entire document with progress tracking\n- Maintains block transformations and properties\n- Provides user selection for replacement direction\n- Automatically redraws viewport after replacement\n\nReplacement Options:\n1. Twinmotion block \u00e2\u2020\u2019 Enscape block\n2. Enscape block \u00e2\u2020\u2019 Twinmotion block\n\nExcel Mapping:\n- Reads from 'enscape_twinmotion_block_mapping.xlsx'\n- Uses 'EnneadTab Helper' worksheet\n- Maps block names in columns A and B\n- Supports multiple block mappings\n\nWorkflow:\n1. User selects replacement direction\n2. Reads block mapping from Excel file\n3. Iterates through mapping data\n4. Replaces blocks using RHINO_BLOCK utility\n5. Redraws viewport to show changes\n\nUsage:\n- Select replacement direction when prompted\n- Tool processes all mapped blocks automatically\n- Maintains block positions and transformations\n- Provides completion feedback",
         "tab": "Tailor.tab",
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false
@@ -1171,7 +1171,7 @@
         "script": "Tailor.tab\\export_without_crv.button\\export_without_crv_left.py",
         "icon": null,
         "alias": "ExportWithoutCrv_1643",
-        "doc": "Export Tool for 1643 Project - Solids Only\n\nExports Rhino file as DWG with all blocks exploded and curves removed.\nFeatures:\n- Explodes all block instances to individual geometry\n- Removes all curve objects from export\n- Keeps only solid geometry for CAD export\n- Handles nested block instances automatically\n- Provides progress tracking for large files\n- Supports project-specific file naming\n\nWorkflow:\n1. Collects all block instances in the document\n2. Explodes blocks to individual geometry objects\n3. Filters out curves and block references\n4. Selects only solid geometry for export\n5. Exports as DWG with \"2007 Solids\" scheme\n6. Cleans up temporary exploded geometry\n\nFile Naming:\n- MotherBabyLobby.3dm \u2192 TempStudy_MotherBabyLobby.dwg\n- Other files \u2192 TempStudy.dwg\n\nUsage:\n- Run tool to prepare geometry for CAD export\n- Only solid geometry will be exported\n- Curves and blocks are automatically removed\n- Provides completion notification",
+        "doc": "Export Tool for 1643 Project - Solids Only\n\nExports Rhino file as DWG with all blocks exploded and curves removed.\nFeatures:\n- Explodes all block instances to individual geometry\n- Removes all curve objects from export\n- Keeps only solid geometry for CAD export\n- Handles nested block instances automatically\n- Provides progress tracking for large files\n- Supports project-specific file naming\n\nWorkflow:\n1. Collects all block instances in the document\n2. Explodes blocks to individual geometry objects\n3. Filters out curves and block references\n4. Selects only solid geometry for export\n5. Exports as DWG with \"2007 Solids\" scheme\n6. Cleans up temporary exploded geometry\n\nFile Naming:\n- MotherBabyLobby.3dm \u00e2\u2020\u2019 TempStudy_MotherBabyLobby.dwg\n- Other files \u00e2\u2020\u2019 TempStudy.dwg\n\nUsage:\n- Run tool to prepare geometry for CAD export\n- Only solid geometry will be exported\n- Curves and blocks are automatically removed\n- Provides completion notification",
         "tab": "Tailor.tab",
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false

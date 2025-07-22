@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = """Automates the creation and placement of reformula labels in Revit. Streamlines the process of labeling elements according to project standards, improving documentation consistency and efficiency."""
 __title__ = "Refomula Label"
 
 import proDUCKtion # pyright: ignore 

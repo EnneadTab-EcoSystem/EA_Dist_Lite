@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = """Launches the EnneadTab App Store, providing access to a curated collection of productivity tools, utilities, and extensions for Revit. Users can easily browse, install, and update plugins to enhance their workflow."""
 __title__ = "App Store"
 __context__ = "zero-doc"
 

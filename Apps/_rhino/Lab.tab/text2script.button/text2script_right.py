@@ -1,6 +1,6 @@
 
 __title__ = "Text2ScriptSetting"
-__doc__ = "This button does Text2ScriptSetting when right click"
+__doc__ = """Opens the settings panel for the Text2Script tool, allowing users to configure AI model preferences, API keys, and script generation options for converting natural language to Python scripts in Rhino."""
 
 
 from EnneadTab import ERROR_HANDLE, LOG

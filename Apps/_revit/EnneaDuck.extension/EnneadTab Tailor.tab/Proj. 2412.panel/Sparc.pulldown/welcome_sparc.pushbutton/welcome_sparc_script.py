@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = """Displays a welcome message and project-specific information for the Sparc project in Revit. Use this tool to onboard team members, share project guidelines, or provide quick access to essential resources."""
 __title__ = "Welcome Sparc"
 
 import proDUCKtion # pyright: ignore 

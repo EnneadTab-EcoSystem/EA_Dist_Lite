@@ -1,6 +1,6 @@
 
 __title__ = "LiveSelection"
-__doc__ = "This button does LiveSelection when left click"
+__doc__ = """Enables real-time selection synchronization between Rhino and Revit. Allows users to select objects in Rhino and have the selection reflected in Revit, streamlining cross-platform workflows and coordination."""
 
 
 from EnneadTab import ERROR_HANDLE, LOG

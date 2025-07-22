@@ -1,6 +1,6 @@
 
 __title__ = "Anything"
-__doc__ = "This button does Anything, depedening what you want to quickly test without creating a new button"
+__doc__ = """A sandbox utility for quick testing and prototyping in Rhino. Use this button to run experimental code snippets, debug features, or validate new ideas without creating a dedicated tool."""
 
 
 from EnneadTab import ERROR_HANDLE, LOG, VERSION_CONTROL

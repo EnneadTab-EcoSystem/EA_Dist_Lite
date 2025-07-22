@@ -3732,10 +3732,10 @@ EA_ImportRevitCollection</script>
         <locale_1033>LiveSelection</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>This button does LiveSelection when left click</locale_1033>
+        <locale_1033>Enables real-time selection synchronization between Rhino and Revit. Allows users to select objects in Rhino and have the selection reflected in Revit, streamlining cross-platform workflows and coordination.</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>This button does LiveSelection when left click</locale_1033>
+        <locale_1033>Enables real-time selection synchronization between Rhino and Revit. Allows users to select objects in Rhino and have the selection reflected in Revit, streamlining cross-platform workflows and coordination.</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>LiveSelection</locale_1033>
@@ -4084,7 +4084,7 @@ EA_RebaseFile</script>
 
 Replaces blocks between Twinmotion and Enscape versions based on Excel mapping data.
 Features:
-- Supports bidirectional block replacement (Twinmotion ↔ Enscape)
+- Supports bidirectional block replacement (Twinmotion â†” Enscape)
 - Uses Excel mapping file for block name relationships
 - Processes entire document with progress tracking
 - Maintains block transformations and properties
@@ -4092,8 +4092,8 @@ Features:
 - Automatically redraws viewport after replacement
 
 Replacement Options:
-1. Twinmotion block → Enscape block
-2. Enscape block → Twinmotion block
+1. Twinmotion block â†’ Enscape block
+2. Enscape block â†’ Twinmotion block
 
 Excel Mapping:
 - Reads from 'enscape_twinmotion_block_mapping.xlsx'
@@ -4119,7 +4119,7 @@ Usage:
 
 Replaces blocks between Twinmotion and Enscape versions based on Excel mapping data.
 Features:
-- Supports bidirectional block replacement (Twinmotion ↔ Enscape)
+- Supports bidirectional block replacement (Twinmotion â†” Enscape)
 - Uses Excel mapping file for block name relationships
 - Processes entire document with progress tracking
 - Maintains block transformations and properties
@@ -4127,8 +4127,8 @@ Features:
 - Automatically redraws viewport after replacement
 
 Replacement Options:
-1. Twinmotion block → Enscape block
-2. Enscape block → Twinmotion block
+1. Twinmotion block â†’ Enscape block
+2. Enscape block â†’ Twinmotion block
 
 Excel Mapping:
 - Reads from 'enscape_twinmotion_block_mapping.xlsx'
@@ -4228,8 +4228,8 @@ Workflow:
 6. Cleans up temporary exploded geometry
 
 File Naming:
-- MotherBabyLobby.3dm → TempStudy_MotherBabyLobby.dwg
-- Other files → TempStudy.dwg
+- MotherBabyLobby.3dm â†’ TempStudy_MotherBabyLobby.dwg
+- Other files â†’ TempStudy.dwg
 
 Usage:
 - Run tool to prepare geometry for CAD export
@@ -4258,8 +4258,8 @@ Workflow:
 6. Cleans up temporary exploded geometry
 
 File Naming:
-- MotherBabyLobby.3dm → TempStudy_MotherBabyLobby.dwg
-- Other files → TempStudy.dwg
+- MotherBabyLobby.3dm â†’ TempStudy_MotherBabyLobby.dwg
+- Other files â†’ TempStudy.dwg
 
 Usage:
 - Run tool to prepare geometry for CAD export
@@ -4742,10 +4742,10 @@ EA_RedAlert</script>
         <locale_1033>Anything</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>This button does Anything, depedening what you want to quickly test without creating a new button</locale_1033>
+        <locale_1033>A sandbox utility for quick testing and prototyping in Rhino. Use this button to run experimental code snippets, debug features, or validate new ideas without creating a dedicated tool.</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>This button does Anything, depedening what you want to quickly test without creating a new button</locale_1033>
+        <locale_1033>A sandbox utility for quick testing and prototyping in Rhino. Use this button to run experimental code snippets, debug features, or validate new ideas without creating a dedicated tool.</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>Anything</locale_1033>
@@ -4819,10 +4819,10 @@ EA_Text2Script</script>
         <locale_1033>Text2ScriptSetting</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>This button does Text2ScriptSetting when right click</locale_1033>
+        <locale_1033>Opens the settings panel for the Text2Script tool, allowing users to configure AI model preferences, API keys, and script generation options for converting natural language to Python scripts in Rhino.</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>This button does Text2ScriptSetting when right click</locale_1033>
+        <locale_1033>Opens the settings panel for the Text2Script tool, allowing users to configure AI model preferences, API keys, and script generation options for converting natural language to Python scripts in Rhino.</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>Text2ScriptSetting</locale_1033>

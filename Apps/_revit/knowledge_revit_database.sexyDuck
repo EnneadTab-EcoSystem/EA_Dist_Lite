@@ -127,7 +127,7 @@
     },
     "EnneadTab Tailor.tab\\Personal.panel\\Generic Order.pulldown\\refomula_label.pushbutton\\refomula_label_script.py": {
         "alias": "Refomula Label",
-        "doc": "Sen Zhang has not writed documentation for this tool, but he should!",
+        "doc": "Automates the creation and placement of reformula labels in Revit. Streamlines the process of labeling elements according to project standards, improving documentation consistency and efficiency.",
         "icon": "EnneadTab Tailor.tab\\Personal.panel\\Generic Order.pulldown\\refomula_label.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab Tailor.tab\\Personal.panel\\Generic Order.pulldown\\refomula_label.pushbutton\\refomula_label_script.py",
@@ -172,7 +172,7 @@
     },
     "EnneadTab Tailor.tab\\Personal.panel\\Generic Order.pulldown\\temp.pushbutton\\temp_script.py": {
         "alias": "Temp",
-        "doc": "Sen Zhang has not writed documentation for this tool, but he should!",
+        "doc": "Temporary script for prototyping and testing new Revit automation features. Use this as a scratchpad for quick experiments, workflow validation, or debugging without affecting production tools.",
         "icon": "EnneadTab Tailor.tab\\Personal.panel\\Generic Order.pulldown\\temp.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab Tailor.tab\\Personal.panel\\Generic Order.pulldown\\temp.pushbutton\\temp_script.py",
@@ -919,7 +919,7 @@
     },
     "EnneadTab Tailor.tab\\Proj. 2412.panel\\Sparc.pulldown\\welcome_sparc.pushbutton\\welcome_sparc_script.py": {
         "alias": "Welcome Sparc",
-        "doc": "Sen Zhang has not writed documentation for this tool, but he should!",
+        "doc": "Displays a welcome message and project-specific information for the Sparc project in Revit. Use this tool to onboard team members, share project guidelines, or provide quick access to essential resources.",
         "icon": "EnneadTab Tailor.tab\\Proj. 2412.panel\\Sparc.pulldown\\welcome_sparc.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab Tailor.tab\\Proj. 2412.panel\\Sparc.pulldown\\welcome_sparc.pushbutton\\welcome_sparc_script.py",
@@ -2575,7 +2575,7 @@
     },
     "EnneadTab.tab\\Resource.panel\\app_store.pushbutton\\app_store_script.py": {
         "alias": "App Store",
-        "doc": "Sen Zhang has not writed documentation for this tool, but he should!",
+        "doc": "Launches the EnneadTab App Store, providing access to a curated collection of productivity tools, utilities, and extensions for Revit. Users can easily browse, install, and update plugins to enhance their workflow.",
         "icon": "EnneadTab.tab\\Resource.panel\\app_store.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\Resource.panel\\app_store.pushbutton\\app_store_script.py",
@@ -2917,7 +2917,7 @@
     },
     "EnneadTab.tab\\UI.panel\\open_app_store.pushbutton\\open_app_store_script.py": {
         "alias": "Open App Store",
-        "doc": "Sen Zhang has not writed documentation for this tool, but he should!",
+        "doc": "Opens the EnneadTab App Store interface, allowing users to browse, install, and manage available add-ons and extensions for Revit. Provides a centralized location for discovering new tools and keeping existing ones up to date.",
         "icon": "EnneadTab.tab\\UI.panel\\open_app_store.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\UI.panel\\open_app_store.pushbutton\\open_app_store_script.py",

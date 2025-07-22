@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = """Temporary script for prototyping and testing new Revit automation features. Use this as a scratchpad for quick experiments, workflow validation, or debugging without affecting production tools."""
 __title__ = "Temp"
 
 import proDUCKtion # pyright: ignore 
