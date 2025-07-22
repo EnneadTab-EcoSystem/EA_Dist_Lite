@@ -160,7 +160,7 @@ class PimNumberFixerWindow(WPFWindow):
                 success_count += 1
             except Exception as e:
                 error_count += 1
-                LOG.log("Error renaming {}: {}".format(file_path, e))
+                ERROR_HANDLE.print_note("Error renaming {}: {}".format(file_path, e))
         message = "Rename completed:\n"
         message += "Success: {}\n".format(success_count)
         message += "Errors: {}\n".format(error_count)

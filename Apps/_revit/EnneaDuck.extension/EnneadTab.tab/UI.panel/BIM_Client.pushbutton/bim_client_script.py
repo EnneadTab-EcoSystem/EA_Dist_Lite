@@ -25,21 +25,32 @@ import os
 from datetime import datetime
 
 def get_local_pip_module():
-    """Get the local pip module from dependency folder"""
+    """Get the local pip module from dependency folder, searching for 'Apps' parent folder first."""
     try:
-        # Get the current script directory
+        import os
         script_dir = os.path.dirname(__file__)
         
-        # Navigate to the dependency folder using relative paths
-        # From: Apps/_revit/EnneaDuck.extension/EnneadTab.tab/UI.panel/BIM_Client.pushbutton/
-        # To: Apps/lib/dependency/py3/
-        dependency_path = os.path.join(script_dir, "..", "..", "..", "..", "..", "..", "..", "..", "lib", "dependency", "py3")
-        dependency_path = os.path.abspath(dependency_path)
+        # Find the parent folder until 'Apps' is reached
+        def find_apps_root(start_path):
+            current = os.path.abspath(start_path)
+            while True:
+                if os.path.basename(current) == "Apps":
+                    return current
+                parent = os.path.dirname(current)
+                if parent == current:
+                    # Reached the root of the filesystem
+                    return None
+                current = parent
         
-        # Debug: Print the resolved path
+        apps_root = find_apps_root(script_dir)
+        if apps_root:
+            dependency_path = os.path.join(apps_root, "lib", "dependency", "py3")
+        else:
+            dependency_path = None
+        
         print(f"Looking for dependency path: {dependency_path}")
         
-        if os.path.exists(dependency_path):
+        if dependency_path and os.path.exists(dependency_path):
             print(f"✅ Dependency path found: {dependency_path}")
             if dependency_path not in sys.path:
                 sys.path.insert(0, dependency_path)
@@ -60,43 +71,48 @@ def get_local_pip_module():
         return None
 
 def install_module_with_local_pip(module_name, python_exe):
-    """Install a module using the local pip module"""
+    """Install a module using pip, preferring system pip, then falling back to local pip via PYTHONPATH."""
     try:
-        pip = get_local_pip_module()
-        if pip is None:
-            return False, "Local pip module not available"
-        
-        # Use the local pip module directly instead of subprocess
-        try:
-            # Import pip's main function
-            from pip._internal.main import main as pip_main
-            
-            # Set up pip arguments
-            import sys
-            original_argv = sys.argv.copy()
-            sys.argv = ['pip', 'install', module_name]
-            
-            # Run pip install
-            pip_main()
-            
-            # Restore original argv
-            sys.argv = original_argv
-            
-            return True, "Module installed successfully using local pip"
-            
-        except ImportError:
-            # Fallback to subprocess method
-            import subprocess
+        # First, try system pip via subprocess
+        import subprocess
+        result = subprocess.run([python_exe, "-m", "pip", "install", module_name], 
+                              capture_output=True, text=True, timeout=120)
+        if result.returncode == 0:
+            return True, "Module installed successfully using system pip"
+        else:
+            # If system pip fails, try with local pip via PYTHONPATH
+            pip = get_local_pip_module()
+            if pip is None:
+                return False, "Local pip module not available"
+            import os
+            script_dir = os.path.dirname(__file__)
+            # Use the same logic as get_local_pip_module to find dependency_path
+            def find_apps_root(start_path):
+                current = os.path.abspath(start_path)
+                while True:
+                    if os.path.basename(current) == "Apps":
+                        return current
+                    parent = os.path.dirname(current)
+                    if parent == current:
+                        return None
+                    current = parent
+            apps_root = find_apps_root(script_dir)
+            if apps_root:
+                dependency_path = os.path.join(apps_root, "lib", "dependency", "py3")
+            else:
+                dependency_path = None
+            if not dependency_path or not os.path.exists(dependency_path):
+                return False, "Local pip dependency path not found"
+            env = os.environ.copy()
+            env["PYTHONPATH"] = dependency_path + os.pathsep + env.get("PYTHONPATH", "")
             result = subprocess.run([python_exe, "-m", "pip", "install", module_name], 
-                                  capture_output=True, text=True, timeout=120)
-            
+                                  capture_output=True, text=True, timeout=120, env=env)
             if result.returncode == 0:
-                return True, "Module installed successfully using local pip"
+                return True, "Module installed successfully using local pip via PYTHONPATH"
             else:
                 return False, f"Installation failed: {result.stderr}"
-            
     except Exception as e:
-        return False, f"Error using local pip: {str(e)}"
+        return False, f"Error using pip: {str(e)}"
 
 def get_pyrevit_python_executable():
     """Get the correct Python executable for PyRevit CPython mode"""
@@ -819,4 +835,6 @@ def main():
 
 
 if __name__ == "__main__":
+    output = script.get_output()
+    output.close_others()
     main() 

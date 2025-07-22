@@ -2799,8 +2799,8 @@
         "tab_icon": null
     },
     "EnneadTab.tab\\Tools.panel\\join_all_coln_floor.pushbutton\\join_all_coln_floor_script.py": {
-        "alias": "Join All Column/Floor",
-        "doc": "Automates the tedious task of joining columns and floors throughout your model. This time-saving utility identifies all column and floor elements and applies join geometry operations between them, providing a detailed completion report of successful and failed joins.",
+        "alias": "Join Selected Elements",
+        "doc": "Automates the tedious task of joining vertical and horizontal elements throughout your model.\n\nThis utility now allows you to select which categories to join:\n- Horizontal elements: multi-pick from Floor, Ceiling\n- Vertical elements: multi-pick from Column, Structural Column\n\nThe tool will join all selected vertical elements to all selected horizontal elements, and provide a detailed completion report of successful and failed joins.",
         "icon": "EnneadTab.tab\\Tools.panel\\join_all_coln_floor.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\Tools.panel\\join_all_coln_floor.pushbutton\\join_all_coln_floor_script.py",
