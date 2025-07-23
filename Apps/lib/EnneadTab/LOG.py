@@ -209,11 +209,11 @@ def send_usage_to_google_form(environment, function_name, result):
         elif _try_urllib_request_usage_implementation(environment, function_name, result):
             return
         else:
-            print("No suitable HTTP library found for sending usage to Google Form")
+            ERROR_HANDLE.print_note("No suitable HTTP library found for sending usage to Google Form")
             
     except Exception as e:
         # Don't let Google Form errors break the main logging
-        print("Failed to send usage to Google Form: {}".format(e))
+        ERROR_HANDLE.print_note("Failed to send usage to Google Form: {}".format(e))
         pass
 
 
@@ -260,12 +260,12 @@ def _try_urllib3_usage_implementation(environment, function_name, result):
         if response.status == 200:
             response_content = response.data.decode('utf-8')
             if "Thank you" in response_content or "submitted" in response_content.lower():
-                print("Usage data sent to Google Form successfully (urllib3)")
+                ERROR_HANDLE.print_note("Usage data sent to Google Form successfully (urllib3)")
             else:
-                print("Form submission completed but may not have been recorded (urllib3)")
+                ERROR_HANDLE.print_note("Form submission completed but may not have been recorded (urllib3)")
             return True
         else:
-            print("Failed to send usage data to Google Form - Status: {} (urllib3)".format(response.status))
+            ERROR_HANDLE.print_note("Failed to send usage data to Google Form - Status: {} (urllib3)".format(response.status))
             return False
             
     except ImportError:
@@ -316,15 +316,15 @@ def _try_urllib2_usage_implementation(environment, function_name, result):
         if response.getcode() == 200:
             # Read response to check for success indicators
             response_content = response.read()
-            print("Response content preview: {}".format(response_content[:200]))  # Debug: show first 200 chars
+            ERROR_HANDLE.print_note("Response content preview: {}".format(response_content[:200]))  # Debug: show first 200 chars
             if "Thank you" in response_content or "submitted" in response_content.lower():
-                print("Usage data sent to Google Form successfully (urllib2)")
+                ERROR_HANDLE.print_note("Usage data sent to Google Form successfully (urllib2)")
             else:
-                print("Form submission completed but may not have been recorded (urllib2)")
-                print("This usually means the field IDs don't match the form fields")
+                ERROR_HANDLE.print_note("Form submission completed but may not have been recorded (urllib2)")
+                ERROR_HANDLE.print_note("This usually means the field IDs don't match the form fields")
             return True
         else:
-            print("Failed to send usage data to Google Form - Status: {} (urllib2)".format(response.getcode()))
+            ERROR_HANDLE.print_note("Failed to send usage data to Google Form - Status: {} (urllib2)".format(response.getcode()))
             return False
             
     except ImportError:
@@ -379,12 +379,12 @@ def _try_urllib_request_usage_implementation(environment, function_name, result)
             # Read response to check for success indicators
             response_content = response.read().decode('utf-8')
             if "Thank you" in response_content or "submitted" in response_content.lower():
-                print("Usage data sent to Google Form successfully (urllib.request)")
+                ERROR_HANDLE.print_note("Usage data sent to Google Form successfully (urllib.request)")
             else:
-                print("Form submission completed but may not have been recorded (urllib.request)")
+                ERROR_HANDLE.print_note("Form submission completed but may not have been recorded (urllib.request)")
             return True
         else:
-            print("Failed to send usage data to Google Form - Status: {} (urllib.request)".format(response.getcode()))
+            ERROR_HANDLE.print_note("Failed to send usage data to Google Form - Status: {} (urllib.request)".format(response.getcode()))
             return False
             
     except ImportError:
