@@ -10,7 +10,7 @@ from EnneadTab import ERROR_HANDLE, LOG, VERSION_CONTROL
 def anything():
     print ("Placeholder func <{}> that does this:{}".format(__title__, __doc__))
 
-    VERSION_CONTROL.updater_for_shanghai()
+    print (x)
 
 
     

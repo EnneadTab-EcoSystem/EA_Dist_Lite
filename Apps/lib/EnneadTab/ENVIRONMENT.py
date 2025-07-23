@@ -212,6 +212,13 @@ if IS_OFFLINE_MODE:
     SHARED_DUMP_FOLDER = DUMP_FOLDER
 
 
+ERROR_LOG_GOOGLE_FORM_SUBMIT = "https://docs.google.com/forms/d/e/1FAIpQLScLvUOwyY84oqCVhoLie2KzLIyYkTBt3fxengOhmhIXaVzhdA/formResponse"
+ERROR_LOG_GOOGLE_FORM_RESULT = "https://docs.google.com/forms/d/1nEbgC-Nbaiwrr5FFVfVgqc_hUqzBrtvus8aHY6aL4lE/edit?pli=1#responses"
+
+
+USAGE_LOG_GOOGLE_FORM_SUBMIT = "https://docs.google.com/forms/d/e/1FAIpQLSc2Ruskj8BQYYA91vOaXqg_mOk0l67ca_ZGXpS-e-LwfU9bVA/formResponse"
+USAGE_LOG_GOOGLE_FORM_RESULT = "https://docs.google.com/forms/d/12Ew3_3Mmrl4P-grEnVkK8cIuLQzDAEm0ECqBmJI_7oA/edit#responses"
+
 ####################################
 
 

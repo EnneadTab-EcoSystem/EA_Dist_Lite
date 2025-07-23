@@ -17,6 +17,15 @@
         "tab_icon": "EnneadTab.menu\\icon.png",
         "is_popular": false
     },
+    "EnneadTab.menu\\check_error_log.button\\check_error_log_left.py": {
+        "script": "EnneadTab.menu\\check_error_log.button\\check_error_log_left.py",
+        "icon": null,
+        "alias": "CheckErrorLog",
+        "doc": "Opens the Google error log URL in the default browser",
+        "tab": "EnneadTab.menu",
+        "tab_icon": "EnneadTab.menu\\icon.png",
+        "is_popular": false
+    },
     "EnneadTab.menu\\create_new_button.button\\new_button_left.py": {
         "script": "EnneadTab.menu\\create_new_button.button\\new_button_left.py",
         "icon": "EnneadTab.menu\\create_new_button.button\\icon.png",

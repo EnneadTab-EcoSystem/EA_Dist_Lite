@@ -30,8 +30,34 @@ import TIME
 import FOLDER
 import DATA_FILE
 import ENVIRONMENT
+import ERROR_HANDLE
 
 LOG_FILE_NAME = "log_{}".format(USER.USER_NAME)
+
+# Google Form field IDs for usage logging
+USAGE_LOG_FORM_FIELDS = {
+    'entry.333183173': 'environment',     # Environment field
+    'entry.1318607272': 'function_name',  # FunctionName field  
+    'entry.1785264643': 'result',         # Result field
+}
+
+
+def _build_usage_form_data(environment, function_name, result):
+    """Build form data dictionary for usage logging Google Form.
+    
+    Args:
+        environment (str): The application environment
+        function_name (str): The name of the function that was executed
+        result (str): The result of the function execution
+        
+    Returns:
+        dict: Form data dictionary with field IDs and values
+    """
+    return {
+        'entry.333183173': environment,     # Environment field
+        'entry.1318607272': function_name,  # FunctionName field  
+        'entry.1785264643': result,         # Result field
+    }
 
 
 @contextmanager
@@ -120,6 +146,16 @@ def log(script_path, func_name_as_record):
 
                     # print ("data to be place in log is ", data)
 
+                # Send usage data to Google Form
+                try:
+                    environment = ENVIRONMENT.get_app_name()
+                    function_name = func_name_as_record.replace("\n", " ")
+                    result = str(out)
+                    send_usage_to_google_form(environment, function_name, result)
+                except Exception as e:
+                    # Don't let Google Form errors break the main logging
+                    pass
+
                 return out
             except:
                 out = func(*args, **kwargs)
@@ -146,6 +182,220 @@ def read_log(user_name=USER.USER_NAME):
     data = DATA_FILE.get_data(LOG_FILE_NAME)
     print("Printing user log from <{}>".format(user_name))
     pprint.pprint(data, indent=4)
+
+
+def send_usage_to_google_form(environment, function_name, result):
+    """Send usage information to Google Form for automated usage tracking.
+
+    Sends usage details to a Google Form for automated usage tracking and analysis.
+    Form includes environment, function name, and result information.
+    
+    Automatically detects the best available HTTP library based on environment:
+    - Rhino: Uses urllib2/urllib (IronPython 2.7 style)
+    - Revit: Uses urllib3 (if available)
+    - Terminal/IDE: Uses built-in urllib modules (Python 3 style)
+
+    Args:
+        environment (str): The application environment (Revit/Rhino/etc.)
+        function_name (str): The name of the function that was executed
+        result (str): The result of the function execution
+    """
+    try:
+        # Try different HTTP libraries based on environment availability
+        if _try_urllib3_usage_implementation(environment, function_name, result):
+            return
+        elif _try_urllib2_usage_implementation(environment, function_name, result):
+            return
+        elif _try_urllib_request_usage_implementation(environment, function_name, result):
+            return
+        else:
+            print("No suitable HTTP library found for sending usage to Google Form")
+            
+    except Exception as e:
+        # Don't let Google Form errors break the main logging
+        print("Failed to send usage to Google Form: {}".format(e))
+        pass
+
+
+def _try_urllib3_usage_implementation(environment, function_name, result):
+    """Try to use urllib3 for sending usage data (Revit environment).
+    
+    Args:
+        environment (str): The application environment
+        function_name (str): The name of the function that was executed
+        result (str): The result of the function execution
+        
+    Returns:
+        bool: True if successful, False if urllib3 not available or failed
+    """
+    try:
+        import urllib3
+        
+        # Google Form URL
+        g_form_url = ENVIRONMENT.USAGE_LOG_GOOGLE_FORM_SUBMIT
+        
+        # Build form data using common helper function
+        form_data = _build_usage_form_data(environment, function_name, result)
+        
+        # Create HTTP manager
+        http = urllib3.PoolManager()
+        
+        # Headers
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Accept-Encoding': 'gzip, deflate',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+        }
+        
+        # Encode form data
+        encoded_data = urllib3.util.url.urlencode(form_data)
+        
+        # Send request
+        response = http.request('POST', g_form_url, body=encoded_data, headers=headers, timeout=30.0)
+        
+        if response.status == 200:
+            response_content = response.data.decode('utf-8')
+            if "Thank you" in response_content or "submitted" in response_content.lower():
+                print("Usage data sent to Google Form successfully (urllib3)")
+            else:
+                print("Form submission completed but may not have been recorded (urllib3)")
+            return True
+        else:
+            print("Failed to send usage data to Google Form - Status: {} (urllib3)".format(response.status))
+            return False
+            
+    except ImportError:
+        # urllib3 not available
+        return False
+    except Exception as e:
+        ERROR_HANDLE.print_note("Error sending to Google Form (urllib3): {}".format(e))
+        return False
+
+
+def _try_urllib2_usage_implementation(environment, function_name, result):
+    """Try to use urllib2 for sending usage data (Rhino environment).
+    
+    Args:
+        environment (str): The application environment
+        function_name (str): The name of the function that was executed
+        result (str): The result of the function execution
+        
+    Returns:
+        bool: True if successful, False if urllib2 not available or failed
+    """
+    try:
+        import urllib2
+        import urllib
+        
+        # Google Form URL
+        g_form_url = ENVIRONMENT.USAGE_LOG_GOOGLE_FORM_SUBMIT
+        
+        # Build form data using common helper function
+        form_data = _build_usage_form_data(environment, function_name, result)
+        
+        # Encode the data (IronPython 2.7 compatible)
+        data = urllib.urlencode(form_data)
+        
+        # Create the request with comprehensive headers
+        req = urllib2.Request(g_form_url, data)
+        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
+        req.add_header('Content-Type', 'application/x-www-form-urlencoded')
+        req.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
+        req.add_header('Accept-Language', 'en-US,en;q=0.5')
+        req.add_header('Accept-Encoding', 'gzip, deflate')
+        req.add_header('Connection', 'keep-alive')
+        req.add_header('Upgrade-Insecure-Requests', '1')
+        
+        # Send the request
+        response = urllib2.urlopen(req, timeout=30)
+        # Google Forms returns a 200 status even on successful submission
+        if response.getcode() == 200:
+            # Read response to check for success indicators
+            response_content = response.read()
+            print("Response content preview: {}".format(response_content[:200]))  # Debug: show first 200 chars
+            if "Thank you" in response_content or "submitted" in response_content.lower():
+                print("Usage data sent to Google Form successfully (urllib2)")
+            else:
+                print("Form submission completed but may not have been recorded (urllib2)")
+                print("This usually means the field IDs don't match the form fields")
+            return True
+        else:
+            print("Failed to send usage data to Google Form - Status: {} (urllib2)".format(response.getcode()))
+            return False
+            
+    except ImportError:
+        # urllib2 not available
+        return False
+    except urllib2.URLError as e:
+        ERROR_HANDLE.print_note("Network error sending to Google Form (urllib2): {}".format(e))
+        return False
+    except Exception as e:
+        ERROR_HANDLE.print_note("Error sending to Google Form (urllib2): {}".format(e))
+        return False
+
+
+def _try_urllib_request_usage_implementation(environment, function_name, result):
+    """Try to use urllib.request for sending usage data (Terminal/IDE environment).
+    
+    Args:
+        environment (str): The application environment
+        function_name (str): The name of the function that was executed
+        result (str): The result of the function execution
+        
+    Returns:
+        bool: True if successful, False if urllib.request not available or failed
+    """
+    try:
+        import urllib.request
+        import urllib.parse
+        
+        # Google Form URL
+        g_form_url = ENVIRONMENT.USAGE_LOG_GOOGLE_FORM_SUBMIT
+        
+        # Build form data using common helper function
+        form_data = _build_usage_form_data(environment, function_name, result)
+        
+        # Encode the data (Python 3.x compatible)
+        data = urllib.parse.urlencode(form_data).encode('utf-8')
+        
+        # Create the request with comprehensive headers
+        req = urllib.request.Request(g_form_url, data)
+        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
+        req.add_header('Content-Type', 'application/x-www-form-urlencoded')
+        req.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
+        req.add_header('Accept-Language', 'en-US,en;q=0.5')
+        req.add_header('Accept-Encoding', 'gzip, deflate')
+        req.add_header('Connection', 'keep-alive')
+        req.add_header('Upgrade-Insecure-Requests', '1')
+        
+        # Send the request
+        response = urllib.request.urlopen(req, timeout=30)
+        # Google Forms returns a 200 status even on successful submission
+        if response.getcode() == 200:
+            # Read response to check for success indicators
+            response_content = response.read().decode('utf-8')
+            if "Thank you" in response_content or "submitted" in response_content.lower():
+                print("Usage data sent to Google Form successfully (urllib.request)")
+            else:
+                print("Form submission completed but may not have been recorded (urllib.request)")
+            return True
+        else:
+            print("Failed to send usage data to Google Form - Status: {} (urllib.request)".format(response.getcode()))
+            return False
+            
+    except ImportError:
+        # urllib.request not available
+        return False
+    except urllib.error.URLError as e:
+        ERROR_HANDLE.print_note("Network error sending to Google Form (urllib.request): {}".format(e))
+        return False
+    except Exception as e:
+        ERROR_HANDLE.print_note("Error sending to Google Form (urllib.request): {}".format(e))
+        return False
 
 
 def unit_test():
