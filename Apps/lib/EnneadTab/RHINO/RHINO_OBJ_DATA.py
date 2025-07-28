@@ -102,14 +102,28 @@ def get_center(obj):
 
     Returns
     -------
-    Rhino.Geometry.Point3d
-        Center point of the object's bounding box
+    Rhino.Geometry.Point3d or None
+        Center point of the object's bounding box, or None if object is invalid
     """
-    corners = rs.BoundingBox(obj)
-    min = corners[0]
-    max = corners[6]
-    center = (min + max)/2
-    return center
+    try:
+        # Check if object exists and is valid
+        if not rs.IsObject(obj):
+            print("Warning: Object {} is not valid".format(obj))
+            return None
+            
+        corners = rs.BoundingBox(obj)
+        if not corners or len(corners) < 7:
+            print("Warning: Could not get bounding box for object {}".format(obj))
+            return None
+            
+        min = corners[0]
+        max = corners[6]
+        center = (min + max)/2
+        return center
+        
+    except Exception as e:
+        print("Error getting center for object {}: {}".format(obj, str(e)))
+        return None
 
 def get_obj_h(obj):
     """Get the height (Z dimension) of an object's bounding box.
@@ -121,14 +135,28 @@ def get_obj_h(obj):
 
     Returns
     -------
-    float
-        Height of the object's bounding box
+    float or None
+        Height of the object's bounding box, or None if object is invalid
     """
-    corners = rs.BoundingBox(obj)
-    min = corners[0]
-    max = corners[6]
-    z_diff = (max.Z - min.Z)
-    return z_diff
+    try:
+        # Check if object exists and is valid
+        if not rs.IsObject(obj):
+            print("Warning: Object {} is not valid".format(obj))
+            return None
+            
+        corners = rs.BoundingBox(obj)
+        if not corners or len(corners) < 7:
+            print("Warning: Could not get bounding box for object {}".format(obj))
+            return None
+            
+        min = corners[0]
+        max = corners[6]
+        z_diff = (max.Z - min.Z)
+        return z_diff
+        
+    except Exception as e:
+        print("Error getting height for object {}: {}".format(obj, str(e)))
+        return None
 
 def get_boundingbox_edge_length(obj):
     """Get the lengths of bounding box edges in X, Y, and Z directions.
@@ -140,14 +168,28 @@ def get_boundingbox_edge_length(obj):
 
     Returns
     -------
-    tuple
-        (X_length, Y_length, Z_length) of the bounding box edges
+    tuple or None
+        (X_length, Y_length, Z_length) of the bounding box edges, or None if object is invalid
     """
-    corners = rs.BoundingBox(obj)
-    X = rs.Distance(corners[0], corners[1])
-    Y = rs.Distance(corners[1], corners[2])
-    Z = rs.Distance(corners[0], corners[5])
-    return X, Y, Z
+    try:
+        # Check if object exists and is valid
+        if not rs.IsObject(obj):
+            print("Warning: Object {} is not valid".format(obj))
+            return None
+            
+        corners = rs.BoundingBox(obj)
+        if not corners or len(corners) < 7:
+            print("Warning: Could not get bounding box for object {}".format(obj))
+            return None
+            
+        X = rs.Distance(corners[0], corners[1])
+        Y = rs.Distance(corners[1], corners[2])
+        Z = rs.Distance(corners[0], corners[5])
+        return X, Y, Z
+        
+    except Exception as e:
+        print("Error getting bounding box edge length for object {}: {}".format(obj, str(e)))
+        return None
 
 
 def get_obj_min_center_pt(obj):
@@ -160,13 +202,27 @@ def get_obj_min_center_pt(obj):
 
     Returns
     -------
-    Rhino.Geometry.Point3d
-        Center point of the minimum (bottom) face of the bounding box
+    Rhino.Geometry.Point3d or None
+        Center point of the minimum (bottom) face of the bounding box, or None if object is invalid
     """
-    pts = rs.BoundingBox(obj)
-    pt0 = pts[0]
-    pt1 = pts[2]
-    return (pt0 + pt1)/2
+    try:
+        # Check if object exists and is valid
+        if not rs.IsObject(obj):
+            print("Warning: Object {} is not valid".format(obj))
+            return None
+            
+        pts = rs.BoundingBox(obj)
+        if not pts or len(pts) < 3:
+            print("Warning: Could not get bounding box for object {}".format(obj))
+            return None
+            
+        pt0 = pts[0]
+        pt1 = pts[2]
+        return (pt0 + pt1)/2
+        
+    except Exception as e:
+        print("Error getting minimum center point for object {}: {}".format(obj, str(e)))
+        return None
 
 
 def get_instance_geo(block_instance):
@@ -189,21 +245,45 @@ def get_instance_geo(block_instance):
     - Applies block instance transformation to all geometry
     - Returns actual geometry objects, not references
     """
-    block_name = rs.BlockInstanceName(block_instance)
-    non_block_objs, block_instance_objs = [], []
+    try:
+        # Check if document is available
+        if not sc.doc:
+            print("Warning: No active document found")
+            return []
+            
+        block_name = rs.BlockInstanceName(block_instance)
+        non_block_objs, block_instance_objs = [], []
 
-    for x in rs.BlockObjects(block_name):
-        (block_instance_objs if rs.IsBlockInstance(x) else non_block_objs).append(x)
+        for x in rs.BlockObjects(block_name):
+            (block_instance_objs if rs.IsBlockInstance(x) else non_block_objs).append(x)
+            
+        non_block_geos = []
+        for x in non_block_objs:
+            try:
+                obj = sc.doc.Objects.Find(x)
+                if obj and obj.Geometry:
+                    non_block_geos.append(obj.Geometry)
+            except Exception as e:
+                print("Warning: Could not get geometry for object {}: {}".format(x, str(e)))
+                continue
+                
+        block_geos = []
+        for x in block_instance_objs:
+            try:
+                block_geos.extend(get_instance_geo(x))
+            except Exception as e:
+                print("Warning: Could not process nested block instance {}: {}".format(x, str(e)))
+                continue
+                
+        geo_contents = non_block_geos + block_geos
         
-    non_block_geos = [sc.doc.Objects.Find(x).Geometry for x in non_block_objs]
-    block_geos = []
-    for x in block_instance_objs:
-        block_geos.extend(get_instance_geo(x))
-    geo_contents = non_block_geos + block_geos
-    
-    transform = rs.BlockInstanceXform(block_instance)
-    [x.Transform(transform) for x in geo_contents]
-    return geo_contents
+        transform = rs.BlockInstanceXform(block_instance)
+        [x.Transform(transform) for x in geo_contents]
+        return geo_contents
+        
+    except Exception as e:
+        print("Error getting instance geometry for block {}: {}".format(block_instance, str(e)))
+        return []
 
 
 def geo_to_obj(geo, name = None):
@@ -216,30 +296,41 @@ def geo_to_obj(geo, name = None):
 
     Returns
     -------
-    Rhino.Geometry.GeometryBase
-        The converted geometry object
+    Rhino.Geometry.GeometryBase or None
+        The converted geometry object, or None if conversion fails
     """
-    if isinstance(geo, Rhino.Geometry.Point3d):
-        out_obj =  Rhino.RhinoDoc.Objects.AddPoint(geo)
-    elif isinstance(geo, Rhino.Geometry.Curve):
-        out_obj = Rhino.RhinoDoc.Objects.AddCurve(geo)
-    elif isinstance(geo, Rhino.Geometry.Brep):
-        out_obj = Rhino.RhinoDoc.Objects.AddBrep(geo)
-    elif isinstance(geo, Rhino.Geometry.Mesh):
-        out_obj = Rhino.RhinoDoc.Objects.AddMesh(geo)
-    elif isinstance(geo, Rhino.Geometry.Surface):
-        out_obj = Rhino.RhinoDoc.Objects.AddSurface(geo)
-    elif isinstance(geo, Rhino.Geometry.Hatch):
-        out_obj = Rhino.RhinoDoc.Objects.AddHatch(geo)
-    elif isinstance(geo, Rhino.Geometry.Text):
-        out_obj = Rhino.RhinoDoc.Objects.AddText(geo)
-    elif isinstance(geo, Rhino.Geometry.TextDot):
-        out_obj = Rhino.RhinoDoc.Objects.AddTextDot(geo)
-    else:
-        print("Unsupported geometry type: {}".format(type(geo)))
-        return None
+    try:
+        # Get the active document
+        doc = Rhino.RhinoDoc.ActiveDoc
+        if not doc:
+            print("Warning: No active Rhino document found")
+            return None
+            
+        if isinstance(geo, Rhino.Geometry.Point3d):
+            out_obj = doc.Objects.AddPoint(geo)
+        elif isinstance(geo, Rhino.Geometry.Curve):
+            out_obj = doc.Objects.AddCurve(geo)
+        elif isinstance(geo, Rhino.Geometry.Brep):
+            out_obj = doc.Objects.AddBrep(geo)
+        elif isinstance(geo, Rhino.Geometry.Mesh):
+            out_obj = doc.Objects.AddMesh(geo)
+        elif isinstance(geo, Rhino.Geometry.Surface):
+            out_obj = doc.Objects.AddSurface(geo)
+        elif isinstance(geo, Rhino.Geometry.Hatch):
+            out_obj = doc.Objects.AddHatch(geo)
+        elif isinstance(geo, Rhino.Geometry.Text):
+            out_obj = doc.Objects.AddText(geo)
+        elif isinstance(geo, Rhino.Geometry.TextDot):
+            out_obj = doc.Objects.AddTextDot(geo)
+        else:
+            print("Unsupported geometry type: {}".format(type(geo)))
+            return None
 
-    if name:
-        out_obj.Attributes.Name = name
-        out_obj.CommitChanges()
-    return out_obj
+        if name and out_obj:
+            out_obj.Attributes.Name = name
+            out_obj.CommitChanges()
+        return out_obj
+        
+    except Exception as e:
+        print("Error converting geometry to object: {}".format(str(e)))
+        return None
