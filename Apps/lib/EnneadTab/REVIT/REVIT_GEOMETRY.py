@@ -6,6 +6,19 @@ try:
 except:
     pass
 
+
+def get_element_center(element):
+    """get the center of the element
+    """
+    geo = element.Geometry[DB.Options()]
+
+    b_box = geo.GetBoundingBox()
+    min_pt = b_box.Min
+    max_pt = b_box.Max
+    return DB.XYZ((min_pt.X + max_pt.X) * 0.5,
+                    (min_pt.Y + max_pt.Y) * 0.5,
+                    (min_pt.Z + max_pt.Z) * 0.5)
+
 def project_pt_in_view(pt, view):
     """transfer a spatial point to flatten to the view Cplane
 

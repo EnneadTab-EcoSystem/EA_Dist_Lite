@@ -172,7 +172,7 @@ def try_catch_error(is_silent=False, is_pass = False):
             # Check if we've reached max depth
             _ensure_recursion_depth_is_int()
             if _error_handler_recursion_depth >= _max_error_handler_recursion_depth:
-                print("Maximum error handler recursion depth reached ({})".format(_max_error_handler_recursion_depth))
+                print("Maximum error handler recursion depth reached ({})".format(str(_max_error_handler_recursion_depth)))
                 # Just call the function directly without error handling
                 return func(*args, **kwargs)
                 
@@ -393,9 +393,11 @@ def _try_urllib2_implementation(error, func_name, user_name):
             # Read response to check for success indicators
             response_content = response.read()
             if "Thank you" in response_content or "submitted" in response_content.lower():
-                print_note("Error data sent to Google Form successfully (urllib2)")
+                # print_note("Error data sent to Google Form successfully (urllib2)")
+                pass
             else:
-                print_note("Form submission completed but may not have been recorded (urllib2)")
+                # print_note("Form submission completed but may not have been recorded (urllib2)")
+                pass
             return True
         else:
             print_note("Failed to send error data to Google Form - Status: {} (urllib2)".format(response.getcode()))
