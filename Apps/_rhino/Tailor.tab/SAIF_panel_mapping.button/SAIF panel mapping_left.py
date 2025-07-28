@@ -24,6 +24,11 @@ class SAIFPanelMapper:
             "Vertical 700 01_SYSTEM_01": {"family_name": "tower_main", "side_frame_w": 650, "is_FRW": False},
             "Vertical 1000 01_SYSTEM_01": {"family_name": "tower_main", "side_frame_w": 850, "is_FRW": False},
             "FR WIDOW_SYSTEM_01": {"family_name": "tower_main", "side_frame_w": 450, "is_FRW": True},
+            "55": {"family_name": "podium_main", "side_frame_w": 700, "is_FRW": False},
+            "44": {"family_name": "podium_main", "side_frame_w": 800, "is_FRW": False},
+            "22": {"family_name": "podium_main", "side_frame_w": 1000, "is_FRW": False},
+            "11": {"family_name": "podium_main", "side_frame_w": 1100, "is_FRW": False},
+
         }
         self.PANEL_MAPPING = self._refine_panel_mapping()
     
