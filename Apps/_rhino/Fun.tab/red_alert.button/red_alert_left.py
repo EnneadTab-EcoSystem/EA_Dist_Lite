@@ -60,7 +60,7 @@ class GameSound(Eto.Forms.Form):
                 return 20
             if unit == "foot":
                 return 1
-            return 1, "{0} x {0}".format(unit)
+            return 1
         self.outline_offset = get_factor(unit)
 
 

@@ -40,9 +40,14 @@ def is_new_sheet_number_ok(new_sheet_numbers):
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def excel_sheet_creator():
-    excel_path = forms.pick_excel_file(title="Where is the excel thjat has the new sheet data?")   
+    excel_path = forms.pick_excel_file(title="Where is the excel that has the new sheet data?")   
     # this is the sample excel for reference. 
     # excel_path = r"J:\2306\2_Record\2023-07-31 SD Submission\SD Sheetlist_REV00.xlsx"
+    
+    # Check if user cancelled the file picker
+    if not excel_path:
+        print("No Excel file selected. Operation cancelled.")
+        return
     
     data = EXCEL.read_data_from_excel(excel_path, worksheet = "Sheet1")
     if not data:

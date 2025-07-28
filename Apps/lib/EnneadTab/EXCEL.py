@@ -391,6 +391,10 @@ def get_all_worksheets(filepath):
     Returns:
         list: Names of all worksheets in the workbook
     """
+    # Check if filepath is None or empty
+    if not filepath:
+        print("Error: filepath is None or empty in get_all_worksheets")
+        return []
 
     wb = xlrd.open_workbook(filepath, on_demand=True)
     return wb.sheet_names()
@@ -407,6 +411,11 @@ def save_as_xls(filepath):
     Returns:
         str or None: Path to converted .xls file if successful, None if conversion fails
     """
+    # Check if filepath is None or empty
+    if not filepath:
+        print("Error: filepath is None or empty in save_as_xls")
+        return None
+    
     _, file = os.path.split(filepath)
     safe_copy = FOLDER.get_local_dump_folder_file("save_copy_" + file)
     COPY.copyfile(filepath, safe_copy)
@@ -461,6 +470,11 @@ def read_data_from_excel(filepath, worksheet=None, return_dict=False, headless=T
     Returns:
         list or dict: Excel data in requested format
     """
+    # Check if filepath is None or empty
+    if not filepath:
+        print("Error: filepath is None or empty")
+        return None if return_dict else []
+    
     # Check if the filepath is a URL
     if filepath.startswith("http://"):
         return _read_data_from_excel_online(filepath, worksheet, return_dict, headless)
@@ -490,6 +504,11 @@ def _read_data_from_excel_online(url, worksheet, return_dict, headless):
 
 
 def _read_data_from_excel_locally(filepath, worksheet, return_dict, headless):
+    # Additional safety check in case this function is called directly
+    if not filepath:
+        print("Error: filepath is None or empty in _read_data_from_excel_locally")
+        return None if return_dict else []
+    
     filepath = FOLDER.get_safe_copy(filepath)
 
 

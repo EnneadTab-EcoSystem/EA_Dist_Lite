@@ -210,6 +210,7 @@ def auto_open_temp_file_on_virtual7():
     is 2025 or higher. If both conditions are met, it attempts to open a specific
     Revit file from the user's OneDrive Desktop folder.
     """
+
     if not USER.IS_DEVELOPER:
         return
     
@@ -232,7 +233,7 @@ def auto_open_temp_file_on_virtual7():
         print(message)
         NOTIFICATION.messenger(main_text = message)
         try:
-            target_file = r"C:\Users\szhang\OneDrive - Ennead Architects\Desktop\temp.rvt"
+            target_file = r"C:\Users\szhang\OneDrive - Ennead Architects\Desktop\temp_bad.rvt"
             print("Target file path: {}".format(target_file))
             print("File exists: {}".format(os.path.exists(target_file)))
             

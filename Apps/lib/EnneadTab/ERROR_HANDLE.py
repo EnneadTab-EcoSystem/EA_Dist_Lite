@@ -70,6 +70,25 @@ except Exception as e:
 _error_handler_recursion_depth = 0
 _max_error_handler_recursion_depth = 50  # Set a reasonable limit
 
+def _ensure_recursion_depth_is_int():
+    """Ensure _error_handler_recursion_depth is an integer, reset to 0 if not."""
+    global _error_handler_recursion_depth
+    if not isinstance(_error_handler_recursion_depth, int):
+        print("WARNING: _error_handler_recursion_depth was {} with value {}, resetting to 0".format(type(_error_handler_recursion_depth), _error_handler_recursion_depth))
+        _error_handler_recursion_depth = 0
+
+def _safe_increment_recursion_depth():
+    """Safely increment the recursion depth counter."""
+    global _error_handler_recursion_depth
+    _ensure_recursion_depth_is_int()
+    _error_handler_recursion_depth += 1
+
+def _safe_decrement_recursion_depth():
+    """Safely decrement the recursion depth counter."""
+    global _error_handler_recursion_depth
+    _ensure_recursion_depth_is_int()
+    _error_handler_recursion_depth -= 1
+
 # Google Form field IDs for error logging
 ERROR_LOG_FORM_FIELDS = {
     'entry.1706374190': 'error',         # Traceback field
@@ -151,23 +170,24 @@ def try_catch_error(is_silent=False, is_pass = False):
             global _error_handler_recursion_depth, _max_error_handler_recursion_depth
             
             # Check if we've reached max depth
+            _ensure_recursion_depth_is_int()
             if _error_handler_recursion_depth >= _max_error_handler_recursion_depth:
                 print("Maximum error handler recursion depth reached ({})".format(_max_error_handler_recursion_depth))
                 # Just call the function directly without error handling
                 return func(*args, **kwargs)
                 
             # Increment depth counter
-            _error_handler_recursion_depth += 1
+            _safe_increment_recursion_depth()
             
             try:
                 out = func(*args, **kwargs)
                 # Decrement depth counter before returning
-                _error_handler_recursion_depth -= 1
+                _safe_decrement_recursion_depth()
                 return out
             except Exception as e:
                 if is_pass:
                     # Ensure we decrement even when passing
-                    _error_handler_recursion_depth -= 1
+                    _safe_decrement_recursion_depth()
                     return
                     
                 # Safely convert error message to string, handling Array[str] objects
@@ -232,7 +252,7 @@ def try_catch_error(is_silent=False, is_pass = False):
                         main_text="!Critical Warning, close all Revit UI window from " + ENVIRONMENT.PLUGIN_NAME + " and reach to Sen Zhang.")
                 
                 # Make sure to decrement the counter even in case of exception
-                _error_handler_recursion_depth -= 1
+                _safe_decrement_recursion_depth()
                     
         error_wrapper.original_function = func
         return error_wrapper
@@ -343,7 +363,7 @@ def _try_urllib2_implementation(error, func_name, user_name):
         bool: True if successful, False if urllib2 not available or failed
     """
     try:
-        import urllib2
+        import urllib2 #pyright: ignore
         import urllib
         import time
         
@@ -478,7 +498,7 @@ def print_note(*args):
         return
         
     try:
-        from pyrevit import script
+        from pyrevit import script #pyright: ignore
         output = script.get_output()
         
         # If single argument, keep original behavior
