@@ -20,15 +20,11 @@ class SAIFPanelMapper:
     def __init__(self):
         """Initialize the mapper with raw mapping data."""
         self._RAW_MAPPING = {
-            "Vertical 400 01_SYSTEM_01": {"family_name": "tower_main", "side_frame_w": 450, "is_FRW": False},
-            "Vertical 700 01_SYSTEM_01": {"family_name": "tower_main", "side_frame_w": 650, "is_FRW": False},
-            "Vertical 1000 01_SYSTEM_01": {"family_name": "tower_main", "side_frame_w": 850, "is_FRW": False},
-            "FR WIDOW_SYSTEM_01": {"family_name": "tower_main", "side_frame_w": 450, "is_FRW": True},
-            "55": {"family_name": "podium_main", "side_frame_w": 700, "is_FRW": False},
-            "44": {"family_name": "podium_main", "side_frame_w": 800, "is_FRW": False},
-            "22": {"family_name": "podium_main", "side_frame_w": 1000, "is_FRW": False},
-            "11": {"family_name": "podium_main", "side_frame_w": 1100, "is_FRW": False},
-
+            # SystemType01 patterns - tower main family, extract width and add 50
+            "SystemType01_Pier (\\d+)_\\d+": {"family_name": "tower_main", "side_frame_w": "extract_width_plus_50", "is_FRW": False},
+            
+            # SystemType06 patterns - podium main family, extract width (no plus 50)
+            "SystemType06_Pier (\\d+)_\\d+": {"family_name": "podium_main", "side_frame_w": "extract_width", "is_FRW": False},
         }
         self.PANEL_MAPPING = self._refine_panel_mapping()
     
@@ -50,8 +46,43 @@ class SAIFPanelMapper:
             for key in self._RAW_MAPPING.keys():
                 try:
                     # Try exact match first, then regex match
-                    if block_name == key or re.search(key, block_name, re.IGNORECASE):
-                        refined_mapping[block_name] = self._RAW_MAPPING[key].copy()  # Make a copy to avoid reference issues
+                    if block_name == key:
+                        refined_mapping[block_name] = self._RAW_MAPPING[key].copy()
+                        print("Matched block '{}' to pattern '{}'".format(block_name, key))
+                        break
+                    elif re.search(key, block_name, re.IGNORECASE):
+                        # Get the mapping data
+                        mapping_data = self._RAW_MAPPING[key].copy()
+                        
+                        # Handle dynamic width extraction
+                        if mapping_data.get("side_frame_w") == "extract_width_plus_50":
+                            match = re.search(key, block_name, re.IGNORECASE)
+                            if match and len(match.groups()) > 0:
+                                # Extract the width value from the first capture group
+                                width_str = match.group(1)
+                                try:
+                                    width_value = int(width_str)
+                                    mapping_data["side_frame_w"] = width_value + 50
+                                    print("Extracted width {} from '{}', calculated side_frame_w: {} (plus 50)".format(
+                                        width_value, block_name, mapping_data["side_frame_w"]))
+                                except ValueError:
+                                    print("Warning: Could not parse width value '{}' from block '{}'".format(width_str, block_name))
+                                    mapping_data["side_frame_w"] = 0  # fallback value
+                        elif mapping_data.get("side_frame_w") == "extract_width":
+                            match = re.search(key, block_name, re.IGNORECASE)
+                            if match and len(match.groups()) > 0:
+                                # Extract the width value from the first capture group
+                                width_str = match.group(1)
+                                try:
+                                    width_value = int(width_str)
+                                    mapping_data["side_frame_w"] = width_value
+                                    print("Extracted width {} from '{}', calculated side_frame_w: {} (no plus 50)".format(
+                                        width_value, block_name, mapping_data["side_frame_w"]))
+                                except ValueError:
+                                    print("Warning: Could not parse width value '{}' from block '{}'".format(width_str, block_name))
+                                    mapping_data["side_frame_w"] = 0  # fallback value
+                        
+                        refined_mapping[block_name] = mapping_data
                         print("Matched block '{}' to pattern '{}'".format(block_name, key))
                         break
                 except re.error as e:

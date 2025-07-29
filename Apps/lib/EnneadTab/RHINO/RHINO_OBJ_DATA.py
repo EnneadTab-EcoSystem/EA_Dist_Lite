@@ -122,8 +122,15 @@ def get_center(obj):
         return center
         
     except Exception as e:
-        print("Error getting center for object {}: {}".format(obj, str(e)))
-        return None
+        try:
+            corners = rs.BoundingBox(obj)
+            min = corners[0]
+            max = corners[6]
+            center = (min + max)/2
+            return center
+        except Exception as e:
+            print("Error getting center for object {}: {}".format(obj, str(e)))
+            return None
 
 def get_obj_h(obj):
     """Get the height (Z dimension) of an object's bounding box.
