@@ -2600,6 +2600,15 @@
         "tab": "Resource",
         "tab_icon": null
     },
+    "EnneadTab.tab\\Resource.panel\\check_error_log.pushbutton\\check_error_log_script.py": {
+        "alias": "Check Error Log",
+        "doc": "Opens the EnneadTab error log Google Form in your default browser. This allows you to view and submit error reports, track known issues, and stay updated on bug fixes and improvements. Essential for troubleshooting and providing feedback to the EnneadTab development team.",
+        "icon": "EnneadTab.tab\\Resource.panel\\check_error_log.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\Resource.panel\\check_error_log.pushbutton\\check_error_log_script.py",
+        "tab": "Resource",
+        "tab_icon": null
+    },
     "EnneadTab.tab\\Resource.panel\\display_warning_history.pushbutton\\display_warning_history_script.py": {
         "alias": "Display Revit Warning History",
         "doc": "Doc string not set",

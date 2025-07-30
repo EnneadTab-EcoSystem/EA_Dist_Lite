@@ -30,7 +30,7 @@ import clr # pyright: ignore
 from pyrevit.revit import ErrorSwallower # pyright: ignore 
 from pyrevit import script, forms # pyright: ignore 
 
-from EnneadTab import ERROR_HANDLE, FOLDER, DATA_FILE, NOTIFICATION, LOG, ENVIRONMENT, UI
+from EnneadTab import ERROR_HANDLE, FOLDER, DATA_FILE, NOTIFICATION, LOG, ENVIRONMENT, UI, SAMPLE_FILE
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FAMILY, REVIT_UNIT
 from Autodesk.Revit import DB # pyright: ignore 
 from Autodesk.Revit import ApplicationServices # pyright: ignore 
@@ -115,17 +115,10 @@ def load_family(file):
 
 
 
-    template = "{}\\BaseFamily_{}.rft".format(os.path.dirname(__file__), template_unit)
+    template = SAMPLE_FILE.get_file("RhinoImportBaseFamily_{}.rft".format(template_unit))
 
-    app = REVIT_APPLICATION.get_app()
-    # create new family from path(loaded with shared parameter), 
-    if int(app.VersionNumber) >= 2024:
-        if REVIT_APPLICATION.is_version_at_least():
-            template = "{}\\BaseFamily_{}_alt.rft".format(os.path.dirname(__file__), template_unit)
-        family_doc = ApplicationServices.Application.NewFamilyDocument (app, template)
-    else:
-        template = "{}\\old_special_compatible.rft".format(os.path.dirname(__file__))
-        family_doc = ApplicationServices.Application.NewFamilyDocument (app, template)
+    family_doc = ApplicationServices.Application.NewFamilyDocument (REVIT_APPLICATION.get_app(), template)
+
 
     block_name = get_block_name_from_data_file(file)
     geo_folder = FOLDER.get_local_dump_folder_folder(KEY_PREFIX + "_" + block_name)
@@ -248,7 +241,14 @@ def free_form_convert( doc, geo_file):
     geos = DB.ShapeImporter().Convert(doc, geo_file)
     for geo in geos:
         try:
-            converted_els.append(DB.FreeFormElement.Create(doc, geo))
+            # Check if geometry is a Solid (required for FreeFormElement.Create)
+            if isinstance(geo, DB.Solid):
+                converted_els.append(DB.FreeFormElement.Create(doc, geo))
+            elif isinstance(geo, DB.Mesh):
+                print("-----Cannot import Mesh geometry, skipping: {}".format(geo))
+                print("FreeFormElement.Create expects Solid, got Mesh")
+            else:
+                print("-----Cannot import unsupported geometry type: {}".format(type(geo)))
         except Exception as e:
             print("-----Cannot import this part of file, skipping: {}".format(geo))
             print(e)

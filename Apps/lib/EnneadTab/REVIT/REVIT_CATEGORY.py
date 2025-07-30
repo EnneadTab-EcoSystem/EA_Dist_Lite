@@ -121,6 +121,11 @@ def get_or_create_subcategory_with_material(doc, subc_name):
         from EnneadTab.REVIT import REVIT_MATERIAL
         from EnneadTab import DATA_FILE
         recent_out_data = DATA_FILE.get_data("rhino2revit_out_paths")
+        
+        # Initialize variables
+        mat_name = None
+        mat_color = None
+        
         if recent_out_data and isinstance(recent_out_data.get("layer_material_mapping"), dict):
             # Try to find material data using the subcategory name as key
             mat_data = recent_out_data["layer_material_mapping"].get(subc_name)
@@ -142,6 +147,7 @@ def get_or_create_subcategory_with_material(doc, subc_name):
                 print("No material data found for subcategory '{}'".format(subc_name))
         else:
             print("No valid layer_material_mapping found in recent_out_data")
+            
         if mat_name:
             # Sanitize material name before using it
             original_mat_name = mat_name

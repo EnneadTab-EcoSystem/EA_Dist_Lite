@@ -1327,7 +1327,7 @@ Features:
 - Projects blocks using insertion points
 - Projects other objects using bounding box centers
 - Supports both top and bottom face projections
-- Works with surfaces and polysurfaces
+- Works with surfaces, polysurfaces and meshes
 - Maintains object properties during projection</locale_1033>
       </tooltip>
       <help_text>
@@ -1337,7 +1337,7 @@ Features:
 - Projects blocks using insertion points
 - Projects other objects using bounding box centers
 - Supports both top and bottom face projections
-- Works with surfaces and polysurfaces
+- Works with surfaces, polysurfaces and meshes
 - Maintains object properties during projection</locale_1033>
       </help_text>
       <button_text>

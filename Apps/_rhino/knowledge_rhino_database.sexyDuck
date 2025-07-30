@@ -219,7 +219,7 @@
         "script": "Block.tab\\fall_geos_on_geo.button\\fall_geos_on_geo_left.py",
         "icon": "Block.tab\\fall_geos_on_geo.button\\icon.png",
         "alias": "FallGeosOnGeo",
-        "doc": "Project objects onto target geometry.\n\nFeatures:\n- Projects blocks using insertion points\n- Projects other objects using bounding box centers\n- Supports both top and bottom face projections\n- Works with surfaces and polysurfaces\n- Maintains object properties during projection",
+        "doc": "Project objects onto target geometry.\n\nFeatures:\n- Projects blocks using insertion points\n- Projects other objects using bounding box centers\n- Supports both top and bottom face projections\n- Works with surfaces, polysurfaces and meshes\n- Maintains object properties during projection",
         "tab": "Block.tab",
         "tab_icon": "Block.tab\\icon.png",
         "is_popular": true

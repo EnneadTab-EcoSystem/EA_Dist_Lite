@@ -200,7 +200,18 @@ class Rhino2Revit_UI(forms.WPFWindow):
         
         for geo in geos:
             try:
-                converted_els.append(DB.FreeFormElement.Create(doc, geo))
+                # Check if geometry is a Solid (required for FreeFormElement.Create)
+                if isinstance(geo, DB.Solid):
+                    converted_els.append(DB.FreeFormElement.Create(doc, geo))
+                elif isinstance(geo, DB.Mesh):
+                    print("-----Cannot import Mesh geometry, skipping: {}".format(geo))
+                    print("FreeFormElement.Create expects Solid, got Mesh")
+                    print("-----")
+                    bad_geo_found = True
+                else:
+                    print("-----Cannot import unsupported geometry type: {}".format(type(geo)))
+                    print("-----")
+                    bad_geo_found = True
             except Exception as e:
                 print("-----Cannot import this part of file, skipping: {}".format(geo))
                 print(e)

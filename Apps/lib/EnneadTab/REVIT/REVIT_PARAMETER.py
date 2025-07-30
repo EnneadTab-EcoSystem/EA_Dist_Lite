@@ -80,12 +80,17 @@ def get_shared_para_group_by_name_in_txt_file(doc,
     Returns:
         DefinitionGroup: The parameter group, or None if not found and not created
     """
-    for definition_group in doc.Application.OpenSharedParameterFile().Groups:
+    shared_para_file = doc.Application.OpenSharedParameterFile()
+    if shared_para_file is None:
+        NOTIFICATION.messenger(main_text="Cannot open shared parameter file. Please check if the shared parameter file is properly configured.")
+        return None
+        
+    for definition_group in shared_para_file.Groups:
         if definition_group.Name == para_group_name:
             return definition_group
     
     if create_if_not_exist:
-        return doc.Application.OpenSharedParameterFile().Groups.Create(para_group_name)
+        return shared_para_file.Groups.Create(para_group_name)
     
     
     

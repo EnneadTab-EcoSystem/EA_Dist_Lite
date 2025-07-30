@@ -106,8 +106,15 @@ def convert_file_to_family_elements(family_doc, file_path, log_messages):
                 geo_count = 0
                 for geo in geos:
                     try:
-                        converted_elements.append(DB.FreeFormElement.Create(family_doc, geo))
-                        geo_count += 1
+                        # Check if geometry is a Solid (required for FreeFormElement.Create)
+                        if isinstance(geo, DB.Solid):
+                            converted_elements.append(DB.FreeFormElement.Create(family_doc, geo))
+                            geo_count += 1
+                        elif isinstance(geo, DB.Mesh):
+                            log_messages.append("Cannot import Mesh geometry, skipping: {}".format(geo))
+                            log_messages.append("FreeFormElement.Create expects Solid, got Mesh")
+                        else:
+                            log_messages.append("Cannot import unsupported geometry type: {}".format(type(geo)))
                     except Exception as e:
                         log_messages.append("Cannot import this part of file, skipping: {}".format(geo))
                 

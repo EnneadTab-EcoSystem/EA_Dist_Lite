@@ -6,7 +6,10 @@ from EnneadTab.REVIT import REVIT_PARAMETER
 
 
 def find_definition_by_name(doc, name):
-    for definition_group in doc.Application.OpenSharedParameterFile().Groups:
+    shared_para_file = doc.Application.OpenSharedParameterFile()
+    if shared_para_file is None:
+        return None
+    for definition_group in shared_para_file.Groups:
         for definition in definition_group.Definitions:
             if definition.Name == name:
                 return definition
@@ -31,7 +34,14 @@ def create_color_setting_to_sheet(doc):
             
     if definition is None:
         option = DB.ExternalDefinitionCreationOptions ("Print_In_Color", DB.SpecTypeId.Boolean.YesNo)
-        definition_group = list(doc.Application.OpenSharedParameterFile().Groups)[0]
+        shared_para_file = doc.Application.OpenSharedParameterFile()
+        if shared_para_file is None:
+            NOTIFICATION.messenger(main_text='Cannot open shared parameter file. Please check if the shared parameter file is properly configured.')
+            return
+        if len(shared_para_file.Groups) == 0:
+            NOTIFICATION.messenger(main_text='No groups found in shared parameter file.')
+            return
+        definition_group = list(shared_para_file.Groups)[0]
         definition = definition_group.Definitions.Create(option)
     
   
@@ -87,7 +97,14 @@ def create_issue_para_to_sheet(doc, issue_name):
             
     if definition is None:
         option = DB.ExternalDefinitionCreationOptions (issue_name, DB.SpecTypeId.String.Text)
-        definition_group = list(doc.Application.OpenSharedParameterFile().Groups)[0]
+        shared_para_file = doc.Application.OpenSharedParameterFile()
+        if shared_para_file is None:
+            NOTIFICATION.messenger(main_text='Cannot open shared parameter file. Please check if the shared parameter file is properly configured.')
+            return
+        if len(shared_para_file.Groups) == 0:
+            NOTIFICATION.messenger(main_text='No groups found in shared parameter file.')
+            return
+        definition_group = list(shared_para_file.Groups)[0]
         definition = definition_group.Definitions.Create(option)
     
   

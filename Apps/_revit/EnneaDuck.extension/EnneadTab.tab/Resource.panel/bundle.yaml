@@ -21,3 +21,4 @@ layout:
   - open_ecosystem_folder
   - app_store
   - remote_fix_code
+  - check_error_log
