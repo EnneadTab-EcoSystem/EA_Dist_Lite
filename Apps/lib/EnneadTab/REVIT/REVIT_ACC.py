@@ -57,8 +57,8 @@ TASK_RUNNER_FILE = "ACC_PROJECT_TASK_RUNNER"
 LOG_FILE_NAME = "EnneadTab_ACC.log"
 
 # Cache expiry settings
-CACHE_EXPIRY_DAYS = 14  # 2 weeks
-TOKEN_BUFFER_MINUTES = 5  # Token refresh buffer
+CACHE_EXPIRY_DAYS = 21  # 3 weeks
+TOKEN_BUFFER_MINUTES = 5  # Token refresh buffer, longer means more time to reuse the token
 
 # API call limits for cost control
 MAX_REVIT_FILES_DETAILED = 50  # Limit detailed file info calls
@@ -114,12 +114,22 @@ def get_api_usage_summary():
 
 import os
 import time
-import base64
 import sys
 import threading
 import subprocess
 import logging
-import uuid  # added at top for job id generation
+try:
+    import base64
+except ImportError as e:
+    import logging
+    logging.error("Failed to import base64: {}".format(e))
+
+try:
+    import uuid  # added at top for job id generation
+except ImportError as e:
+    import logging
+    logging.error("Failed to import uuid: {}".format(e))
+
 # Setup imports
 root_folder = os.path.abspath((os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.append(root_folder)
@@ -164,90 +174,274 @@ def EXAMPLE_2_IMPROVED():
     export_by_project_name_improved("2317_NYU Kimmel Garage Infill")
     print("EXAMPLE_2_IMPROVED completed.")
 
-def export_by_project_name_improved(project_name):
-    """Export all sheets and DWGs from BIM360 files in a given project with improved error handling.
-    Args:
-        project_name (str): The name of the project to export from.
-    Returns:
-        bool: True if export was successful, False otherwise.
+class ACC_Export_Manager:
+    """Manages the export of Revit files from Autodesk Construction Cloud projects.
+    
+    This class handles the complete workflow of:
+    1. Project data retrieval
+    2. Revit file discovery
+    3. Access token management
+    4. Export job creation and monitoring
+    5. File downloading
     """
-    print("Starting export for project: {}".format(project_name))
-    print("Getting project data...")
-    project_data = get_project_data_by_name(project_name)
-    if not project_data:
-        print("Project not found: {}".format(project_name))
-        NOTIFICATION.messenger("Project not found: {}".format(project_name))
-        return False
-    print("Project data found. Project ID: {}".format(project_data["id"]))
-    project_id = project_data["id"]
-    hub_id = project_data["relationships"]["hub"]["data"]["id"]
-    print("Getting Revit files data...")
-    revit_files = get_project_revit_files_data(project_id, hub_id)
-    if not revit_files:
-        print("No Revit files found in project")
-        NOTIFICATION.messenger("No Revit files found in project")
-        return False
-    print("Found {} Revit files".format(len(revit_files)))
-    desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
-    output_folder = os.path.join(desktop_path, "cloud export")
-    if not os.path.exists(output_folder):
-        print("Creating output folder: {}".format(output_folder))
-        os.makedirs(output_folder)
-    print("Getting access token...")
-    data = SECRET.get_acc_key_data()
-    if not data:
-        print("Failed to get ACC key data")
-        return False
-    client_id = data.get("client_id")
-    client_secret = data.get("client_secret")
-    if not (client_id and client_secret):
-        print("Missing client ID or secret")
-        return False
-    token_url = "https://developer.api.autodesk.com/authentication/v2/token"
-    token_headers = {"Content-Type": "application/x-www-form-urlencoded"}
-    token_data = {
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "grant_type": "client_credentials",
-        "scope": "data:read data:write data:create data:search bucket:read bucket:create account:read"
-    }
-    print("Requesting access token...")
-    token_resp = requests.post(token_url, headers=token_headers, data=token_data)
-    print("Token response status: {}".format(token_resp.status_code))
-    print("Token response body: {}".format(token_resp.text))
-    if token_resp.status_code != 200:
-        print("Failed to get access token. Status code: {}".format(token_resp.status_code))
-        return False
-    access_token = token_resp.json().get("access_token")
-    print("Access token obtained successfully")
-    for i, file_data in enumerate(revit_files, 1):
-        print("\nProcessing file {}/{}".format(i, len(revit_files)))
+    
+    def __init__(self, project_name, output_folder=None):
+        """Initialize the export manager.
+        
+        Args:
+            project_name (str): Name of the project to export from
+            output_folder (str, optional): Output folder path. Defaults to Desktop/cloud export
+        """
+        self.project_name = project_name
+        self.project_data = None
+        self.project_id = None
+        self.hub_id = None
+        self.revit_files = []
+        self.access_token = None
+        self.consecutive_failures = 0
+        self.max_consecutive_failures = 3
+        
+        # Set output folder
+        if output_folder is None:
+            desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+            self.output_folder = os.path.join(desktop_path, "cloud export")
+        else:
+            self.output_folder = output_folder
+            
+        # Create output folder if it doesn't exist
+        if not os.path.exists(self.output_folder):
+            print("Creating output folder: {}".format(self.output_folder))
+            os.makedirs(self.output_folder)
+    
+    def run_export(self):
+        """Main method to run the complete export process.
+        
+        Returns:
+            bool: True if export was successful, False otherwise
+        """
+        print("Starting export for project: {}".format(self.project_name))
+        
+        # Step 1: Get project data
+        if not self._get_project_data():
+            return False
+            
+        # Step 2: Get Revit files
+        if not self._get_revit_files():
+            return False
+            
+        # Step 3: Get access token
+        if not self._get_access_token():
+            return False
+            
+        # Step 4: Process each file
+        if not self._process_files():
+            return False
+            
+        print("\nExport completed. Files saved to: {}".format(self.output_folder))
+        NOTIFICATION.messenger("Export completed. Files saved to: {}".format(self.output_folder))
+        return True
+    
+    def _get_project_data(self):
+        """Get project data by name.
+        
+        Returns:
+            bool: True if project found, False otherwise
+        """
+        print("Getting project data...")
+        self.project_data = get_project_data_by_name(self.project_name)
+        if not self.project_data:
+            print("Project not found: {}".format(self.project_name))
+            NOTIFICATION.messenger("Project not found: {}".format(self.project_name))
+            return False
+            
+        self.project_id = self.project_data["id"]
+        self.hub_id = self.project_data["relationships"]["hub"]["data"]["id"]
+        print("Project data found. Project ID: {}".format(self.project_id))
+        return True
+    
+    def _get_revit_files(self):
+        """Get Revit files from the project.
+        
+        Returns:
+            bool: True if files found, False otherwise
+        """
+        print("Getting Revit files data...")
+        self.revit_files = get_project_revit_files_data(self.project_id, self.hub_id)
+        if not self.revit_files:
+            print("No Revit files found in project")
+            NOTIFICATION.messenger("No Revit files found in project")
+            return False
+            
+        print("Found {} Revit files".format(len(self.revit_files)))
+        return True
+    
+    def _get_access_token(self):
+        """Get access token for API calls.
+        
+        Returns:
+            bool: True if token obtained, False otherwise
+        """
+        print("Getting access token...")
+        data = SECRET.get_acc_key_data()
+        if not data:
+            print("Failed to get ACC key data")
+            return False
+            
+        client_id = data.get("client_id")
+        client_secret = data.get("client_secret")
+        if not (client_id and client_secret):
+            print("Missing client ID or secret")
+            return False
+            
+        token_url = "https://developer.api.autodesk.com/authentication/v2/token"
+        token_headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        token_data = {
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "grant_type": "client_credentials",
+            "scope": "data:read data:write data:create data:search bucket:read bucket:create account:read"
+        }
+        
+        print("Requesting access token...")
+        try:
+            token_resp = requests.post(token_url, headers=token_headers, data=token_data, timeout=30)
+            print("Token response status: {}".format(token_resp.status_code))
+            if token_resp.status_code != 200:
+                print("Failed to get access token. Status code: {}".format(token_resp.status_code))
+                return False
+            self.access_token = token_resp.json().get("access_token")
+        except Exception as e:
+            print("Error getting access token: {}".format(e))
+            return False
+            
+        print("Access token obtained successfully")
+        return True
+    
+    def _process_files(self):
+        """Process all Revit files for export.
+        
+        Returns:
+            bool: True if processing completed, False if too many failures
+        """
+        if not self.revit_files:
+            return True
+            
+        for i, file_data in enumerate(self.revit_files, 1):
+            print("\nProcessing file {}/{}".format(i, len(self.revit_files)))
+            
+            if not self._process_single_file(file_data):
+                if self.consecutive_failures >= self.max_consecutive_failures:
+                    print("ERROR: {} consecutive failures. Stopping early to debug the issue.")
+                    return False
+                continue
+                
+        return True
+    
+    def _process_single_file(self, file_data):
+        """Process a single Revit file.
+        
+        Args:
+            file_data (dict): File data from the API
+            
+        Returns:
+            bool: True if file processed successfully, False otherwise
+        """
+        # Validate file data
         if "data" not in file_data:
             print("Skipping file - no data found")
-            continue
+            self._increment_failures()
+            return False
+            
         file_id = file_data["data"]["id"]
         file_name = file_data["data"]["attributes"]["displayName"]
         print("Processing file: {}".format(file_name))
-        versions_url = "https://developer.api.autodesk.com/data/v1/projects/{}/items/{}/versions".format(project_id, file_id)
-        versions_headers = {"Authorization": "Bearer {}".format(access_token)}
+        
+        # Get file versions
+        urn_b64 = self._get_file_urn(file_id)
+        if not urn_b64:
+            return False
+            
+        # Create export job
+        if not self._create_export_job(urn_b64):
+            return False
+            
+        # Monitor export progress
+        if not self._monitor_export_progress(urn_b64, file_name):
+            return False
+            
+        # Reset failure counter on success
+        self.consecutive_failures = 0
+        return True
+    
+    def _get_file_urn(self, file_id):
+        """Get the URN for a file.
+        
+        Args:
+            file_id (str): File ID from the API
+            
+        Returns:
+            str: Base64 encoded URN or None if failed
+        """
+        versions_url = "https://developer.api.autodesk.com/data/v1/projects/{}/items/{}/versions".format(
+            self.project_id, file_id)
+        versions_headers = {"Authorization": "Bearer {}".format(self.access_token)}
+        
         print("Getting file versions...")
-        versions_resp = requests.get(versions_url, headers=versions_headers)
-        print("Versions response status: {}".format(versions_resp.status_code))
-        print("Versions response body: {}".format(versions_resp.text))
-        if versions_resp.status_code != 200:
-            print("Failed to get versions. Status code: {}".format(versions_resp.status_code))
-            continue
-        versions_data = versions_resp.json()
-        if not versions_data.get("data"):
-            print("No versions found")
-            continue
-        latest_version = versions_data["data"][0]
-        urn = latest_version["id"]
-        urn_b64 = base64.b64encode(urn.encode("utf-8")).decode("utf-8").rstrip("=")
-        print("Using base64 URN: {}".format(urn_b64))
+        try:
+            versions_resp = requests.get(versions_url, headers=versions_headers, timeout=30)
+            print("Versions response status: {}".format(versions_resp.status_code))
+            if versions_resp.status_code != 200:
+                print("Failed to get versions. Status code: {}".format(versions_resp.status_code))
+                self._increment_failures()
+                return None
+                
+            versions_data = versions_resp.json()
+            if not versions_data.get("data"):
+                print("No versions found")
+                self._increment_failures()
+                return None
+                
+            latest_version = versions_data["data"][0]
+            
+            # Get the derivative URN, not the file URN
+            if "relationships" in latest_version and "derivatives" in latest_version["relationships"]:
+                derivative_data = latest_version["relationships"]["derivatives"]["data"]
+                if derivative_data:
+                    # The derivative ID is already base64 encoded
+                    urn_b64 = derivative_data["id"]
+                    print("Using derivative URN (already base64): {}".format(urn_b64))
+                    return urn_b64
+                else:
+                    print("No derivative found in version data")
+                    self._increment_failures()
+                    return None
+            else:
+                # Fallback to using the version ID directly
+                urn = latest_version["id"]
+                # Remove query parameters from URN before encoding
+                urn_clean = urn.split("?")[0] if "?" in urn else urn
+                urn_b64 = base64.b64encode(urn_clean.encode("utf-8")).decode("utf-8").rstrip("=")
+                print("Using base64 URN: {}".format(urn_b64))
+                print("DEBUG: Cleaned URN: {}".format(urn_clean))
+                return urn_b64
+                
+        except Exception as e:
+            print("Error getting file versions: {}".format(e))
+            self._increment_failures()
+            return None
+    
+    def _create_export_job(self, urn_b64):
+        """Create an export job for the given URN.
+        
+        Args:
+            urn_b64 (str): Base64 encoded URN
+            
+        Returns:
+            bool: True if job created successfully, False otherwise
+        """
         export_url = "https://developer.api.autodesk.com/modelderivative/v2/designdata/job"
         export_headers = {
-            "Authorization": "Bearer {}".format(access_token),
+            "Authorization": "Bearer {}".format(self.access_token),
             "Content-Type": "application/json",
             "x-ads-force": "true"
         }
@@ -268,60 +462,141 @@ def export_by_project_name_improved(project_name):
                 ]
             }
         }
+        
         print("Creating export job...")
-        export_resp = requests.post(export_url, headers=export_headers, json=export_data)
-        print("Export job response status: {}".format(export_resp.status_code))
-        print("Export job response body: {}".format(export_resp.text))
-        if export_resp.status_code == 409:
-            print("Export job already in progress, skipping...")
-            continue
-        if export_resp.status_code == 406:
-            print("File is a shallow copy, skipping...")
-            continue
-        if export_resp.status_code not in [200, 202]:
-            print("Failed to create export job. Status code: {}".format(export_resp.status_code))
-            continue
-        job_id = urn_b64
+        try:
+            export_resp = requests.post(export_url, headers=export_headers, json=export_data)
+            print("Export job response status: {}".format(export_resp.status_code))
+            if export_resp.status_code not in [200, 202]:
+                print("Export job response body: {}".format(export_resp.text))
+                
+            if export_resp.status_code == 409:
+                print("Export job already in progress, skipping...")
+                return True  # Not a failure, just skip
+            elif export_resp.status_code == 406:
+                print("File is a shallow copy, skipping...")
+                return True  # Not a failure, just skip
+            elif export_resp.status_code not in [200, 202]:
+                print("Failed to create export job. Status code: {}".format(export_resp.status_code))
+                self._increment_failures()
+                return False
+                
+            return True
+            
+        except Exception as e:
+            print("Error creating export job: {}".format(e))
+            self._increment_failures()
+            return False
+    
+    def _monitor_export_progress(self, urn_b64, file_name):
+        """Monitor the export progress and download files when complete.
+        
+        Args:
+            urn_b64 (str): Base64 encoded URN
+            file_name (str): Name of the file being exported
+            
+        Returns:
+            bool: True if export completed successfully, False otherwise
+        """
         manifest_url = "https://developer.api.autodesk.com/modelderivative/v2/designdata/{}/manifest".format(urn_b64)
-        manifest_headers = {"Authorization": "Bearer {}".format(access_token)}
+        manifest_headers = {"Authorization": "Bearer {}".format(self.access_token)}
+        
         print("Waiting for export to complete...")
-        max_retries = 10
+        max_retries = 3
         retry_count = 0
+        
         while retry_count < max_retries:
-            manifest_resp = requests.get(manifest_url, headers=manifest_headers)
-            print("Manifest response status: {}".format(manifest_resp.status_code))
-            print("Manifest response body: {}".format(manifest_resp.text))
-            if manifest_resp.status_code == 404:
-                print("Manifest not found, retrying... ({}/{})".format(retry_count + 1, max_retries))
-                time.sleep(10)
+            try:
+                manifest_resp = requests.get(manifest_url, headers=manifest_headers)
+                print("Manifest response status: {}".format(manifest_resp.status_code))
+                
+                if manifest_resp.status_code == 404:
+                    print("Manifest not found, retrying... ({}/{})".format(retry_count + 1, max_retries))
+                    if retry_count == 0:  # Only print debug info on first attempt
+                        print("DEBUG: URN being used: {}".format(urn_b64))
+                    time.sleep(10)
+                    retry_count += 1
+                    continue
+                    
+                if manifest_resp.status_code != 200:
+                    print("Failed to get manifest. Status code: {}".format(manifest_resp.status_code))
+                    break
+                    
+                manifest_data = manifest_resp.json()
+                if manifest_data["status"] == "success":
+                    print("Export successful, downloading files...")
+                    return self._download_exported_files(manifest_data, manifest_headers, file_name)
+                elif manifest_data["status"] == "failed":
+                    print("Export failed")
+                    self._increment_failures()
+                    break
+                    
+                print("Export in progress...")
+                time.sleep(5)
+                
+            except Exception as e:
+                print("Error monitoring export progress: {}".format(e))
                 retry_count += 1
-                continue
-            if manifest_resp.status_code != 200:
-                print("Failed to get manifest. Status code: {}".format(manifest_resp.status_code))
-                break
-            manifest_data = manifest_resp.json()
-            if manifest_data["status"] == "success":
-                print("Export successful, downloading files...")
-                for derivative in manifest_data.get("derivatives", []):
-                    if derivative["type"] in ["dwg", "pdf"]:
-                        for output in derivative.get("output", []):
-                            download_url = output["url"]
-                            download_resp = requests.get(download_url, headers=manifest_headers)
-                            if download_resp.status_code == 200:
-                                output_file = os.path.join(output_folder, "{}_{}.{}".format(
-                                    file_name, output["name"], derivative["type"]))
-                                print("Saving file: {}".format(output_file))
-                                with open(output_file, "wb") as f:
-                                    f.write(download_resp.content)
-                break
-            elif manifest_data["status"] == "failed":
-                print("Export failed")
-                break
-            print("Export in progress...")
-            time.sleep(5)
-    print("\nExport completed. Files saved to: {}".format(output_folder))
-    NOTIFICATION.messenger("Export completed. Files saved to: {}".format(output_folder))
-    return True
+                time.sleep(5)
+        
+        # If we get here, all retries failed
+        if retry_count >= max_retries:
+            print("ERROR: All manifest retries failed for file: {}".format(file_name))
+            self._increment_failures()
+            
+        return False
+    
+    def _download_exported_files(self, manifest_data, manifest_headers, file_name):
+        """Download exported files from the manifest.
+        
+        Args:
+            manifest_data (dict): Manifest data from the API
+            manifest_headers (dict): Headers for download requests
+            file_name (str): Name of the file being exported
+            
+        Returns:
+            bool: True if files downloaded successfully, False otherwise
+        """
+        print("DEBUG: Manifest structure: {}".format(manifest_data.keys()))
+        
+        for derivative in manifest_data.get("derivatives", []):
+            print("DEBUG: Derivative structure: {}".format(
+                derivative.keys() if isinstance(derivative, dict) else "Not a dict"))
+                
+            if isinstance(derivative, dict) and derivative.get("type") in ["dwg", "pdf"]:
+                for output in derivative.get("output", []):
+                    download_url = output["url"]
+                    try:
+                        download_resp = requests.get(download_url, headers=manifest_headers)
+                        if download_resp.status_code == 200:
+                            output_file = os.path.join(self.output_folder, "{}_{}.{}".format(
+                                file_name, output["name"], derivative["type"]))
+                            print("Saving file: {}".format(output_file))
+                            with open(output_file, "wb") as f:
+                                f.write(download_resp.content)
+                    except Exception as e:
+                        print("Error downloading file: {}".format(e))
+                        continue
+                        
+        return True
+    
+    def _increment_failures(self):
+        """Increment the consecutive failure counter."""
+        self.consecutive_failures += 1
+
+
+def export_by_project_name_improved(project_name):
+    """Export all sheets and DWGs from BIM360 files in a given project with improved error handling.
+    
+    This is a wrapper function that uses the ACC_Export_Manager class.
+    
+    Args:
+        project_name (str): The name of the project to export from.
+    Returns:
+        bool: True if export was successful, False otherwise.
+    """
+    export_manager = ACC_Export_Manager(project_name)
+    return export_manager.run_export()
 
 # Global token cache to reuse tokens across projects
 _CACHED_TOKEN = {
@@ -1504,15 +1779,17 @@ def DEMO_data_generation():
     print("   🔄 Will auto-regenerate when cache expires or in debug mode")
 
 if __name__ == "__main__":
-    print("Script started from __main__.")
-    logging.info("Script started from __main__.")
+    # print("Script started from __main__.")
+    # logging.info("Script started from __main__.")
     
-    # Demonstration mode - show what data gets generated
-    if len(sys.argv) > 1 and sys.argv[1] == "demo":
-        print("Running data generation demonstration...")
-        DEMO_data_generation()
-    else:
-        debug_mode = True
-        print("Debug mode is ON: forcing regeneration of all tasks.")
-        logging.info("Debug mode ON: forcing regeneration of all tasks.")
-        batch_run_projects(debug=debug_mode)
+    # # Demonstration mode - show what data gets generated
+    # if len(sys.argv) > 1 and sys.argv[1] == "demo":
+    #     print("Running data generation demonstration...")
+    #     DEMO_data_generation()
+    # else:
+    #     debug_mode = True
+    #     print("Debug mode is ON: forcing regeneration of all tasks.")
+    #     logging.info("Debug mode ON: forcing regeneration of all tasks.")
+    #     batch_run_projects(debug=debug_mode)
+
+    EXAMPLE_2_IMPROVED()

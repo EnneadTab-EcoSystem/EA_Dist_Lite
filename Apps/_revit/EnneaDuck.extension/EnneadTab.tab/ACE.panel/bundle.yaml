@@ -14,7 +14,7 @@ layout:
   - List_Legend and Schedule
   - Excel Sheet Creator
   - CollectTextures
-  - family_tree
+  - Family
   - inspect_local_graphic_override
   - list_family
   - transfer_parameter_data
@@ -28,6 +28,7 @@ layout:
   - color_scheme_to_filled_region_types
   - repath_dwg_drive_letter
   - merge_ost
+  - revision_cloud_color_manager
   - batch_fix_family_name
   - wall_type_diagram
   - rename_nesting_family

@@ -49,16 +49,19 @@ def get_tagged_elements(tag, doc):
         return None
 
 
-def purge_tags(bad_host_family_names, tag_category, doc = DOC):
+def purge_tags(bad_host_family_name_or_names, tag_category, doc = DOC):
     """get all the tags from project, if its host's name is in the list, delete it.
     Note that: if tag is tagging multiple elements and anyone of them is in the list, the shared tag will be deleted.
     This should not be too much of a issue in most case it is used.
     
     Args:
-        bad_host_family_names: list of family names that are not allowed to be tagged
+        bad_host_family_name_or_names: family name or list of family names and type names that are not allowed to be tagged
         tag_category: the category of the tags to be deleted
         doc: the current document
     """
+    if not isinstance(bad_host_family_name_or_names, list):
+        bad_host_family_name_or_names = [bad_host_family_name_or_names]
+
     from pyrevit import script
     output = script.get_output()
     all_tags = DB.FilteredElementCollector(doc).OfCategory(tag_category).WhereElementIsNotElementType().ToElements()
@@ -76,7 +79,7 @@ def purge_tags(bad_host_family_names, tag_category, doc = DOC):
                 continue
             try:
                 if hasattr(host, "Symbol"):
-                    if host.Symbol.FamilyName in bad_host_family_names:
+                    if host.Symbol.FamilyName in bad_host_family_name_or_names:
                         doc.Delete(tag.Id)
                         if is_shared:
                             print ("Shared tag deleted for element: {}".format(output.linkify(host.Id)))

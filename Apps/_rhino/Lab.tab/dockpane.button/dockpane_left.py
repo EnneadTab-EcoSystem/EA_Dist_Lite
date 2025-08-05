@@ -193,7 +193,18 @@ def dockpane():
         panel_bitmap = System.Drawing.SystemIcons.Application.ToBitmap()
         
     # Get the plugin instance
-    plugin = Rhino.PlugIns.PlugIn.Find("EnneadTab")
+    try:
+        # Try to get the plugin instance using FindPlugIn method
+        plugin = Rhino.PlugIns.PlugIn.FindPlugIn("EnneadTab")
+        if plugin is None:
+            # Fallback: try to get the assembly directly
+            import clr
+            clr.AddReference("EnneadTab")
+            plugin = clr.GetClrType(type).Assembly
+    except:
+        # Final fallback: use None (some versions of Rhino allow this)
+        plugin = None
+        
     # Register with the plugin and panel class
     Panels.RegisterPanel(plugin, DockablePanel, "EnneadTab Dockpane", panel_bitmap)
     

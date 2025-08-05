@@ -14,6 +14,26 @@ import COPY
 import ERROR_HANDLE
 import ENGINE
 
+def is_process_running(process_name):
+    """Check if a process is already running.
+    
+    Args:
+        process_name (str): Name of the process to check (without .exe extension).
+        
+    Returns:
+        bool: True if process is running, False otherwise.
+    """
+    try:
+        import subprocess
+        # Use tasklist to check if process is running
+        result = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq {}.exe'.format(process_name)], 
+                              capture_output=True, text=True, shell=True)
+        # If the process is found, tasklist will show it in the output
+        return process_name.lower() in result.stdout.lower()
+    except:
+        # If we can't check, assume it's not running to avoid blocking
+        return False
+
 # Dictionary to track recent calls to executables
 _recent_exe_calls = {}
 # Maximum number of calls allowed per second (2 calls per second)
@@ -217,17 +237,38 @@ def try_open_app(exe_name, legacy_name = None, safe_open = False, depth = 0):
         ERROR_HANDLE.print_note("No legacy app found!!!\n{}".format(exe_name))
         return False
 
+    # # Check if process is already running (for single-instance applications)
+    # if is_process_running(exe_name.replace(".exe", "")):
+    #     ERROR_HANDLE.print_note("Process {} is already running. Skipping startup.".format(exe_name))
+    #     return True
+
     # Execute the app
     if safe_open:
         temp_path = create_temporary_copy(exe_path, exe_name.replace(".exe", ""))
         if temp_path:
-            os.startfile(temp_path)
-            clean_temporary_executables()
-            return True
+            try:
+                os.startfile(temp_path)
+                clean_temporary_executables()
+                return True
+            except OSError as e:
+                if "being used by another process" in str(e):
+                    ERROR_HANDLE.print_note("Process {} is already running or file is locked. Skipping startup.".format(exe_name))
+                    return True
+                else:
+                    ERROR_HANDLE.print_note("Failed to start {}: {}".format(exe_name, e))
+                    return False
         return False
     else:
-        os.startfile(exe_path)
-        return True
+        try:
+            os.startfile(exe_path)
+            return True
+        except OSError as e:
+            if "being used by another process" in str(e):
+                ERROR_HANDLE.print_note("Process {} is already running or file is locked. Skipping startup.".format(exe_name))
+                return True
+            else:
+                ERROR_HANDLE.print_note("Failed to start {}: {}".format(exe_name, e))
+                return False
 
 def clean_temporary_executables():
     if random.random() < 0.9:
@@ -268,12 +309,6 @@ def clean_temporary_executables():
                 continue
             except Exception as e:
                 ERROR_HANDLE.print_note("Error removing {}: {}".format(file_path, e))
-
-def ensure_module(module_name):
-    """Ensure a Python module is available in the portable engine.
-    Installs the module to SITE_PACKAGES_FOLDER if missing, and adds it to sys.path.
-    """
-    return ENGINE.ensure_module(module_name)
 
 if __name__ == "__main__":
     script_path = os.path.join(ENVIRONMENT.APP_FOLDER, "Messenger.py")

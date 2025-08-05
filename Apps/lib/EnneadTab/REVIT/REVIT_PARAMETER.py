@@ -70,12 +70,12 @@ def create_shared_parameter_in_txt_file(doc,
 def get_shared_para_group_by_name_in_txt_file(doc, 
                                    para_group_name,
                                    create_if_not_exist=False):
-    """Retrieves or creates a parameter group in the shared parameter file.
+    """Retrieves or creates a shared parameter group by name.
 
     Args:
         doc (Document): Active Revit document
-        para_group_name (str): Name of the parameter group to find/create
-        create_if_not_exist (bool): Create group if not found. Defaults to False
+        para_group_name (str): Name of the parameter group to find
+        create_if_not_exist (bool): If True, creates the group if it doesn't exist
 
     Returns:
         DefinitionGroup: The parameter group, or None if not found and not created
@@ -119,6 +119,11 @@ def get_shared_para_definition_in_txt_file_by_name(doc,
         doc.Application.SharedParametersFilename = filepath
         
         shared_para_file = doc.Application.OpenSharedParameterFile()
+
+    # Check if shared_para_file is still None after attempting to set it up
+    if not shared_para_file:
+        NOTIFICATION.messenger(main_text="Failed to load shared parameter file. Cannot proceed.")
+        return None
 
     for definition_group in shared_para_file.Groups:
         for definition in definition_group.Definitions:

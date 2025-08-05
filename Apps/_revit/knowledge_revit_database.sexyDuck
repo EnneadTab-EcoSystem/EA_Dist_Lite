@@ -1916,12 +1916,48 @@
         "tab": "ACE",
         "tab_icon": null
     },
-    "EnneadTab.tab\\ACE.panel\\Family RePath.pushbutton\\family repath_script.py": {
+    "EnneadTab.tab\\ACE.panel\\Family.pulldown\\Family RePath.pushbutton\\family repath_script.py": {
         "alias": "Family RePath",
         "doc": "Find family file path. And remap the path to a folder you picked. In this folder, families will be organised based on their category.\nThis will also load the repathed families back to central model.\n\nYou have the option to sync and close after the long-boring reloading.\nYou also have the option to dig inside the nesting family and save them.\n",
-        "icon": "EnneadTab.tab\\ACE.panel\\Family RePath.pushbutton\\icon.png",
+        "icon": "EnneadTab.tab\\ACE.panel\\Family.pulldown\\Family RePath.pushbutton\\icon.png",
         "is_popular": true,
-        "script": "EnneadTab.tab\\ACE.panel\\Family RePath.pushbutton\\family repath_script.py",
+        "script": "EnneadTab.tab\\ACE.panel\\Family.pulldown\\Family RePath.pushbutton\\family repath_script.py",
+        "tab": "ACE",
+        "tab_icon": null
+    },
+    "EnneadTab.tab\\ACE.panel\\Family.pulldown\\batch_fix_family_name.pushbutton\\batch_fix_family_name_script.py": {
+        "alias": "Batch Format Family Name",
+        "doc": "Batch rename family names to follow Healthcare standard naming convention.\n\nFormat: \n    CATEGORY_MainDescription_FIRM[_AdditionalInfo][_HOSTING]\n\nExamples:\n    LITE_PendantLamp_EA_Vitra_CH\n    DOOR_Telescopic_EC_TwoPanel_WH\n    FURN_Chair_EA_Tack\n    \nComponents:\n    - CATEGORY: Category abbreviation or CSI Division No. (e.g., LITE, DOOR, FURN)\n    - MainDescription: CamelCase, no underscores or spaces (e.g., PendantLamp, Telescopic)\n    - FIRM: EA (EnneadArchitects) or EC (EwingCole)\n    - AdditionalInfo: Optional - Shape/Brand/Note\n    - HOSTING: Optional - WH(Wall)/CH(Ceiling)/FH(Floor)/FC(Face)\n",
+        "icon": "EnneadTab.tab\\ACE.panel\\Family.pulldown\\batch_fix_family_name.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\ACE.panel\\Family.pulldown\\batch_fix_family_name.pushbutton\\batch_fix_family_name_script.py",
+        "tab": "ACE",
+        "tab_icon": null
+    },
+    "EnneadTab.tab\\ACE.panel\\Family.pulldown\\family_tree.pushbutton\\family_tree_script.py": {
+        "alias": "Family Tree",
+        "doc": "Family hierarchy visualization tool that reveals the complete nesting structure of complex Revit families. This utility generates a clear, hierarchical display of all nested components within the current family, showing parent-child relationships and dependency chains. Perfect for understanding complex families, troubleshooting parameter inheritance, or documenting family architecture.",
+        "icon": "EnneadTab.tab\\ACE.panel\\Family.pulldown\\family_tree.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\ACE.panel\\Family.pulldown\\family_tree.pushbutton\\family_tree_script.py",
+        "tab": "ACE",
+        "tab_icon": null
+    },
+    "EnneadTab.tab\\ACE.panel\\Family.pulldown\\list_family.pushbutton\\list_family_script.py": {
+        "alias": "List Families",
+        "doc": "Lists selected families in organized views.\n\nThis script allows listing of both 2D detail items and 3D families in dedicated views.\nDetail items are placed in a drafting view while 3D families can be placed in either\na 3D view or floor plan view. Families are organized by category with labels and optional tags.\n\nKey Features:\n- Supports both 2D detail items and 3D families\n- Organizes families by category with clear labeling\n- Creates dedicated views for family display\n- Optional tagging support\n- Handles hosted families with appropriate host elements\n- Creates category-specific filtered views\n\nNote: \n3D families will be visible in all project views. The script creates an internal level \nfar from the main project levels to minimize interference.\n",
+        "icon": "EnneadTab.tab\\ACE.panel\\Family.pulldown\\list_family.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\ACE.panel\\Family.pulldown\\list_family.pushbutton\\list_family_script.py",
+        "tab": "ACE",
+        "tab_icon": null
+    },
+    "EnneadTab.tab\\ACE.panel\\Family.pulldown\\rename_nesting_family.pushbutton\\rename_nesting_family_script.py": {
+        "alias": "Rename Nesting Family",
+        "doc": "Scans through project families and their nested components to remove '*ConflictingName' string.\n            \nPROCESS:\n- Iterates through all families in current project\n- Opens each family document\n- Checks nested families for '*ConflictingName' string\n- Renames affected nested families by removing the conflicting string\n- Loads modified families back to project\n- Logs all changes made during the process\n\nYou can also requist to locate and rename based on other rules.\n",
+        "icon": "EnneadTab.tab\\ACE.panel\\Family.pulldown\\rename_nesting_family.pushbutton\\icon.png",
+        "is_popular": true,
+        "script": "EnneadTab.tab\\ACE.panel\\Family.pulldown\\rename_nesting_family.pushbutton\\rename_nesting_family_script.py",
         "tab": "ACE",
         "tab_icon": null
     },
@@ -1976,15 +2012,6 @@
         "icon": "EnneadTab.tab\\ACE.panel\\Worksets.pulldown\\links_to_worksets.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\ACE.panel\\Worksets.pulldown\\links_to_worksets.pushbutton\\links_to_worksets_script.py",
-        "tab": "ACE",
-        "tab_icon": null
-    },
-    "EnneadTab.tab\\ACE.panel\\batch_fix_family_name.pushbutton\\batch_fix_family_name_script.py": {
-        "alias": "Batch Format Family Name",
-        "doc": "Batch rename family names to follow Healthcare standard naming convention.\n\nFormat: \n    CATEGORY_MainDescription_FIRM[_AdditionalInfo][_HOSTING]\n\nExamples:\n    LITE_PendantLamp_EA_Vitra_CH\n    DOOR_Telescopic_EC_TwoPanel_WH\n    FURN_Chair_EA_Tack\n    \nComponents:\n    - CATEGORY: Category abbreviation or CSI Division No. (e.g., LITE, DOOR, FURN)\n    - MainDescription: CamelCase, no underscores or spaces (e.g., PendantLamp, Telescopic)\n    - FIRM: EA (EnneadArchitects) or EC (EwingCole)\n    - AdditionalInfo: Optional - Shape/Brand/Note\n    - HOSTING: Optional - WH(Wall)/CH(Ceiling)/FH(Floor)/FC(Face)\n",
-        "icon": "EnneadTab.tab\\ACE.panel\\batch_fix_family_name.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab.tab\\ACE.panel\\batch_fix_family_name.pushbutton\\batch_fix_family_name_script.py",
         "tab": "ACE",
         "tab_icon": null
     },
@@ -2051,15 +2078,6 @@
         "tab": "ACE",
         "tab_icon": null
     },
-    "EnneadTab.tab\\ACE.panel\\family_tree.pushbutton\\family_tree_script.py": {
-        "alias": "Family Tree",
-        "doc": "Family hierarchy visualization tool that reveals the complete nesting structure of complex Revit families. This utility generates a clear, hierarchical display of all nested components within the current family, showing parent-child relationships and dependency chains. Perfect for understanding complex families, troubleshooting parameter inheritance, or documenting family architecture.",
-        "icon": "EnneadTab.tab\\ACE.panel\\family_tree.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab.tab\\ACE.panel\\family_tree.pushbutton\\family_tree_script.py",
-        "tab": "ACE",
-        "tab_icon": null
-    },
     "EnneadTab.tab\\ACE.panel\\inspect_local_graphic_override.pushbutton\\inspect_local_graphic_override_script.py": {
         "alias": "Inspect Local Graphic Override",
         "doc": "For views on selected sheets, inspect if there are local graphic override or local hidden objects that is not controlled by template.",
@@ -2084,15 +2102,6 @@
         "icon": "EnneadTab.tab\\ACE.panel\\lines_in_view_locator.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\ACE.panel\\lines_in_view_locator.pushbutton\\lines_in_view_locator_script.py",
-        "tab": "ACE",
-        "tab_icon": null
-    },
-    "EnneadTab.tab\\ACE.panel\\list_family.pushbutton\\list_family_script.py": {
-        "alias": "List Families",
-        "doc": "Lists selected families in organized views.\n\nThis script allows listing of both 2D detail items and 3D families in dedicated views.\nDetail items are placed in a drafting view while 3D families can be placed in either\na 3D view or floor plan view. Families are organized by category with labels and optional tags.\n\nKey Features:\n- Supports both 2D detail items and 3D families\n- Organizes families by category with clear labeling\n- Creates dedicated views for family display\n- Optional tagging support\n- Handles hosted families with appropriate host elements\n- Creates category-specific filtered views\n\nNote: \n3D families will be visible in all project views. The script creates an internal level \nfar from the main project levels to minimize interference.\n",
-        "icon": "EnneadTab.tab\\ACE.panel\\list_family.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab.tab\\ACE.panel\\list_family.pushbutton\\list_family_script.py",
         "tab": "ACE",
         "tab_icon": null
     },
@@ -2132,21 +2141,21 @@
         "tab": "ACE",
         "tab_icon": null
     },
-    "EnneadTab.tab\\ACE.panel\\rename_nesting_family.pushbutton\\rename_nesting_family_script.py": {
-        "alias": "Rename Nesting Family",
-        "doc": "Scans through project families and their nested components to remove '*ConflictingName' string.\n            \nPROCESS:\n- Iterates through all families in current project\n- Opens each family document\n- Checks nested families for '*ConflictingName' string\n- Renames affected nested families by removing the conflicting string\n- Loads modified families back to project\n- Logs all changes made during the process\n\nYou can also requist to locate and rename based on other rules.\n",
-        "icon": "EnneadTab.tab\\ACE.panel\\rename_nesting_family.pushbutton\\icon.png",
-        "is_popular": true,
-        "script": "EnneadTab.tab\\ACE.panel\\rename_nesting_family.pushbutton\\rename_nesting_family_script.py",
-        "tab": "ACE",
-        "tab_icon": null
-    },
     "EnneadTab.tab\\ACE.panel\\repath_dwg_drive_letter.pushbutton\\repath_dwg_drive_letter_script.py": {
         "alias": "Repath Dwg Drive Letter",
         "doc": "Pick the old and new drive letters to repath all linked DWGs.",
         "icon": "EnneadTab.tab\\ACE.panel\\repath_dwg_drive_letter.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\ACE.panel\\repath_dwg_drive_letter.pushbutton\\repath_dwg_drive_letter_script.py",
+        "tab": "ACE",
+        "tab_icon": null
+    },
+    "EnneadTab.tab\\ACE.panel\\revision_cloud_color_manager.pushbutton\\revision_cloud_color_manager_script.py": {
+        "alias": "Revision Cloud Color Manager",
+        "doc": "Manage revision cloud colors based on revision ID. Enable/disable color display and set custom colors for each revision across all documents.",
+        "icon": "EnneadTab.tab\\ACE.panel\\revision_cloud_color_manager.pushbutton\\icon.png",
+        "is_popular": true,
+        "script": "EnneadTab.tab\\ACE.panel\\revision_cloud_color_manager.pushbutton\\revision_cloud_color_manager_script.py",
         "tab": "ACE",
         "tab_icon": null
     },

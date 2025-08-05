@@ -236,7 +236,7 @@ def rename_views(doc, sheets, is_default_format, is_original_flavor, attempt = 0
     except Exception as e:
         if not t.HasEnded():
             t.RollBack()
-        raise e
+        
 
 @ERROR_HANDLE.try_catch_error()
 def rename_family(selected_element):
