@@ -52,7 +52,6 @@ class RevisionCloudColorManager:
     def load_config(self):
         """Load configuration from DATA_FILE"""
         default_config = {
-            "enabled": False,
             "revision_colors": {},
             "default_color": {"R": 255, "G": 0, "B": 0}  # Default red
         }
@@ -68,20 +67,11 @@ class RevisionCloudColorManager:
         return self.create_default_config()
     
     def create_default_config(self):
-        """Create a default configuration with colors assigned to existing revisions"""
+        """Create a default configuration"""
         config = {
-            "enabled": False,
             "revision_colors": {},
             "default_color": {"R": 255, "G": 0, "B": 0}  # Default red
         }
-        
-        # Get existing revisions and assign colors from palette
-        revisions = self.get_all_revisions()
-        for i, revision in enumerate(revisions):
-            revision_number = revision.RevisionNumber
-            # Use colors from palette, cycling if more revisions than colors
-            color_index = i % len(DEFAULT_COLOR_PALETTE)
-            config["revision_colors"][revision_number] = DEFAULT_COLOR_PALETTE[color_index]
         
         # Save the default config
         try:
@@ -135,108 +125,89 @@ class RevisionCloudColorManager:
         # Final fallback - return default red
         return {"R": 255, "G": 0, "B": 0}
     
-    def assign_colors_to_new_revisions(self):
-        """Assign colors to any revisions that don't have colors yet"""
-        revisions = self.get_all_revisions()
-        existing_colors = set(self.config["revision_colors"].keys())
-        new_revisions = []
-        
-        for revision in revisions:
-            revision_number = revision.RevisionNumber
-            if revision_number not in existing_colors:
-                new_revisions.append(revision_number)
-        
-        if not new_revisions:
-            return
-        
-        # Assign colors to new revisions
-        for i, revision_number in enumerate(new_revisions):
-            # Find next available color from palette
-            used_colors = set()
-            for color in self.config["revision_colors"].values():
-                used_colors.add((color["R"], color["G"], color["B"]))
-            
-            # Find first unused color from palette
-            for color in DEFAULT_COLOR_PALETTE:
-                color_tuple = (color["R"], color["G"], color["B"])
-                if color_tuple not in used_colors:
-                    self.config["revision_colors"][revision_number] = color
-                    break
-            else:
-                # If all palette colors are used, generate a random color
-                import random
-                self.config["revision_colors"][revision_number] = {
-                    "R": random.randint(50, 255),
-                    "G": random.randint(50, 255), 
-                    "B": random.randint(50, 255)
-                }
-        
-        self.save_config()
-        if new_revisions:
-            NOTIFICATION.messenger("Assigned colors to {} new revisions.".format(len(new_revisions)))
+
+    
+
     
     def apply_colors_to_revision_clouds(self):
-        """Apply colors to revision clouds based on configuration using graphic overrides"""
-        # Auto-enable if not already enabled
-        if not self.config["enabled"]:
-            self.config["enabled"] = True
-            self.save_config()
-            NOTIFICATION.messenger("Color management automatically enabled.")
-        
-        # First, assign colors to any new revisions
-        self.assign_colors_to_new_revisions()
+        """Apply colors to revision clouds based on configuration using element graphic overrides"""
         
         clouds = self.get_all_revision_clouds()
         if not clouds:
             NOTIFICATION.messenger("No revision clouds found in the document.")
             return
         
-        # Get all views to apply overrides
-        all_views = list(DB.FilteredElementCollector(self.doc).OfClass(DB.View).WhereElementIsNotElementType().ToElements())
-        
         # Track clouds colored per revision
         revision_cloud_counts = {}
         total_clouds_colored = 0
+        debug_info = []
         
+        # Apply colors using element graphic overrides
         t = DB.Transaction(self.doc, "Apply Revision Cloud Colors")
         t.Start()
         
         try:
-            for view in all_views:
-                # Skip views that don't support graphic overrides
-                if not hasattr(view, 'SetElementOverrides'):
-                    continue
-                
-                # Create override settings for each revision
-                for cloud in clouds:
+            # Process each cloud individually using its owner view
+            for cloud in clouds:
+                try:
+                    # Get the view that owns this cloud
+                    owner_view_id = cloud.OwnerViewId
+                    if not owner_view_id or owner_view_id == DB.ElementId.InvalidElementId:
+                        debug_info.append("Cloud {} has no valid owner view".format(cloud.Id))
+                        continue
+                    
+                    owner_view = self.doc.GetElement(owner_view_id)
+                    if not owner_view:
+                        debug_info.append("Could not get owner view for cloud {}".format(cloud.Id))
+                        continue
+                    
+                    # Skip views that don't support element overrides
+                    if not hasattr(owner_view, 'SetElementOverrides'):
+                        debug_info.append("View {} does not support element overrides".format(owner_view.Name))
+                        continue
+                    
+                    # Get revision for this cloud
                     revision_id = cloud.RevisionId
-                    if revision_id:
-                        revision = self.doc.GetElement(revision_id)
-                        if revision:
-                            revision_number = revision.RevisionNumber
-                            color_config = self.config["revision_colors"].get(revision_number, self.config["default_color"])
-                            
-                            # Create Revit color
-                            revit_color = DB.Color(color_config["R"], color_config["G"], color_config["B"])
-                            
-                            # Create override settings
-                            override_settings = DB.OverrideGraphicSettings()
-                            override_settings.SetProjectionLineColor(revit_color)
-                            override_settings.SetProjectionLineWeight(3)  # Make it more visible
-                            
-                            # Apply override to the cloud in this view
-                            view.SetElementOverrides(cloud.Id, override_settings)
-                            
-                            # Track this cloud for the revision
-                            if revision_number not in revision_cloud_counts:
-                                revision_cloud_counts[revision_number] = 0
-                            revision_cloud_counts[revision_number] += 1
-                            total_clouds_colored += 1
+                    if not revision_id:
+                        debug_info.append("Cloud {} has no revision ID".format(cloud.Id))
+                        continue
+                    
+                    revision = self.doc.GetElement(revision_id)
+                    if not revision:
+                        debug_info.append("Could not get revision for cloud {}".format(cloud.Id))
+                        continue
+                    
+                    revision_number = revision.RevisionNumber
+                    
+                    # Get color for this revision
+                    color_config = self.config["revision_colors"].get(revision_number, self.config["default_color"])
+                    revit_color = DB.Color(color_config["R"], color_config["G"], color_config["B"])
+                    
+                    # Create override settings with comprehensive properties
+                    override_settings = DB.OverrideGraphicSettings()
+                    override_settings.SetProjectionLineColor(revit_color)
+                    override_settings.SetProjectionLineWeight(8)
+                    override_settings.SetProjectionLinePatternId(DB.ElementId.InvalidElementId)  # Solid pattern
+                    override_settings.SetCutLineColor(revit_color)
+                    override_settings.SetCutLineWeight(8)
+                    override_settings.SetCutLinePatternId(DB.ElementId.InvalidElementId)
+                    
+                    # Apply override to this cloud in its owner view
+                    owner_view.SetElementOverrides(cloud.Id, override_settings)
+                    
+                    # Track this revision
+                    if revision_number not in revision_cloud_counts:
+                        revision_cloud_counts[revision_number] = 0
+                    revision_cloud_counts[revision_number] += 1
+                    total_clouds_colored += 1
+                    
+                except Exception as e:
+                    debug_info.append("Error applying color to cloud {}: {}".format(cloud.Id, str(e)))
             
             t.Commit()
             
             # Create summary message
-            summary = "Applied colors to {} revision clouds across {} views.\n\n".format(total_clouds_colored, len(all_views))
+            summary = "Applied colors to {} revision clouds.\n\n".format(total_clouds_colored)
             summary += "Summary by Revision:\n"
             
             if revision_cloud_counts:
@@ -248,74 +219,121 @@ class RevisionCloudColorManager:
             else:
                 summary += "  No clouds were colored.\n"
             
+            # Add debug info if there were issues
+            if debug_info:
+                summary += "\nDebug Information:\n"
+                for info in debug_info[:10]:  # Limit to first 10 debug messages
+                    summary += "  {}\n".format(info)
+                if len(debug_info) > 10:
+                    summary += "  ... and {} more debug messages\n".format(len(debug_info) - 10)
+            
             NOTIFICATION.messenger(summary)
             
         except Exception as e:
             t.RollBack()
             ERROR_HANDLE.print_note("Failed to apply colors: {}".format(e))
+            # Show debug info even on error
+            if debug_info:
+                debug_summary = "Debug information:\n"
+                for info in debug_info[:5]:
+                    debug_summary += "  {}\n".format(info)
+                NOTIFICATION.messenger(debug_summary)
     
     def remove_colors_from_revision_clouds(self):
-        """Remove custom colors from revision clouds using graphic overrides"""
+        """Remove custom colors from revision clouds and restore system defaults"""
         clouds = self.get_all_revision_clouds()
         if not clouds:
             NOTIFICATION.messenger("No revision clouds found in the document.")
             return
         
-        # Get all views to remove overrides
-        all_views = list(DB.FilteredElementCollector(self.doc).OfClass(DB.View).WhereElementIsNotElementType().ToElements())
-        
         # Track clouds processed per revision
         revision_cloud_counts = {}
         total_clouds_processed = 0
+        debug_info = []
         
         t = DB.Transaction(self.doc, "Remove Revision Cloud Colors")
         t.Start()
         
         try:
-            for view in all_views:
-                # Skip views that don't support graphic overrides
-                if not hasattr(view, 'SetElementOverrides'):
-                    continue
-                
-                for cloud in clouds:
+            # Process each cloud individually using its owner view
+            for cloud in clouds:
+                try:
+                    # Get the view that owns this cloud
+                    owner_view_id = cloud.OwnerViewId
+                    if not owner_view_id or owner_view_id == DB.ElementId.InvalidElementId:
+                        debug_info.append("Cloud {} has no valid owner view".format(cloud.Id))
+                        continue
+                    
+                    owner_view = self.doc.GetElement(owner_view_id)
+                    if not owner_view:
+                        debug_info.append("Could not get owner view for cloud {}".format(cloud.Id))
+                        continue
+                    
+                    # Skip views that don't support element overrides
+                    if not hasattr(owner_view, 'SetElementOverrides'):
+                        debug_info.append("View {} does not support element overrides".format(owner_view.Name))
+                        continue
+                    
+                    # Get revision for this cloud
                     revision_id = cloud.RevisionId
-                    if revision_id:
-                        revision = self.doc.GetElement(revision_id)
-                        if revision:
-                            revision_number = revision.RevisionNumber
-                            
-                            # Create default override settings (black color, normal weight)
-                            override_settings = DB.OverrideGraphicSettings()
-                            override_settings.SetProjectionLineColor(DB.Color(0, 0, 0))
-                            override_settings.SetProjectionLineWeight(1)
-                            
-                            # Apply default override to the cloud in this view
-                            view.SetElementOverrides(cloud.Id, override_settings)
-                            
-                            # Track this cloud for the revision
-                            if revision_number not in revision_cloud_counts:
-                                revision_cloud_counts[revision_number] = 0
-                            revision_cloud_counts[revision_number] += 1
-                            total_clouds_processed += 1
+                    if not revision_id:
+                        debug_info.append("Cloud {} has no revision ID".format(cloud.Id))
+                        continue
+                    
+                    revision = self.doc.GetElement(revision_id)
+                    if not revision:
+                        debug_info.append("Could not get revision for cloud {}".format(cloud.Id))
+                        continue
+                    
+                    revision_number = revision.RevisionNumber
+                    
+                    # Create empty override settings to restore system defaults
+                    override_settings = DB.OverrideGraphicSettings()
+                    
+                    # Apply default override to this cloud in its owner view
+                    owner_view.SetElementOverrides(cloud.Id, override_settings)
+                    
+                    # Track this revision
+                    if revision_number not in revision_cloud_counts:
+                        revision_cloud_counts[revision_number] = 0
+                    revision_cloud_counts[revision_number] += 1
+                    total_clouds_processed += 1
+                    
+                except Exception as e:
+                    debug_info.append("Error resetting colors for cloud {}: {}".format(cloud.Id, str(e)))
             
             t.Commit()
             
             # Create summary message
-            summary = "Removed colors from {} revision clouds across {} views.\n\n".format(total_clouds_processed, len(all_views))
+            summary = "Removed colors from {} revision clouds.\n\n".format(total_clouds_processed)
             summary += "Summary by Revision:\n"
             
             if revision_cloud_counts:
                 for revision_number in sorted(revision_cloud_counts.keys()):
                     count = revision_cloud_counts[revision_number]
-                    summary += "  Revision {}: {} clouds (reset to default)\n".format(revision_number, count)
+                    summary += "  Revision {}: {} clouds (restored to system default)\n".format(revision_number, count)
             else:
                 summary += "  No clouds were processed.\n"
+            
+            # Add debug info if there were issues
+            if debug_info:
+                summary += "\nDebug Information:\n"
+                for info in debug_info[:10]:  # Limit to first 10 debug messages
+                    summary += "  {}\n".format(info)
+                if len(debug_info) > 10:
+                    summary += "  ... and {} more debug messages\n".format(len(debug_info) - 10)
             
             NOTIFICATION.messenger(summary)
             
         except Exception as e:
             t.RollBack()
             ERROR_HANDLE.print_note("Failed to remove colors: {}".format(e))
+            # Show debug info even on error
+            if debug_info:
+                debug_summary = "Debug information:\n"
+                for info in debug_info[:5]:
+                    debug_summary += "  {}\n".format(info)
+                NOTIFICATION.messenger(debug_summary)
     
     def manage_revision_colors(self):
         """Manage colors for individual revisions"""
@@ -351,7 +369,12 @@ class RevisionCloudColorManager:
         if not selected_revision:
             return
         
-        revision = selected_revision.item
+        # Handle both TemplateListItem and direct object returns
+        if hasattr(selected_revision, 'item'):
+            revision = selected_revision.item
+        else:
+            revision = selected_revision
+            
         revision_number = revision.RevisionNumber
         
         # Show current color or pick new one
@@ -400,7 +423,6 @@ class RevisionCloudColorManager:
     def show_current_config(self):
         """Show current configuration"""
         config_text = "Revision Cloud Color Manager Configuration:\n\n"
-        config_text += "Enabled: {}\n".format(self.config["enabled"])
         config_text += "Default Color: RGB({},{},{})\n\n".format(
             self.config["default_color"]["R"],
             self.config["default_color"]["G"], 
@@ -416,15 +438,61 @@ class RevisionCloudColorManager:
         
         forms.alert(config_text, title="Current Configuration")
     
+    def test_color_application(self):
+        """Test method to verify color application is working"""
+        # First run debug to see current state
+        self.debug_revision_clouds()
+        
+        # Ask user if they want to proceed with test
+        proceed = forms.alert(
+            "This will apply a bright red color to all revision clouds to test if the system is working.\n\n"
+            "Do you want to proceed with the test?",
+            title="Test Color Application",
+            yes=True,
+            no=True
+        )
+        
+        if not proceed:
+            return
+        
+        # Temporarily set all revisions to bright red for testing
+        original_colors = self.config["revision_colors"].copy()
+        
+        revisions = self.get_all_revisions()
+        for revision in revisions:
+            revision_number = revision.RevisionNumber
+            self.config["revision_colors"][revision_number] = {"R": 255, "G": 0, "B": 0}  # Bright red
+        
+        self.save_config()
+        
+        # Apply the test colors
+        self.apply_colors_to_revision_clouds()
+        
+        # Restore original colors
+        self.config["revision_colors"] = original_colors
+        self.save_config()
+        
+        NOTIFICATION.messenger("Test completed. If you saw bright red revision clouds, the system is working correctly.")
+    
     def run_main_menu(self):
         """Run the main menu interface"""
+        # Show helpful note about the simplified approach
+        REVIT_FORMS.dialogue(
+            "Welcome",
+            "Revision Cloud Color Manager\n\n"
+            "This tool applies colors to existing revision clouds based on their revision numbers.\n\n"
+            "IMPORTANT: If you add new revision clouds or modify existing ones, you need to re-run this tool to apply colors to the new/modified clouds.\n\n"
+            "The tool will only color clouds that currently exist in the document."
+        )
+        
         while True:
             options = {
                 "1. Apply Colors to Revision Clouds": self.apply_colors_to_revision_clouds,
                 "2. Reset All Colors from Revision Clouds": self.remove_colors_from_revision_clouds,
                 "3. Pick Color Mapping for Revisions": self.manage_revision_colors,
-                "4. Advanced Options": self.show_advanced_menu,
-                "5. Exit": None
+                "4. Test Color Application": self.test_color_application,
+                "5. Advanced Options": self.show_advanced_menu,
+                "6. Exit": None
             }
             
             selection = forms.SelectFromList.show(
@@ -439,15 +507,78 @@ class RevisionCloudColorManager:
             if selection in options and options[selection]:
                 options[selection]()
     
+    def debug_revision_clouds(self):
+        """Debug method to help diagnose revision cloud color issues"""
+        debug_info = []
+        
+        # Check revision clouds
+        clouds = self.get_all_revision_clouds()
+        debug_info.append("Found {} revision clouds in document".format(len(clouds)))
+        
+        if clouds:
+            # Check revisions
+            revisions = self.get_all_revisions()
+            debug_info.append("Found {} revisions in document".format(len(revisions)))
+            
+            # Check clouds by revision
+            clouds_by_revision = {}
+            orphaned_clouds = 0
+            for cloud in clouds:
+                revision_id = cloud.RevisionId
+                if revision_id:
+                    revision = self.doc.GetElement(revision_id)
+                    if revision:
+                        revision_number = revision.RevisionNumber
+                        if revision_number not in clouds_by_revision:
+                            clouds_by_revision[revision_number] = 0
+                        clouds_by_revision[revision_number] += 1
+                    else:
+                        orphaned_clouds += 1
+                else:
+                    orphaned_clouds += 1
+            
+            debug_info.append("Clouds by revision:")
+            for rev_num, count in clouds_by_revision.items():
+                debug_info.append("  Revision {}: {} clouds".format(rev_num, count))
+            
+            if orphaned_clouds > 0:
+                debug_info.append("  Orphaned clouds (no revision): {}".format(orphaned_clouds))
+        
+        # Check cloud owner views
+        owner_views = set()
+        for cloud in clouds:
+            owner_view_id = cloud.OwnerViewId
+            if owner_view_id and owner_view_id != DB.ElementId.InvalidElementId:
+                owner_view = self.doc.GetElement(owner_view_id)
+                if owner_view:
+                    owner_views.add(owner_view.Name)
+        
+        debug_info.append("Revision clouds are in {} different views: {}".format(len(owner_views), ", ".join(sorted(owner_views))))
+        
+        # Check configuration
+        debug_info.append("Configuration:")
+        debug_info.append("  Default color: RGB({},{},{})".format(
+            self.config["default_color"]["R"],
+            self.config["default_color"]["G"],
+            self.config["default_color"]["B"]))
+        debug_info.append("  Custom colors: {}".format(len(self.config["revision_colors"])))
+        
+        for rev_num, color in self.config["revision_colors"].items():
+            debug_info.append("    Revision {}: RGB({},{},{})".format(
+                rev_num, color["R"], color["G"], color["B"]))
+        
+        # Show debug info
+        debug_text = "\n".join(debug_info)
+        forms.alert(debug_text, title="Revision Cloud Debug Information")
+    
     def show_advanced_menu(self):
         """Show advanced options menu"""
         while True:
             options = {
-                "1. Enable/Disable Color Management": self.toggle_enabled,
-                "2. Set Default Color": self.set_default_color,
-                "3. Assign Colors to New Revisions": self.assign_colors_to_new_revisions,
-                "4. Show Current Configuration": self.show_current_config,
-                "5. Back to Main Menu": None
+                "1. Set Default Color": self.set_default_color,
+                "2. Show Current Configuration": self.show_current_config,
+                "3. Debug Revision Clouds": self.debug_revision_clouds,
+                "4. Back to Main Menu": None
             }
             
             selection = forms.SelectFromList.show(
@@ -462,12 +593,7 @@ class RevisionCloudColorManager:
             if selection in options and options[selection]:
                 options[selection]()
     
-    def toggle_enabled(self):
-        """Toggle the enabled state of color management"""
-        self.config["enabled"] = not self.config["enabled"]
-        self.save_config()
-        status = "enabled" if self.config["enabled"] else "disabled"
-        NOTIFICATION.messenger("Revision cloud color management {}.".format(status))
+
 
     def get_color_name(self, color_config):
         """Get a human-readable name for a color"""
