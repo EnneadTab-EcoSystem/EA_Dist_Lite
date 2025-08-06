@@ -44,6 +44,11 @@ def random_selection_to_group_left():
     for index in range(group_num):
         collection[index] = [rs.AddTextDot(1 + index, bbox_center_pt + rs.CreateVector([index * rough_size * 0.05,0,0]) )]
 
+    # Safety check to ensure ids is still valid before iteration
+    if not ids:
+        NOTIFICATION.messenger("Selection became invalid during processing.")
+        return
+
     for el in ids:
         index = random.randint(0, group_num - 1)
         collection[index].append(el)

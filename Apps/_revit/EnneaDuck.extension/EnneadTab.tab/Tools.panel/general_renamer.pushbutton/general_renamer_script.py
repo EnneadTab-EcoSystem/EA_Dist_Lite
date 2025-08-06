@@ -122,8 +122,17 @@ def get_unique_view_name(base_name, view_names_pool):
 
 @ERROR_HANDLE.try_catch_error()
 def rename_views(doc, sheets, is_default_format, is_original_flavor, attempt = 0, show_log = True):
-    t = DB.Transaction(doc, "Rename Views")
-    t.Start()
+    # Check if there's already an active transaction
+    if doc.IsModifiable:
+        # No active transaction, start a new one
+        t = DB.Transaction(doc, "Rename Views")
+        t.Start()
+        transaction_started = True
+    else:
+        # There's already an active transaction, use it
+        t = None
+        transaction_started = False
+    
     try:
         failed_sheets = set()
         all_views = DB.FilteredElementCollector(doc).OfClass(DB.View).WhereElementIsNotElementType().ToElements()
@@ -232,9 +241,12 @@ def rename_views(doc, sheets, is_default_format, is_original_flavor, attempt = 0
                 print ("\n\nAttemp = {}".format(attempt))
             rename_views(doc, list(failed_sheets), is_default_format, is_original_flavor, attempt, show_log)
         
-        t.Commit()
+        # Only commit if we started the transaction
+        if transaction_started and t:
+            t.Commit()
     except Exception as e:
-        if not t.HasEnded():
+        # Only rollback if we started the transaction and it hasn't ended
+        if transaction_started and t and not t.HasEnded():
             t.RollBack()
         
 
