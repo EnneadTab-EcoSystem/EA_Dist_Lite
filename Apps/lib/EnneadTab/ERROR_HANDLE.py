@@ -249,7 +249,7 @@ def try_catch_error(is_silent=False, is_pass = False):
 
                 if ENVIRONMENT.IS_REVIT_ENVIRONMENT and not is_silent:
                     NOTIFICATION.messenger(
-                        main_text="!Critical Warning, close all Revit UI window from " + ENVIRONMENT.PLUGIN_NAME + " and reach to Sen Zhang.")
+                        "!Critical Warning, close all Revit UI window from " + ENVIRONMENT.PLUGIN_NAME + " and reach to Sen Zhang.")
                 
                 # Make sure to decrement the counter even in case of exception
                 _safe_decrement_recursion_depth()

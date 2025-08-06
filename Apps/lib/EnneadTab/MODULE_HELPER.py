@@ -52,9 +52,7 @@ def run_func_in_module(module_path, func_name, *args):
         ref_module, module_name, None
     )
     if func is None:
-        NOTIFICATION.messenger(
-            main_text="Oooops, cannot find the the source code.\nSen Zhang is no longer working for EnneadTab unluckly."
-        )
+        NOTIFICATION.messenger("Oooops, cannot find the the source code.\nSen Zhang is no longer working for EnneadTab unluckly.")
     else:
         func(*args)
 
@@ -83,7 +81,7 @@ def run_revit_script(script_subfolder_or_fullpath, func_name, *args, **kwargs):
         )
 
     if not os.path.exists(full_file_path):
-        NOTIFICATION.messenger(main_text="File not found:\n{}".format(full_file_path))
+        NOTIFICATION.messenger("File not found:\n{}".format(full_file_path))
         print("File not found:\n{}".format(full_file_path))
         return
 
@@ -151,11 +149,9 @@ def run_Rhino_button(locator, *args, **kwargs):
             if func is not None:
                 break
         else:
-            NOTIFICATION.messenger(
-                main_text="Oooops, cannot find the func <{}> in source code.\nContact SZ and let him know. Thx!".format(
+            NOTIFICATION.messenger("Oooops, cannot find the func <{}> in source code.\nContact SZ and let him know. Thx!".format(
                     func_name
-                )
-            )
+                ))
             return
 
     # no longer decide to aapkly pre error

@@ -449,7 +449,7 @@ def is_money_negative(user_name=get_current_user_name()):
         folder = r"L:\4b_Applied Computing\01_Revit\04_Tools\08_EA Extensions\Project Settings\Misc"
         image = "LOG_BANKRUPT.png"
 
-        NOTIFICATION.messenger(main_text="Woahaha! You don't have enough EA Coins...",
+        NOTIFICATION.messenger("Woahaha! You don't have enough EA Coins..."),
                                      sub_text="Current Balance = {} EA Coins".format(
                                          get_current_money()),
                                      icon="{}\{}".format(folder, image),

@@ -107,8 +107,7 @@ def _select_warning_history_files():
 def _show_chart_js_hint():
     """Display hint about JavaScript loading requirement."""
     hint_image = script.get_bundle_file("chart js hint.png")
-    NOTIFICATION.messenger(
-        main_text="When asked about loading java script, click 'yes'",
+    NOTIFICATION.messenger("When asked about loading java script, click 'yes'"),
         image=hint_image
     )
 

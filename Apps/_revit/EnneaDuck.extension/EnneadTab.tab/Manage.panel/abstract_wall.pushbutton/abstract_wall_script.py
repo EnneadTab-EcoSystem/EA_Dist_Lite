@@ -73,7 +73,7 @@ class Solution:
     def run(self, starting_view):
         # confirm current active view is a plan view or RCP, cancel and warn if not
         if starting_view.ViewType not in [DB.ViewType.FloorPlan, DB.ViewType.CeilingPlan]:
-            NOTIFICATION.messenger(main_text="Current active view is not a plan view or RCP, abort.")
+            NOTIFICATION.messenger("Current active view is not a plan view or RCP, abort."))
             return
         
         
@@ -121,9 +121,9 @@ class Solution:
         
         # Report summary of pinned walls skipped
         if self.pinned_walls_skipped > 0:
-            NOTIFICATION.messenger(main_text="Abstract wall update completed.\n\n{} pinned walls were skipped to prevent accidental modification.".format(self.pinned_walls_skipped))
+            NOTIFICATION.messenger("Abstract wall update completed.\n\n{} pinned walls were skipped to prevent accidental modification.").format(self.pinned_walls_skipped))
         else:
-            NOTIFICATION.messenger(main_text="Abstract wall update completed successfully.")
+            NOTIFICATION.messenger("Abstract wall update completed successfully."))
     
     
     def unit_test():
@@ -365,12 +365,12 @@ class Solution:
     def prepare_view_line2wall(self):
         
         if self.prefix not in doc.ActiveView.Name:
-            NOTIFICATION.messenger(main_text="Current active view is not a abstract wall view, cannot find its source view..")
+            NOTIFICATION.messenger("Current active view is not a abstract wall view, cannot find its source view.."))
             return None
         desired_source_view_name = doc.ActiveView.Name.replace(self.prefix, "")
         source_view = REVIT_VIEW.get_view_by_name(desired_source_view_name)
         if not source_view:
-            NOTIFICATION.messenger(main_text="The source view of this diagram view cannot be found...")
+            NOTIFICATION.messenger("The source view of this diagram view cannot be found..."))
             return None
         
         uidoc.ActiveView = source_view
@@ -384,7 +384,7 @@ class Solution:
         
         
         if self.prefix in doc.ActiveView.Name:
-            NOTIFICATION.messenger(main_text="Current active view is already a diagram view, abort.")
+            NOTIFICATION.messenger("Current active view is already a diagram view, abort."))
             
             return None
         

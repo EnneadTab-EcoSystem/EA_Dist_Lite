@@ -805,7 +805,7 @@ class EA_Printer_UI(WPFWindow):
         
         for item in self.data_grid_preview.ItemsSource:
             if "*" in item.format_name:
-                NOTIFICATION.messenger(main_text="Please remove * at " + item.format_name)
+                NOTIFICATION.messenger("Please remove * at ") + item.format_name)
                 self.button_main.Content = "There are * in some name."
                 return False
 
@@ -1400,7 +1400,7 @@ class EA_Printer_UI(WPFWindow):
         
         for doc in self.docs_to_process:
             if doc.IsLinked:
-                NOTIFICATION.messenger(main_text='[{}] is a link file, cannot edit.'.format(doc.Title))
+                NOTIFICATION.messenger('[{}] is a link file, cannot edit.').format(doc.Title))
                 continue
             HELPER.create_issue_para_to_sheet(doc, issue_name)
         
@@ -1424,7 +1424,7 @@ class EA_Printer_UI(WPFWindow):
         
         for doc in self.docs_to_process:
             if doc.IsLinked:
-                NOTIFICATION.messenger(main_text='[{}] is a link file, cannot edit.'.format(doc.Title))
+                NOTIFICATION.messenger('[{}] is a link file, cannot edit.').format(doc.Title))
                 continue
             HELPER.create_color_setting_to_sheet(doc)
         

@@ -239,7 +239,7 @@ class ExcelDataCollection:
 
     def save(self, filepath, worksheet=ENVIRONMENT.PLUGIN_NAME, open_after=True, freeze_column=None):
         if self.has_warning:
-            NOTIFICATION.messenger(main_text="There are warnings related to cell override, see console for details")
+            NOTIFICATION.messenger("There are warnings related to cell override, see console for details")
         save_data_to_excel(self.data, filepath, worksheet=worksheet, open_after=open_after, freeze_row=self.header_row+1, freeze_column=freeze_column)
 
 
@@ -514,7 +514,7 @@ def _read_data_from_excel_locally(filepath, worksheet, return_dict, headless):
 
     if filepath.endswith(".xlsx"):
         if not worksheet:
-            NOTIFICATION.messenger(main_text="Worksheet input is required for xlsx files")
+            NOTIFICATION.messenger("Worksheet input is required for xlsx files")
             print ("Worksheet input is required for xlsx files")
             return {}   
         job_data = {
@@ -563,14 +563,14 @@ def _read_data_from_excel_locally(filepath, worksheet, return_dict, headless):
 
 
         return converted_data
-        NOTIFICATION.messenger(main_text="Excel file is xlsx, converting to xls, this will take a few moments.\nFor better performance, save as .xls instead of .xlsx.")   
+        NOTIFICATION.messenger("Excel file is xlsx, converting to xls, this will take a few moments.\nFor better performance, save as .xls instead of .xlsx.")   
         filepath = save_as_xls(filepath)
 
     ##################################################
     # due to the rhino 8 and revit 2025 core change, there will be no more running for xls files
     if USER.IS_DEVELOPER:
         print ("##################Excel: due to the rhino 8 and revit 2025 core change, there will be no more running for xls files")
-        NOTIFICATION.messenger(main_text="due to the rhino 8 and revit 2025 core change, there will be no more running for xls files")
+        NOTIFICATION.messenger("due to the rhino 8 and revit 2025 core change, there will be no more running for xls files")
     ##################################################
 
     if not return_dict:
@@ -582,7 +582,7 @@ def _read_data_from_excel_locally(filepath, worksheet, return_dict, headless):
                 worksheet = wb.sheet_names()[0]
             sheet = wb.sheet_by_name(worksheet)
         except:
-            NOTIFICATION.messenger(main_text="Cannot open worksheet: {}".format(worksheet))
+            NOTIFICATION.messenger("Cannot open worksheet: {}".format(worksheet))
             return None
         
         OUT = []
@@ -781,7 +781,7 @@ def save_data_to_excel(data, filepath, worksheet=ENVIRONMENT.PLUGIN_NAME, open_a
         try:
             workbook.close()
             if not open_after:
-                NOTIFICATION.messenger(main_text="Excel saved at '{}'".format(filepath))
+                NOTIFICATION.messenger("Excel saved at '{}'".format(filepath))
         except Exception as e:
             print (ERROR_HANDLE.get_alternative_traceback())
 
@@ -1085,7 +1085,7 @@ def flip_dict(dict):
         output[dict[key]] = key
     
     if duplicate_keys:
-        NOTIFICATION.messenger(main_text="Warning: Found duplicate keys in flipped dictionary: {}".format(", ".join(str(x) for x in duplicate_keys)))
+        NOTIFICATION.messenger("Warning: Found duplicate keys in flipped dictionary: {}".format(", ".join(str(x) for x in duplicate_keys)))
         for key in duplicate_keys:
             print ("duplicate key: ", key)
     return output

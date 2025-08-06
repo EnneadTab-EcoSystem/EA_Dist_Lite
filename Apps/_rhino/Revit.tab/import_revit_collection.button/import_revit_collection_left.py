@@ -29,7 +29,7 @@ def process_dwg(file, units, is_using_default_layer_structure):
     #units = "Millimeters"
     rs.Command("_-import \"{}\" _ModelUnits={} -enter -enter".format(file, units))
 
-    NOTIFICATION.messenger(sub_text = "Come Back, come back!", main_text = "Import Finish!")
+    NOTIFICATION.messenger("Import Finish! Come Back, come back!")
     imported_objs = rs.LastCreatedObjects()
     #print imported_objs
     layers_used = set()
@@ -37,7 +37,7 @@ def process_dwg(file, units, is_using_default_layer_structure):
 
     if not imported_objs:
         # NOTIFICATION.messenger(main_text = "Cannot find impoted objs.")
-        NOTIFICATION.messenger(main_text = "Cannot find impoted objs in file\n{}.".format(file))
+        NOTIFICATION.messenger("Cannot find impoted objs in file\n{}.".format(file))
         return
 
     for obj in imported_objs:
@@ -80,6 +80,10 @@ def process_dwg(file, units, is_using_default_layer_structure):
     change_objs_layer(imported_objs, parent_layer_prefix)
     safely_delete_used_layer(layers_used)
     REF_MODULE.random_layer_color(default_opt = True)
+    
+    # Redraw the view after processing this file
+    rs.Redraw()
+
 
 
 def safely_delete_used_layer(layers_to_remove):
@@ -164,12 +168,13 @@ def import_revit_collection():
     rs.EnableRedraw(False)
     
     global OST_MATERIAL_MAP
-    OST_MATERIAL_MAP  = DATA_FILE.get_data("EA_OST_MATERIAL_MAP")
+    OST_MATERIAL_MAP  = DATA_FILE.get_data("OST_MATERIAL_MAP")
     if not OST_MATERIAL_MAP:
-        NOTIFICATION.messenger(main_text="No mapping data found. Did you export setting from Revit side?")
+        NOTIFICATION.messenger("No mapping data found. Did you export setting from Revit side?")
         return
     map(lambda x: process_dwg(x, units, is_using_default), filenames)
     
+
     
     NOTIFICATION.duck_pop("All imported!")
 

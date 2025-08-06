@@ -8,15 +8,6 @@
         "tab": "Browser",
         "tab_icon": null
     },
-    "EnneadTab Library.tab\\Browser.panel\\meta_data_exporter.pushbutton\\meta_data_exporter_script.py": {
-        "alias": "MetaData Exporter",
-        "doc": "Process all the family file to generate a metadata file for usage later.",
-        "icon": "EnneadTab Library.tab\\Browser.panel\\meta_data_exporter.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab Library.tab\\Browser.panel\\meta_data_exporter.pushbutton\\meta_data_exporter_script.py",
-        "tab": "Browser",
-        "tab_icon": null
-    },
     "EnneadTab Library.tab\\Contents.panel\\how to.pushbutton\\instruction to library_script.py": {
         "alias": "How to Use Ennead Library",
         "doc": "Click the icon to load the family, some older revit version family will be upgraded during the process. Then you can start to use it.",
@@ -368,15 +359,6 @@
         "tab": "Proj. 1643",
         "tab_icon": null
     },
-    "EnneadTab Tailor.tab\\Proj. 1643.panel\\Lenox Hill.pulldown\\update_WWR_region.pushbutton\\update_WWR_region_script.py": {
-        "alias": "Update WWR chart",
-        "doc": "Update the window wall ratio chart by reading filled region in groups",
-        "icon": "EnneadTab Tailor.tab\\Proj. 1643.panel\\Lenox Hill.pulldown\\update_WWR_region.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab Tailor.tab\\Proj. 1643.panel\\Lenox Hill.pulldown\\update_WWR_region.pushbutton\\update_WWR_region_script.py",
-        "tab": "Proj. 1643",
-        "tab_icon": null
-    },
     "EnneadTab Tailor.tab\\Proj. 1643.panel\\Lenox Hill.pulldown\\update_delta_area_graphic.pushbutton\\update_delta_area_graphic_script.py": {
         "alias": "update_delta_area_graphic",
         "doc": "update the delta area graphic",
@@ -548,15 +530,6 @@
         "tab": "Proj. 2142",
         "tab_icon": null
     },
-    "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\all_in_one_checker.pushbutton\\all_in_one_checker_script.py": {
-        "alias": "DEPRECIATED:Detailed Program Chart Update",
-        "doc": "Basic area summery checker that update the data in special calculator. \n\nThis is also hooked to the sync event for this project. Request by Gayatri",
-        "icon": "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\all_in_one_checker.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\all_in_one_checker.pushbutton\\all_in_one_checker_script.py",
-        "tab": "Proj. 2151",
-        "tab_icon": null
-    },
     "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\color_pills.pushbutton\\color_pills_script.py": {
         "alias": "Colorize Pills",
         "doc": "Colorize the diagram pills, requested by Gayatri",
@@ -581,15 +554,6 @@
         "icon": "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\dgsf_area_data_check.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\dgsf_area_data_check.pushbutton\\dgsf_area_data_check_script.py",
-        "tab": "Proj. 2151",
-        "tab_icon": null
-    },
-    "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\load_color_template.pushbutton\\load_color_template_script.py": {
-        "alias": "DEPRECIATED: Load Color Template",
-        "doc": "Update color scheme with office template excel version\nJ:\\2151\\2_Master File\\B-70_Programming\\03_Colors\\Color Scheme_NYULI_Active.xls.\nNOTE: excel should be saved with .xls instead of .xlsx format\nAlso note, the column header should be as such:\nA: Department\nB: Department Abbr.\nC: Department Color\n\nD: Program\nE: Program Abbr.\nF: Program Color\n\nANYTHING ELSE IN THE EXCEL FILE WILL BE IGNORED, including the hex code text on color cell and red, green, blue value number. \nThose manual color text cannot be trusted on the long run.\n",
-        "icon": "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\load_color_template.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\load_color_template.pushbutton\\load_color_template_script.py",
         "tab": "Proj. 2151",
         "tab_icon": null
     },
@@ -662,15 +626,6 @@
         "icon": "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\update_dummy_patient_room.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\update_dummy_patient_room.pushbutton\\update_dummy_patient_room_script.py",
-        "tab": "Proj. 2151",
-        "tab_icon": null
-    },
-    "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\update_material_setting.pushbutton\\update_material_setting_script.py": {
-        "alias": "Update Material Setting",
-        "doc": "Sen Zhang has not writed documentation for this tool, but he should!",
-        "icon": "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\update_material_setting.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\update_material_setting.pushbutton\\update_material_setting_script.py",
         "tab": "Proj. 2151",
         "tab_icon": null
     },
@@ -845,33 +800,6 @@
         "tab": "Proj. 2314",
         "tab_icon": null
     },
-    "EnneadTab Tailor.tab\\Proj. 2314.panel\\First Ave.pulldown\\assign_mirrored_panel.pushbutton\\assign_mirrored_panel_script.py": {
-        "alias": "Assign Mirrored Panels",
-        "doc": "For Ethan's beautiful diagram.",
-        "icon": "EnneadTab Tailor.tab\\Proj. 2314.panel\\First Ave.pulldown\\assign_mirrored_panel.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab Tailor.tab\\Proj. 2314.panel\\First Ave.pulldown\\assign_mirrored_panel.pushbutton\\assign_mirrored_panel_script.py",
-        "tab": "Proj. 2314",
-        "tab_icon": null
-    },
-    "EnneadTab Tailor.tab\\Proj. 2317.panel\\Kimmel.pulldown\\DWG export setting_check.pushbutton\\check_export setting_script.py": {
-        "alias": "Check DWG Export Layer Mapping",
-        "doc": "check NYU CAD export layer mapping rule",
-        "icon": "EnneadTab Tailor.tab\\Proj. 2317.panel\\Kimmel.pulldown\\DWG export setting_check.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab Tailor.tab\\Proj. 2317.panel\\Kimmel.pulldown\\DWG export setting_check.pushbutton\\check_export setting_script.py",
-        "tab": "Proj. 2317",
-        "tab_icon": null
-    },
-    "EnneadTab Tailor.tab\\Proj. 2317.panel\\Kimmel.pulldown\\assign_door_mat.pushbutton\\assign_door_mat_script.py": {
-        "alias": "Assign Door Mat",
-        "doc": "Assign materials to door panels and frames in the current phase using instance parameters Door_$Panel_Material and Door_$Frame_Material",
-        "icon": "EnneadTab Tailor.tab\\Proj. 2317.panel\\Kimmel.pulldown\\assign_door_mat.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab Tailor.tab\\Proj. 2317.panel\\Kimmel.pulldown\\assign_door_mat.pushbutton\\assign_door_mat_script.py",
-        "tab": "Proj. 2317",
-        "tab_icon": null
-    },
     "EnneadTab Tailor.tab\\Proj. 2317.panel\\Kimmel.pulldown\\cleanup_dr_tag.pushbutton\\cleanup_dr_tag_script.py": {
         "alias": "Cleanup Dr Tag",
         "doc": "Sen Zhang has not writed documentation for this tool, but he should!",
@@ -926,15 +854,6 @@
         "tab": "Proj. 2412",
         "tab_icon": null
     },
-    "EnneadTab Tailor.tab\\Proj. 2418.panel\\Texttile.pulldown\\make_filter_legend.pushbutton\\make_filter_legend_script.py": {
-        "alias": "Make Filter Legend",
-        "doc": "Create view filters based on Generic Model family names, apply colors from CSS definitions, and generate a legend.",
-        "icon": "EnneadTab Tailor.tab\\Proj. 2418.panel\\Texttile.pulldown\\make_filter_legend.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab Tailor.tab\\Proj. 2418.panel\\Texttile.pulldown\\make_filter_legend.pushbutton\\make_filter_legend_script.py",
-        "tab": "Proj. 2418",
-        "tab_icon": null
-    },
     "EnneadTab Tailor.tab\\Proj. 2419.panel\\SinoChem.pulldown\\chained_family_loading.pushbutton\\chained_family_loading_script.py": {
         "alias": "Chained Family Loading",
         "doc": "Sen Zhang has not writed documentation for this tool, but he should!",
@@ -960,15 +879,6 @@
         "is_popular": false,
         "script": "EnneadTab Tailor.tab\\Proj. 2419.panel\\SinoChem.pulldown\\print_all_family_name.pushbutton\\print_all_family_name_script.py",
         "tab": "Proj. 2419",
-        "tab_icon": null
-    },
-    "EnneadTab Tailor.tab\\Proj. 2501.panel\\SAIF.pulldown\\panel_location_map.pushbutton\\panel_location_map_script.py": {
-        "alias": "Panel Location Map",
-        "doc": "Maps curtain wall panels to their grid positions (U and V indices) and saves the mapping data for use in other tools. This tool analyzes all curtain wall panels in the document and creates a location map that can be used for panel selection and analysis.",
-        "icon": "EnneadTab Tailor.tab\\Proj. 2501.panel\\SAIF.pulldown\\panel_location_map.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab Tailor.tab\\Proj. 2501.panel\\SAIF.pulldown\\panel_location_map.pushbutton\\panel_location_map_script.py",
-        "tab": "Proj. 2501",
         "tab_icon": null
     },
     "EnneadTab Tailor.tab\\Proj. 2512.panel\\MetroTech.pulldown\\room_bounding_to_area_b_line.pushbutton\\room_bounding_to_area_b_line_script.py": {
@@ -1558,7 +1468,7 @@
     },
     "EnneadTab Tailor.tab\\archive\\Proj. 2135.panel\\A.stack\\Proj 2135C.pulldown\\57_break composite floor.pushbutton\\break floor_script.py": {
         "alias": "57_break composite floor",
-        "doc": "For composite floor element, recreate the finish and structrue slab as seperate element. It will use the source footprint for both outcomes.",
+        "doc": "For composite floor element, recreate the finish and structure slab as separate element. It will use the source footprint for both outcomes.",
         "icon": "EnneadTab Tailor.tab\\archive\\Proj. 2135.panel\\A.stack\\Proj 2135C.pulldown\\57_break composite floor.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab Tailor.tab\\archive\\Proj. 2135.panel\\A.stack\\Proj 2135C.pulldown\\57_break composite floor.pushbutton\\break floor_script.py",
@@ -2276,15 +2186,6 @@
         "tab": "Import Export",
         "tab_icon": null
     },
-    "EnneadTab.tab\\Import Export.panel\\Rhino.pulldown\\import_rhino_material.pushbutton\\import_rhino_material_script.py": {
-        "alias": "Import Rhino Material",
-        "doc": "Import material definitions from Rhino into Revit. Creates new materials or updates existing ones based on Rhino material properties.",
-        "icon": "EnneadTab.tab\\Import Export.panel\\Rhino.pulldown\\import_rhino_material.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab.tab\\Import Export.panel\\Rhino.pulldown\\import_rhino_material.pushbutton\\import_rhino_material_script.py",
-        "tab": "Import Export",
-        "tab_icon": null
-    },
     "EnneadTab.tab\\Import Export.panel\\Rhino.pulldown\\map_Rhino_block.pushbutton\\map_rhino_block_script.py": {
         "alias": "Map Rhino Block to Revit Family",
         "doc": "Transform the Rhino block orientation to Adaptive Revit Family. It will be searching for same name as block name.\n The biggest benift is You will no longer be restricted by level based vertical up family. It can be freeform as in Rhino.",
@@ -2357,39 +2258,12 @@
         "tab": "Import Export",
         "tab_icon": null
     },
-    "EnneadTab.tab\\Import Export.panel\\ennead_exporter.pushbutton\\super_exporter_script.py": {
-        "alias": "Ennead Exporter",
-        "doc": "Professional export solution that handles multiple file formats and workflows. This comprehensive utility manages PDF, DWG, and JPG exports simultaneously with intelligent organization by prefix and file type. Features include email notifications with folder links, accurate time estimation, color/BW export control, revision-based filtering, and option to sync and close after completion. Perfect for meeting tight deadlines while maintaining project organization.",
-        "icon": "EnneadTab.tab\\Import Export.panel\\ennead_exporter.pushbutton\\icon.png",
-        "is_popular": true,
-        "script": "EnneadTab.tab\\Import Export.panel\\ennead_exporter.pushbutton\\super_exporter_script.py",
-        "tab": "Import Export",
-        "tab_icon": null
-    },
-    "EnneadTab.tab\\Import Export.panel\\ennead_printer.bad_pushbutton\\OLD_ennead_printer_script.py": {
-        "alias": "Ennead Exporter",
-        "doc": "A great helper for your print on deadline. Feastures include:\n  -pdf, dwg, jpg export together\n  -Package export files to subfolders in destination folder by assigned prefix and file type\n  -Prefix for auto numbering\n  -Email result as a link to folder.\n  -Time esitmation, with increasing accuracy the more you export\n  -Identify color setting per parameter on sheet. So you can mix color and BW export together.\n  -Option to sync and close files after exporting done.\n  -Export sheets by revision mark instead of printSet, and allow selective export without desrupting shared printSet.\n  -Export views on sheet seperatedly for dwg.\n  -Export from links or open docs.\n  -Merge pdf after export.\n  -JOKE while exporting.",
-        "icon": "EnneadTab.tab\\Import Export.panel\\ennead_printer.bad_pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab.tab\\Import Export.panel\\ennead_printer.bad_pushbutton\\OLD_ennead_printer_script.py",
-        "tab": "Import Export",
-        "tab_icon": null
-    },
     "EnneadTab.tab\\Import Export.panel\\export isolated walltype.pushbutton\\isolated export walltype_script.py": {
         "alias": "Isolated Export By System Family Type",
-        "doc": "Pick category and type for the dwg export. It will isolate elements by types in the view and give individual .dwg file.\n\nThe child elements such as shared family will be isolated as well.\n\nUse EnneadTab for Rhino <Import Revit Export Collection> to get things under type parent layers.\n\nCurrently handle Wall/Floor/Roof/Column/Stair\n\nThis tool primarily deal with the system family category that normally will be difficult to seperate in dwg export.",
+        "doc": "Pick category and type for the dwg export. It will isolate elements by types in the view and give individual .dwg file.\n\nThe child elements such as shared family will be isolated as well.\n\nUse EnneadTab for Rhino <Import Revit Export Collection> to get things under type parent layers.\n\nCurrently handle Wall/Floor/Roof/Column/Stair\n\nThis tool primarily deal with the system family category that normally will be difficult to separate in dwg export.",
         "icon": "EnneadTab.tab\\Import Export.panel\\export isolated walltype.pushbutton\\icon.png",
         "is_popular": true,
         "script": "EnneadTab.tab\\Import Export.panel\\export isolated walltype.pushbutton\\isolated export walltype_script.py",
-        "tab": "Import Export",
-        "tab_icon": null
-    },
-    "EnneadTab.tab\\Import Export.panel\\export_ost_material_table.pushbutton\\export_ost_material_table_script.py": {
-        "alias": "Export SubCategory Material Table",
-        "doc": "Export the OST and material table so it can be used in Rhino import when using 'map Revit SubC'.\n\nWith this tool, the layer in Rhino can be assigned with similar Revit material based on layer names.\nIf you have not done already, you can update dwg export layer mapping with EnneadTab first so each SubCategory in object style table become something rhino layer can match.\n",
-        "icon": "EnneadTab.tab\\Import Export.panel\\export_ost_material_table.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab.tab\\Import Export.panel\\export_ost_material_table.pushbutton\\export_ost_material_table_script.py",
         "tab": "Import Export",
         "tab_icon": null
     },
@@ -2444,15 +2318,6 @@
         "icon": "EnneadTab.tab\\Manage.panel\\Shake All Tags.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\Manage.panel\\Shake All Tags.pushbutton\\shake all tags_script.py",
-        "tab": "Manage",
-        "tab_icon": null
-    },
-    "EnneadTab.tab\\Manage.panel\\abstract_wall.pushbutton\\abstract_wall_script.py": {
-        "alias": "CurtainWall Location Manager",
-        "doc": "Manager your curtain wall locations by converting walls in current plan to abstract line.\nYou can then modify/confirm the location of CW wall in that diagram and update the actual CW wall with this tool.\n\nLeft Click: Process current view\nRight Click: Process selected views\n\n\nYou also have the option to include EOS lines in the diagrams, as long as the floor type name contain \"struc\".\nYou can use working-view-manager to export those Abstract wall diagram views to jpgs and can review those quicker.",
-        "icon": "EnneadTab.tab\\Manage.panel\\abstract_wall.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab.tab\\Manage.panel\\abstract_wall.pushbutton\\abstract_wall_script.py",
         "tab": "Manage",
         "tab_icon": null
     },
@@ -2615,15 +2480,6 @@
         "icon": "EnneadTab.tab\\Resource.panel\\check_error_log.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\Resource.panel\\check_error_log.pushbutton\\check_error_log_script.py",
-        "tab": "Resource",
-        "tab_icon": null
-    },
-    "EnneadTab.tab\\Resource.panel\\display_warning_history.pushbutton\\display_warning_history_script.py": {
-        "alias": "Display Revit Warning History",
-        "doc": "Doc string not set",
-        "icon": "EnneadTab.tab\\Resource.panel\\display_warning_history.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab.tab\\Resource.panel\\display_warning_history.pushbutton\\display_warning_history_script.py",
         "tab": "Resource",
         "tab_icon": null
     },
@@ -2975,15 +2831,6 @@
         "icon": "EnneadTab.tab\\UI.panel\\place_views_on_sheets.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\UI.panel\\place_views_on_sheets.pushbutton\\place_views_on_sheets_script.py",
-        "tab": "UI",
-        "tab_icon": null
-    },
-    "EnneadTab.tab\\UI.panel\\prefilter_selection.pushbutton\\prefilter_selection_script.py": {
-        "alias": "Prefilter Selection",
-        "doc": "Just like the prefilter selection in Rhino, this allow you to narrow down selection beofre heavy window selection and post filter.\nVery helpful when the drawing is very crowded.\n\nYou can enable multiple category at same time.\n\nLet Sen.Z know if you would like to add more to the category list.",
-        "icon": "EnneadTab.tab\\UI.panel\\prefilter_selection.pushbutton\\icon.png",
-        "is_popular": true,
-        "script": "EnneadTab.tab\\UI.panel\\prefilter_selection.pushbutton\\prefilter_selection_script.py",
         "tab": "UI",
         "tab_icon": null
     },

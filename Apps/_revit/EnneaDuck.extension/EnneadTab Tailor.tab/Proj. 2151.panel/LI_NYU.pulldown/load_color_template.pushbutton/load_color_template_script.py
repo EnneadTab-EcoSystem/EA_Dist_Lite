@@ -66,7 +66,7 @@ def load_color_template():
         
     t.Commit()
     
-    NOTIFICATION.messenger(main_text="Color Scheme Updated!")
+    NOTIFICATION.messenger("Color Scheme Updated!"))
     print ("\n\nDone!")
     
     OUTPUT.display_output_on_browser()
@@ -75,7 +75,7 @@ def load_color_template():
 def update_color_scheme(data, lookup_key, color_scheme_name):
     color_scheme = REVIT_SELECTION.get_color_scheme_by_name(color_scheme_name)
     if not color_scheme:
-        NOTIFICATION.messenger(main_text="Color Scheme [{}] not found!\nCheck spelling".format(color_scheme_name))
+        NOTIFICATION.messenger("Color Scheme [{}] not found!\nCheck spelling").format(color_scheme_name))
         return
     
     output.print_md ("##Working on color scheme [{}]".format(color_scheme.Name))

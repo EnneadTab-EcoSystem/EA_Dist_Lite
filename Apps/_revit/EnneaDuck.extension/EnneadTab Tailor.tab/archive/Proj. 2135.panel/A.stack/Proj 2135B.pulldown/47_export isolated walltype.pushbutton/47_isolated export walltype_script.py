@@ -261,7 +261,7 @@ def export_dwg_action(file_name, view_or_sheet, doc, output_folder, additional_m
         attempt += 1
         try:
             doc.Export(output_folder, r"{}".format(file_name), view_as_collection, DWG_option)
-            print("DWG export succesfully")
+            print("DWG export successfully")
             break
         except Exception as e:
             if  "The files already exist!" in e:

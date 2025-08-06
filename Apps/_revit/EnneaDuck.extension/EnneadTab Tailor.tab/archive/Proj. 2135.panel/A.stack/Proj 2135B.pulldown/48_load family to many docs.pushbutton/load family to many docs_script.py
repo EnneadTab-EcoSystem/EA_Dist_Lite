@@ -36,7 +36,7 @@ def load_family_to_docs(doc, family_doc):
     update_log("\n\nLoading [{}]".format(family_doc.Title))
     try:
         family_doc.LoadFamily(doc, FamilyOption())
-        update_log("Family load succesfully to {}.".format(doc.Title))
+        update_log("Family load successfully to {}.".format(doc.Title))
     except Exception as e:
         update_log("Family [{}] fail to load to {}.\n Error = {}".format(family_doc.Title, doc.Title, e))
     #t.Commit()

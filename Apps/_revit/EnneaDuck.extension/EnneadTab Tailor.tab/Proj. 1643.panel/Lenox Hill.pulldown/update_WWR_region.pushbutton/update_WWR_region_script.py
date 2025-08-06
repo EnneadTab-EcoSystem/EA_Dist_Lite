@@ -108,7 +108,7 @@ def update_WWR_region():
     t.Commit()
  
  
-    EnneadTab.NOTIFICATION.messenger(main_text="WWR data updated")
+    EnneadTab.NOTIFICATION.messenger("WWR data updated"))
    
     
     

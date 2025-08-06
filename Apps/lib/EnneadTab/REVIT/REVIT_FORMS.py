@@ -90,7 +90,7 @@ class EnneadTabModelessForm(WPFWindow):
             return path
 
 
-        NOTIFICATION.messenger(main_text="There is no pre-recorded path, going to re-search again.")
+        NOTIFICATION.messenger("There is no pre-recorded path, going to re-search again.")
         # if the path has changed during editng, need to redo search
         for folder, _, files in os.walk(ENVIRONMENT.REVIT_FOLDER):
             if xaml_file_name in files:
@@ -100,7 +100,7 @@ class EnneadTabModelessForm(WPFWindow):
                 return data[xaml_file_name]
                 
         else:
-            NOTIFICATION.messenger(main_text="Cannot find the xaml file....")
+            NOTIFICATION.messenger("Cannot find the xaml file....")
             return None
 
         

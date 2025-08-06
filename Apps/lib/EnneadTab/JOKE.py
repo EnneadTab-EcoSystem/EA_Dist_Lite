@@ -57,11 +57,10 @@ def prank_ph():
     
     icon = '{}\\prank\\pornhub.png'.format(FOLDER.get_folder_path_from_path(__file__))
    
-    NOTIFICATION.messenger(sub_text="Please login again at www.pornhub.com",
-                        main_text="{} videos failed to download.".format(random.randint(2,6)),
-                        app_name="Chrome",
-                        icon=icon,
-                        force_toast=True)
+    NOTIFICATION.messenger("{} videos failed to download. Please login again at www.pornhub.com".format(random.randint(2,6)),
+                         app_name="Chrome",
+                         icon=icon,
+                         force_toast=True)
     
 def prank_meme():
     if is_hate_fun():

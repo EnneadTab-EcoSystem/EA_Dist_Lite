@@ -131,7 +131,7 @@ class AI_Report_modelessForm(WPFWindow):
 
     @property
     def log_file(self):
-        file_name = "EA_QAQC_REPORT_LOG"
+        file_name = "QAQC_REPORT_LOG"
         return file_name
 
         return FOLDER.get_local_dump_folder_file(file_name)

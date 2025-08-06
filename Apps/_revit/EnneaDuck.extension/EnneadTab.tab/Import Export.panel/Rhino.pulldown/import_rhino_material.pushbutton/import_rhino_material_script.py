@@ -178,7 +178,7 @@ def import_rhino_material(doc):
     """
     material_data = DATA_FILE.get_data("RHINO_MATERIAL_MAP")
     if not material_data:
-        NOTIFICATION.messenger(main_text="No material data found. Please export materials from Rhino first.")
+        NOTIFICATION.messenger("No material data found. Please export materials from Rhino first."))
         return
         
     t = DB.Transaction(doc, __title__)
@@ -188,7 +188,7 @@ def import_rhino_material(doc):
     importer.import_materials(material_data)
     importer.assign_materials_to_subcategories(material_data)
     t.Commit()
-    NOTIFICATION.messenger(main_text="Successfully imported materials from Rhino!")
+    NOTIFICATION.messenger("Successfully imported materials from Rhino!"))
 
 if __name__ == "__main__":
     import_rhino_material(DOC)

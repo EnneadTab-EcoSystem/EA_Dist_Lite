@@ -14,7 +14,7 @@ except:
 
 def is_selection_not_valid(obj, note = "Nothing is selected."):
     if not obj:
-        NOTIFICATION.messenger(main_text = note, sub_text = "Action Cancelled")
+        NOTIFICATION.messenger(note + " Action Cancelled")
         return False
     return True
 

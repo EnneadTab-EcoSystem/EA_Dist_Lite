@@ -33,14 +33,14 @@ def check_active_view():
     
     # Check if current view is not a sheet
     if active_view.ViewType == DB.ViewType.DrawingSheet:
-        NOTIFICATION.messenger(main_text="Please run this tool from a view that's placed on a sheet, not from a sheet view.")
+        NOTIFICATION.messenger("Please run this tool from a view that's placed on a sheet, not from a sheet view."))
         return None, None
     
     # Find the hosting sheet
     hosting_sheet = get_hosting_sheet(active_view)
     
     if not hosting_sheet:
-        NOTIFICATION.messenger(main_text="Please run this tool from a view that's placed on a sheet.")
+        NOTIFICATION.messenger("Please run this tool from a view that's placed on a sheet."))
         return None, None
     
     return active_view, hosting_sheet
@@ -78,7 +78,7 @@ def load_color_map_from_css():
     
     # Check if CSS file exists
     if not os.path.exists(css_file_path):
-        NOTIFICATION.messenger(main_text="color_map.css file not found. Please create it first.")
+        NOTIFICATION.messenger("color_map.css file not found. Please create it first."))
         return color_map
     
     # Read CSS file and parse color definitions
@@ -100,7 +100,7 @@ def load_color_map_from_css():
         color_map[family_name] = (r, g, b)
     
     if not color_map:
-        NOTIFICATION.messenger(main_text="No color definitions found in color_map.css file.")
+        NOTIFICATION.messenger("No color definitions found in color_map.css file."))
         
     return color_map
 
@@ -186,7 +186,7 @@ def create_or_update_filters(view, color_map):
                 "override": override
             }
         except Exception as e:
-            NOTIFICATION.messenger(main_text="Error creating filter for {}: {}".format(family_name, str(e)))
+            NOTIFICATION.messenger("Error creating filter for {}: {}").format(family_name, str(e)))
             print (traceback.format_exc())
             continue
     
@@ -215,7 +215,7 @@ def find_or_create_legend_view():
     existing_legends = [v for v in legend_views if v.ViewType == DB.ViewType.Legend]
     
     if not existing_legends:
-        NOTIFICATION.messenger(main_text="No legend views found in the document. Please create a legend view first.")
+        NOTIFICATION.messenger("No legend views found in the document. Please create a legend view first."))
         return None
     
     # Duplicate the first legend found
@@ -259,7 +259,7 @@ def create_legend_graphics(legend_view, filter_overrides):
             try:
                 DOC.Delete(element_id)
             except Exception as e:
-                NOTIFICATION.messenger(main_text="Error deleting element: " + str(e))
+                NOTIFICATION.messenger("Error deleting element: ") + str(e))
     
     # Get text note type for legend
     text_note_types = DB.FilteredElementCollector(DOC).OfClass(DB.TextNoteType).ToElements()
@@ -346,7 +346,7 @@ def create_legend_graphics(legend_view, filter_overrides):
             DB.TextNote.Create(DOC, legend_view.Id, text_point, item["name"], text_note_type_id)
         except Exception as e:
             # Log the error but continue with other items
-            NOTIFICATION.messenger(main_text="Error creating legend item: " + str(e))
+            NOTIFICATION.messenger("Error creating legend item: ") + str(e))
         
         # Update position for next item
         y_position -= item_spacing

@@ -13,7 +13,7 @@ import random
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 from EnneadTab.REVIT import REVIT_FORMS, REVIT_APPLICATION
-from EnneadTab import NOTIFICATION, ERROR_HANDLE, LOG
+from EnneadTab import NOTIFICATION, ERROR_HANDLE, LOG, COLOR
 
 uidoc = REVIT_APPLICATION.get_uidoc()
 doc = REVIT_APPLICATION.get_doc()
@@ -66,7 +66,7 @@ def process_setting(sel_setting):
         if new_layer_info.LayerName != LayerName or new_layer_info.LayerName == "{{}}".format(export_layer_key.CategoryName):
             new_layer_info.LayerName = LayerName
             new_layer_info.CutLayerName = LayerName
-            new_layer_info.ColorNumber = random.randint(1,255)
+            new_layer_info.ColorNumber = COLOR.get_desaturated_random_index_color_number()
 
         #print new_layer_info.LayerName
         new_export_layer_table.Add(export_layer_key, new_layer_info)

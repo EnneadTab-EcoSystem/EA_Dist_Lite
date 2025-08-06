@@ -81,7 +81,7 @@ def main():
                                                title="Select DWG Export Setting")
     
     if not selected_setting:
-        NOTIFICATION.messenger(main_text="No setting selected! The ducks are disappointed ")
+        NOTIFICATION.messenger("No setting selected! The ducks are disappointed "))
         return
         
     # Time to make that table look gorgeous!

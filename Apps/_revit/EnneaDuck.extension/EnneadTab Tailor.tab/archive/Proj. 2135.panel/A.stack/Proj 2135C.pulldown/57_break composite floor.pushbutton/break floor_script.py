@@ -3,7 +3,7 @@
 
 
 
-__doc__ = "For composite floor element, recreate the finish and structrue slab as seperate element. It will use the source footprint for both outcomes."
+__doc__ = "For composite floor element, recreate the finish and structure slab as separate element. It will use the source footprint for both outcomes."
 __title__ = "57_break composite floor"
 
 from pyrevit import forms #

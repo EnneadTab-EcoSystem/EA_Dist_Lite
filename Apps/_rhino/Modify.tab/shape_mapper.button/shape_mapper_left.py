@@ -170,7 +170,7 @@ class Morph_Solution:
         temp_copy_design_crvs = rs.CopyObjects(crvs_to_map)
         for crv in temp_copy_design_crvs:
             if rs.IsCircle(crv):
-                NOTIFICATION.messenger(main_text="Circle crv is not my favorite...")
+                NOTIFICATION.messenger("Circle crv is not my favorite..."))
             if rs.CurveDegree(crv) == 1:
                 rs.RebuildCurve(crv)
                 

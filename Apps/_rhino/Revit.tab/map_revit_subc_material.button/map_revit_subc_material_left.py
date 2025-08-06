@@ -24,7 +24,7 @@ def map_revit_subc_material():
     data = DATA_FILE.get_data("SUBC_MATERIAL_TABLE")
     print(data)
     if not data:
-        NOTIFICATION.messenger(main_text="There are no material data exported from Revit. \nUse the \"Export SubCategory Material Table\" button in \nEnneadTab for Revit to export the data first",
+        NOTIFICATION.messenger("There are no material data exported from Revit. \nUse the \")Export SubCategory Material Table\" button in \nEnneadTab for Revit to export the data first",
                                          image = ENVIRONMENT.get_EnneadTab_For_Rhino_root()+ "\\Source Codes\\Revit\\map_revit_subC_material_LG.png",
                                          animation_stay_duration = 7)
         return

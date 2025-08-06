@@ -70,7 +70,7 @@ def nest_layer():
         display = "Layers below have been merged under parental layer {}\n\n{}".format(RHINO_LAYER.rhino_layer_to_user_layer(parent_layer_prefix), temp)
         rs.MessageBox(message = display, buttons= 0 | 48, title = "Done")
     except Exception as e:
-        display = "Sometime merging parent layer while containing child can raise error saying some of the child layer structure cannot be found. This is becasue thier parent have changed name.\n\nThe best way to avoid this is to start merging from the inner side and moveup the hierarchy one parent at a time.\n\n(If the error message below DOES NOT sound like the description above, please report to SenZhang, you might have discovered a bug. Thank you in advance!)\n\nError Message Below:\n\n" + str(e)
+        display = "Sometime merging parent layer while containing child can raise error saying some of the child layer structure cannot be found. This is because their parent have changed name.\n\nThe best way to avoid this is to start merging from the inner side and moveup the hierarchy one parent at a time.\n\n(If the error message below DOES NOT sound like the description above, please report to SenZhang, you might have discovered a bug. Thank you in advance!)\n\nError Message Below:\n\n" + str(e)
         rs.MessageBox(message = display, buttons= 0 | 48, title = "Too aggresive merging...")
 
 

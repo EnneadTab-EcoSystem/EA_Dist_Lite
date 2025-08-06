@@ -493,7 +493,7 @@ class PanelLocationMapper:
         # Get all panels
         panels = self.get_all_panels()
         if not panels:
-            NOTIFICATION.messenger(main_text="No curtain wall panels found in the document.")
+            NOTIFICATION.messenger("No curtain wall panels found in the document."))
             return {}
         
         print("Found {} curtain wall panels".format(len(panels)))
@@ -501,7 +501,7 @@ class PanelLocationMapper:
         # Load mapping data
         data = self.load_mapping_data()
         if not data:
-            NOTIFICATION.messenger(main_text="No SAIF panel mapping data found.")
+            NOTIFICATION.messenger("No SAIF panel mapping data found."))
             return {}
         
         # Print data structure overview

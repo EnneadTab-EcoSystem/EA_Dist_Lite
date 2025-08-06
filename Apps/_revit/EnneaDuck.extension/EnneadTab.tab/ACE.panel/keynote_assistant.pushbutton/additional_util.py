@@ -164,7 +164,7 @@ def batch_translate_keynote(keynote_data_conn):
         print (x)
     result_dict = AI.translate_multiple(input_texts)
     if not result_dict:
-        print ("No result from translation, usally due to missing api key, please check your api key")
+        print ("No result from translation, usually due to missing api key, please check your api key")
         return
     print ("\n\n\n\n\nResult:")
     for x in result_dict:

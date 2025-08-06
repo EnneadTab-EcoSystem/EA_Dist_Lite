@@ -418,7 +418,7 @@ def pick_shared_para_definition(doc, select_multiple = False):
 
     shared_para_file = doc.Application.OpenSharedParameterFile()
     if not shared_para_file:
-        NOTIFICATION.messenger(main_text="There is no shared parameter file found.")
+        NOTIFICATION.messenger("There is no shared parameter file found.")
         return None
     options = []
     for definition_group in shared_para_file.Groups:

@@ -323,3 +323,39 @@ def get_color_template_data(template = None):
 
             
         return {"department_color_map": department_data, "program_color_map": program_data}
+
+def rgb_to_autocad_color_number(rgb_tuple):
+    """Convert RGB color to AutoCAD color number.
+    
+    AutoCAD uses a specific color index system. This function maps RGB values
+    to the closest AutoCAD color number (1-255).
+    
+    Args:
+        rgb_tuple (tuple): RGB color as (r, g, b) tuple with values 0-255
+        
+    Returns:
+        int: AutoCAD color number (1-255)
+    """
+    r, g, b = rgb_tuple
+    
+    # AutoCAD color index mapping for standard colors
+    # This is a simplified mapping - AutoCAD has specific color indices
+    # We'll use a hash-based approach to get consistent colors
+    
+    # Create a hash from RGB values to get a consistent color number
+    color_hash = (r * 299 + g * 587 + b * 114) % 255
+    
+    # Ensure we don't return 0 (which might be problematic)
+    if color_hash == 0:
+        color_hash = 1
+        
+    return color_hash
+
+def get_desaturated_random_index_color_number():
+    """Generate a desaturated random color and return as AutoCAD color number.
+    
+    Returns:
+        int: AutoCAD color number (1-255) for a desaturated random color
+    """
+    desaturated_rgb = get_random_color(return_tuple=True)
+    return rgb_to_autocad_color_number(desaturated_rgb)

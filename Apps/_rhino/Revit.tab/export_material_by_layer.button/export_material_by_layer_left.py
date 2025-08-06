@@ -38,7 +38,7 @@ def export_material_by_layer():
             if material_name not in cached_convertion:
                 pb_material = material.RenderMaterial.ConvertToPhysicallyBased(Rhino.Render.RenderTexture.TextureGeneration.Skip)
                 cached_convertion[material_name] = pb_material
-                note = "temporaryly converting to physically based for material: {}.\nBecasue you can not directly use Enscape material for Revit.".format(material_name)
+                note = "temporarily converting to physically based for material: {}.\nBecause you can not directly use Enscape material for Revit.".format(material_name)
                 NOTIFICATION.messenger(main_text=note)
                 print (note)
             else:
@@ -77,7 +77,7 @@ def export_material_by_layer():
     
     # Save the material data to a file that Revit can read
     DATA_FILE.set_data(layer_materials, "RHINO_MATERIAL_MAP")
-    NOTIFICATION.messenger(main_text="Material data exported successfully!")
+    NOTIFICATION.messenger("Material data exported successfully!"))
 
 if __name__ == "__main__":
     export_material_by_layer()

@@ -49,7 +49,7 @@ def load_family_to_docs(doc, family_doc):
         return
     try:
         family_doc.LoadFamily(doc, FamilyOption())
-        update_log("Family load succesfully to {}.".format(doc.Title))
+        update_log("Family load successfully to {}.".format(doc.Title))
     except Exception as e:
         update_log("Family [{}] fail to load to {}.\n Error = {}".format(family_doc.Title, doc.Title, e))
     #t.Commit()
@@ -206,7 +206,7 @@ def process_family():
 
             selected_family_doc.Close()
         except Exception as e:
-            print("Fail to close family doc becasue: {}".format(e))
+            print("Fail to close family doc because: {}".format(e))
     """
 
     SOUND.play_sound("sound_effect_notification_position.wav")

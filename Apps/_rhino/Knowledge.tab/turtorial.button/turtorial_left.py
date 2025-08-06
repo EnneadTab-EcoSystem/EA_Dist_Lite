@@ -1,4 +1,4 @@
-__title__ = "Turtorial"
+__title__ = "Tutorial"
 __doc__ = """EnneadTab learning resources hub.
 
 Features:
@@ -77,7 +77,7 @@ def open_playlist():
 
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
-def turtorial():
+def tutorial():
 
     opts = ["L drive contents(PDFs, Docs, GH Scripts, Videos)", "EnneadTab YouTube Playlist"]
     res = rs.PopupMenu(items = opts, modes = [0, 0])
@@ -92,4 +92,4 @@ def turtorial():
 
 
 if __name__ == "__main__":
-    turtorial()
+    tutorial()

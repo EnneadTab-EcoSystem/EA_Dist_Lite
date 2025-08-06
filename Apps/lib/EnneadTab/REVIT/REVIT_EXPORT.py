@@ -178,7 +178,7 @@ def export_pdf(view_or_sheet, file_name_naked, output_folder, is_color_by_sheet)
                 except:
                     print ("2nd method")
                     print_manager.SubmitPrint()
-                print ("PDF export succesfully")
+                print ("PDF export successfully")
                 break
             except Exception as e:
                 if  "The files already exist!" in e:
@@ -329,7 +329,7 @@ def export_dwg(view_or_sheet, file_name, output_folder, dwg_setting_name, is_exp
         attempt += 1
         try:
             doc.Export(output_folder, r"{}".format(file_name), view_as_collection, DWG_option)
-            #print "DWG export succesfully: " + file_name
+            #print "DWG export successfully: " + file_name
             break
         except Exception as e:
             if  "The files already exist!" in e:
@@ -406,7 +406,7 @@ def export_image(view_or_sheet, file_name_naked, output_folder, is_thumbnail = F
         try:
 
             doc.ExportImage(opts)
-            # print ("Image export succesfully")
+            # print ("Image export successfully")
 
             break
         except Exception as e:

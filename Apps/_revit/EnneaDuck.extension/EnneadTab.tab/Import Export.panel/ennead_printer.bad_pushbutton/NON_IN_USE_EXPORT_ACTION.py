@@ -139,10 +139,10 @@ def export_dwg(view_or_sheet, file_name, output_folder, dwg_setting_name, is_exp
     """
     
     if "*" in view_or_sheet.Name:
-        NOTIFICATION.messenger(main_text="<{}> contains * in name. Please fix!".format(view_or_sheet.Name))
+        NOTIFICATION.messenger("<{}> contains * in name. Please fix!").format(view_or_sheet.Name))
         return []
     if hasattr(view_or_sheet, "SheetNumber") and "*" in view_or_sheet.SheetNumber:
-        NOTIFICATION.messenger(main_text="<{}> contains * in sheet number. Please fix!".format(view_or_sheet.SheetNumber))
+        NOTIFICATION.messenger("<{}> contains * in sheet number. Please fix!").format(view_or_sheet.SheetNumber))
         return []
     files_exported = []
     doc = view_or_sheet.Document

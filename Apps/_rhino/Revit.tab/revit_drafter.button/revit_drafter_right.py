@@ -183,7 +183,7 @@ def revit_drafter():
 
     bad_layer = validate_layer_objs(out_layers)
     if bad_layer:
-        NOTIFICATION.messenger(main_text = "Please only put crvs on curve layer, and surface on filledregion layer.", sub_text = RHINO_LAYER.rhino_layer_to_user_layer(bad_layer))
+        NOTIFICATION.messenger("Please only put crvs on curve layer, and surface on filledregion layer. " + RHINO_LAYER.rhino_layer_to_user_layer(bad_layer))
         return
 
 
@@ -219,7 +219,7 @@ def revit_drafter():
     # save data to dump folder\
     DATA_FILE.set_data(OUT_Data, "draft_transfer_rhino2revit_setting")
 
-    NOTIFICATION.messenger(main_text = "Draft Data recorded. You can return to Revit now")
+    NOTIFICATION.messenger("Draft Data recorded. You can return to Revit now")
 
 
 

@@ -14,8 +14,7 @@ from EnneadTab import LOG, ERROR_HANDLE
 @ERROR_HANDLE.try_catch_error()
 def time_travel():
     if len(rs.SelectedObjects()) == 0:
-        NOTIFICATION.messenger(sub_text = "Time travel begin!",
-                                    main_text = "Select objects to go back in time.")
+        NOTIFICATION.messenger("Time travel begin! Select objects to go back in time.")
     rs.Command("_UndoSelected")
 
 

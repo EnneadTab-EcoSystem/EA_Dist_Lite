@@ -180,7 +180,7 @@
 
                         </Grid.RowDefinitions>
                         <TextBlock Text="Sender Email:" Grid.Column="0" Grid.Row="0" Foreground="#FFDAE8FD" />
-                        <TextBlock Text="Receiver Emails, seperated by semi-colon(;)"  Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" Foreground="#FFDAE8FD" />
+                        <TextBlock Text="Receiver Emails, separated by semi-colon(;)"  Grid.Column="0" Grid.Row="1" Grid.ColumnSpan="2" Foreground="#FFDAE8FD" />
                         <TextBox x:Name="email_receivers" Text="xxx1@ennead.com; xxx2@ennead.com" Grid.Column="0" Grid.Row="2" Grid.ColumnSpan="2" Foreground="#FFC5C5C5" VerticalContentAlignment="Center" Background="#FF5D5D5D" TextWrapping="Wrap"/>
                         <TextBlock Text="Subject Line:" Grid.Column="0" Grid.Row="3"  Foreground="#FFDAE8FD" VerticalAlignment="Center" />
                         <TextBox x:Name="email_subject_line" Text="Super Exporter Notification" Margin="0,5,0,0" Grid.Column="1" Grid.Row="3" Foreground="#FFC5C5C5" VerticalContentAlignment="Center" Background="#FF5D5D5D" TextWrapping="Wrap"/>

@@ -1006,10 +1006,10 @@ class InternalCheck:
             T.RollBack()
 
         if self.show_log:
-            NOTIFICATION.messenger(main_text="Program schedule calculator update done!")
+            NOTIFICATION.messenger("Program schedule calculator update done!"))
 
         if self._owner_holding:
-            NOTIFICATION.messenger(main_text="{} need to sync to display more accurate schedule.".format(
+            NOTIFICATION.messenger("{} need to sync to display more accurate schedule.").format(
                 ", ".join(self._owner_holding)))
         if self._found_bad_area:
             NOTIFICATION.duck_pop(main_text="Attention, there are some un-enclosed area in area plans that might affect your accuracy.\nSee output window for details.")
@@ -1040,7 +1040,7 @@ def dgsf_chart_update(doc, show_log=True, dedicated_department=None):
     if doc is None:
         ERROR_HANDLE.print_note("Document is None in dgsf_chart_update")
         if show_log:
-            NOTIFICATION.messenger(main_text="Document validation failed - document is None")
+            NOTIFICATION.messenger("Document validation failed - document is None"))
         return
 
     # Additional document validity checks
@@ -1048,7 +1048,7 @@ def dgsf_chart_update(doc, show_log=True, dedicated_department=None):
         if not hasattr(doc, "Title"):
             ERROR_HANDLE.print_note("Document does not have required attributes")
             if show_log:
-                NOTIFICATION.messenger(main_text="Document validation failed - invalid document object")
+                NOTIFICATION.messenger("Document validation failed - invalid document object"))
             return
             
         # Try to access document title to verify it's a valid document
@@ -1056,13 +1056,13 @@ def dgsf_chart_update(doc, show_log=True, dedicated_department=None):
         if not doc_title:
             ERROR_HANDLE.print_note("Document title is empty or None")
             if show_log:
-                NOTIFICATION.messenger(main_text="Document validation failed - empty document title")
+                NOTIFICATION.messenger("Document validation failed - empty document title"))
             return
             
     except Exception as e:
         ERROR_HANDLE.print_note("Document validation failed with exception: {}".format(str(e)))
         if show_log:
-            NOTIFICATION.messenger(main_text="Document validation failed - exception during validation")
+            NOTIFICATION.messenger("Document validation failed - exception during validation"))
         return
 
     if not dedicated_department:
@@ -1072,7 +1072,7 @@ def dgsf_chart_update(doc, show_log=True, dedicated_department=None):
 
     proj_data = REVIT_PROJ_DATA.get_revit_project_data(doc)
     if not proj_data:
-        NOTIFICATION.messenger(main_text="No project data found, please initialize the project first.")
+        NOTIFICATION.messenger("No project data found, please initialize the project first."))
         return
 
     # Get parameter names from project data
@@ -1107,7 +1107,7 @@ def dgsf_chart_update(doc, show_log=True, dedicated_department=None):
 
         if not OptionValidation(doc, option, show_log).validate_all():
             print("Validation failed")
-            NOTIFICATION.messenger(main_text="Validation failed")
+            NOTIFICATION.messenger("Validation failed"))
             return
 
         InternalCheck(doc, option, show_log).update_dgsf_chart()

@@ -53,7 +53,7 @@ class ColorSchemeUpdater:
                 self.update_color_scheme(data, key, color_scheme_name)
         t.Commit()
         
-        NOTIFICATION.messenger(main_text="Color Scheme Updated!")
+        NOTIFICATION.messenger("Color Scheme Updated!"))
         print ("Finish updating Color Scheme")
         OUTPUT.display_output_on_browser()
 
@@ -66,7 +66,7 @@ class ColorSchemeUpdater:
             color_scheme_name (str): Name of the color scheme to update
         """
         if not data:
-            NOTIFICATION.messenger(main_text="No data found in the template excel file.")
+            NOTIFICATION.messenger("No data found in the template excel file."))
             print ("No data found in the template excel file.")
             return
         if not color_scheme_name:
@@ -74,7 +74,7 @@ class ColorSchemeUpdater:
         color_schemes = get_color_schemes_by_name(color_scheme_name)
         if not color_schemes:
             print ("cannot find color scheme {}".format(color_scheme_name))
-            NOTIFICATION.messenger(main_text="Color Scheme [{}] not found!\nCheck spelling".format(color_scheme_name))
+            NOTIFICATION.messenger("Color Scheme [{}] not found!\nCheck spelling").format(color_scheme_name))
             return
 
         for color_scheme in color_schemes:
@@ -82,7 +82,7 @@ class ColorSchemeUpdater:
         
             department_data = data[lookup_key]
             if not department_data:
-                NOTIFICATION.messenger(main_text="No data found in the template excel file in [{}]".format(lookup_key))
+                NOTIFICATION.messenger("No data found in the template excel file in [{}]").format(lookup_key))
                 print ("No data found in the template excel file in [{}]".format(lookup_key))
                 return
 

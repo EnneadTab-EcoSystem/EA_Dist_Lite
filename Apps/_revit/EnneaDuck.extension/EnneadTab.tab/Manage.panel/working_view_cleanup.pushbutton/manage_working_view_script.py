@@ -467,7 +467,7 @@ class WorkingViewManager(WPFWindow):
             if attempt == 5:
                 break
 
-        print( "Image export succesfully")
+        print( "Image export successfully")
 
         time_end = time.time()
         #cleanup_jpg_name()

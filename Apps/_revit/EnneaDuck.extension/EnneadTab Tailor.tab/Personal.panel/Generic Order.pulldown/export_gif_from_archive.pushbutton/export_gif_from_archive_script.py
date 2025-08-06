@@ -53,7 +53,7 @@ def export_image_from_view(view, doc):
             break
         try:
             doc.ExportImage(opts)
-            print("Image export succesfully")
+            print("Image export successfully")
             break
         except Exception as e:
             attempt += 1
