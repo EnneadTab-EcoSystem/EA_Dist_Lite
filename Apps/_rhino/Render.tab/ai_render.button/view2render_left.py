@@ -547,7 +547,7 @@ class ViewCaptureDialog(Eto.Forms.Form):
 
         data["pipeline_model"] = MODEL_DICT.get(self.cb_model.SelectedIndex, None)
         if data["pipeline_model"] is None:
-            NOTIFICATION.messenger("AI Model not selected!"))
+            NOTIFICATION.messenger("AI Model not selected!")
             
             return
         if self.cb_model.SelectedIndex != 0:
@@ -580,7 +580,7 @@ class ViewCaptureDialog(Eto.Forms.Form):
         DATA_FILE.set_data(
             data, "AI_RENDER_DATA_{}".format(TIME.get_formatted_current_time()))
 
-        NOTIFICATION.messenger("Render Job Enqueued!"))
+        NOTIFICATION.messenger("Render Job Enqueued!")
 
 
 

@@ -65,10 +65,9 @@ class FamilyMetaDataExporter:
                 x for x in os.listdir(self.meta_data_folder) 
                 if x.endswith(".sexyDuck")
             ]
-            NOTIFICATION.messenger("{} existing meta data file(s) found.").format(
+            NOTIFICATION.messenger("{} existing meta data file(s) found.".format(
                     len(self.existing_meta_data)
-                )
-            )
+                ))
 
     @TIME.timer
     def export_data(self):
@@ -146,7 +145,7 @@ class FamilyMetaDataExporter:
         if self.counter > SAFETY_MAX or self.is_dry_run:
             return
             
-        NOTIFICATION.messenger("-{}/{}: {}").format(
+        NOTIFICATION.messenger("-{}/{}: {}".format(
                 self.counter,
                 self.total_family_count,
                 family_path.replace(self.family_lib_folder, "")

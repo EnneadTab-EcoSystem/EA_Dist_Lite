@@ -155,7 +155,7 @@ def export_pdf(view_or_sheet, file_name_naked, output_folder, is_color_by_sheet)
         #t.Commit()
         #"""
         print ("Print Setting Name = [{}]".format(print_manager.PrintSetup.CurrentPrintSetting.Name))
-        print_manager.PrintToFileName = r"{}\{}.pdf".format(output_folder, file_name_naked)
+        print_manager.PrintToFileName = os.path.join(output_folder, "{}.pdf".format(file_name_naked))
         print_manager.PrintRange = DB.PrintRange.Select
         view_set = DB.ViewSet()
         view_set.Insert(view_or_sheet)
@@ -328,7 +328,7 @@ def export_dwg(view_or_sheet, file_name, output_folder, dwg_setting_name, is_exp
             break
         attempt += 1
         try:
-            doc.Export(output_folder, r"{}".format(file_name), view_as_collection, DWG_option)
+            doc.Export(output_folder, file_name, view_as_collection, DWG_option)
             #print "DWG export successfully: " + file_name
             break
         except Exception as e:
@@ -491,7 +491,7 @@ def combine_final_pdf(output_folder, files_exported_for_this_issue, combined_pdf
             print ("--combining PDF: {}".format(file_path))
             list_of_filepaths.append(file_path)
 
-    combined_pdf_file_path = "{}\{}.pdf".format(output_folder, combined_pdf_name)
+    combined_pdf_file_path = os.path.join(output_folder, "{}.pdf".format(combined_pdf_name))
     PDF.pdfs2pdf(combined_pdf_file_path, list_of_filepaths, reorder = True)
     if copy_folder:
         FOLDER.copy_file_to_folder(combined_pdf_file_path, copy_folder)
@@ -527,23 +527,23 @@ def dump_exported_files_to_copy_folder(output_folder, files_exported_for_this_is
 
             if ".pdf" in file.lower():
                 if plot_id:
-                    new_folder = "{}\{}\PDFs".format(copy_folder, plot_id)
+                    new_folder = os.path.join(copy_folder, plot_id, "PDFs")
                 else:
-                    new_folder = "{}\PDFs".format(copy_folder)
+                    new_folder = os.path.join(copy_folder, "PDFs")
                 new_folder = FOLDER.secure_folder(new_folder)
 
             elif ".dwg" in file.lower():
                 if plot_id:
-                    new_folder = "{}\{}\DWGs".format(copy_folder, plot_id)
+                    new_folder = os.path.join(copy_folder, plot_id, "DWGs")
                 else:
-                    new_folder = "{}\DWGs".format(copy_folder)
+                    new_folder = os.path.join(copy_folder, "DWGs")
                 new_folder = FOLDER.secure_folder(new_folder)
 
             elif ".jpg" in file.lower():
                 if plot_id:
-                    new_folder = "{}\{}\JPGs".format(copy_folder, plot_id)
+                    new_folder = os.path.join(copy_folder, plot_id, "JPGs")
                 else:
-                    new_folder = "{}\JPGs".format(copy_folder)
+                    new_folder = os.path.join(copy_folder, "JPGs")
                 new_folder = FOLDER.secure_folder(new_folder)
 
             else:

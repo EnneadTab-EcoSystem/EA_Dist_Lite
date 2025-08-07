@@ -18,13 +18,13 @@ def create_color_setting_to_sheet(doc):
     sample_sheet = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_Sheets).WhereElementIsNotElementType().FirstElement()
     para = sample_sheet.LookupParameter("Print_In_Color")
     if para:
-        NOTIFICATION.messenger('[Print_In_Color] parameter already exist in current file.'))
+        NOTIFICATION.messenger('[Print_In_Color] parameter already exist in current file.')
         return
     
 
     shared_para_file = doc.Application.OpenSharedParameterFile()
     if not shared_para_file:
-        NOTIFICATION.messenger('[{}]\nneed to have a valid shared parameter file').format(doc.Title))
+        NOTIFICATION.messenger('[{}]\nneed to have a valid shared parameter file'.format(doc.Title))
         filepath = "{}\\01_Revit\\03_Library\\{}_SharedParam.txt".format(ENVIRONMENT.L_DRIVE_HOST_FOLDER, ENVIRONMENT.PLUGIN_ABBR)
         doc.Application.SharedParametersFilename = filepath
 
@@ -35,10 +35,10 @@ def create_color_setting_to_sheet(doc):
         option = DB.ExternalDefinitionCreationOptions ("Print_In_Color", DB.SpecTypeId.Boolean.YesNo)
         shared_para_file = doc.Application.OpenSharedParameterFile()
         if shared_para_file is None:
-            NOTIFICATION.messenger('Cannot open shared parameter file. Please check if the shared parameter file is properly configured.'))
+            NOTIFICATION.messenger('Cannot open shared parameter file. Please check if the shared parameter file is properly configured.')
             return
         if len(shared_para_file.Groups) == 0:
-            NOTIFICATION.messenger('No groups found in shared parameter file.'))
+            NOTIFICATION.messenger('No groups found in shared parameter file.')
             return
         definition_group = list(shared_para_file.Groups)[0]
         definition = definition_group.Definitions.Create(option)
@@ -69,7 +69,7 @@ def create_color_setting_to_sheet(doc):
     t.Commit()
     
     
-    NOTIFICATION.messenger('[Print_In_Color] parameter added to the current document.'))
+    NOTIFICATION.messenger('[Print_In_Color] parameter added to the current document.')
     
 
 
@@ -79,16 +79,16 @@ def create_issue_para_to_sheet(doc, issue_name):
     sample_sheet = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_Sheets).WhereElementIsNotElementType().FirstElement()
     para = sample_sheet.LookupParameter(issue_name)
     if para:
-        NOTIFICATION.messenger('[{}] parameter already exist in current file.').format(issue_name))
+        NOTIFICATION.messenger('[{}] parameter already exist in current file.'.format(issue_name))
         return
     
 
     shared_para_file = doc.Application.OpenSharedParameterFile()
     if not shared_para_file:
-        NOTIFICATION.messenger('[{}]\nneed to have a valid shared parameter file').format(doc.Title))
+        NOTIFICATION.messenger('[{}]\nneed to have a valid shared parameter file'.format(doc.Title))
         filepath = "{}\\01_Revit\\03_Library\\{}_SharedParam.txt".format(ENVIRONMENT.L_DRIVE_HOST_FOLDER, ENVIRONMENT.PLUGIN_ABBR)
         if not os.path.exists(filepath):
-            NOTIFICATION.messenger('Cannot locate a good shared parameter file.'))
+            NOTIFICATION.messenger('Cannot locate a good shared parameter file.')
         doc.Application.SharedParametersFilename = filepath
 
     definition = find_definition_by_name(doc, issue_name)
@@ -98,10 +98,10 @@ def create_issue_para_to_sheet(doc, issue_name):
         option = DB.ExternalDefinitionCreationOptions (issue_name, DB.SpecTypeId.String.Text)
         shared_para_file = doc.Application.OpenSharedParameterFile()
         if shared_para_file is None:
-            NOTIFICATION.messenger('Cannot open shared parameter file. Please check if the shared parameter file is properly configured.'))
+            NOTIFICATION.messenger('Cannot open shared parameter file. Please check if the shared parameter file is properly configured.')
             return
         if len(shared_para_file.Groups) == 0:
-            NOTIFICATION.messenger('No groups found in shared parameter file.'))
+            NOTIFICATION.messenger('No groups found in shared parameter file.')
             return
         definition_group = list(shared_para_file.Groups)[0]
         definition = definition_group.Definitions.Create(option)
@@ -132,7 +132,7 @@ def create_issue_para_to_sheet(doc, issue_name):
     t.Commit()
     
     
-    NOTIFICATION.messenger('[{}] parameter added to the current document.').format(issue_name))
+    NOTIFICATION.messenger('[{}] parameter added to the current document.'.format(issue_name))
     
 
 

@@ -56,16 +56,16 @@ class PrefilterUI(REVIT_FORMS.EnneadTabModelessForm):
         import os
         import sys
         if not self._toggle_bt_enabled.IsChecked:
-            NOTIFICATION.messenger("Filter is disabled now..."))
+            NOTIFICATION.messenger("Filter is disabled now...")
             return
         self.update_cate_selection()
 
         
         if True not in self.selection_cate_setting.values():
-            NOTIFICATION.messenger("You have disabled all categories."))
+            NOTIFICATION.messenger("You have disabled all categories.")
             return
         
-        NOTIFICATION.messenger("Go ahead and select in window now..."))
+        NOTIFICATION.messenger("Go ahead and select in window now...")
         uidoc = REVIT_APPLICATION.get_uidoc()
 
         current_folder = os.path.dirname(os.path.realpath(__file__))
@@ -78,7 +78,7 @@ class PrefilterUI(REVIT_FORMS.EnneadTabModelessForm):
             final_elements.append(x)
         
         REVIT_SELECTION.set_selection(final_elements)
-        NOTIFICATION.messenger("{} elements selected.").format(len(final_elements)))
+        NOTIFICATION.messenger("{} elements selected.".format(len(final_elements)))
         uidoc.RefreshActiveView()
         return
         self.rename_view_event_handler.kwargs = sheets, is_default_format

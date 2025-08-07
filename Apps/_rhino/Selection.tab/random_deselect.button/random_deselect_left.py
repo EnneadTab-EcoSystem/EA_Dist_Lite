@@ -22,11 +22,11 @@ from EnneadTab import ERROR_HANDLE, LOG, DATA_FILE, NOTIFICATION
 def random_deselect_left():
     ids = rs.SelectedObjects(False, False)
     if not ids: 
-        NOTIFICATION.messenger  ("No objects selected, action cancelled.")
+        NOTIFICATION.messenger("No objects selected, action cancelled.")
         return
     
     if len(ids) == 1: 
-        NOTIFICATION.messenger  ("Only one object selected, action cancelled.")
+        NOTIFICATION.messenger("Only one object selected, action cancelled.")
         return
     
     percent = -1
@@ -38,17 +38,17 @@ def random_deselect_left():
                                         default_value = str(percent_default), 
                                         title = "random de-select")
         if not input:
-            NOTIFICATION.messenger  ("No input, action cancelled.")
+            NOTIFICATION.messenger("No input, action cancelled.")
             return
         
         try:
             percent = int(input)
         except Exception as e:
             print (e)
-            NOTIFICATION.messenger  ("Try another valid input number.")
+            NOTIFICATION.messenger("Try another valid input number.")
             
     if not percent: return
-    NOTIFICATION.messenger  ("{}% deslected.".format(percent))
+    NOTIFICATION.messenger("{}% deslected.".format(percent))
     
     if not percent: return
 

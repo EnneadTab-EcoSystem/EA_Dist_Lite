@@ -77,7 +77,7 @@ def export_material_by_layer():
     
     # Save the material data to a file that Revit can read
     DATA_FILE.set_data(layer_materials, "RHINO_MATERIAL_MAP")
-    NOTIFICATION.messenger("Material data exported successfully!"))
+    NOTIFICATION.messenger("Material data exported successfully!")
 
 if __name__ == "__main__":
     export_material_by_layer()

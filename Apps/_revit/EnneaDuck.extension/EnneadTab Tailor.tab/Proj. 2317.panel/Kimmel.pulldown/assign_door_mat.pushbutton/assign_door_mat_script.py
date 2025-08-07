@@ -21,7 +21,7 @@ def assign_door_mat(doc):
     # Get latest phase
     phases = REVIT_PHASE.get_all_phases(doc)
     if not phases:
-        NOTIFICATION.messenger("No phases found in document!"))
+        NOTIFICATION.messenger("No phases found in document!")
         return
         
     current_phase = phases[-1]  # Get the latest phase
@@ -31,7 +31,7 @@ def assign_door_mat(doc):
     doors = REVIT_DESIGN_OPTION.filter_main_and_primary_elements(doors)
     
     if not doors:
-        NOTIFICATION.messenger("No doors found in phase {}!").format(current_phase.Name))
+        NOTIFICATION.messenger("No doors found in phase {}!".format(current_phase.Name))
         return
         
     # Get materials from selection
@@ -60,7 +60,7 @@ def assign_door_mat(doc):
             frame_param.Set(frame_mat.Id)
             
     t.Commit()
-    NOTIFICATION.messenger("Successfully assigned materials to {} doors in phase {}!").format(updated_count, current_phase.Name))
+    NOTIFICATION.messenger("Successfully assigned materials to {} doors in phase {}!".format(updated_count, current_phase.Name))
 
 ################## main code below #####################
 if __name__ == "__main__":

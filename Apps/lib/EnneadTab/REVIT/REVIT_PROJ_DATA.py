@@ -362,14 +362,14 @@ class ProjectDataEditor:
                                                                                  title="Select the [DEPARTMENT] color schemes", 
                                                                                  button_name="Select [DEPARTMENT] color schemes")
             if not department_color_scheme_names:
-                NOTIFICATION.messenger("No [DEPARTMENT] color scheme selected"))
+                NOTIFICATION.messenger("No [DEPARTMENT] color scheme selected")
                 continue
             
             program_color_scheme_names = REVIT_COLOR_SCHEME.pick_color_schemes(self.doc, 
                                                                                  title="Select the [PROGRAM] color schemes", 
                                                                                  button_name="Select [PROGRAM] color schemes")
             if not program_color_scheme_names:
-                NOTIFICATION.messenger("No [PROGRAM] color scheme selected"))
+                NOTIFICATION.messenger("No [PROGRAM] color scheme selected")
                 continue
             
             self.project_data["color_update"]["setting"]["naming_map"]["department_color_map"] = department_color_scheme_names

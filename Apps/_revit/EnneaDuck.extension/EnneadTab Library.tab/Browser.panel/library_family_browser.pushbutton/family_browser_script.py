@@ -142,13 +142,13 @@ class family_browser_ModelessForm(WPFWindow):
 
         self.Title = self.title_text.Text
 
-        self.set_image_source(self.logo_img, "{}\logo_vertical_light.png".format(ENVIRONMENT.IMAGE_FOLDER))
+        self.set_image_source(self.logo_img, os.path.join(ENVIRONMENT.IMAGE_FOLDER, "logo_vertical_light.png"))
         self.set_image_source(self.monitor_icon, "monitor_icon.png")
         self.set_image_source(self.preview_image, "DEFAULT PREVIEW_CANNOT FIND PREVIEW IMAGE.png")
         self.set_image_source(self.status_icon, "update_icon.png")
 
 
-        self.meta_data_folder = "{}\\01_Revit\\06_DB\\Family Browser".format(ENVIRONMENT.L_DRIVE_HOST_FOLDER)
+        self.meta_data_folder = os.path.join(ENVIRONMENT.L_DRIVE_HOST_FOLDER, "01_Revit", "06_DB", "Family Browser")
 
 
 
@@ -162,7 +162,7 @@ class family_browser_ModelessForm(WPFWindow):
         self.Show()
 
     def get_meta_datas(self):
-        meta_data_files = ["{}\{}".format(self.meta_data_folder, x) for x in os.listdir(self.meta_data_folder) if x.endswith(ENVIRONMENT.PLUGIN_EXTENSION)]
+        meta_data_files = [os.path.join(self.meta_data_folder, x) for x in os.listdir(self.meta_data_folder) if x.endswith(ENVIRONMENT.PLUGIN_EXTENSION)]
         meta_data_files.sort()
         NOTIFICATION.messenger(main_text = "Indexing {} files from the DataBase...\nthis might takes a few seconds...".format(len(meta_data_files)))
 
@@ -283,8 +283,7 @@ class family_browser_ModelessForm(WPFWindow):
   
 
     def get_true_preview_images(self, preview_obj):
-        
-        preview_images = ["{}\{}".format(self.meta_data_folder, img) for img in preview_obj.preview_images]
+        preview_images = [os.path.join(self.meta_data_folder, img) for img in preview_obj.preview_images]
         return preview_images
 
    

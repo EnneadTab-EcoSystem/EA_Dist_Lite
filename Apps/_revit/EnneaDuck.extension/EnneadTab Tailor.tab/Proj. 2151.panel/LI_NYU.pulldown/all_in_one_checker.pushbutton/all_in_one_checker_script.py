@@ -426,7 +426,7 @@ class InternalCheck:
         T.Start()
 
         if not self.validate_all(self):
-            NOTIFICATION.messenger("Cannot proceed further before all setup is validated."))
+            NOTIFICATION.messenger("Cannot proceed further before all setup is validated.")
             T.RollBack()
             return
 
@@ -441,7 +441,7 @@ class InternalCheck:
         
         
         if self.show_log:
-            NOTIFICATION.messenger("Program schedule calculator update done!"))
+            NOTIFICATION.messenger("Program schedule calculator update done!")
 
         
         if self._found_bad_area:

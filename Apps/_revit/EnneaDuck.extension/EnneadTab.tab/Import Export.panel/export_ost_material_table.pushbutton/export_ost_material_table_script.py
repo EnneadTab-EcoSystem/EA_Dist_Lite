@@ -82,7 +82,7 @@ class Solution:
         DATA_FILE.pretty_print_dict (self.table)
         # pprint.pprint(self.table, indent=4)
         DATA_FILE.set_data(self.table, "SUBC_MATERIAL_TABLE")
-        NOTIFICATION.messenger("Export done, now swicth to 'map Revit SubC' in Rhino"))
+        NOTIFICATION.messenger("Export done, now swicth to 'map Revit SubC' in Rhino")
 
 
 

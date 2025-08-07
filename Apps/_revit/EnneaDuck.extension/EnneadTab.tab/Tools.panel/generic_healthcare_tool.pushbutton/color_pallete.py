@@ -8,7 +8,7 @@ def update_color_pallete(doc):
 
     naming_map, excel_path, is_remove_unused = get_data_setup_from_project_data(doc)
     if not naming_map:
-        NOTIFICATION.messenger("No naming map found in the project data, set it up or select the excel file that contains the color pallete"))
+        NOTIFICATION.messenger("No naming map found in the project data, set it up or select the excel file that contains the color pallete")
         naming_map, excel_path, is_remove_unused = manual_update_color_pallete(doc)
         if not naming_map:
             return
@@ -41,7 +41,7 @@ def get_data_setup_from_project_data(doc):
         return None, None, False
 
     if not os.path.exists(excel_path):
-        NOTIFICATION.messenger("Cannot find the excel file {}. Maybe your drive is disconnected.").format(excel_path))
+        NOTIFICATION.messenger("Cannot find the excel file {}. Maybe your drive is disconnected.".format(excel_path))
         return None, None, False
         
     return naming_map, excel_path, is_remove_unused
@@ -49,10 +49,10 @@ def get_data_setup_from_project_data(doc):
 
 
 def manual_update_color_pallete(doc):
-    NOTIFICATION.messenger("Select the excel file that contains the color pallete"))
+    NOTIFICATION.messenger("Select the excel file that contains the color pallete")
     excel_path = forms.pick_file(title="Select the excel file. If you don't have one, hit Cancel and get a sample file.", files_filter="Excel Files (*.xls)|*.xls")
     if not excel_path:
-        NOTIFICATION.messenger("No excel file selected\nHere is a sample excel color."))
+        NOTIFICATION.messenger("No excel file selected\nHere is a sample excel color.")
         excel_path = FOLDER.copy_file_to_local_dump_folder(os.path.join(os.path.dirname(__file__), "HealthCare_Color Scheme.xls"))
         os.startfile(excel_path)
         return None, None, None
@@ -62,11 +62,11 @@ def manual_update_color_pallete(doc):
 
     department_color_scheme_name = REVIT_COLOR_SCHEME.pick_color_scheme(doc, title="Select the [DEPARTMENT] color scheme", button_name="Select [DEPARTMENT] color scheme")
     if not department_color_scheme_name:
-        NOTIFICATION.messenger("No [DEPARTMENT] color scheme selected"))
+        NOTIFICATION.messenger("No [DEPARTMENT] color scheme selected")
         return
     program_color_scheme_name = REVIT_COLOR_SCHEME.pick_color_scheme(doc, title="Select the [PROGRAM] color scheme", button_name="Select [PROGRAM] color scheme")     
     if not program_color_scheme_name:
-        NOTIFICATION.messenger("No [PROGRAM] color scheme selected"))
+        NOTIFICATION.messenger("No [PROGRAM] color scheme selected")
         return
 
     naming_map = {"department_color_map":department_color_scheme_name,

@@ -82,7 +82,7 @@ def get_shared_para_group_by_name_in_txt_file(doc,
     """
     shared_para_file = doc.Application.OpenSharedParameterFile()
     if shared_para_file is None:
-        NOTIFICATION.messenger("Cannot open shared parameter file. Please check if the shared parameter file is properly configured."))
+        NOTIFICATION.messenger("Cannot open shared parameter file. Please check if the shared parameter file is properly configured.")
         return None
         
     for definition_group in shared_para_file.Groups:
@@ -94,7 +94,7 @@ def get_shared_para_group_by_name_in_txt_file(doc,
     
     
     
-    NOTIFICATION.messenger("Cannot find [{}] in shared parameter file.\nIs this loaded correctly?").format(para_group_name))
+    NOTIFICATION.messenger("Cannot find [{}] in shared parameter file.\nIs this loaded correctly?".format(para_group_name))
     return None
 
 def get_shared_para_definition_in_txt_file_by_name(doc, 
@@ -114,7 +114,7 @@ def get_shared_para_definition_in_txt_file_by_name(doc,
     shared_para_file = doc.Application.OpenSharedParameterFile()
     if not shared_para_file:
   
-        NOTIFICATION.messenger('[{}]\nneed to have a valid shared parameter file. \nI am going to use default EnneadTab shared parameter file.\nBut you nned to save it to a better place.').format(doc.Title))
+        NOTIFICATION.messenger('[{}]\nneed to have a valid shared parameter file. \nI am going to use default EnneadTab shared parameter file.\nBut you nned to save it to a better place.'.format(doc.Title))
         filepath = SAMPLE_FILE.get_file("DefaultSharedParameter.txt")
         doc.Application.SharedParametersFilename = filepath
         
@@ -122,7 +122,7 @@ def get_shared_para_definition_in_txt_file_by_name(doc,
 
     # Check if shared_para_file is still None after attempting to set it up
     if not shared_para_file:
-        NOTIFICATION.messenger("Failed to load shared parameter file. Cannot proceed."))
+        NOTIFICATION.messenger("Failed to load shared parameter file. Cannot proceed.")
         return None
 
     for definition_group in shared_para_file.Groups:
@@ -132,7 +132,7 @@ def get_shared_para_definition_in_txt_file_by_name(doc,
 
 
 
-    NOTIFICATION.messenger("Cannot find [{}] in shared parameter file.\nIs this loaded correctly?").format(para_name))
+    NOTIFICATION.messenger("Cannot find [{}] in shared parameter file.\nIs this loaded correctly?".format(para_name))
     
     
     return None

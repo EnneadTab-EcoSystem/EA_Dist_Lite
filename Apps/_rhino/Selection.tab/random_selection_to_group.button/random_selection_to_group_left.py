@@ -22,10 +22,10 @@ import rhinoscriptsyntax as rs
 def random_selection_to_group_left():
     ids = rs.SelectedObjects(False, False)
     if not ids: 
-        NOTIFICATION.messenger  ("No objects selected, action cancelled.")
+        NOTIFICATION.messenger("No objects selected, action cancelled.")
         return
     if len(ids) == 1: 
-        NOTIFICATION.messenger  ("Only one object selected, action cancelled.")
+        NOTIFICATION.messenger("Only one object selected, action cancelled.")
         return
     bbox_center_pt = RHINO_OBJ_DATA.get_center(ids)
     X, Y, Z = RHINO_OBJ_DATA.get_boundingbox_edge_length(ids)

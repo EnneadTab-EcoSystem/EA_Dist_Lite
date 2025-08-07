@@ -45,7 +45,7 @@ def update_material_setting(doc):
     REVIT_MATERIAL.update_material_setting(doc, MATERIAL_MAP)
 
     t.Commit()
-    NOTIFICATION.messenger("Material setting updated"))
+    NOTIFICATION.messenger("Material setting updated")
 
 
 

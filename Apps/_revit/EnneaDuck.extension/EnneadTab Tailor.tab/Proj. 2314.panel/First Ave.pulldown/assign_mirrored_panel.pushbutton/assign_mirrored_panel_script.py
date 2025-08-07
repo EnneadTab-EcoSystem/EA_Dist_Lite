@@ -47,7 +47,7 @@ def assign_mirrored_panel():
         
     t.Commit()
     
-    EnneadTab.NOTIFICATION.messenger("Done"))
+    EnneadTab.NOTIFICATION.messenger("Done")
 
 ################## main code below #####################
 output = script.get_output()

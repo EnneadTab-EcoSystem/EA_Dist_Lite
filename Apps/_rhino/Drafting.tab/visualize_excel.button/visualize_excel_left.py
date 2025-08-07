@@ -172,7 +172,7 @@ class ShapeWriter:
         
     def write_shape(self):
         if not hasattr(self, "datas"):
-            NOTIFICATION.messenger("Excel data not read."))
+            NOTIFICATION.messenger("Excel data not read.")
             return
         map(self.process_data, self.datas)
         
