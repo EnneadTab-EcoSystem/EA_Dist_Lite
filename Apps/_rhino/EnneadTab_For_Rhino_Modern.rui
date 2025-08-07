@@ -1639,7 +1639,7 @@ Key Features:
       <script>EA_ActivateEnneadTab
 EA_FindLayerInFiles</script>
     </macro_item>
-    <macro_item guid="00bf977b-c9b8-4b6c-9d6f-b1c8de037f31" bitmap_id="93f5432a-6a91-4420-8bbd-d683e693414b">
+    <macro_item guid="00bf977b-c9b8-4b6c-9d6f-b1c8de037f31" bitmap_id="dde7ee5c-765b-4e7c-82ae-a11b178f2fbe">
       <text>
         <locale_1033>ForceLayerPackage</locale_1033>
       </text>
@@ -4087,7 +4087,7 @@ Key Features:
       <script>EA_ActivateEnneadTab
 EA_RebaseFile</script>
     </macro_item>
-    <macro_item guid="4c379625-5fed-40e4-9aab-c9323b624bb0" bitmap_id="9bf6b9ed-6c85-49b8-87c0-26eed8a8a81d">
+    <macro_item guid="4c379625-5fed-40e4-9aab-c9323b624bb0" bitmap_id="e0825153-b45d-4f82-926a-2836f0971298">
       <text>
         <locale_1033>2425ReplaceBlocks</locale_1033>
       </text>
@@ -4096,7 +4096,7 @@ EA_RebaseFile</script>
 
 Replaces blocks between Twinmotion and Enscape versions based on Excel mapping data.
 Features:
-- Supports bidirectional block replacement (Twinmotion â†” Enscape)
+- Supports bidirectional block replacement (Twinmotion ↔ Enscape)
 - Uses Excel mapping file for block name relationships
 - Processes entire document with progress tracking
 - Maintains block transformations and properties
@@ -4104,8 +4104,8 @@ Features:
 - Automatically redraws viewport after replacement
 
 Replacement Options:
-1. Twinmotion block â†’ Enscape block
-2. Enscape block â†’ Twinmotion block
+1. Twinmotion block → Enscape block
+2. Enscape block → Twinmotion block
 
 Excel Mapping:
 - Reads from 'enscape_twinmotion_block_mapping.xlsx'
@@ -4131,7 +4131,7 @@ Usage:
 
 Replaces blocks between Twinmotion and Enscape versions based on Excel mapping data.
 Features:
-- Supports bidirectional block replacement (Twinmotion â†” Enscape)
+- Supports bidirectional block replacement (Twinmotion ↔ Enscape)
 - Uses Excel mapping file for block name relationships
 - Processes entire document with progress tracking
 - Maintains block transformations and properties
@@ -4139,8 +4139,8 @@ Features:
 - Automatically redraws viewport after replacement
 
 Replacement Options:
-1. Twinmotion block â†’ Enscape block
-2. Enscape block â†’ Twinmotion block
+1. Twinmotion block → Enscape block
+2. Enscape block → Twinmotion block
 
 Excel Mapping:
 - Reads from 'enscape_twinmotion_block_mapping.xlsx'
@@ -4170,7 +4170,7 @@ Usage:
       <script>EA_ActivateEnneadTab
 EA_2425ReplaceBlocks</script>
     </macro_item>
-    <macro_item guid="87629185-ded0-4280-9772-7f507a5c8111" bitmap_id="dcab998f-3946-4935-a7a8-b0d427e7b6b2">
+    <macro_item guid="87629185-ded0-4280-9772-7f507a5c8111" bitmap_id="6108add0-652b-428a-94ea-49e3d5436256">
       <text>
         <locale_1033>ChildrenPalaceMassing</locale_1033>
       </text>
@@ -4215,7 +4215,7 @@ Usage:
       <script>EA_ActivateEnneadTab
 EA_ChildrenPalaceMassing</script>
     </macro_item>
-    <macro_item guid="168370c0-18bf-4742-b4a0-7a82b40ba6c6" bitmap_id="d41c466d-1bf6-4cbb-aa12-dde65363d681">
+    <macro_item guid="168370c0-18bf-4742-b4a0-7a82b40ba6c6" bitmap_id="46603f38-04b3-4483-9424-39bf32b42bef">
       <text>
         <locale_1033>ExportWithoutCrv_1643</locale_1033>
       </text>
@@ -4240,8 +4240,8 @@ Workflow:
 6. Cleans up temporary exploded geometry
 
 File Naming:
-- MotherBabyLobby.3dm â†’ TempStudy_MotherBabyLobby.dwg
-- Other files â†’ TempStudy.dwg
+- MotherBabyLobby.3dm → TempStudy_MotherBabyLobby.dwg
+- Other files → TempStudy.dwg
 
 Usage:
 - Run tool to prepare geometry for CAD export
@@ -4270,8 +4270,8 @@ Workflow:
 6. Cleans up temporary exploded geometry
 
 File Naming:
-- MotherBabyLobby.3dm â†’ TempStudy_MotherBabyLobby.dwg
-- Other files â†’ TempStudy.dwg
+- MotherBabyLobby.3dm → TempStudy_MotherBabyLobby.dwg
+- Other files → TempStudy.dwg
 
 Usage:
 - Run tool to prepare geometry for CAD export
@@ -4288,7 +4288,7 @@ Usage:
       <script>EA_ActivateEnneadTab
 EA_ExportWithoutCrv_1643</script>
     </macro_item>
-    <macro_item guid="88e6071a-834e-4831-af1b-67b44b1f13ac" bitmap_id="10f9fabb-7ee8-49a1-a922-aa38797c2947">
+    <macro_item guid="88e6071a-834e-4831-af1b-67b44b1f13ac" bitmap_id="69da349f-7cba-4a35-a63c-75523374df33">
       <text>
         <locale_1033>2128_PatternMaker</locale_1033>
       </text>
@@ -4357,7 +4357,7 @@ Usage:
       <script>EA_ActivateEnneadTab
 EA_2128_PatternMaker</script>
     </macro_item>
-    <macro_item guid="403a008f-ce02-430f-9012-104b66c2047c" bitmap_id="9756c3b4-6b71-4a8d-b5c0-bdab1f639c37">
+    <macro_item guid="403a008f-ce02-430f-9012-104b66c2047c" bitmap_id="144df7c3-3bbf-4772-bae8-37c90b9b8477">
       <text>
         <locale_1033>RegisterMirror</locale_1033>
       </text>
@@ -4412,7 +4412,7 @@ Usage:
       <script>EA_ActivateEnneadTab
 EA_RegisterMirror</script>
     </macro_item>
-    <macro_item guid="7d65fe82-088d-4812-a352-ac01d43707bc" bitmap_id="e1682882-a8b8-492e-bf69-54289c54081a">
+    <macro_item guid="7d65fe82-088d-4812-a352-ac01d43707bc" bitmap_id="5d61fd83-5f5c-4816-a574-67cbb42f30c3">
       <text>
         <locale_1033>RelocateAll_1643</locale_1033>
       </text>
@@ -4473,7 +4473,7 @@ Usage:
       <script>EA_ActivateEnneadTab
 EA_RelocateAll_1643</script>
     </macro_item>
-    <macro_item guid="624fcc72-c15c-4036-a3b5-d8c079c8b7b5" bitmap_id="3c3edf22-3fd1-4d7d-8ccf-51135057749a">
+    <macro_item guid="624fcc72-c15c-4036-a3b5-d8c079c8b7b5" bitmap_id="741f74b0-5cdd-4113-a683-5e3a1be73500">
       <text>
         <locale_1033>SaifPanelMapping</locale_1033>
       </text>
@@ -4584,7 +4584,7 @@ Usage:
       <script>EA_ActivateEnneadTab
 EA_MoveImg_1643</script>
     </macro_item>
-    <macro_item guid="f801db6c-13db-4d5a-aef9-21147bcdc5ff" bitmap_id="24bc5867-d5f2-4df1-b2b4-8b01b6a90d8f">
+    <macro_item guid="f801db6c-13db-4d5a-aef9-21147bcdc5ff" bitmap_id="c100ce19-3ecd-43b2-87b7-5fd57691374a">
       <text>
         <locale_1033>2419_Facade move</locale_1033>
       </text>
@@ -5443,7 +5443,7 @@ Key Features:
       <script>EA_ActivateEnneadTab
 EA_AppStore</script>
     </macro_item>
-    <macro_item guid="7565664e-7f0e-4db9-9fe1-7959a1c182ee" bitmap_id="5ed82eed-30e4-4495-9983-68074b063a1c">
+    <macro_item guid="7565664e-7f0e-4db9-9fe1-7959a1c182ee" bitmap_id="03bf1972-3652-4434-9d1f-133e4001cb90">
       <text>
         <locale_1033>CheckErrorLog</locale_1033>
       </text>
@@ -5702,7 +5702,7 @@ EA_UnitTest</script>
       <bitmap_item guid="0f563d93-f0db-4722-b35d-bb6210c83629" index="18"/>
       <bitmap_item guid="fe91d123-f7d5-4513-8e40-4111f6985952" index="19"/>
       <bitmap_item guid="867edb13-4c77-41b0-919c-5d12a728c56b" index="20"/>
-      <bitmap_item guid="93f5432a-6a91-4420-8bbd-d683e693414b" index="21"/>
+      <bitmap_item guid="dde7ee5c-765b-4e7c-82ae-a11b178f2fbe" index="21"/>
       <bitmap_item guid="407339a2-1fe7-48b3-872e-2ec2b771d6b6" index="22"/>
       <bitmap_item guid="f2433b5b-4d31-48c3-97d7-6f7ba9aed4c6" index="23"/>
       <bitmap_item guid="be085b29-f7b7-4665-a78a-9ac672f3f875" index="24"/>
@@ -5797,16 +5797,16 @@ EA_UnitTest</script>
       <bitmap_item guid="aeab6fdd-17bd-4667-92ef-e07da55beb27" index="113"/>
       <bitmap_item guid="28564a23-c114-4a3e-a9c8-6532fb5b3a70" index="114"/>
       <bitmap_item guid="41d624e3-dbbe-4820-aa0e-9d666be8f95e" index="115"/>
-      <bitmap_item guid="9bf6b9ed-6c85-49b8-87c0-26eed8a8a81d" index="116"/>
-      <bitmap_item guid="dcab998f-3946-4935-a7a8-b0d427e7b6b2" index="117"/>
-      <bitmap_item guid="d41c466d-1bf6-4cbb-aa12-dde65363d681" index="118"/>
-      <bitmap_item guid="10f9fabb-7ee8-49a1-a922-aa38797c2947" index="119"/>
-      <bitmap_item guid="9756c3b4-6b71-4a8d-b5c0-bdab1f639c37" index="120"/>
-      <bitmap_item guid="e1682882-a8b8-492e-bf69-54289c54081a" index="121"/>
-      <bitmap_item guid="3c3edf22-3fd1-4d7d-8ccf-51135057749a" index="122"/>
+      <bitmap_item guid="e0825153-b45d-4f82-926a-2836f0971298" index="116"/>
+      <bitmap_item guid="6108add0-652b-428a-94ea-49e3d5436256" index="117"/>
+      <bitmap_item guid="46603f38-04b3-4483-9424-39bf32b42bef" index="118"/>
+      <bitmap_item guid="69da349f-7cba-4a35-a63c-75523374df33" index="119"/>
+      <bitmap_item guid="144df7c3-3bbf-4772-bae8-37c90b9b8477" index="120"/>
+      <bitmap_item guid="5d61fd83-5f5c-4816-a574-67cbb42f30c3" index="121"/>
+      <bitmap_item guid="741f74b0-5cdd-4113-a683-5e3a1be73500" index="122"/>
       <bitmap_item guid="3c13b537-0f6a-449d-acd2-2a4f666f616f" index="123"/>
       <bitmap_item guid="7f17092a-8d63-4999-9d1f-4ad7dfa06940" index="124"/>
-      <bitmap_item guid="24bc5867-d5f2-4df1-b2b4-8b01b6a90d8f" index="125"/>
+      <bitmap_item guid="c100ce19-3ecd-43b2-87b7-5fd57691374a" index="125"/>
       <bitmap_item guid="a9b17235-30ff-4888-bec0-5507144f9173" index="126"/>
       <bitmap_item guid="9b3fd901-6426-4e19-8708-2e105d9e6dc8" index="127"/>
       <bitmap_item guid="487a7d6f-d6cf-4df2-b76f-eab8155a2ddd" index="128"/>
@@ -5838,7 +5838,7 @@ EA_UnitTest</script>
       <bitmap_item guid="545a80ad-cf23-4757-aebd-28685c2cec86" index="154"/>
       <bitmap_item guid="bbe52d09-c8fa-46bd-90c7-d37b434815db" index="155"/>
       <bitmap_item guid="b70390c1-0f7f-40ef-b747-127ab9ef40cb" index="156"/>
-      <bitmap_item guid="5ed82eed-30e4-4495-9983-68074b063a1c" index="157"/>
+      <bitmap_item guid="03bf1972-3652-4434-9d1f-133e4001cb90" index="157"/>
       <bitmap_item guid="c49fddf2-9a13-4519-bd2d-7ae43e0ed860" index="158"/>
       <bitmap_item guid="6584114c-c354-436f-8eb7-d98c8bc25cb0" index="159"/>
       <bitmap_item guid="6f62db42-ee2b-462d-af1c-69a7e8d72ab6" index="160"/>
@@ -7441,7 +7441,7 @@ RU5ErkJggg==</bitmap>
       <bitmap_item guid="0f563d93-f0db-4722-b35d-bb6210c83629" index="18"/>
       <bitmap_item guid="fe91d123-f7d5-4513-8e40-4111f6985952" index="19"/>
       <bitmap_item guid="867edb13-4c77-41b0-919c-5d12a728c56b" index="20"/>
-      <bitmap_item guid="93f5432a-6a91-4420-8bbd-d683e693414b" index="21"/>
+      <bitmap_item guid="dde7ee5c-765b-4e7c-82ae-a11b178f2fbe" index="21"/>
       <bitmap_item guid="407339a2-1fe7-48b3-872e-2ec2b771d6b6" index="22"/>
       <bitmap_item guid="f2433b5b-4d31-48c3-97d7-6f7ba9aed4c6" index="23"/>
       <bitmap_item guid="be085b29-f7b7-4665-a78a-9ac672f3f875" index="24"/>
@@ -7536,16 +7536,16 @@ RU5ErkJggg==</bitmap>
       <bitmap_item guid="aeab6fdd-17bd-4667-92ef-e07da55beb27" index="113"/>
       <bitmap_item guid="28564a23-c114-4a3e-a9c8-6532fb5b3a70" index="114"/>
       <bitmap_item guid="41d624e3-dbbe-4820-aa0e-9d666be8f95e" index="115"/>
-      <bitmap_item guid="9bf6b9ed-6c85-49b8-87c0-26eed8a8a81d" index="116"/>
-      <bitmap_item guid="dcab998f-3946-4935-a7a8-b0d427e7b6b2" index="117"/>
-      <bitmap_item guid="d41c466d-1bf6-4cbb-aa12-dde65363d681" index="118"/>
-      <bitmap_item guid="10f9fabb-7ee8-49a1-a922-aa38797c2947" index="119"/>
-      <bitmap_item guid="9756c3b4-6b71-4a8d-b5c0-bdab1f639c37" index="120"/>
-      <bitmap_item guid="e1682882-a8b8-492e-bf69-54289c54081a" index="121"/>
-      <bitmap_item guid="3c3edf22-3fd1-4d7d-8ccf-51135057749a" index="122"/>
+      <bitmap_item guid="e0825153-b45d-4f82-926a-2836f0971298" index="116"/>
+      <bitmap_item guid="6108add0-652b-428a-94ea-49e3d5436256" index="117"/>
+      <bitmap_item guid="46603f38-04b3-4483-9424-39bf32b42bef" index="118"/>
+      <bitmap_item guid="69da349f-7cba-4a35-a63c-75523374df33" index="119"/>
+      <bitmap_item guid="144df7c3-3bbf-4772-bae8-37c90b9b8477" index="120"/>
+      <bitmap_item guid="5d61fd83-5f5c-4816-a574-67cbb42f30c3" index="121"/>
+      <bitmap_item guid="741f74b0-5cdd-4113-a683-5e3a1be73500" index="122"/>
       <bitmap_item guid="3c13b537-0f6a-449d-acd2-2a4f666f616f" index="123"/>
       <bitmap_item guid="7f17092a-8d63-4999-9d1f-4ad7dfa06940" index="124"/>
-      <bitmap_item guid="24bc5867-d5f2-4df1-b2b4-8b01b6a90d8f" index="125"/>
+      <bitmap_item guid="c100ce19-3ecd-43b2-87b7-5fd57691374a" index="125"/>
       <bitmap_item guid="a9b17235-30ff-4888-bec0-5507144f9173" index="126"/>
       <bitmap_item guid="9b3fd901-6426-4e19-8708-2e105d9e6dc8" index="127"/>
       <bitmap_item guid="487a7d6f-d6cf-4df2-b76f-eab8155a2ddd" index="128"/>
@@ -7577,7 +7577,7 @@ RU5ErkJggg==</bitmap>
       <bitmap_item guid="545a80ad-cf23-4757-aebd-28685c2cec86" index="154"/>
       <bitmap_item guid="bbe52d09-c8fa-46bd-90c7-d37b434815db" index="155"/>
       <bitmap_item guid="b70390c1-0f7f-40ef-b747-127ab9ef40cb" index="156"/>
-      <bitmap_item guid="5ed82eed-30e4-4495-9983-68074b063a1c" index="157"/>
+      <bitmap_item guid="03bf1972-3652-4434-9d1f-133e4001cb90" index="157"/>
       <bitmap_item guid="c49fddf2-9a13-4519-bd2d-7ae43e0ed860" index="158"/>
       <bitmap_item guid="6584114c-c354-436f-8eb7-d98c8bc25cb0" index="159"/>
       <bitmap_item guid="6f62db42-ee2b-462d-af1c-69a7e8d72ab6" index="160"/>
@@ -10548,7 +10548,7 @@ B4Y6yelJnqJ9CcmFToT/B2JGGtB14uMMAAAAAElFTkSuQmCC</bitmap>
       <bitmap_item guid="0f563d93-f0db-4722-b35d-bb6210c83629" index="18"/>
       <bitmap_item guid="fe91d123-f7d5-4513-8e40-4111f6985952" index="19"/>
       <bitmap_item guid="867edb13-4c77-41b0-919c-5d12a728c56b" index="20"/>
-      <bitmap_item guid="93f5432a-6a91-4420-8bbd-d683e693414b" index="21"/>
+      <bitmap_item guid="dde7ee5c-765b-4e7c-82ae-a11b178f2fbe" index="21"/>
       <bitmap_item guid="407339a2-1fe7-48b3-872e-2ec2b771d6b6" index="22"/>
       <bitmap_item guid="f2433b5b-4d31-48c3-97d7-6f7ba9aed4c6" index="23"/>
       <bitmap_item guid="be085b29-f7b7-4665-a78a-9ac672f3f875" index="24"/>
@@ -10643,16 +10643,16 @@ B4Y6yelJnqJ9CcmFToT/B2JGGtB14uMMAAAAAElFTkSuQmCC</bitmap>
       <bitmap_item guid="aeab6fdd-17bd-4667-92ef-e07da55beb27" index="113"/>
       <bitmap_item guid="28564a23-c114-4a3e-a9c8-6532fb5b3a70" index="114"/>
       <bitmap_item guid="41d624e3-dbbe-4820-aa0e-9d666be8f95e" index="115"/>
-      <bitmap_item guid="9bf6b9ed-6c85-49b8-87c0-26eed8a8a81d" index="116"/>
-      <bitmap_item guid="dcab998f-3946-4935-a7a8-b0d427e7b6b2" index="117"/>
-      <bitmap_item guid="d41c466d-1bf6-4cbb-aa12-dde65363d681" index="118"/>
-      <bitmap_item guid="10f9fabb-7ee8-49a1-a922-aa38797c2947" index="119"/>
-      <bitmap_item guid="9756c3b4-6b71-4a8d-b5c0-bdab1f639c37" index="120"/>
-      <bitmap_item guid="e1682882-a8b8-492e-bf69-54289c54081a" index="121"/>
-      <bitmap_item guid="3c3edf22-3fd1-4d7d-8ccf-51135057749a" index="122"/>
+      <bitmap_item guid="e0825153-b45d-4f82-926a-2836f0971298" index="116"/>
+      <bitmap_item guid="6108add0-652b-428a-94ea-49e3d5436256" index="117"/>
+      <bitmap_item guid="46603f38-04b3-4483-9424-39bf32b42bef" index="118"/>
+      <bitmap_item guid="69da349f-7cba-4a35-a63c-75523374df33" index="119"/>
+      <bitmap_item guid="144df7c3-3bbf-4772-bae8-37c90b9b8477" index="120"/>
+      <bitmap_item guid="5d61fd83-5f5c-4816-a574-67cbb42f30c3" index="121"/>
+      <bitmap_item guid="741f74b0-5cdd-4113-a683-5e3a1be73500" index="122"/>
       <bitmap_item guid="3c13b537-0f6a-449d-acd2-2a4f666f616f" index="123"/>
       <bitmap_item guid="7f17092a-8d63-4999-9d1f-4ad7dfa06940" index="124"/>
-      <bitmap_item guid="24bc5867-d5f2-4df1-b2b4-8b01b6a90d8f" index="125"/>
+      <bitmap_item guid="c100ce19-3ecd-43b2-87b7-5fd57691374a" index="125"/>
       <bitmap_item guid="a9b17235-30ff-4888-bec0-5507144f9173" index="126"/>
       <bitmap_item guid="9b3fd901-6426-4e19-8708-2e105d9e6dc8" index="127"/>
       <bitmap_item guid="487a7d6f-d6cf-4df2-b76f-eab8155a2ddd" index="128"/>
@@ -10684,7 +10684,7 @@ B4Y6yelJnqJ9CcmFToT/B2JGGtB14uMMAAAAAElFTkSuQmCC</bitmap>
       <bitmap_item guid="545a80ad-cf23-4757-aebd-28685c2cec86" index="154"/>
       <bitmap_item guid="bbe52d09-c8fa-46bd-90c7-d37b434815db" index="155"/>
       <bitmap_item guid="b70390c1-0f7f-40ef-b747-127ab9ef40cb" index="156"/>
-      <bitmap_item guid="5ed82eed-30e4-4495-9983-68074b063a1c" index="157"/>
+      <bitmap_item guid="03bf1972-3652-4434-9d1f-133e4001cb90" index="157"/>
       <bitmap_item guid="c49fddf2-9a13-4519-bd2d-7ae43e0ed860" index="158"/>
       <bitmap_item guid="6584114c-c354-436f-8eb7-d98c8bc25cb0" index="159"/>
       <bitmap_item guid="6f62db42-ee2b-462d-af1c-69a7e8d72ab6" index="160"/>

@@ -222,24 +222,73 @@ USAGE_LOG_GOOGLE_FORM_RESULT = "https://docs.google.com/forms/d/12Ew3_3Mmrl4P-gr
 ####################################
 
 
-def _delete_folder_or_file_after_date(path, date_YYMMDD_tuple):
+# Global cache for deletion counter to reduce file I/O
+_DELETION_COUNTER_CACHE = None
+
+def _delete_folder_or_file_after_date(path, date_YYMMDD_tuple, max_delete_per_day = 200):
     """Delete a folder if current date is past the specified date.
     
     Args:
         path (str): Path to the folder or file to be deleted
         date_YYMMDD_tuple (tuple): Date tuple in format (year, month, day)
+        max_delete_per_day (int): Maximum number of deletions allowed per day (default: 200)
     """
+    global _DELETION_COUNTER_CACHE
+    
     if not os.path.exists(path):
         return
         
     delete_after = datetime(*date_YYMMDD_tuple)
     if datetime.now() >= delete_after:
+        # Check daily deletion limit
+        import time
+        import json
+        
+        deletion_counter_file = os.path.join(DUMP_FOLDER, "daily_deletion_counter.DuckLock")
+        current_date = datetime.now().strftime("%Y-%m-%d")
+        
+        # Use cache or load from file
+        if _DELETION_COUNTER_CACHE is None or _DELETION_COUNTER_CACHE.get("date") != current_date:
+            deletion_data = {"date": current_date, "count": 0}
+            if os.path.exists(deletion_counter_file):
+                try:
+                    with open(deletion_counter_file, "r") as f:
+                        deletion_data = json.load(f)
+                except:
+                    pass
+            
+            # Reset counter if it's a new day
+            if deletion_data.get("date") != current_date:
+                deletion_data = {"date": current_date, "count": 0}
+            
+            _DELETION_COUNTER_CACHE = deletion_data
+        else:
+            deletion_data = _DELETION_COUNTER_CACHE
+        
+        # Check if we've reached the daily limit
+        if deletion_data["count"] >= max_delete_per_day:
+            return
+        
+        # Perform deletion
         import shutil
         try:
             if os.path.isdir(path):
                 shutil.rmtree(path)
             else:
                 os.remove(path)
+            
+            # Increment deletion counter
+            deletion_data["count"] += 1
+            _DELETION_COUNTER_CACHE = deletion_data
+            
+            # Only save to file when reaching the max delete count
+            if deletion_data["count"] >= max_delete_per_day:
+                try:
+                    with open(deletion_counter_file, "w") as f:
+                        json.dump(deletion_data, f)
+                except:
+                    pass
+                
         except Exception as e:
             pass
 

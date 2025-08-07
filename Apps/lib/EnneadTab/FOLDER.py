@@ -190,7 +190,7 @@ def get_local_dump_folder_file(file_name):
     """Get full path for file in EA dump folder.
 
     Args:
-        file_name (str): Name of file including extension
+        file_name (str): Name of file,  extension optional
 
     Returns:
         str: Full path in EA dump folder

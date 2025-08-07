@@ -1,5 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+# IronPython 2.7 Compatible
 
 __doc__ = """Compare multiple view templates and generate an interactive HTML report showing differences.
 This tool allows users to select multiple view templates and compares their settings including:
@@ -18,10 +19,11 @@ from pyrevit import forms
 from pyrevit import script
 import proDUCKtion
 import time
+import os
 proDUCKtion.validify()
 
 from EnneadTab.REVIT import REVIT_APPLICATION
-from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION, TIME
+from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION, TIME, USER, DATA_FILE, FOLDER
 from Autodesk.Revit import DB
 
 DOC = REVIT_APPLICATION.get_doc()
@@ -70,19 +72,24 @@ def compare_view_templates(doc):
     output.print_md("## Analyzing Templates...")
     
     # Step 2: Collect data from all templates with timeout protection
-    comparison_data = collect_template_data_with_timeout(doc, valid_templates, output)
-    if not comparison_data:
+    result = collect_template_data_with_timeout(doc, valid_templates, output)
+    if not result or not result[0]:
         ERROR_HANDLE.print_note("Failed to collect template data. Please try again.")
         return
+    
+    comparison_data, full_template_data = result
     
     # Step 3: Find differences between templates
     differences = find_all_differences(comparison_data, [t.Name for t in valid_templates])
     
-    # Step 4: Generate and save HTML report
-    filepath = generate_and_save_report(differences, [t.Name for t in valid_templates])
+    # Step 4: Save full template data as JSON and get file path
+    json_file_path = save_full_template_data_as_json(full_template_data, doc)
+    
+    # Step 5: Generate and save HTML report
+    filepath = generate_and_save_report(differences, [t.Name for t in valid_templates], comparison_data, json_file_path)
     
     # Step 5: Display results and summary
-    display_results(differences, filepath, time_start)
+    display_results(differences, filepath, time_start, [t.Name for t in valid_templates])
 
 
 def validate_templates(templates):
@@ -131,6 +138,7 @@ def collect_template_data_with_timeout(doc, templates, output):
     # Initialize data collector
     collector = TemplateDataCollector(doc)
     comparison_data = {}
+    full_template_data = {}  # For JSON dump
     
     # Set timeout (5 minutes)
     timeout_seconds = 300
@@ -150,34 +158,53 @@ def collect_template_data_with_timeout(doc, templates, output):
             template_start_time = time.time()
             template_timeout = 60  # 1 minute per template
             
-            controlled_params, uncontrolled_params = collector.get_view_parameters(template)
+            # Use comprehensive data collection method
+            full_data = collector.collect_all_template_data(template)
             
             # Check individual template timeout
             if time.time() - template_start_time > template_timeout:
                 ERROR_HANDLE.print_note("Template {} timed out, skipping.".format(template.Name))
                 continue
             
-            template_data = {
-                'name': template.Name,
-                'category_overrides': collector.get_category_overrides(template),
-                'category_visibility': collector.get_category_visibility(template),
-                'workset_visibility': collector.get_workset_visibility(template),
-                'view_parameters': controlled_params,
-                'uncontrolled_parameters': uncontrolled_params,
-                'filters': collector.get_filter_data(template)
-            }
+            if full_data:
+                # Store full data for JSON dump
+                full_template_data[template.Name] = full_data
+                
+                # Create data for comparison
+                template_data = {
+                    'name': full_data['template_name'],
+                    'category_overrides': full_data['category_overrides'],
+                    'category_visibility': full_data['category_visibility'],
+                    'workset_visibility': full_data['workset_visibility'],
+                    'view_parameters': full_data['view_parameters'],
+                    'uncontrolled_parameters': full_data['uncontrolled_parameters'],
+                    'filters': full_data['filters'],
+                    'import_categories': full_data['import_categories'],
+                    'revit_links': full_data['revit_links'],
+                    'detail_levels': full_data['detail_levels'],
+                    'view_properties': full_data['view_properties'],
+                    'template_usage': full_data['template_usage']
+                }
+                
+                comparison_data[template.Name] = template_data
             
             # Check timeout again after data collection
             if time.time() - template_start_time > template_timeout:
                 ERROR_HANDLE.print_note("Template {} data collection timed out, using partial data.".format(template.Name))
             
-            comparison_data[template.Name] = template_data
-            
         except Exception as e:
             ERROR_HANDLE.print_note("Error processing template {}: {}".format(template.Name, str(e)))
             continue
     
-    return comparison_data if comparison_data else None
+    # Save full template data as JSON for developer use
+    ERROR_HANDLE.print_note("About to save JSON data. Full template data keys: {}".format(list(full_template_data.keys()) if full_template_data else "None"))
+    save_full_template_data_as_json(full_template_data, doc)
+    
+    # Save error data if any errors occurred
+    template_names_str = "_".join([t.Name for t in templates[:2]])  # Use first 2 template names
+    collector.save_error_data(template_names_str)
+    
+    return (comparison_data if comparison_data else None, full_template_data)
 
 
 def select_templates_for_comparison(doc):
@@ -206,6 +233,27 @@ def select_templates_for_comparison(doc):
         if not view_templates:
             ERROR_HANDLE.print_note("No view templates found in the document.")
             return None
+        
+
+
+
+        
+        # If in DEVELOPER mode, automatically select test templates
+        # if USER.IS_DEVELOPER:
+        #     test_templates = []
+        #     for template in view_templates:
+        #         if "0__test1" in template.Name or "0__test2" in template.Name:
+        #             test_templates.append(template)
+
+            
+        #     if len(test_templates) >= 2:
+        #         ERROR_HANDLE.print_note("DEVELOPER mode: Auto-selected test templates: {}".format([t.Name for t in test_templates]))
+        #         return test_templates
+        #     elif len(test_templates) == 1:
+        #         ERROR_HANDLE.print_note("DEVELOPER mode: Only found 1 test template ({}), proceeding with manual selection".format(test_templates[0].Name))
+        #     else:
+        #         ERROR_HANDLE.print_note("DEVELOPER mode: No test templates found, proceeding with manual selection")
+        #     return test_templates
         
         # Create custom template list items for selection that show template names
         class TemplateOption(forms.TemplateListItem):
@@ -258,9 +306,17 @@ def collect_template_data(doc, templates):
             'workset_visibility': collector.get_workset_visibility(template),
             'view_parameters': controlled_params,
             'uncontrolled_parameters': uncontrolled_params,
-            'filters': collector.get_filter_data(template)
+            'filters': collector.get_filter_data(template),
+            'import_categories': collector.get_import_category_data(template),
+            'revit_links': collector.get_revit_link_data(template),
+            'detail_levels': collector.get_detail_level_data(template),
+            'view_properties': collector._get_view_properties(template)
         }
         comparison_data[template.Name] = template_data
+    
+    # Save error data if any errors occurred
+    template_names_str = "_".join([t.Name for t in templates[:2]])  # Use first 2 template names
+    collector.save_error_data(template_names_str)
     
     return comparison_data
 
@@ -285,13 +341,15 @@ def find_all_differences(comparison_data, template_names):
     return differences
 
 
-def generate_and_save_report(differences, template_names):
+def generate_and_save_report(differences, template_names, comparison_data=None, json_file_path=None):
     """
     Generate HTML report and save to file.
     
     Args:
         differences: Dictionary containing all differences
         template_names: List of template names
+        comparison_data: Dictionary containing all template data for comprehensive comparison
+        json_file_path: Path to the saved JSON file for clickable link
         
     Returns:
         str: Filepath of the saved HTML report
@@ -304,7 +362,7 @@ def generate_and_save_report(differences, template_names):
     summary_stats = engine.get_summary_statistics(differences)
     
     # Generate HTML report
-    html_content = generator.generate_comparison_report(differences, summary_stats)
+    html_content = generator.generate_comparison_report(differences, summary_stats, comparison_data, json_file_path)
     
     # Save report to file
     filepath = generator.save_report_to_file(html_content)
@@ -312,7 +370,7 @@ def generate_and_save_report(differences, template_names):
     return filepath
 
 
-def display_results(differences, filepath, time_start):
+def display_results(differences, filepath, time_start, template_names=None):
     """
     Display comparison results and summary.
     
@@ -320,6 +378,7 @@ def display_results(differences, filepath, time_start):
         differences: Dictionary containing all differences
         filepath: Filepath of the saved HTML report
         time_start: Start time for performance measurement
+        template_names: List of template names that were compared
     """
     output = script.get_output()
     
@@ -330,9 +389,21 @@ def display_results(differences, filepath, time_start):
     engine = TemplateComparisonEngine({})
     summary_stats = engine.get_summary_statistics(differences)
     
+    # Calculate template count correctly
+    template_count = len(template_names) if template_names else 0
+    if template_count == 0 and differences:
+        # Fallback: try to infer from any differences that have template-specific data
+        for diff_type, diff_data in differences.items():
+            if isinstance(diff_data, dict) and diff_data:
+                # Get the first item and count its template entries
+                first_item = next(iter(diff_data.values()))
+                if isinstance(first_item, dict):
+                    template_count = len(first_item)
+                    break
+    
     # Display summary
     output.print_md("## Summary")
-    output.print_md("**Templates compared:** {}".format(len(differences.get('category_overrides', {}))))
+    output.print_md("**Templates compared:** {}".format(template_count))
     output.print_md("**Total differences found:** {}".format(summary_stats['total_differences']))
     output.print_md("**Processing time:** {:.2f} seconds".format(time_diff))
     output.print_md("**Report saved to:** {}".format(filepath))
@@ -354,6 +425,48 @@ def display_results(differences, filepath, time_start):
     
     # Show completion notification
     NOTIFICATION.messenger("View template comparison completed in {}. Report opened.".format(TIME.get_readable_time(time_diff)))
+
+
+def save_full_template_data_as_json(full_template_data, doc):
+    """
+    Save full template data using DATA_FILE.set_data for developer use.
+    
+    Args:
+        full_template_data: Complete template data dictionary
+        doc: The Revit document
+        
+    Returns:
+        str: File path to the saved JSON file, or None if failed
+    """
+    try:
+        ERROR_HANDLE.print_note("Starting DATA_FILE save process...")
+        ERROR_HANDLE.print_note("Full template data type: {}".format(type(full_template_data)))
+        ERROR_HANDLE.print_note("Full template data length: {}".format(len(full_template_data) if full_template_data else 0))
+        
+        # Create filename with timestamp
+        project_name = doc.Title.replace(" ", "_").replace(".", "_") if doc.Title else "Unknown_Project"
+        filename = "template_full_data_{}".format(project_name)
+        
+        # Save using DATA_FILE.set_data (automatically saves to DUMP folder)
+        ERROR_HANDLE.print_note("About to save data file: {}".format(filename))
+        DATA_FILE.set_data(full_template_data, filename, is_local=True)
+        
+        ERROR_HANDLE.print_note("Full template data saved using DATA_FILE.set_data to: {}".format(filename))
+        
+        # Get the file path for the saved JSON file
+        filepath = FOLDER.get_local_dump_folder_file(filename)
+        
+        # Check if DEVELOPER mode is enabled and open JSON file
+        if USER.IS_DEVELOPER:
+            ERROR_HANDLE.print_note("Opening file for developer: {}".format(filepath))
+            if os.path.exists(filepath):
+                os.startfile(filepath)
+        
+        return filepath
+            
+    except Exception as e:
+        ERROR_HANDLE.print_note("Error saving full template data: {}".format(str(e)))
+        return None
 
 
 # Main execution
