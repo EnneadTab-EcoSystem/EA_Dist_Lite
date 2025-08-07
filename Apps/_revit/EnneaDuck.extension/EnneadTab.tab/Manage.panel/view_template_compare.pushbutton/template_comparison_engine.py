@@ -178,6 +178,28 @@ class TemplateComparisonEngine:
         """
         total_differences = sum(len(diff_dict) for diff_dict in differences.values())
         
+        # Calculate category visibility breakdown for each template
+        category_visibility_breakdown = {}
+        for template_name, data in self.comparison_data.items():
+            category_vis_data = data.get('category_visibility', {})
+            on_visible_count = 0
+            hidden_count = 0
+            uncontrolled_count = 0
+            
+            for category, visibility_state in category_vis_data.items():
+                if visibility_state in ['On', 'Visible']:
+                    on_visible_count += 1
+                elif visibility_state == 'Hidden':
+                    hidden_count += 1
+                elif visibility_state == 'UNCONTROLLED':
+                    uncontrolled_count += 1
+            
+            category_visibility_breakdown[template_name] = {
+                'on_visible': on_visible_count,
+                'hidden': hidden_count,
+                'uncontrolled': uncontrolled_count
+            }
+        
         return {
             'total_differences': total_differences,
             'category_overrides': len(differences['category_overrides']),
@@ -185,7 +207,8 @@ class TemplateComparisonEngine:
             'workset_visibility': len(differences['workset_visibility']),
             'view_parameters': len(differences['view_parameters']),
             'uncontrolled_parameters': len(differences['uncontrolled_parameters']),
-            'filters': len(differences['filters'])
+            'filters': len(differences['filters']),
+            'category_visibility_breakdown': category_visibility_breakdown
         } 
     
 

@@ -56,6 +56,12 @@ def compare_view_templates(doc):
         ERROR_HANDLE.print_note("Please select at least 2 view templates for comparison.")
         return
     
+    # Validate templates before processing
+    valid_templates = validate_templates(templates)
+    if not valid_templates or len(valid_templates) < 2:
+        ERROR_HANDLE.print_note("No valid templates found for comparison.")
+        return
+    
     # Initialize output and timing
     output = script.get_output()
     time_start = time.time()
@@ -63,17 +69,115 @@ def compare_view_templates(doc):
     output.print_md("# View Template Comparison")
     output.print_md("## Analyzing Templates...")
     
-    # Step 2: Collect data from all templates
-    comparison_data = collect_template_data(doc, templates)
+    # Step 2: Collect data from all templates with timeout protection
+    comparison_data = collect_template_data_with_timeout(doc, valid_templates, output)
+    if not comparison_data:
+        ERROR_HANDLE.print_note("Failed to collect template data. Please try again.")
+        return
     
     # Step 3: Find differences between templates
-    differences = find_all_differences(comparison_data, [t.Name for t in templates])
+    differences = find_all_differences(comparison_data, [t.Name for t in valid_templates])
     
     # Step 4: Generate and save HTML report
-    filepath = generate_and_save_report(differences, [t.Name for t in templates])
+    filepath = generate_and_save_report(differences, [t.Name for t in valid_templates])
     
     # Step 5: Display results and summary
     display_results(differences, filepath, time_start)
+
+
+def validate_templates(templates):
+    """
+    Validate templates to ensure they are still valid and accessible.
+    
+    Args:
+        templates: List of view templates to validate
+        
+    Returns:
+        list: Valid templates only
+    """
+    valid_templates = []
+    
+    for template in templates:
+        try:
+            # Check if template is still valid
+            if template and template.IsValidObject:
+                # Try to access a basic property to ensure it's accessible
+                template_name = template.Name
+                if template_name:
+                    valid_templates.append(template)
+                else:
+                    ERROR_HANDLE.print_note("Template has no name, skipping: {}".format(template.Id))
+            else:
+                ERROR_HANDLE.print_note("Template is no longer valid, skipping: {}".format(template.Id))
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error validating template {}: {}".format(template.Id, str(e)))
+            continue
+    
+    return valid_templates
+
+
+def collect_template_data_with_timeout(doc, templates, output):
+    """
+    Collect data from all selected templates with timeout protection.
+    
+    Args:
+        doc: The Revit document
+        templates: List of view templates to analyze
+        output: PyRevit output object for progress reporting
+        
+    Returns:
+        dict: Collected data for all templates or None if timeout
+    """
+    # Initialize data collector
+    collector = TemplateDataCollector(doc)
+    comparison_data = {}
+    
+    # Set timeout (5 minutes)
+    timeout_seconds = 300
+    start_time = time.time()
+    
+    # Collect data for each template with progress reporting
+    for i, template in enumerate(templates):
+        # Check timeout
+        if time.time() - start_time > timeout_seconds:
+            ERROR_HANDLE.print_note("Data collection timed out after {} seconds. Please try with fewer templates.".format(timeout_seconds))
+            return None
+        
+        try:
+            output.print_md("**Processing template {}/{}: {}**".format(i+1, len(templates), template.Name))
+            
+            # Collect data with individual timeout for each template
+            template_start_time = time.time()
+            template_timeout = 60  # 1 minute per template
+            
+            controlled_params, uncontrolled_params = collector.get_view_parameters(template)
+            
+            # Check individual template timeout
+            if time.time() - template_start_time > template_timeout:
+                ERROR_HANDLE.print_note("Template {} timed out, skipping.".format(template.Name))
+                continue
+            
+            template_data = {
+                'name': template.Name,
+                'category_overrides': collector.get_category_overrides(template),
+                'category_visibility': collector.get_category_visibility(template),
+                'workset_visibility': collector.get_workset_visibility(template),
+                'view_parameters': controlled_params,
+                'uncontrolled_parameters': uncontrolled_params,
+                'filters': collector.get_filter_data(template)
+            }
+            
+            # Check timeout again after data collection
+            if time.time() - template_start_time > template_timeout:
+                ERROR_HANDLE.print_note("Template {} data collection timed out, using partial data.".format(template.Name))
+            
+            comparison_data[template.Name] = template_data
+            
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error processing template {}: {}".format(template.Name, str(e)))
+            continue
+    
+    return comparison_data if comparison_data else None
 
 
 def select_templates_for_comparison(doc):
@@ -86,34 +190,47 @@ def select_templates_for_comparison(doc):
     Returns:
         list: Selected view templates
     """
-    # Get all view templates
-    collector = DB.FilteredElementCollector(doc).OfClass(DB.View)
-    view_templates = [view for view in collector if view.IsTemplate]
-    
-    if not view_templates:
-        ERROR_HANDLE.print_note("No view templates found in the document.")
+    try:
+        # Get all view templates with error handling
+        collector = DB.FilteredElementCollector(doc).OfClass(DB.View)
+        view_templates = []
+        
+        for view in collector:
+            try:
+                if view and view.IsTemplate and view.IsValidObject:
+                    view_templates.append(view)
+            except Exception as e:
+                ERROR_HANDLE.print_note("Error checking view template: {}".format(str(e)))
+                continue
+        
+        if not view_templates:
+            ERROR_HANDLE.print_note("No view templates found in the document.")
+            return None
+        
+        # Create custom template list items for selection that show template names
+        class TemplateOption(forms.TemplateListItem):
+            @property
+            def name(self):
+                return self.item.Name
+        
+        template_items = sorted([TemplateOption(template) for template in view_templates], key=lambda x: x.name)
+        
+        # Show selection dialog
+        selected_templates = forms.SelectFromList.show(
+            template_items,
+            title="Select View Templates to Compare",
+            multiselect=True,
+            button_name="Compare Templates"
+        )
+        
+        if not selected_templates:
+            return None
+        
+        return selected_templates
+        
+    except Exception as e:
+        ERROR_HANDLE.print_note("Error selecting templates: {}".format(str(e)))
         return None
-    
-    # Create custom template list items for selection that show template names
-    class TemplateOption(forms.TemplateListItem):
-        @property
-        def name(self):
-            return self.item.Name
-    
-    template_items = sorted([TemplateOption(template) for template in view_templates], key=lambda x: x.name)
-    
-    # Show selection dialog
-    selected_templates = forms.SelectFromList.show(
-        template_items,
-        title="Select View Templates to Compare",
-        multiselect=True,
-        button_name="Compare Templates"
-    )
-    
-    if not selected_templates:
-        return None
-    
-    return selected_templates
 
 
 def collect_template_data(doc, templates):
