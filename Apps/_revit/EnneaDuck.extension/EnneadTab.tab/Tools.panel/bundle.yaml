@@ -15,6 +15,7 @@ layout:
   - translate_AI 
   - generic_healthcare_tool
   - ">>>" 
+  - nyu_export_mapping
   - apply_panel_radius_UI 
   - open_doc_silently 
   - AlignScopebox 

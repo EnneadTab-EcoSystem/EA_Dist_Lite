@@ -2870,6 +2870,15 @@
         "tab": "Tools",
         "tab_icon": null
     },
+    "EnneadTab.tab\\Tools.panel\\nyu_export_mapping.pushbutton\\nyu_export_mapping_script.py": {
+        "alias": "NYU Export CAD Layer Mapping",
+        "doc": "Apply NYU CAD Layer Standards to DWG Export Settings.\nThis tool maps Revit categories to NYU standard layer names and colors.\nAll subcategories will use the parent category's layer settings.",
+        "icon": "EnneadTab.tab\\Tools.panel\\nyu_export_mapping.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\Tools.panel\\nyu_export_mapping.pushbutton\\nyu_export_mapping_script.py",
+        "tab": "Tools",
+        "tab_icon": null
+    },
     "EnneadTab.tab\\Tools.panel\\open_doc_silently.pushbutton\\open_doc_silently_script.py": {
         "alias": "Open Doc(s) Siliently",
         "doc": "Batch opener for Revit files with enhanced reliability. Opens multiple documents while automatically handling warnings that would normally interrupt the process. Includes support for audit mode and detached/no-workset opening options. A comprehensive summary report is provided upon completion.",
