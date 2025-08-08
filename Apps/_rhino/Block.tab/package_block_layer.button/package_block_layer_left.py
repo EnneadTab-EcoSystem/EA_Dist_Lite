@@ -64,7 +64,7 @@ def package_block_layer(blocks = None, flatten_layer = None):
         if not blocks:
             return
     if flatten_layer == None:
-        flatten_layer = rs.ListBox(items = [True, False], message =  "Flatten block layers?", title = "Packaging block layers", default = True)
+        flatten_layer = rs.ListBox(items = [True, False], message =  "Flatten block layers?", title = "Packaging block layers", default = True)  # type: ignore
 
 
     rs.EnableRedraw(False)

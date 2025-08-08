@@ -50,14 +50,28 @@ def random_layer_color(default_opt = False):
         
     all_layer_names = rs.LayerNames()
     for layer in all_layer_names:
-        current_color = rs.LayerColor(layer)
-        #print current_color
-       
-        
-        if not should_process(current_color):
+        # Safety check: Ensure layer still exists before trying to access its properties
+        if not rs.IsLayer(layer):
+            print("Warning: Layer '{}' no longer exists, skipping...".format(layer))
             continue
-        
-        rs.LayerColor(layer, color = random_color(layer, use_desaturated_color))
+            
+        try:
+            current_color = rs.LayerColor(layer)
+            #print current_color
+           
+            
+            if not should_process(current_color):
+                continue
+            
+            rs.LayerColor(layer, color = random_color(layer, use_desaturated_color))
+        except Exception as e:
+            # Add error to class-level error group for review with full traceback
+            import traceback
+            error_msg = "Error processing layer '{}': {}\nFull traceback:\n{}".format(
+                layer, str(e), traceback.format_exc())
+            print(error_msg)
+            ERROR_HANDLE.print_note(error_msg)
+            continue
         """
         if str(current_color) == "Color [A=255, R=0, G=0, B=0]":
             rs.LayerColor(layer, color = random_color(layer, use_desaturated_color))
