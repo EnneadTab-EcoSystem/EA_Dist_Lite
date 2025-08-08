@@ -115,7 +115,7 @@ def load_family(file):
 
 
 
-    template = SAMPLE_FILE.get_file("RhinoImportBaseFamily_{}.rft".format(template_unit))
+    template = SAMPLE_FILE.get_file("RhinoImportBaseFamily_{}.rfa".format(template_unit))
 
     family_doc = ApplicationServices.Application.NewFamilyDocument (REVIT_APPLICATION.get_app(), template)
 

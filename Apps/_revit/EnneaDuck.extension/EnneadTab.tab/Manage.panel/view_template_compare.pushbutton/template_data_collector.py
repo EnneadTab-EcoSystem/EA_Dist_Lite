@@ -701,7 +701,7 @@ class TemplateDataCollector:
         """
         try:
             if not param or not param.HasValue:
-                return "No Value"
+                return "N/A"
                 
             storage_type = param.StorageType
             
