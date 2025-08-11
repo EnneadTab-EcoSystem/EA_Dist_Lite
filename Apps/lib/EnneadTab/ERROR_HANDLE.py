@@ -70,6 +70,97 @@ except Exception as e:
 _error_handler_recursion_depth = 0
 _max_error_handler_recursion_depth = 50  # Set a reasonable limit
 
+
+####################################################################################################
+"""
+temp solution to debug where the error is coming from
+"""
+
+
+# Safe ENVIRONMENT accessor functions
+def get_plugin_name():
+    """Safely get plugin name with fallback."""
+    if ENVIRONMENT is not None:
+        try:
+            return ENVIRONMENT.PLUGIN_NAME
+        except:
+            print(traceback.format_exc())
+            pass
+    return "EnneadTab"  # Default fallback
+
+def get_plugin_extension():
+    """Safely get plugin extension with fallback."""
+    if ENVIRONMENT is not None:
+        try:
+            return ENVIRONMENT.PLUGIN_EXTENSION
+        except:
+            print(traceback.format_exc())
+            pass
+    return ".sexyDuck"  # Default fallback
+
+def get_document_folder():
+    """Safely get document folder with fallback."""
+    if ENVIRONMENT is not None:
+        try:
+            return ENVIRONMENT.DOCUMENT_FOLDER
+        except:
+            print(traceback.format_exc())
+            pass
+    return None
+
+def get_one_drive_desktop_folder():
+    """Safely get OneDrive desktop folder with fallback."""
+    if ENVIRONMENT is not None:
+        try:
+            return ENVIRONMENT.ONE_DRIVE_DESKTOP_FOLDER
+        except:
+            print(traceback.format_exc())
+            pass
+    return None
+
+def get_error_log_google_form_submit():
+    """Safely get error log Google form URL with fallback."""
+    if ENVIRONMENT is not None:
+        try:
+            return ENVIRONMENT.ERROR_LOG_GOOGLE_FORM_SUBMIT
+        except:
+            print(traceback.format_exc())
+            pass
+    return None
+
+def get_usage_log_google_form_submit():
+    """Safely get usage log Google form URL with fallback."""
+    if ENVIRONMENT is not None:
+        try:
+            return ENVIRONMENT.USAGE_LOG_GOOGLE_FORM_SUBMIT
+        except:
+            print(traceback.format_exc())
+            pass
+    return None
+
+def get_app_name():
+    """Safely get app name with fallback."""
+    if ENVIRONMENT is not None:
+        try:
+            return ENVIRONMENT.get_app_name()
+        except:
+            print(traceback.format_exc())
+            pass
+    return "unknown"  # Default fallback
+
+def is_revit_environment():
+    """Safely check if in Revit environment."""
+    if ENVIRONMENT is not None:
+        try:
+            return ENVIRONMENT.IS_REVIT_ENVIRONMENT
+        except:
+            print(traceback.format_exc())
+            pass
+    return False
+####################################################################################################
+
+
+
 def _ensure_recursion_depth_is_int():
     """Ensure _error_handler_recursion_depth is an integer, reset to 0 if not."""
     global _error_handler_recursion_depth
@@ -217,7 +308,10 @@ def try_catch_error(is_silent=False, is_pass = False):
                         error = error_msg
                         print(new_e)
 
-                subject_line = ENVIRONMENT.PLUGIN_NAME + " Auto Error Log"
+                # Safely get plugin name with fallback
+                plugin_name = get_plugin_name()
+                
+                subject_line = plugin_name + " Auto Error Log"
                 if is_silent:
                     subject_line += "(Silent)"
                 try:
@@ -234,42 +328,12 @@ def try_catch_error(is_silent=False, is_pass = False):
                     try:
                         error_file = FOLDER.get_local_dump_folder_file("error_general_log.txt")
                         
-                        # Add specific debugging information for template file errors
-                        if "Input template file is invalid" in error_msg or "template" in error_msg.lower():
-                            error += "\n\n=== TEMPLATE FILE DEBUGGING INFO ==="
-                            try:
-                                # Import modules safely
-                                try:
-                                    import SAMPLE_FILE
-                                    import ENVIRONMENT
-                                    
-                                    error += "\nDOCUMENT_FOLDER: {}".format(ENVIRONMENT.DOCUMENT_FOLDER)
-                                    error += "\nApp name: {}".format(ENVIRONMENT.get_app_name())
-                                    
-                                    if ENVIRONMENT.get_app_name() == "revit":
-                                        try:
-                                            from REVIT import REVIT_APPLICATION
-                                            error += "\nRevit version: {}".format(REVIT_APPLICATION.get_revit_version())
-                                        except:
-                                            error += "\nCould not get Revit version"
-                                    
-                                    # Test template file resolution
-                                    test_files = ["RhinoImportBaseFamily_ft.rfa", "RhinoImportBaseFamily_mm.rfa"]
-                                    for test_file in test_files:
-                                        result = SAMPLE_FILE.get_file(test_file)
-                                        error += "\n{}: {}".format(test_file, "Found" if result else "Not found")
-                                        if result:
-                                            error += " at {}".format(result)
-                                except Exception as import_error:
-                                    error += "\nFailed to import modules: {}".format(str(import_error))
-                            except Exception as debug_e:
-                                error += "\nDebug info collection failed: {}".format(str(debug_e))
-                        
-                        error += "\n\n######If you have " + ENVIRONMENT.PLUGIN_NAME + " UI window open, just close the original " + ENVIRONMENT.PLUGIN_NAME + " window. Do no more action, otherwise the program might crash.##########\n#########Not sure what to do? Msg Sen Zhang, you have dicovered a important bug and we need to fix it ASAP!!!!!########BTW, a local copy of the error is available at {}".format(error_file)
+              
+                        error += "\n\n######If you have " + plugin_name + " UI window open, just close the original " + plugin_name + " window. Do no more action, otherwise the program might crash.##########\n#########Not sure what to do? Msg Sen Zhang, you have dicovered a important bug and we need to fix it ASAP!!!!!########BTW, a local copy of the error is available at {}".format(error_file)
                     except Exception as path_error:
                         # Fallback if FOLDER is not available
                         error_file = "error_general_log.txt"
-                        error += "\n\n######If you have " + ENVIRONMENT.PLUGIN_NAME + " UI window open, just close the original " + ENVIRONMENT.PLUGIN_NAME + " window. Do no more action, otherwise the program might crash.##########\n#########Not sure what to do? Msg Sen Zhang, you have dicovered a important bug and we need to fix it ASAP!!!!!########BTW, a local copy of the error is available at {}".format(error_file)
+                        error += "\n\n######If you have " + plugin_name + " UI window open, just close the original " + plugin_name + " window. Do no more action, otherwise the program might crash.##########\n#########Not sure what to do? Msg Sen Zhang, you have dicovered a important bug and we need to fix it ASAP!!!!!########BTW, a local copy of the error is available at {}".format(error_file)
                     try:
                         import io
                         with io.open(error_file, "w", encoding="utf-8") as f:
@@ -284,9 +348,9 @@ def try_catch_error(is_silent=False, is_pass = False):
                         output.insert_divider()
                         output.plot()
 
-                if ENVIRONMENT.IS_REVIT_ENVIRONMENT and not is_silent:
+                if is_revit_environment() and not is_silent and NOTIFICATION is not None:
                     NOTIFICATION.messenger(
-                        "!Critical Warning, close all Revit UI window from " + ENVIRONMENT.PLUGIN_NAME + " and reach to Sen Zhang.")
+                        "!Critical Warning, close all Revit UI window from " + plugin_name + " and reach to Sen Zhang.")
                 
                 # Make sure to decrement the counter even in case of exception
                 _safe_decrement_recursion_depth()
@@ -344,7 +408,10 @@ def _try_urllib3_implementation(error, func_name, user_name):
         import time
         
         # Google Form URL
-        g_form_url = ENVIRONMENT.ERROR_LOG_GOOGLE_FORM_SUBMIT
+        g_form_url = get_error_log_google_form_submit()
+        if g_form_url is None:
+            print_note("ENVIRONMENT not available, skipping Google Form submission")
+            return False
         
         # Build form data using common helper function
         form_data = _build_error_form_data(error, func_name, user_name)
@@ -405,7 +472,10 @@ def _try_urllib2_implementation(error, func_name, user_name):
         import time
         
         # Google Form URL
-        g_form_url = ENVIRONMENT.ERROR_LOG_GOOGLE_FORM_SUBMIT
+        g_form_url = get_error_log_google_form_submit()
+        if g_form_url is None:
+            print_note("ENVIRONMENT not available, skipping Google Form submission")
+            return False
         
         # Build form data using common helper function
         form_data = _build_error_form_data(error, func_name, user_name)
@@ -468,7 +538,10 @@ def _try_urllib_request_implementation(error, func_name, user_name):
         import time
         
         # Google Form URL
-        g_form_url = ENVIRONMENT.ERROR_LOG_GOOGLE_FORM_SUBMIT
+        g_form_url = get_error_log_google_form_submit()
+        if g_form_url is None:
+            print_note("ENVIRONMENT not available, skipping Google Form submission")
+            return False
         
         # Build form data using common helper function
         form_data = _build_error_form_data(error, func_name, user_name)

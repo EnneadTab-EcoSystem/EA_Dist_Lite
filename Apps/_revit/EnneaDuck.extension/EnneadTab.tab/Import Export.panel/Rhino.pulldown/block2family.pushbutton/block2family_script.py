@@ -32,12 +32,13 @@ from pyrevit import script, forms # pyright: ignore
 
 from EnneadTab import ERROR_HANDLE, FOLDER, DATA_FILE, NOTIFICATION, LOG, ENVIRONMENT, UI, SAMPLE_FILE
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FAMILY, REVIT_UNIT
+from EnneadTab.REVIT import REVIT_APPLICATION
+from EnneadTab import ENVIRONMENT
 from Autodesk.Revit import DB # pyright: ignore 
 from Autodesk.Revit import ApplicationServices # pyright: ignore 
 # from Autodesk.Revit import UI # pyright: ignore
 # uidoc = EnneadTab.REVIT.REVIT_APPLICATION.get_uidoc()
 doc = REVIT_APPLICATION.get_doc()
-
 
 # from EnneadTab.REVIT import REVIT_APPLICATION
 from Autodesk.Revit import DB # pyright: ignore 
@@ -49,6 +50,7 @@ KEY_PREFIX = "BLOCKS2FAMILY"
 
 def get_block_name_from_data_file(data_file):
     return data_file.replace(ENVIRONMENT.PLUGIN_EXTENSION, "").replace(KEY_PREFIX + "_", "")
+
 
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
@@ -136,12 +138,12 @@ def load_family(file):
     # Get template file with better error handling
     template_filename = "RhinoImportBaseFamily_{}.rfa".format(template_unit)
     template = SAMPLE_FILE.get_file(template_filename)
+    template = SAMPLE_FILE.family_as_template(template)
     
     if not template:
         # Try to find the template file manually with debugging
         import os
-        from EnneadTab import ENVIRONMENT
-        from EnneadTab.REVIT import REVIT_APPLICATION
+
         
         revit_version = REVIT_APPLICATION.get_revit_version()
         print("Debug: Revit version detected: {}".format(revit_version))
@@ -169,7 +171,7 @@ def load_family(file):
     # Create family document from template
     try:
         # Try to open the template file first to validate it
-        print("Attempting to create family document from template: {}".format(template))
+        # print("Attempting to create family document from template: {}".format(template))
         
         # Check if template file exists and is readable
         if not os.path.exists(template):
@@ -180,26 +182,15 @@ def load_family(file):
             
         # Try to create family document
         family_doc = ApplicationServices.Application.NewFamilyDocument(REVIT_APPLICATION.get_app(), template)
-        print("Successfully created family document from template")
+        # print("Successfully created family document from template")
         
     except Exception as e:
         error_msg = "Failed to create family document from template '{}': {}".format(template, str(e))
         NOTIFICATION.messenger(error_msg)
         print(error_msg)
         
-        # Try alternative approach - use GM_Blank.rfa as fallback
-        try:
-            print("Attempting fallback to GM_Blank.rfa template...")
-            fallback_template = SAMPLE_FILE.get_file("GM_Blank.rfa")
-            if fallback_template and os.path.exists(fallback_template):
-                family_doc = ApplicationServices.Application.NewFamilyDocument(REVIT_APPLICATION.get_app(), fallback_template)
-                print("Successfully created family document using fallback template")
-            else:
-                print("Fallback template not found")
-                return
-        except Exception as fallback_error:
-            print("Fallback template also failed: {}".format(str(fallback_error)))
-            return
+        
+        return
 
 
     block_name = get_block_name_from_data_file(file)
@@ -227,6 +218,7 @@ def load_family(file):
     # load to project
     option = DB.SaveAsOptions()
     option.OverwriteExistingFile = True
+
     family_container_folder = ENVIRONMENT.ONE_DRIVE_DESKTOP_FOLDER + "\\{} Temp Family Folder".format(ENVIRONMENT.PLUGIN_NAME)
     if not os.path.exists(family_container_folder):
         os.makedirs(family_container_folder)

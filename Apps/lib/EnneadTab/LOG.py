@@ -132,6 +132,9 @@ def log(script_path, func_name_as_record):
     def decorator(func):
         def wrapper(*args, **kwargs):
             try:
+                # Get environment name before entering the context manager
+                app_name = ERROR_HANDLE.get_app_name()
+                
                 with DATA_FILE.update_data(LOG_FILE_NAME) as data:
                     t_start = time.time()
                     out = func(*args, **kwargs)
@@ -139,7 +142,7 @@ def log(script_path, func_name_as_record):
                     if not data:
                         data = dict()
                     data[TIME.get_formatted_current_time()] = {
-                        "application": ENVIRONMENT.get_app_name(),
+                        "application": app_name,
                         "function_name": func_name_as_record.replace("\n", " "),
                         "arguments": args,
                         "result": str(out),
@@ -151,7 +154,7 @@ def log(script_path, func_name_as_record):
 
                 # Send usage data to Google Form
                 try:
-                    environment = ENVIRONMENT.get_app_name()
+                    environment = app_name
                     function_name = func_name_as_record.replace("\n", " ")
                     result = str(out)
                     send_usage_to_google_form(environment, function_name, result)
@@ -235,7 +238,10 @@ def _try_urllib3_usage_implementation(environment, function_name, result):
         import urllib3
         
         # Google Form URL
-        g_form_url = ENVIRONMENT.USAGE_LOG_GOOGLE_FORM_SUBMIT
+        g_form_url = ERROR_HANDLE.get_usage_log_google_form_submit()
+        if g_form_url is None:
+            ERROR_HANDLE.print_note("ENVIRONMENT not available, skipping Google Form submission")
+            return False
         
         # Build form data using common helper function
         form_data = _build_usage_form_data(environment, function_name, result)
@@ -295,7 +301,10 @@ def _try_urllib2_usage_implementation(environment, function_name, result):
         import urllib
         
         # Google Form URL
-        g_form_url = ENVIRONMENT.USAGE_LOG_GOOGLE_FORM_SUBMIT
+        g_form_url = ERROR_HANDLE.get_usage_log_google_form_submit()
+        if g_form_url is None:
+            ERROR_HANDLE.print_note("ENVIRONMENT not available, skipping Google Form submission")
+            return False
         
         # Build form data using common helper function
         form_data = _build_usage_form_data(environment, function_name, result)
@@ -357,7 +366,10 @@ def _try_urllib_request_usage_implementation(environment, function_name, result)
         import urllib.parse
         
         # Google Form URL
-        g_form_url = ENVIRONMENT.USAGE_LOG_GOOGLE_FORM_SUBMIT
+        g_form_url = ERROR_HANDLE.get_usage_log_google_form_submit()
+        if g_form_url is None:
+            ERROR_HANDLE.print_note("ENVIRONMENT not available, skipping Google Form submission")
+            return False
         
         # Build form data using common helper function
         form_data = _build_usage_form_data(environment, function_name, result)

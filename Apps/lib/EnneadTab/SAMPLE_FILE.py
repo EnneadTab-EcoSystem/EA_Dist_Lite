@@ -4,6 +4,7 @@ Good the sharing template"""
 import os
 import ENVIRONMENT
 import NOTIFICATION
+import FOLDER
 
 def get_file(file_name):
     """Get the full path of a sample file.
@@ -57,6 +58,19 @@ def get_file(file_name):
     
     return None
 
+
+
+def family_as_template(file_path):
+    
+    folder = os.path.dirname(file_path)
+    file_name = os.path.basename(file_path)
+    new_file_name = file_name.replace(".rfa", ".rft")
+    new_file_path = os.path.join(folder, new_file_name)
+    FOLDER.copy_file_to_local_dump_folder(file_path, new_file_path)
+    return new_file_path
+
+
+    
 
 if __name__ == "__main__":
     print (get_file("LifeSafetyCalculator.rfa"))
