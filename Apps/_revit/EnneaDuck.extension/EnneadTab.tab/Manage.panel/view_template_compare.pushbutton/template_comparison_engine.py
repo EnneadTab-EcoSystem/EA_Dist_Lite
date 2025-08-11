@@ -34,32 +34,32 @@ class TemplateComparisonEngine:
         Returns:
             dict: All differences found, organized by type
         """
-        differences = {
-            'category_overrides': {},
-            'category_visibility': {},
-            'workset_visibility': {},
-            'view_parameters': {},
-            'uncontrolled_parameters': {},
-            'filters': {},
-            'import_categories': {},
-            'revit_links': {},
-            'detail_levels': {},
-            'view_properties': {}
+        template_differences = {
+            'category_graphic_overrides': {},      # Category line, pattern, color overrides
+            'category_visibility_settings': {},    # Category show/hide settings
+            'workset_visibility_settings': {},     # Workset show/hide settings
+            'template_controlled_parameters': {},  # Parameters controlled by template
+            'dangerous_uncontrolled_parameters': {}, # Parameters not controlled (can cause inconsistencies)
+            'filter_settings': {},                 # Filter enable, visibility, and graphic overrides
+            'import_category_overrides': {},       # Import category graphic overrides
+            'revit_link_overrides': {},           # Revit link visibility and graphic overrides
+            'category_detail_levels': {},         # Per-category detail level settings
+            'view_behavior_properties': {}        # Core view properties (discipline, detail level, etc.)
         }
         
-        # Compare category overrides
-        differences['category_overrides'] = self._compare_dict_values('category_overrides', template_names)
+        # Compare category graphic overrides (lines, patterns, colors)
+        template_differences['category_graphic_overrides'] = self._compare_dict_values('category_overrides', template_names)
         
-        # Compare category visibility
-        differences['category_visibility'] = self._compare_dict_values('category_visibility', template_names)
+        # Compare category visibility settings (show/hide)
+        template_differences['category_visibility_settings'] = self._compare_dict_values('category_visibility', template_names)
         
-        # Compare workset visibility
-        differences['workset_visibility'] = self._compare_dict_values('workset_visibility', template_names)
+        # Compare workset visibility settings (show/hide)
+        template_differences['workset_visibility_settings'] = self._compare_dict_values('workset_visibility', template_names)
         
-        # Compare view parameters (controlled) - now includes values
-        differences['view_parameters'] = self._compare_parameter_values('view_parameters', template_names)
+        # Compare template-controlled parameters (with values)
+        template_differences['template_controlled_parameters'] = self._compare_parameter_values('view_parameters', template_names)
         
-        # Compare uncontrolled parameters (DANGEROUS - can cause inconsistencies)
+        # Compare dangerous uncontrolled parameters (can cause inconsistencies)
         # Based on Revit API: GetNonControlledTemplateParameterIds() returns parameters 
         # that are NOT marked as included when the view is used as a template
         # These can cause inconsistent behavior across views using the same template
@@ -73,24 +73,24 @@ class TemplateComparisonEngine:
                 param_values[template_name] = param in self.comparison_data[template_name]['uncontrolled_parameters']
                     
             if len(set(param_values.values())) > 1:
-                differences['uncontrolled_parameters'][param] = param_values
+                template_differences['dangerous_uncontrolled_parameters'][param] = param_values
         
-        # Compare filters
-        differences['filters'] = self._compare_dict_values('filters', template_names)
+        # Compare filter settings (enable, visibility, graphic overrides)
+        template_differences['filter_settings'] = self._compare_filter_data('filters', template_names)
         
-        # Compare import categories
-        differences['import_categories'] = self._compare_dict_values('import_categories', template_names)
+        # Compare import category overrides
+        template_differences['import_category_overrides'] = self._compare_dict_values('import_categories', template_names)
         
-        # Compare Revit links
-        differences['revit_links'] = self._compare_dict_values('revit_links', template_names)
+        # Compare Revit link overrides
+        template_differences['revit_link_overrides'] = self._compare_dict_values('revit_links', template_names)
         
-        # Compare detail levels
-        differences['detail_levels'] = self._compare_dict_values('detail_levels', template_names)
+        # Compare category detail level settings
+        template_differences['category_detail_levels'] = self._compare_dict_values('detail_levels', template_names)
         
-        # Compare view properties
-        differences['view_properties'] = self._compare_dict_values('view_properties', template_names)
+        # Compare view behavior properties (discipline, detail level, etc.)
+        template_differences['view_behavior_properties'] = self._compare_dict_values('view_properties', template_names)
         
-        return differences
+        return template_differences
     
     def _compare_dict_values(self, data_key, template_names):
         """
@@ -143,6 +143,7 @@ class TemplateComparisonEngine:
         - If parameter is controlled in both templates, compares the values
         - If parameter is controlled in one but not the other, shows "Controlled" vs "Not Controlled"
         - If parameter values differ between controlled templates, shows the actual values
+        - Excludes "Workset" parameter as it's not relevant for template comparison
         
         Args:
             data_key: Key in comparison_data to compare (should be 'view_parameters')
@@ -166,6 +167,10 @@ class TemplateComparisonEngine:
         
         # Compare each parameter across templates
         for param_name in all_params:
+            # Skip the "Workset" parameter as it's not relevant for template comparison
+            if param_name.lower() == "workset":
+                continue
+                
             param_data = {}
             
             for template_name in template_names:
@@ -225,6 +230,82 @@ class TemplateComparisonEngine:
         
         return differences
     
+    def _compare_filter_data(self, data_key, template_names):
+        """
+        Compare filter data across templates with enhanced structure.
+        
+        Compares:
+        - Filter enable status (enabled/disabled)
+        - Filter visibility status (visible/hidden)
+        - Graphic override settings
+        
+        Args:
+            data_key: Key in comparison_data to compare
+            template_names: List of template names
+            
+        Returns:
+            dict: Filter differences found
+        """
+        differences = {}
+        
+        # Collect all filter names from all templates
+        all_filters = set()
+        for template_name, data in self.comparison_data.items():
+            if data_key in data:
+                all_filters.update(data[data_key].keys())
+        
+        # Compare each filter across templates
+        for filter_name in all_filters:
+            filter_values = {}
+            for template_name in template_names:
+                template_data = self.comparison_data[template_name]
+                if data_key in template_data and filter_name in template_data[data_key]:
+                    filter_values[template_name] = template_data[data_key][filter_name]
+                else:
+                    filter_values[template_name] = None
+            
+            # Check if filter data is different across templates
+            if self._has_filter_differences(filter_values):
+                differences[filter_name] = filter_values
+        
+        return differences
+    
+    def _has_filter_differences(self, filter_values):
+        """
+        Check if filter values are different across templates.
+        
+        Args:
+            filter_values: Dictionary of filter data per template
+            
+        Returns:
+            bool: True if differences found, False if all the same
+        """
+        values = list(filter_values.values())
+        if not values:
+            return False
+        
+        # Remove None values for comparison
+        non_none_values = [v for v in values if v is not None]
+        if len(non_none_values) <= 1:
+            return len(values) != len(non_none_values)  # True if some templates don't have this filter
+        
+        # Compare enable status
+        first_enabled = non_none_values[0].get('enabled', False)
+        if not all(v.get('enabled', False) == first_enabled for v in non_none_values):
+            return True
+        
+        # Compare visibility status
+        first_visible = non_none_values[0].get('visible', False)
+        if not all(v.get('visible', False) == first_visible for v in non_none_values):
+            return True
+        
+        # Compare graphic overrides
+        first_overrides = non_none_values[0].get('graphic_overrides', {})
+        if not all(v.get('graphic_overrides', {}) == first_overrides for v in non_none_values):
+            return True
+        
+        return False
+    
     def _has_differences(self, values_dict):
         """
         Check if values in a dictionary are different.
@@ -279,16 +360,16 @@ class TemplateComparisonEngine:
         
         return {
             'total_differences': total_differences,
-            'category_overrides': len(differences['category_overrides']),
-            'category_visibility': len(differences['category_visibility']),
-            'workset_visibility': len(differences['workset_visibility']),
-            'view_parameters': len(differences['view_parameters']),
-            'uncontrolled_parameters': len(differences['uncontrolled_parameters']),
-            'filters': len(differences['filters']),
-            'import_categories': len(differences['import_categories']),
-            'revit_links': len(differences['revit_links']),
-            'detail_levels': len(differences['detail_levels']),
-            'view_properties': len(differences['view_properties']),
+            'category_graphic_overrides': len(differences['category_graphic_overrides']),
+            'category_visibility_settings': len(differences['category_visibility_settings']),
+            'workset_visibility_settings': len(differences['workset_visibility_settings']),
+            'template_controlled_parameters': len(differences['template_controlled_parameters']),
+            'dangerous_uncontrolled_parameters': len(differences['dangerous_uncontrolled_parameters']),
+            'filter_settings': len(differences['filter_settings']),
+            'import_category_overrides': len(differences['import_category_overrides']),
+            'revit_link_overrides': len(differences['revit_link_overrides']),
+            'category_detail_levels': len(differences['category_detail_levels']),
+            'view_behavior_properties': len(differences['view_behavior_properties']),
             'category_visibility_breakdown': category_visibility_breakdown
         } 
     

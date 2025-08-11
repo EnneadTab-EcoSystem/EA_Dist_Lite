@@ -486,6 +486,159 @@ class TemplateDataCollector:
             ERROR_HANDLE.print_note("Error converting discipline to text: {}".format(str(e)))
             return "Unknown"
     
+    def _convert_color_scheme_location_to_text(self, location_value):
+        """
+        Convert Color Scheme Location value to readable text.
+        
+        Args:
+            location_value: Integer value (0 or 1)
+            
+        Returns:
+            str: Readable location text
+        """
+        try:
+            if location_value == 0:
+                return "Foreground"
+            elif location_value == 1:
+                return "Background"
+            else:
+                return "Unknown ({})".format(location_value)
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error converting color scheme location to text: {}".format(str(e)))
+            return "Error: {}".format(location_value)
+    
+    def _convert_display_model_to_text(self, display_value):
+        """
+        Convert Display Model value to readable text.
+        
+        Args:
+            display_value: Integer value (0, 1, or 2)
+            
+        Returns:
+            str: Readable display model text
+        """
+        try:
+            if display_value == 0:
+                return "Normal"
+            elif display_value == 1:
+                return "Halftone"
+            elif display_value == 2:
+                return "Do not display"
+            else:
+                return "Unknown ({})".format(display_value)
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error converting display model to text: {}".format(str(e)))
+            return "Error: {}".format(display_value)
+    
+    
+    def _convert_far_clipping_to_text(self, clipping_value):
+        """
+        Convert Far Clipping value to readable text.
+        
+        Args:
+            clipping_value: Integer value
+            
+        Returns:
+            str: Readable far clipping text
+        """
+        try:
+            if clipping_value == 0:
+                return "No Clipping"
+            elif clipping_value == 1:
+                return "Clip With Lines"
+            elif clipping_value == 2:
+                return "Clip Without Lines"
+            else:
+                return "Unknown ({})".format(clipping_value)
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error converting far clipping to text: {}".format(str(e)))
+            return "Error: {}".format(clipping_value)
+    
+    def _convert_show_hidden_lines_to_text(self, hidden_lines_value):
+        """
+        Convert Show Hidden Lines value to readable text.
+        
+        Args:
+            hidden_lines_value: Integer value (0 or 1)
+            
+        Returns:
+            str: Readable hidden lines text
+        """
+        try:
+            if hidden_lines_value == 0:
+                return "Hide"
+            elif hidden_lines_value == 1:
+                return "Show"
+            else:
+                return "Unknown ({})".format(hidden_lines_value)
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error converting show hidden lines to text: {}".format(str(e)))
+            return "Error: {}".format(hidden_lines_value)
+    
+    def _convert_sun_path_to_text(self, sun_path_value):
+        """
+        Convert Sun Path value to readable text.
+        
+        Args:
+            sun_path_value: Integer value (0 or 1)
+            
+        Returns:
+            str: Readable sun path text
+        """
+        return sun_path_value
+    
+    def _convert_parts_visibility_to_text(self, parts_visibility_value):
+        """
+        Convert Parts Visibility value to readable text.
+        
+        Args:
+            parts_visibility_value: Integer value (0, 1, or 2)
+            
+        Returns:
+            str: Readable parts visibility text
+        """
+        try:
+            if parts_visibility_value == 0:
+                return "Show Parts"
+            elif parts_visibility_value == 1:
+                return "Show Original"
+            elif parts_visibility_value == 2:
+                return "Show Both" 
+            else:
+                return "Unknown ({})".format(parts_visibility_value)
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error converting parts visibility to text: {}".format(str(e)))
+            return "Error: {}".format(parts_visibility_value)
+    
+    def _convert_model_display_to_text(self, model_display_value):
+        """
+        Convert Model Display (Visual Style) value to readable text.
+        
+        Args:
+            model_display_value: Integer value (0, 1, 2, 3, 4, or 5)
+            
+        Returns:
+            str: Readable model display text
+        """
+        try:
+            if model_display_value == 0:
+                return "Wireframe"
+            elif model_display_value == 1:
+                return "Hidden Line"
+            elif model_display_value == 2:
+                return "Shaded"
+            elif model_display_value == 3:
+                return "Consistent Colors"
+            elif model_display_value == 4:
+                return "Textures"
+            elif model_display_value == 5:
+                return "Realistic"
+            else:
+                return "Unknown ({})".format(model_display_value)
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error converting model display to text: {}".format(str(e)))
+            return "Error: {}".format(model_display_value)
+    
     def get_category_visibility(self, template):
         """
         Get category visibility settings from template.
@@ -691,118 +844,195 @@ class TemplateDataCollector:
     
     def _get_parameter_value_as_string(self, param):
         """
-        Get parameter value as a readable string.
+        Get parameter value as a readable string with enhanced conversion logic.
+        
+        This method handles different parameter types and applies special conversions
+        for known parameter types like Detail Level, Discipline, Color Scheme Location, etc.
         
         Args:
             param: The parameter object
             
         Returns:
-            str: Parameter value as string
+            str: Parameter value as readable string
         """
+        # Early validation
+        if not param:
+            return "N/A"
+        if not param.HasValue:
+            return "Parameter No Value"
+        
         try:
-            if not param or not param.HasValue:
-                return "N/A"
-                
             storage_type = param.StorageType
             
-            # Handle String parameters
+            # Use strategy pattern for different storage types
             if storage_type == DB.StorageType.String:
-                try:
-                    value = param.AsString()
-                    return value if value else "Empty String"
-                except:
-                    return "Error: String conversion failed"
-            
-            # Handle Integer parameters
+                return self._convert_string_parameter(param)
             elif storage_type == DB.StorageType.Integer:
-                try:
-                    int_value = param.AsInteger()
-                    
-                    # Check if it's a YesNo parameter
-                    try:
-                        if hasattr(param, 'Definition') and param.Definition and hasattr(param.Definition, 'ParameterType'):
-                            if param.Definition.ParameterType == DB.ParameterType.YesNo:
-                                return "Yes" if int_value == 1 else "No"
-                    except:
-                        pass
-                    
-                    # Check if it's a Detail Level parameter
-                    try:
-                        if hasattr(param, 'Definition') and param.Definition and hasattr(param.Definition, 'Name'):
-                            param_name = param.Definition.Name
-                            if param_name and "Detail Level" in param_name:
-                                # Convert detail level enum to text
-                                return self._convert_detail_level_to_text(int_value)
-                    except:
-                        pass
-                    
-                    # Check if it's a Discipline parameter
-                    try:
-                        if hasattr(param, 'Definition') and param.Definition and hasattr(param.Definition, 'Name'):
-                            param_name = param.Definition.Name
-                            if param_name and "Discipline" in param_name:
-                                # Convert discipline enum to text
-                                return self._convert_discipline_to_text(int_value)
-                    except:
-                        pass
-                    
-                    return str(int_value)
-                except:
-                    return "Error: Integer conversion failed"
-            
-            # Handle Double parameters
+                return self._convert_integer_parameter(param)
             elif storage_type == DB.StorageType.Double:
-                try:
-                    double_value = param.AsDouble()
-                    return str(round(double_value, 4))
-                except:
-                    return "Error: Double conversion failed"
-            
-            # Handle ElementId parameters
+                return self._convert_double_parameter(param)
             elif storage_type == DB.StorageType.ElementId:
-                try:
-                    element_id = param.AsElementId()
-                    if element_id and element_id.IntegerValue != -1:
-                        try:
-                            element = self.doc.GetElement(element_id)
-                            if element and hasattr(element, 'Name'):
-                                return element.Name
-                            else:
-                                return str(element_id.IntegerValue)
-                        except:
-                            return str(element_id.IntegerValue)
-                    else:
-                        return "None"
-                except:
-                    return "Error: ElementId conversion failed"
-            
-            # Handle other types with fallback
+                return self._convert_elementid_parameter(param)
             else:
-                try:
-                    # Try AsValueString first
-                    value_string = param.AsValueString()
-                    if value_string:
-                        return value_string
-                    
-                    # Fallback to AsString
-                    string_value = param.AsString()
-                    if string_value:
-                        return string_value
-                    
-                    return "Unknown Type"
-                except:
-                    return "Error: Value conversion failed"
-                    
+                return self._convert_unknown_parameter(param)
+                
         except Exception as e:
-            error_msg = str(e)
-            if "InternalDefinition" in error_msg and "Para" in error_msg:
-                return "Not Present"  # More user-friendly message
-            else:
-                return "Error: {}".format(error_msg[:50])
+            return self._handle_parameter_error(e)
+    
+    def _convert_string_parameter(self, param):
+        """Convert string parameter to readable text."""
+        try:
+            value = param.AsString()
+            return value if value else "Empty String"
+        except Exception as e:
+            return "Error: String conversion failed - {}".format(str(e)[:30])
+    
+    def _convert_double_parameter(self, param):
+        """Convert double parameter to readable text."""
+        try:
+            double_value = param.AsDouble()
+            return str(round(double_value, 4))
+        except Exception as e:
+            return "Error: Double conversion failed - {}".format(str(e)[:30])
+    
+    def _convert_elementid_parameter(self, param):
+        """Convert ElementId parameter to readable text."""
+        try:
+            element_id = param.AsElementId()
+            if not element_id or element_id.IntegerValue == -1:
+                return "None"
+            
+            try:
+                element = self.doc.GetElement(element_id)
+                if element and hasattr(element, 'Name'):
+                    return element.Name
+                else:
+                    return str(element_id.IntegerValue)
+            except Exception:
+                return str(element_id.IntegerValue)
+        except Exception as e:
+            return "Error: ElementId conversion failed - {}".format(str(e)[:30])
+    
+    def _convert_integer_parameter(self, param):
+        """Convert integer parameter to readable text with special handling."""
+        try:
+            int_value = param.AsInteger()
+            param_name = self._get_parameter_name(param)
+            
+            # Apply special conversions based on parameter type and name
+            converted_value = self._apply_special_integer_conversions(param, int_value, param_name)
+            if converted_value:
+                return converted_value
+            
+            # Debug logging for troubleshooting
+            self._log_debug_parameter_info(param_name, int_value, param.StorageType)
+            
+            return str(int_value)
+            
+        except Exception as e:
+            return "Error: Integer conversion failed - {}".format(str(e)[:30])
+    
+    def _apply_special_integer_conversions(self, param, int_value, param_name):
+        """Apply special conversions for known parameter types."""
+        if not param_name:
+            return None
+        
+        param_name_lower = param_name.lower()
+        
+        # Check parameter type first (more reliable)
+        try:
+            if (hasattr(param, 'Definition') and param.Definition and 
+                hasattr(param.Definition, 'ParameterType')):
+                
+                if param.Definition.ParameterType == DB.ParameterType.YesNo:
+                    return "Yes" if int_value == 1 else "No"
+        except Exception:
+            pass
+        
+        # Check parameter name for special conversions
+        conversion_map = {
+            'detail level': self._convert_detail_level_to_text,
+            'discipline': self._convert_discipline_to_text,
+            'color scheme location': self._convert_color_scheme_location_to_text,
+            'display model': self._convert_display_model_to_text,
+            'model display': self._convert_model_display_to_text,
+            'far clipping': self._convert_far_clipping_to_text,
+            'show hidden lines': self._convert_show_hidden_lines_to_text,
+            'sun path': self._convert_sun_path_to_text,
+            'parts visibility': self._convert_parts_visibility_to_text
+        }
+        
+        for keyword, conversion_func in conversion_map.items():
+            if keyword in param_name_lower:
+                try:
+                    return conversion_func(int_value)
+                except Exception as e:
+                    ERROR_HANDLE.print_note("Error converting {} parameter '{}': {}".format(
+                        keyword, param_name, str(e)
+                    ))
+                    return "Error: {} conversion failed".format(keyword.title())
+        
+        return None
+    
+    def _get_parameter_name(self, param):
+        """Safely get parameter name."""
+        try:
+            if (hasattr(param, 'Definition') and param.Definition and 
+                hasattr(param.Definition, 'Name')):
+                return param.Definition.Name
+        except Exception:
+            pass
+        return None
+    
+    def _log_debug_parameter_info(self, param_name, value, storage_type):
+        """Log debug information for troubleshooting."""
+        if not param_name:
+            return
+            
+        # Only log parameters that might need special handling
+        debug_keywords = ['detail', 'discipline', 'color', 'scheme', 'location', 'display', 'model', 'far', 'clipping', 'hidden', 'lines', 'sun', 'path', 'parts', 'visibility']
+        if any(keyword in param_name.lower() for keyword in debug_keywords):
+            ERROR_HANDLE.print_note("DEBUG: Found parameter '{}' with value {} (type: {})".format(
+                param_name, value, storage_type
+            ))
+    
+    def _convert_unknown_parameter(self, param):
+        """Convert unknown parameter types using fallback methods."""
+        try:
+            # Try AsValueString first (most reliable for unknown types)
+            value_string = param.AsValueString()
+            if value_string:
+                return value_string
+            
+            # Fallback to AsString
+            string_value = param.AsString()
+            if string_value:
+                return string_value
+            
+            return "Unknown Type"
+        except Exception as e:
+            return "Error: Unknown type conversion failed - {}".format(str(e)[:30])
+    
+    def _handle_parameter_error(self, exception):
+        """Handle parameter conversion errors with user-friendly messages."""
+        error_msg = str(exception)
+        
+        # Check for specific error types
+        if "InternalDefinition" in error_msg and "Para" in error_msg:
+            return "Not Present"
+        elif "Parameter" in error_msg and "not found" in error_msg.lower():
+            return "Parameter Not Found"
+        else:
+            return "Error: {}".format(error_msg[:50])
     
     def get_filter_data(self, template):
         """
-        Get filter usage and graphic override data.
+        Get filter usage, visibility, enable status, and graphic override data.
+        
+        Enhanced to capture:
+        - Filter enable status (Enable Filter checkbox)
+        - Filter visibility status (Visibility checkbox)
+        - Graphic override settings (Lines, Patterns, Transparency)
         
         Improved error handling:
         - Uses ERROR_HANDLE.print_note for detailed error reporting
@@ -814,7 +1044,7 @@ class TemplateDataCollector:
             template: The view template to analyze
             
         Returns:
-            dict: Filter data with override settings
+            dict: Filter data with enable, visibility, and override settings
         """
         filters = {}
         skipped_filters = []
@@ -832,8 +1062,24 @@ class TemplateDataCollector:
                 try:
                     filter_element = self.doc.GetElement(filter_id)
                     if filter_element:
+                        # Get filter enable status
+                        is_enabled = template.GetIsFilterEnabled(filter_id)
+                        
+                        # Get filter visibility status
+                        is_visible = template.GetFilterVisibility(filter_id)
+                        
+                        # Get graphic override settings
                         override = template.GetFilterOverrides(filter_id)
-                        filters[filter_element.Name] = self._extract_override_details(override)
+                        override_details = self._extract_override_details(override)
+                        
+                        # Combine all filter data
+                        filter_data = {
+                            'enabled': is_enabled,
+                            'visible': is_visible,
+                            'graphic_overrides': override_details
+                        }
+                        
+                        filters[filter_element.Name] = filter_data
                 except Exception as e:
                     error_msg = "Failed to get filter data for ID {}: {}".format(filter_id, str(e))
                     skipped_filters.append(error_msg)

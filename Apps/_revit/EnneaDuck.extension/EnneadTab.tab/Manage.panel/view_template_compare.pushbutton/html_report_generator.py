@@ -463,6 +463,21 @@ class HTMLReportGenerator:
         html_parts.append("        <div class=\"section\">")
         html_parts.append("            <h2 class=\"toggle\" onclick=\"toggleSection('comprehensive_parameters')\">All View Parameters (Click to expand)</h2>")
         html_parts.append("            <div id=\"comprehensive_parameters\" class=\"collapsible\">")
+        
+        # Identify parameters that commonly return "N/A" for comprehensive section
+        na_parameters_comprehensive = self._identify_na_parameters_comprehensive(comparison_data)
+        
+        html_parts.append("                <div style=\"background-color: #e7f3ff; border: 1px solid #b3d9ff; padding: 10px; margin-bottom: 15px; border-radius: 5px; color: #0066cc;\">")
+        html_parts.append("                    <strong>Note:</strong> Some parameters may show \"N/A\" due to Revit API limitations. These parameters cannot be read programmatically but may still have values in the actual view template.")
+        
+        if na_parameters_comprehensive:
+            html_parts.append("                    <br><br><strong>Parameters showing \"N/A\" in this comparison:</strong><br>")
+            html_parts.append("                    <ul style=\"margin: 5px 0; padding-left: 20px;\">")
+            for param in na_parameters_comprehensive:
+                html_parts.append("                        <li>" + param + "</li>")
+            html_parts.append("                    </ul>")
+        
+        html_parts.append("                </div>")
         html_parts.append("                <table>")
         html_parts.append("                    <tr>")
         html_parts.append("                        <th>Parameter</th>")
@@ -479,6 +494,10 @@ class HTMLReportGenerator:
                 all_parameters.update(data['view_parameters'])
         
         for parameter in sorted(all_parameters):
+            # Skip the "Workset" parameter as it's not relevant for template comparison
+            if parameter.lower() == "workset":
+                continue
+                
             html_parts.append("                    <tr>")
             html_parts.append("                        <td class=\"template-col\">" + parameter + "</td>")
             
@@ -532,6 +551,10 @@ class HTMLReportGenerator:
                 all_uncontrolled.update(data['uncontrolled_parameters'])
         
         for parameter in sorted(all_uncontrolled):
+            # Skip the "Workset" parameter as it's not relevant for template comparison
+            if parameter.lower() == "workset":
+                continue
+                
             html_parts.append("                    <tr>")
             html_parts.append("                        <td class=\"template-col\">" + parameter + "</td>")
             
@@ -586,10 +609,9 @@ class HTMLReportGenerator:
                     
                     if filter_data is None:
                         html_parts.append("                        <td class=\"same\">Not Applied</td>")
-                    elif filter_data == "UNCONTROLLED":
-                        html_parts.append("                        <td style=\"background: linear-gradient(135deg, rgba(255, 165, 2, 0.3) 0%, rgba(255, 165, 2, 0.2) 100%); color: #ffa502; font-weight: bold;\">UNCONTROLLED</td>")
                     else:
-                        summary = self._create_override_summary(filter_data)
+                        # Use the new filter summary method for enhanced data structure
+                        summary = self._create_filter_summary(filter_data)
                         html_parts.append("                        <td class=\"different\" style=\"white-space: pre-line;\">" + summary + "</td>")
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing filter {} in {}: {}".format(filter_name, template_name, str(e)))
@@ -815,16 +837,16 @@ class HTMLReportGenerator:
         """
         # Safely get values with defaults to prevent KeyError
         total_differences = summary_stats.get('total_differences', 0)
-        category_overrides = summary_stats.get('category_overrides', 0)
-        category_visibility = summary_stats.get('category_visibility', 0)
-        workset_visibility = summary_stats.get('workset_visibility', 0)
-        view_parameters = summary_stats.get('view_parameters', 0)
-        uncontrolled_parameters = summary_stats.get('uncontrolled_parameters', 0)
-        filters = summary_stats.get('filters', 0)
-        import_categories = summary_stats.get('import_categories', 0)
-        revit_links = summary_stats.get('revit_links', 0)
-        detail_levels = summary_stats.get('detail_levels', 0)
-        view_properties = summary_stats.get('view_properties', 0)
+        category_graphic_overrides = summary_stats.get('category_graphic_overrides', 0)
+        category_visibility_settings = summary_stats.get('category_visibility_settings', 0)
+        workset_visibility_settings = summary_stats.get('workset_visibility_settings', 0)
+        template_controlled_parameters = summary_stats.get('template_controlled_parameters', 0)
+        dangerous_uncontrolled_parameters = summary_stats.get('dangerous_uncontrolled_parameters', 0)
+        filter_settings = summary_stats.get('filter_settings', 0)
+        import_category_overrides = summary_stats.get('import_category_overrides', 0)
+        revit_link_overrides = summary_stats.get('revit_link_overrides', 0)
+        category_detail_levels = summary_stats.get('category_detail_levels', 0)
+        view_behavior_properties = summary_stats.get('view_behavior_properties', 0)
         
         # Get detailed category visibility breakdown
         category_visibility_breakdown = summary_stats.get('category_visibility_breakdown', {})
@@ -845,16 +867,16 @@ class HTMLReportGenerator:
             <h3>Summary</h3>
             <p><strong>Total differences found:</strong> {}</p>
             <ul>
-                <li>Category Overrides: {}</li>
-                <li>Category Visibility: {}</li>
-                <li>Workset Visibility: {}</li>
-                <li>View Parameters: {}</li>
-                <li>Uncontrolled Parameters: {} <span style="color: red; font-weight: bold;">DANGEROUS</span></li>
-                <li>Filters: {}</li>
-                <li>Import Categories: {}</li>
-                <li>Revit Links: {}</li>
-                <li>Detail Levels: {}</li>
-                <li>View Properties: {}</li>
+                <li>Category Graphic Overrides: {}</li>
+                <li>Category Visibility Settings: {}</li>
+                <li>Workset Visibility Settings: {}</li>
+                <li>Template-Controlled Parameters: {}</li>
+                <li>Dangerous Uncontrolled Parameters: {} <span style="color: red; font-weight: bold;">DANGEROUS</span></li>
+                <li>Filter Settings: {}</li>
+                <li>Import Category Overrides: {}</li>
+                <li>Revit Link Overrides: {}</li>
+                <li>Category Detail Levels: {}</li>
+                <li>View Behavior Properties: {}</li>
             </ul>
             <div style="margin-top: 15px; padding: 10px; background-color: #333333; border-left: 4px solid #666666; border-radius: 3px;">
                 <p style="margin: 0; font-size: 0.9em; color: #cccccc;">
@@ -868,9 +890,9 @@ class HTMLReportGenerator:
                 </p>
         </div>
         </div>
-""".format(json_path_html, total_differences, category_overrides, category_visibility, 
-           workset_visibility, view_parameters, uncontrolled_parameters, filters,
-           import_categories, revit_links, detail_levels, view_properties)
+        """.format(json_path_html, total_differences, category_graphic_overrides, category_visibility_settings,
+        workset_visibility_settings, template_controlled_parameters, dangerous_uncontrolled_parameters, filter_settings,
+        import_category_overrides, revit_link_overrides, category_detail_levels, view_behavior_properties)
         
         # Add detailed category visibility breakdown if available
         if category_visibility_breakdown and isinstance(category_visibility_breakdown, dict):
@@ -949,36 +971,36 @@ class HTMLReportGenerator:
         
         try:
             # Safely access differences dictionary with defaults
-            category_overrides = differences.get('category_overrides', {})
-            category_visibility = differences.get('category_visibility', {})
-            workset_visibility = differences.get('workset_visibility', {})
-            view_parameters = differences.get('view_parameters', {})
-            uncontrolled_parameters = differences.get('uncontrolled_parameters', {})
-            filters = differences.get('filters', {})
+            category_graphic_overrides = differences.get('category_graphic_overrides', {})
+            category_visibility_settings = differences.get('category_visibility_settings', {})
+            workset_visibility_settings = differences.get('workset_visibility_settings', {})
+            template_controlled_parameters = differences.get('template_controlled_parameters', {})
+            dangerous_uncontrolled_parameters = differences.get('dangerous_uncontrolled_parameters', {})
+            filter_settings = differences.get('filter_settings', {})
         
-        # Category Overrides Section
-            if category_overrides:
-                html += self._generate_category_overrides_section(category_overrides)
+        # Category Graphic Overrides Section
+            if category_graphic_overrides:
+                html += self._generate_category_overrides_section(category_graphic_overrides)
         
-        # Category Visibility Section
-            if category_visibility:
-                html += self._generate_category_visibility_section(category_visibility)
+        # Category Visibility Settings Section
+            if category_visibility_settings:
+                html += self._generate_category_visibility_section(category_visibility_settings)
         
-        # Workset Visibility Section
-            if workset_visibility:
-                html += self._generate_workset_visibility_section(workset_visibility)
+        # Workset Visibility Settings Section
+            if workset_visibility_settings:
+                html += self._generate_workset_visibility_section(workset_visibility_settings)
         
-        # View Parameters Section
-            if view_parameters:
-                html += self._generate_view_parameters_section(view_parameters)
+        # Template-Controlled Parameters Section
+            if template_controlled_parameters:
+                html += self._generate_view_parameters_section(template_controlled_parameters)
         
-        # Uncontrolled Parameters Section (DANGEROUS)
-            if uncontrolled_parameters:
-                html += self._generate_uncontrolled_parameters_section(uncontrolled_parameters)
+        # Dangerous Uncontrolled Parameters Section
+            if dangerous_uncontrolled_parameters:
+                html += self._generate_uncontrolled_parameters_section(dangerous_uncontrolled_parameters)
         
-        # Filters Section
-            if filters:
-                html += self._generate_filters_section(filters)
+        # Filter Settings Section
+            if filter_settings:
+                html += self._generate_filters_section(filter_settings)
         
         # Template Usage Section
             html += self._generate_template_usage_section(comparison_data)
@@ -1335,10 +1357,28 @@ class HTMLReportGenerator:
             if not isinstance(self.template_names, list):
                 self.template_names = []
             
+            # Identify parameters that commonly return "N/A"
+            na_parameters = self._identify_na_parameters(differences)
+            
             html = """
         <div class="section">
             <h2 class="toggle" onclick="toggleSection('view_parameters')">View Parameters (Click to expand)</h2>
             <div id="view_parameters" class="collapsible">
+                <div style="background-color: #e7f3ff; border: 1px solid #b3d9ff; padding: 10px; margin-bottom: 15px; border-radius: 5px; color: #0066cc;">
+                    <strong>Note:</strong> Due to Revit API limitations, not all parameters of template can be read programmatically(model display mode, lighting, shadows, etc.). Be mindful the comparision in this specificsection might not be a complete picture.
+"""
+            
+            if na_parameters:
+                html += """
+                    <br><br><strong>Parameters showing "N/A" in this comparison:</strong><br>
+                    <ul style="margin: 5px 0; padding-left: 20px;">
+"""
+                for param in na_parameters:
+                    html += "                        <li>{}</li>\n".format(param)
+                html += "                    </ul>\n"
+            
+            html += """
+                </div>
                 <table>
                     <tr>
                         <th>Parameter</th>
@@ -1357,6 +1397,10 @@ class HTMLReportGenerator:
             html += "                    </tr>\n"
             
             for param_name, values in differences.items():
+                # Skip the "Workset" parameter as it's not relevant for template comparison
+                if param_name.lower() == "workset":
+                    continue
+                    
                 try:
                     html += "                    <tr><td class='template-col'>{}</td>".format(str(param_name))
                     for template_name in self.template_names:
@@ -1383,6 +1427,84 @@ class HTMLReportGenerator:
         except Exception as e:
             ERROR_HANDLE.print_note("Error generating view parameters section: {}".format(str(e)))
             return "<h2 style='color: red;'>Error Generating View Parameters Section</h2>\n"
+    
+    def _identify_na_parameters(self, differences):
+        """
+        Identify parameters that commonly return "N/A" due to Revit API limitations.
+        
+        Args:
+            differences: Dictionary of view parameter differences with values
+            
+        Returns:
+            list: List of parameter names that show "N/A"
+        """
+        na_parameters = set()
+        
+        try:
+            for param_name, values in differences.items():
+                # Check if all templates show "N/A" for this parameter
+                all_na = True
+                for template_name in self.template_names:
+                    try:
+                        value = values.get(template_name, 'N/A')
+                        if value != 'N/A' and value != 'Not Present':
+                            all_na = False
+                            break
+                    except Exception:
+                        continue
+                
+                if all_na:
+                    na_parameters.add(param_name)
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error identifying NA parameters: {}".format(str(e)))
+        
+        return sorted(list(na_parameters))
+    
+    def _identify_na_parameters_comprehensive(self, comparison_data):
+        """
+        Identify parameters that commonly return "N/A" in comprehensive comparison.
+        
+        Args:
+            comparison_data: Dictionary containing all template data
+            
+        Returns:
+            list: List of parameter names that show "N/A"
+        """
+        na_parameters = set()
+        
+        try:
+            # Get all parameters from all templates
+            all_parameters = set()
+            for template_name, data in comparison_data.items():
+                if 'view_parameters' in data:
+                    all_parameters.update(data['view_parameters'].keys())
+            
+            # Check each parameter
+            for parameter in all_parameters:
+                # Skip the "Workset" parameter
+                if parameter.lower() == "workset":
+                    continue
+                
+                # Check if all templates show "N/A" for this parameter
+                all_na = True
+                for template_name in self.template_names:
+                    try:
+                        template_data = comparison_data.get(template_name, {})
+                        view_parameters = template_data.get('view_parameters', {})
+                        param_value = view_parameters.get(parameter, 'N/A')
+                        
+                        if param_value != 'N/A' and param_value != 'Not Present':
+                            all_na = False
+                            break
+                    except Exception:
+                        continue
+                
+                if all_na:
+                    na_parameters.add(parameter)
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error identifying NA parameters in comprehensive comparison: {}".format(str(e)))
+        
+        return sorted(list(na_parameters))
     
     def _generate_uncontrolled_parameters_section(self, differences):
         """
@@ -1414,6 +1536,10 @@ class HTMLReportGenerator:
         html += "                    </tr>\n"
         
         for param, values in differences.items():
+            # Skip the "Workset" parameter as it's not relevant for template comparison
+            if param.lower() == "workset":
+                continue
+                
             html += "                    <tr><td class='template-col'>{}</td>".format(param)
             for template_name in self.template_names:
                 value = values.get(template_name, False)
@@ -1430,10 +1556,10 @@ class HTMLReportGenerator:
     
     def _generate_filters_section(self, differences):
         """
-        Generate the filters comparison section.
+        Generate the filters comparison section with enhanced data structure.
         
         Args:
-            differences: Dictionary of filter differences
+            differences: Dictionary of filter differences with enable/visibility/overrides
             
         Returns:
             str: HTML for filters section
@@ -1455,18 +1581,54 @@ class HTMLReportGenerator:
         for filter_name, values in differences.items():
             html += "                    <tr><td class='template-col'>{}</td>".format(filter_name)
             for template_name in self.template_names:
-                value = values.get(template_name, 'N/A')
-                if value == "UNCONTROLLED":
-                    html += "<td style='background-color: #FF8C00; color: white; font-weight: bold;'>UNCONTROLLED</td>"
-                elif value:
-                    summary = self._create_override_summary(value)
-                    html += "<td class='different' style='white-space: pre-line;'>{}</td>".format(summary)
-                else:
+                filter_data = values.get(template_name, None)
+                if filter_data is None:
                     html += "<td class='same'>Not Applied</td>"
+                else:
+                    # Create summary for the new filter data structure
+                    summary = self._create_filter_summary(filter_data)
+                    html += "<td class='different' style='white-space: pre-line;'>{}</td>".format(summary)
             html += "</tr>\n"
         
         html += "                </table></div></div>\n"
         return html
+    
+    def _create_filter_summary(self, filter_data):
+        """
+        Create a summary for filter data including enable, visibility, and graphic overrides.
+        
+        Args:
+            filter_data: Dictionary containing filter enable, visibility, and graphic overrides
+            
+        Returns:
+            str: Formatted summary string
+        """
+        if not filter_data:
+            return "No Data"
+        
+        summary_parts = []
+        
+        # Add enable status
+        enabled = filter_data.get('enabled', False)
+        enabled_text = "✓ Enabled" if enabled else "✗ Disabled"
+        enabled_color = "#4CAF50" if enabled else "#F44336"
+        summary_parts.append("<span style='color: {}; font-weight: bold;'>{}</span>".format(enabled_color, enabled_text))
+        
+        # Add visibility status
+        visible = filter_data.get('visible', False)
+        visible_text = "✓ Visible" if visible else "✗ Hidden"
+        visible_color = "#4CAF50" if visible else "#F44336"
+        summary_parts.append("<span style='color: {}; font-weight: bold;'>{}</span>".format(visible_color, visible_text))
+        
+        # Add graphic overrides summary
+        graphic_overrides = filter_data.get('graphic_overrides', {})
+        if graphic_overrides:
+            override_summary = self._create_override_summary(graphic_overrides)
+            if override_summary and override_summary.strip():
+                summary_parts.append("Graphic Overrides:")
+                summary_parts.append(override_summary)
+        
+        return "<br>".join(summary_parts)
     
     def _generate_template_usage_section(self, comparison_data=None):
         """
