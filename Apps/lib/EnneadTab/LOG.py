@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 EnneadTab Logging System
 
@@ -411,17 +412,17 @@ def unit_test():
     print("\n1. Testing basic logging...")
     try:
         log("test_script.py", "test_function")
-        print("   ✓ Basic logging test passed")
+        print("   [PASS] Basic logging test passed")
     except Exception as e:
-        print("   ✗ Basic logging test failed: {}".format(e))
+        print("   [FAIL] Basic logging test failed: {}".format(e))
     
     # Test 2: Log reading functionality
     print("\n2. Testing log reading...")
     try:
         log_data = read_log()
-        print("   ✓ Log reading test passed - Found {} entries".format(len(log_data) if log_data else 0))
+        print("   [PASS] Log reading test passed - Found {} entries".format(len(log_data) if log_data else 0))
     except Exception as e:
-        print("   ✗ Log reading test failed: {}".format(e))
+        print("   [FAIL] Log reading test failed: {}".format(e))
     
     # Test 3: Usage tracking decorator
     print("\n3. Testing usage tracking decorator...")
@@ -431,9 +432,9 @@ def unit_test():
             return "test_result"
         
         result = test_function()
-        print("   ✓ Usage tracking test passed - Result: {}".format(result))
+        print("   [PASS] Usage tracking test passed - Result: {}".format(result))
     except Exception as e:
-        print("   ✗ Usage tracking test failed: {}".format(e))
+        print("   [FAIL] Usage tracking test failed: {}".format(e))
     
     # Test 4: Context manager
     print("\n4. Testing context manager...")
@@ -442,17 +443,17 @@ def unit_test():
             return x + y
         
         with log_usage(sample_function, 5, 3) as result:
-            print("   ✓ Context manager test passed - Result: {}".format(result))
+            print("   [PASS] Context manager test passed - Result: {}".format(result))
     except Exception as e:
-        print("   ✗ Context manager test failed: {}".format(e))
+        print("   [FAIL] Context manager test failed: {}".format(e))
     
     # Test 5: Google Form submission (mock test)
     print("\n5. Testing Google Form submission...")
     try:
         success = send_usage_to_google_form("TEST", "unit_test_function", "success")
-        print("   ✓ Google Form submission test {}".format('passed' if success else 'failed'))
+        print("   [PASS] Google Form submission test {}".format('passed' if success else 'failed'))
     except Exception as e:
-        print("   ✗ Google Form submission test failed: {}".format(e))
+        print("   [FAIL] Google Form submission test failed: {}".format(e))
     
     print("\n=== Unit Tests Complete ===")
 

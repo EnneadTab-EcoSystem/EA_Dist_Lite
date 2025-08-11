@@ -453,9 +453,15 @@ def update_data(file_name, is_local=True, keep_holder_key=None):
         set_data(data, file_name, is_local)
    
     except Exception as e:
-        import ERROR_HANDLE
         print("Error in DATA_FILE.py at update_data function:", str(e))
-        print (ERROR_HANDLE.get_alternative_traceback())
+        try:
+            import ERROR_HANDLE
+            print(ERROR_HANDLE.get_alternative_traceback())
+        except Exception as traceback_error:
+            import traceback
+            print("Failed to get alternative traceback: {}".format(str(traceback_error)))
+            print("Original traceback:")
+            print(traceback.format_exc())
 
         
 

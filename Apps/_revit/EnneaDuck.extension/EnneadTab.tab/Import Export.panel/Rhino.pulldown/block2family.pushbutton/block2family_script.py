@@ -94,17 +94,37 @@ def process_file(data_file, use_UV_projection):
 
 
 def load_family(file):
+    # Ensure REVIT_APPLICATION is available at the start
+    try:
+        from EnneadTab.REVIT import REVIT_APPLICATION
+        import os
+    except Exception as e:
+        NOTIFICATION.messenger("Failed to import REVIT_APPLICATION: {}".format(str(e)))
+        return
+        
     data = DATA_FILE.get_data(file)
+    if not data:
+        NOTIFICATION.messenger("Failed to load data from file: {}".format(file))
+        return
 
-    geo_data = data["geo_data"]
+    geo_data = data.get("geo_data")
+    if not geo_data:
+        NOTIFICATION.messenger("No geometry data found in file: {}".format(file))
+        return
+        
     para_names = []
     for id, info in geo_data.items():
-        user_data = info["user_data"]
-        para_names.extend(user_data.keys())
+        if info and "user_data" in info:
+            user_data = info["user_data"]
+            para_names.extend(user_data.keys())
 
     para_names = list(set(para_names))
     
-    unit = data["unit"] # ft, in, m, mm
+    unit = data.get("unit") # ft, in, m, mm
+    if not unit:
+        NOTIFICATION.messenger("No unit information found in data file: {}".format(file))
+        return
+        
     if unit in ["ft", "in"]:
         template_unit = "ft"
     elif unit in ["m", "mm"]:
@@ -113,11 +133,73 @@ def load_family(file):
         NOTIFICATION.messenger("Wait, cannot use this unit [{}]".format(unit))
         return
 
+    # Get template file with better error handling
+    template_filename = "RhinoImportBaseFamily_{}.rfa".format(template_unit)
+    template = SAMPLE_FILE.get_file(template_filename)
+    
+    if not template:
+        # Try to find the template file manually with debugging
+        import os
+        from EnneadTab import ENVIRONMENT
+        from EnneadTab.REVIT import REVIT_APPLICATION
+        
+        revit_version = REVIT_APPLICATION.get_revit_version()
+        print("Debug: Revit version detected: {}".format(revit_version))
+        
+        # Try different possible paths
+        possible_paths = [
+            os.path.join(ENVIRONMENT.DOCUMENT_FOLDER, "revit", str(revit_version), template_filename),
+            os.path.join(ENVIRONMENT.DOCUMENT_FOLDER, "revit", template_filename),
+        ]
+        
+        for path in possible_paths:
+            print("Debug: Checking path: {}".format(path))
+            if os.path.exists(path):
+                template = path
+                print("Debug: Found template at: {}".format(template))
+                break
+        
+        if not template:
+            error_msg = "Cannot find template file '{}'. Checked paths:\n{}".format(
+                template_filename, "\n".join(possible_paths))
+            NOTIFICATION.messenger(error_msg)
+            print(error_msg)
+            return
 
-
-    template = SAMPLE_FILE.get_file("RhinoImportBaseFamily_{}.rfa".format(template_unit))
-
-    family_doc = ApplicationServices.Application.NewFamilyDocument (REVIT_APPLICATION.get_app(), template)
+    # Create family document from template
+    try:
+        # Try to open the template file first to validate it
+        print("Attempting to create family document from template: {}".format(template))
+        
+        # Check if template file exists and is readable
+        if not os.path.exists(template):
+            error_msg = "Template file does not exist: {}".format(template)
+            NOTIFICATION.messenger(error_msg)
+            print(error_msg)
+            return
+            
+        # Try to create family document
+        family_doc = ApplicationServices.Application.NewFamilyDocument(REVIT_APPLICATION.get_app(), template)
+        print("Successfully created family document from template")
+        
+    except Exception as e:
+        error_msg = "Failed to create family document from template '{}': {}".format(template, str(e))
+        NOTIFICATION.messenger(error_msg)
+        print(error_msg)
+        
+        # Try alternative approach - use GM_Blank.rfa as fallback
+        try:
+            print("Attempting fallback to GM_Blank.rfa template...")
+            fallback_template = SAMPLE_FILE.get_file("GM_Blank.rfa")
+            if fallback_template and os.path.exists(fallback_template):
+                family_doc = ApplicationServices.Application.NewFamilyDocument(REVIT_APPLICATION.get_app(), fallback_template)
+                print("Successfully created family document using fallback template")
+            else:
+                print("Fallback template not found")
+                return
+        except Exception as fallback_error:
+            print("Fallback template also failed: {}".format(str(fallback_error)))
+            return
 
 
     block_name = get_block_name_from_data_file(file)
@@ -280,7 +362,15 @@ def update_instances(file, use_UV_projection):
     exisitng_instances_map = {x.LookupParameter("Rhino_Id").AsString(): x for x in exisitng_instances}
     
     data = DATA_FILE.get_data(file)
-    unit = data["unit"]
+    if not data:
+        NOTIFICATION.messenger("Failed to load data from file: {}".format(file))
+        return
+        
+    unit = data.get("unit")
+    if not unit:
+        NOTIFICATION.messenger("No unit information found in data file: {}".format(file))
+        return
+        
     if unit == "ft":
         factor = 1
     elif unit == "in":
@@ -290,8 +380,10 @@ def update_instances(file, use_UV_projection):
     else:
         factor = REVIT_UNIT.m_to_internal(1)
 
-        
-    geo_data = data["geo_data"]
+    geo_data = data.get("geo_data")
+    if not geo_data:
+        NOTIFICATION.messenger("No geometry data found in file: {}".format(file))
+        return
 
     type = REVIT_FAMILY.get_family_type_by_name(family_name=block_name, type_name=block_name, doc=doc)
     type.LookupParameter("Description").Set("EnneadTab Block Convert")
@@ -299,28 +391,59 @@ def update_instances(file, use_UV_projection):
 
 
     def _work(id):
-        info = geo_data[id]
-        if id in exisitng_instances_map:
-            instance = exisitng_instances_map[id]
-            doc.Delete(instance.Id)
-        transform_data = info["transform_data"]
-        instance = place_new_instance(type, transform_data, factor, use_UV_projection)
-        user_data = info["user_data"]
-        for key, value in user_data.items():
-            if instance.LookupParameter(key) is None:
-                continue
+        try:
+            if id not in geo_data:
+                print("Warning: ID {} not found in geo_data".format(id))
+                return
+                
+            info = geo_data[id]
+            if not info:
+                print("Warning: No info found for ID {}".format(id))
+                return
+                
+            if id in exisitng_instances_map:
+                instance = exisitng_instances_map[id]
+                if instance:
+                    doc.Delete(instance.Id)
+                    
+            transform_data = info.get("transform_data")
+            if not transform_data:
+                print("Warning: No transform data for ID {}".format(id))
+                return
+                
+            instance = place_new_instance(type, transform_data, factor, use_UV_projection)
+            if not instance:
+                print("Warning: Failed to place instance for ID {}".format(id))
+                return
+                
+            user_data = info.get("user_data", {})
+            for key, value in user_data.items():
+                param = instance.LookupParameter(key)
+                if param is None:
+                    continue
 
-            if key == "Projected_Area":
-                value = factor * float(value)
-            if key in ["Panel_Width", "Panel_Height"]:
-                value = factor * float(value)
-            instance.LookupParameter(key).Set(value)
+                if key == "Projected_Area":
+                    value = factor * float(value)
+                if key in ["Panel_Width", "Panel_Height"]:
+                    value = factor * float(value)
+                param.Set(value)
 
-        if instance.LookupParameter("Rhino_Id"):
-            instance.LookupParameter("Rhino_Id").Set(id)
+            rhino_id_param = instance.LookupParameter("Rhino_Id")
+            if rhino_id_param:
+                rhino_id_param.Set(id)
+        except Exception as e:
+            print("Error processing ID {}: {}".format(id, str(e)))
 
 
-    UI.progress_bar(geo_data.keys(), _work, label_func=lambda x: "Working on [{}]".format(x))
+    try:
+        geo_keys = list(geo_data.keys()) if geo_data else []
+        if not geo_keys:
+            NOTIFICATION.messenger("No geometry data to process")
+            return
+        UI.progress_bar(geo_keys, _work, label_func=lambda x: "Working on [{}]".format(x))
+    except Exception as e:
+        NOTIFICATION.messenger("Error processing geometry data: {}".format(str(e)))
+        print("Error in progress_bar: {}".format(str(e)))
     t.Commit()
 
         

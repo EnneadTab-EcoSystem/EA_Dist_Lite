@@ -192,13 +192,18 @@ def try_catch_error(is_silent=False, is_pass = False):
                     
                 # Safely convert error message to string, handling Array[str] objects
                 try:
-                    if hasattr(e, '__iter__') and not isinstance(e, (str, bytes)):
+                    if e is None:
+                        error_msg = "Unknown error (None)"
+                    elif hasattr(e, '__iter__') and not isinstance(e, (str, bytes)):
                         # Handle array-like objects by joining them
-                        error_msg = " ".join(str(item) for item in e)
+                        try:
+                            error_msg = " ".join(str(item) for item in e)
+                        except:
+                            error_msg = str(e)
                     else:
                         error_msg = str(e)
-                except:
-                    error_msg = "Unable to convert error to string"
+                except Exception as convert_error:
+                    error_msg = "Unable to convert error to string: {}".format(str(convert_error))
                 
                 print_note(error_msg)
                 print_note("error_Wrapper func for EA Log -- Error: " + error_msg)
@@ -228,6 +233,38 @@ def try_catch_error(is_silent=False, is_pass = False):
                 if not is_silent:
                     try:
                         error_file = FOLDER.get_local_dump_folder_file("error_general_log.txt")
+                        
+                        # Add specific debugging information for template file errors
+                        if "Input template file is invalid" in error_msg or "template" in error_msg.lower():
+                            error += "\n\n=== TEMPLATE FILE DEBUGGING INFO ==="
+                            try:
+                                # Import modules safely
+                                try:
+                                    import SAMPLE_FILE
+                                    import ENVIRONMENT
+                                    
+                                    error += "\nDOCUMENT_FOLDER: {}".format(ENVIRONMENT.DOCUMENT_FOLDER)
+                                    error += "\nApp name: {}".format(ENVIRONMENT.get_app_name())
+                                    
+                                    if ENVIRONMENT.get_app_name() == "revit":
+                                        try:
+                                            from REVIT import REVIT_APPLICATION
+                                            error += "\nRevit version: {}".format(REVIT_APPLICATION.get_revit_version())
+                                        except:
+                                            error += "\nCould not get Revit version"
+                                    
+                                    # Test template file resolution
+                                    test_files = ["RhinoImportBaseFamily_ft.rfa", "RhinoImportBaseFamily_mm.rfa"]
+                                    for test_file in test_files:
+                                        result = SAMPLE_FILE.get_file(test_file)
+                                        error += "\n{}: {}".format(test_file, "Found" if result else "Not found")
+                                        if result:
+                                            error += " at {}".format(result)
+                                except Exception as import_error:
+                                    error += "\nFailed to import modules: {}".format(str(import_error))
+                            except Exception as debug_e:
+                                error += "\nDebug info collection failed: {}".format(str(debug_e))
+                        
                         error += "\n\n######If you have " + ENVIRONMENT.PLUGIN_NAME + " UI window open, just close the original " + ENVIRONMENT.PLUGIN_NAME + " window. Do no more action, otherwise the program might crash.##########\n#########Not sure what to do? Msg Sen Zhang, you have dicovered a important bug and we need to fix it ASAP!!!!!########BTW, a local copy of the error is available at {}".format(error_file)
                     except Exception as path_error:
                         # Fallback if FOLDER is not available
