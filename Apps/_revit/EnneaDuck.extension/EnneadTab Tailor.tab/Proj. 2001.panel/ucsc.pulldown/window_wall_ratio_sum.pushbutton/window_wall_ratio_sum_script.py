@@ -49,7 +49,7 @@ def window_wall_ratio_sum(doc):
     t.Start()
 
 
-    
+
     # get all types of the family
     all_types = REVIT_FAMILY.get_all_types_by_family_name(FMILY_NAME)
 
@@ -73,7 +73,7 @@ def window_wall_ratio_sum(doc):
         facade_total_area_sum = 0
         for i, piece_type in enumerate(piece_types):
             print ("{}/{} Getting type {}".format(i+1, len(piece_types), piece_type.LookupParameter("Facade Orientation").AsString()))
-           
+
             # get the glass area of the piece type
             glass_area = piece_type.LookupParameter("Glass Area").AsDouble()
             print ("Glass area: {}".format(glass_area))
@@ -84,12 +84,25 @@ def window_wall_ratio_sum(doc):
             facade_total_area_sum += total_area
 
             piece_type.LookupParameter("_order").Set("{}_{}".format(order, keyword))
-            
 
-        summery_type = [type for type in all_types if keyword in type.LookupParameter("Facade Side").AsString() and "Total" in type.LookupParameter("Facade Orientation").AsString()][0]
-        summery_type.LookupParameter("Glass Area").Set(facade_glass_area_sum)
-        summery_type.LookupParameter("Total Area").Set(facade_total_area_sum)
-        summery_type.LookupParameter("_order").Set("{}_{}".format(order, keyword))
+
+        summery_types= [type for type in all_types if keyword in type.LookupParameter("Facade Side").AsString() and "Total" in type.LookupParameter("Facade Orientation").AsString()]
+        
+        if len(summery_types) == 1:
+            summery_type = summery_types[0]
+            print ("Found orientation summery type: {}".format(summery_type.LookupParameter("Facade Orientation").AsString()))
+            summery_type.LookupParameter("Glass Area").Set(facade_glass_area_sum)
+            summery_type.LookupParameter("Total Area").Set(facade_total_area_sum)
+            summery_type.LookupParameter("_order").Set("{}_{}".format(order, keyword))
+        elif len(summery_types) > 1:
+            print ("Found {} orientation summery types".format(len(summery_types)))
+            for summery_type in summery_types:
+                print ("Summery type: {}".format(summery_type.LookupParameter("Facade Orientation").AsString()))
+                summery_type.LookupParameter("Glass Area").Set(facade_glass_area_sum)
+                summery_type.LookupParameter("Total Area").Set(facade_total_area_sum)
+                summery_type.LookupParameter("_order").Set("{}_{}".format(order, keyword))
+        else:
+            print ("No orientation summery type found")
 
         grand_glass_area_total += facade_glass_area_sum
         grand_total_area_total += facade_total_area_sum
@@ -114,6 +127,8 @@ def window_wall_ratio_sum(doc):
 
     NOTIFICATION.messenger("Window Wall Ratio Update completed")
 
+    print ("\n\nI will gather area even from block data not placed in the model. So make sure your project borwser is exactly the same as the one you are trying to schedule.")
+
 
 
 ################## main code below #####################
@@ -126,3 +141,4 @@ if __name__ == "__main__":
 
 
 
+ 
