@@ -449,24 +449,6 @@
         "tab": "Proj. 2001",
         "tab_icon": null
     },
-    "EnneadTab Tailor.tab\\Proj. 2108.panel\\OBO.pulldown\\Block2Family.pushbutton\\Block2Family_script.py": {
-        "alias": "Block2Family",
-        "doc": "After getting all the block data from Rhino side, create/update family in Revit.If the edit is about moving/rotating in rhino, the revit side will remove old family instance and get a new one based on saved Rhino Id.",
-        "icon": "EnneadTab Tailor.tab\\Proj. 2108.panel\\OBO.pulldown\\Block2Family.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab Tailor.tab\\Proj. 2108.panel\\OBO.pulldown\\Block2Family.pushbutton\\Block2Family_script.py",
-        "tab": "Proj. 2108",
-        "tab_icon": null
-    },
-    "EnneadTab Tailor.tab\\Proj. 2108.panel\\OBO.pulldown\\detail_line_from_excel.pushbutton\\detail_line_from_excel_script.py": {
-        "alias": "Detail Line By Excel",
-        "doc": "(Depreciated, moving to Tool in main E-tab)Generate detail line from the Excel survey pt data. Best used for property line geneation.",
-        "icon": "EnneadTab Tailor.tab\\Proj. 2108.panel\\OBO.pulldown\\detail_line_from_excel.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab Tailor.tab\\Proj. 2108.panel\\OBO.pulldown\\detail_line_from_excel.pushbutton\\detail_line_from_excel_script.py",
-        "tab": "Proj. 2108",
-        "tab_icon": null
-    },
     "EnneadTab Tailor.tab\\Proj. 2125.panel\\Inova.pulldown\\align_viewports.pushbutton\\align_viewports_script.py": {
         "alias": "Align Viewports",
         "doc": "Align selected viewports to the right handside, with view title coming to right as well.",

@@ -22,10 +22,10 @@ except ImportError:
         SD_AVAILABLE = True
     except Exception as e:
         SD_AVAILABLE = False
-        print("System.Drawing not available: {}".format(str(e)))
+        # print("System.Drawing not available: {}".format(str(e)))
 except Exception as e:
     SD_AVAILABLE = False
-    print("System.Drawing not available: {}".format(str(e)))
+    # print("System.Drawing not available: {}".format(str(e)))
 
 
 def get_image_path_by_name(file_name):

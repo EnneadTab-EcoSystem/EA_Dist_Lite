@@ -32,7 +32,7 @@ import proDUCKtion # pyright: ignore
 proDUCKtion.validify()
 from EnneadTab import ENVIRONMENT, DATA_CONVERSION, NOTIFICATION, UI, SOUND, TIME
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FILTER
-from EnneadTab import ERROR_HANDLE, LOG
+from EnneadTab import ERROR_HANDLE, LOG, SAMPLE_FILE
 from EnneadTab.REVIT import REVIT_SELECTION, REVIT_VIEW, REVIT_FAMILY, REVIT_FORMS,REVIT_SYNC
 from Autodesk.Revit import DB # pyright: ignore
 # from rpw.db import family 
@@ -1159,8 +1159,8 @@ class List2DFamily(ListFamily):
         
     def get_tag_family(self):
         """Gets detail item tag family"""
-        family_name = "{}_DetailItem_Tag".format(ENVIRONMENT.PLUGIN_ABBR)
-        tag_family_path = "{}\\{}.rfa".format(os.path.dirname(__file__), family_name)
+        family_name = "ListFamilyDetailItem_Tag.rfa"
+        tag_family_path = SAMPLE_FILE.get_file(family_name)
         tag_family = REVIT_FAMILY.get_family_by_name(family_name, load_path_if_not_exist=tag_family_path)
         if not tag_family:
             NOTIFICATION.messenger("Warning: Tag family '{}' not found and could not be loaded. Proceeding without tags.".format(family_name))
@@ -1198,8 +1198,9 @@ class List3DFamily(ListFamily):
         
     def get_tag_family(self):
         """Gets 3D family tag family"""
-        family_name = "{}_Family_Tag".format(ENVIRONMENT.PLUGIN_ABBR)
-        return REVIT_FAMILY.get_family_by_name(family_name, load_path_if_not_exist=None)
+        family_name = "ListFamily_Tag.rfa"
+        tag_family_path = SAMPLE_FILE.get_file(family_name)
+        return REVIT_FAMILY.get_family_by_name(family_name, load_path_if_not_exist=tag_family_path)
         
     def _get_view_type_from_user(self):
         """Gets view type preference from user"""
