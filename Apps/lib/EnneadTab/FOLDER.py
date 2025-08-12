@@ -43,7 +43,10 @@ try:
 except Exception as e:
     print ("COPY import failed in FOLDER.py: {}".format(traceback.format_exc()))
 
-
+try:
+    import ERROR_HANDLE
+except Exception as e:
+    print ("ERROR_HANDLE import failed in FOLDER.py: {}".format(traceback.format_exc()))
 
 
 

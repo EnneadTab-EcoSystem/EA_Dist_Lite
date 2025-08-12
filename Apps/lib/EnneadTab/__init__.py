@@ -166,9 +166,19 @@ def initialize_package():
         Special modules (RHINO, REVIT) are handled separately from regular modules
         due to their specific initialization requirements.
     """
+    imported_modules = {}
     for module in get_module_files():
         if not import_special_modules(module):
             import_module(module)
+            # Store the module reference for namespace exposure
+            base_name = module[:-3] if module.endswith('.py') else module
+            try:
+                imported_modules[base_name] = sys.modules.get("{}.{}".format(__package_name__, base_name))
+            except:
+                pass
+    
+    # Expose all imported modules in the package namespace
+    globals().update(imported_modules)
 
 # Execute package initialization
 initialize_package()
