@@ -3,8 +3,7 @@
 
 
 __doc__ = """Update color scheme with office template excel version
-J:\\2151\\2_Master File\\B-70_Programming\\03_Colors\\Color Scheme_NYULI_Active.xls.
-NOTE: excel should be saved with .xls instead of .xlsx format
+J:\\2151\\2_Master File\\B-70_Programming\\03_Colors\\Color Scheme_NYULI.xlsx.
 Also note, the column header should be as such:
 A: Department
 B: Department Abbr.
@@ -33,7 +32,7 @@ doc = __revit__.ActiveUIDocument.Document # pyright: ignore
 
 
 
-EXCEL_PATH = "J:\\2151\\2_Master File\\B-70_Programming\\03_Colors\\Color Scheme_NYULI_Active.xls"
+EXCEL_PATH = "J:\\2151\\2_Master File\\B-70_Programming\\03_Colors\\Color Scheme_NYULI.xlsx"
 NAMING_MAP = {"department_color_map":["Department Category_Primary", "Department Category_Opt1"],
               "program_color_map":["Department Program Type_Primary", "Department Program Type_Opt1"]}
 

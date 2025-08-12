@@ -568,7 +568,7 @@
     },
     "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\load_color_template.pushbutton\\load_color_template_script.py": {
         "alias": "DEPRECIATED: Load Color Template",
-        "doc": "Update color scheme with office template excel version\nJ:\\2151\\2_Master File\\B-70_Programming\\03_Colors\\Color Scheme_NYULI_Active.xls.\nNOTE: excel should be saved with .xls instead of .xlsx format\nAlso note, the column header should be as such:\nA: Department\nB: Department Abbr.\nC: Department Color\n\nD: Program\nE: Program Abbr.\nF: Program Color\n\nANYTHING ELSE IN THE EXCEL FILE WILL BE IGNORED, including the hex code text on color cell and red, green, blue value number. \nThose manual color text cannot be trusted on the long run.\n",
+        "doc": "Update color scheme with office template excel version\nJ:\\2151\\2_Master File\\B-70_Programming\\03_Colors\\Color Scheme_NYULI.xlsx.\nAlso note, the column header should be as such:\nA: Department\nB: Department Abbr.\nC: Department Color\n\nD: Program\nE: Program Abbr.\nF: Program Color\n\nANYTHING ELSE IN THE EXCEL FILE WILL BE IGNORED, including the hex code text on color cell and red, green, blue value number. \nThose manual color text cannot be trusted on the long run.\n",
         "icon": "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\load_color_template.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab Tailor.tab\\Proj. 2151.panel\\LI_NYU.pulldown\\load_color_template.pushbutton\\load_color_template_script.py",

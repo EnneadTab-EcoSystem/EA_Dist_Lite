@@ -23,7 +23,7 @@ from EnneadTab import EXCEL
 from EnneadTab.EXCEL import ExcelDataItem
 
 
-EXCEL_PATH = "J:\\2151\\2_Master File\\B-70_Programming\\03_Colors\\Color Scheme_NYULI_Active.xls"
+EXCEL_PATH = "J:\\2151\\2_Master File\\B-70_Programming\\03_Colors\\Color Scheme_NYULI.xlsx"
 OUT_EXCEL_PATH = "J:\\2151\\2_Master File\\B-70_Programming\\03_Colors\\archive\\temp_out.xls"
 
 

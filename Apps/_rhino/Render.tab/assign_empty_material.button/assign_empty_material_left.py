@@ -27,26 +27,30 @@ def assign_empty_material():
     materials_created = 0
     
     for layer_name in all_layers:
+        # Check if layer still exists before operating on it
+        if not rs.IsLayer(layer_name):
+            continue
+            
         # Check if layer is visible and not locked
         if not rs.IsLayerVisible(layer_name) or rs.IsLayerLocked(layer_name):
             continue
 
-            
         # Check if any objects on this layer already have materials assigned
         current_layer_material_index = rs.LayerMaterialIndex(layer_name)
 
         if current_layer_material_index > -1:
             continue
 
-            
         # Create a unique material name based on the layer hierarchy
         material_name = "SampleMat_" + layer_name.replace("::", "_")
         
-
+        # Get layer color
+        layer_color = rs.LayerColor(layer_name)
+        
         # Create the new material
         material = Rhino.DocObjects.Material()
         material.Name = material_name
-        material.DiffuseColor = rs.LayerColor(layer_name)
+        material.DiffuseColor = layer_color
         
         # Add the material to the document
         material_index = doc.Materials.Add(material)
