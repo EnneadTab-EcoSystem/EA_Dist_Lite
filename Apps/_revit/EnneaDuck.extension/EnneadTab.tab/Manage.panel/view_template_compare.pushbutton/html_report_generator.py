@@ -75,8 +75,7 @@ class HTMLReportGenerator:
         
         self.template_names = valid_template_names
         
-        html = self._generate_html_header()
-        html += self._generate_summary_section(summary_stats, json_file_path)
+        html = self._generate_html_header(summary_stats, json_file_path)
         
         # Only show detailed sections (differences) if we have differences
         if differences and isinstance(differences, dict) and any(len(section) > 0 for section in differences.values()):
@@ -86,10 +85,14 @@ class HTMLReportGenerator:
         
         return html
     
-    def _generate_html_header(self):
+    def _generate_html_header(self, summary_stats=None, json_file_path=None):
         """
         Generate the HTML header with CSS and JavaScript.
         
+        Args:
+            summary_stats: Dictionary containing summary statistics
+            json_file_path: Path to the saved JSON file for clickable link
+            
         Returns:
             str: HTML header section
         """
@@ -185,6 +188,21 @@ class HTMLReportGenerator:
         html_parts.append("        .error { background: #4a2d2d; border: 1px solid #6b4a4a; padding: 20px; border-radius: 10px; margin: 15px 0; color: #d5a8a8; }")
         html_parts.append("        .section { margin: 20px 0; }")
         html_parts.append("        .bold-text { font-weight: 700; color: #ffffff; }")
+        html_parts.append("        .toggle { display: flex; align-items: center; justify-content: space-between; }")
+        html_parts.append("        .toggle-hint { font-size: 0.7em; color: #666666; opacity: 0.6; margin-left: 8px; transition: all 0.2s ease; }")
+        html_parts.append("        .toggle:hover .toggle-hint { opacity: 0.8; color: #888888; }")
+        html_parts.append("        .toggle-hint.expanded { color: #ffa500; }")
+        html_parts.append("        .close-all-btn { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; background: #404040; color: #ffffff; border: 1px solid #666666; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500; transition: all 0.3s ease; z-index: 1000; }")
+        html_parts.append("        .close-all-btn:hover { background: #666666; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }")
+        html_parts.append("        .minimap { position: fixed; left: 20px; top: 50%; transform: translateY(-50%); width: 200px; max-height: 400px; background: #2a2a2a; border: 1px solid #404040; border-radius: 8px; padding: 15px; z-index: 1000; overflow-y: auto; }")
+        html_parts.append("        .minimap h4 { color: #ffffff; margin: 0 0 10px 0; font-size: 14px; font-weight: 600; }")
+        html_parts.append("        .minimap-item { color: #cccccc; font-size: 12px; padding: 5px 0; cursor: pointer; border-bottom: 1px solid #404040; transition: all 0.2s ease; }")
+        html_parts.append("        .minimap-item:hover { color: #ffffff; background: #404040; padding-left: 5px; }")
+        html_parts.append("        .minimap-item:last-child { border-bottom: none; }")
+        html_parts.append("        .minimap-item.active { color: #ffffff; font-weight: bold; background: #666666; padding-left: 5px; border-left: 3px solid #ffffff; }")
+        html_parts.append("        .summary-collapsible { display: none; }")
+        html_parts.append("        .summary-collapsible.show { display: block; }")
+        html_parts.append("        /* Summary section uses same collapsible behavior as other sections */")
         html_parts.append("        /* Custom scrollbar */")
         html_parts.append("        ::-webkit-scrollbar { width: 12px; }")
         html_parts.append("        ::-webkit-scrollbar-track { background: #2a2a2a; border-radius: 6px; }")
@@ -196,10 +214,19 @@ class HTMLReportGenerator:
         html_parts.append("    <script>")
         html_parts.append("        function toggleSection(sectionId) {")
         html_parts.append("            var section = document.getElementById(sectionId);")
+        html_parts.append("            var hint = document.querySelector('.toggle-hint[data-section=\"' + sectionId + '\"]');")
         html_parts.append("            if (section.style.display === \"none\" || section.style.display === \"\") {")
         html_parts.append("                section.style.display = \"block\";")
+        html_parts.append("                if (hint) {")
+        html_parts.append("                    hint.textContent = \"-\";")
+        html_parts.append("                    hint.classList.add('expanded');")
+        html_parts.append("                }")
         html_parts.append("            } else {")
         html_parts.append("                section.style.display = \"none\";")
+        html_parts.append("                if (hint) {")
+        html_parts.append("                    hint.textContent = \"+\";")
+        html_parts.append("                    hint.classList.remove('expanded');")
+        html_parts.append("                }")
         html_parts.append("            }")
         html_parts.append("        }")
         html_parts.append("        var searchTimeout;")
@@ -261,6 +288,100 @@ class HTMLReportGenerator:
         html_parts.append("            document.getElementById('searchInput').value = '';")
         html_parts.append("            performSearch();")
         html_parts.append("        }")
+        html_parts.append("        function closeAllSections() {")
+        html_parts.append("            var sections = document.querySelectorAll('.collapsible');")
+        html_parts.append("            var hints = document.querySelectorAll('.toggle-hint');")
+        html_parts.append("            sections.forEach(function(section) {")
+        html_parts.append("                section.style.display = 'none';")
+        html_parts.append("            });")
+        html_parts.append("            hints.forEach(function(hint) {")
+        html_parts.append("                hint.textContent = '+';")
+        html_parts.append("                hint.classList.remove('expanded');")
+        html_parts.append("            });")
+        html_parts.append("        }")
+
+        html_parts.append("        function scrollToSection(sectionId) {")
+        html_parts.append("            var element = document.getElementById(sectionId);")
+        html_parts.append("            if (element) {")
+        html_parts.append("                // Open the section if it's closed")
+        html_parts.append("                if (element.style.display === 'none' || element.style.display === '') {")
+        html_parts.append("                    toggleSection(sectionId);")
+        html_parts.append("                }")
+        html_parts.append("                // Scroll to the section")
+        html_parts.append("                element.scrollIntoView({ behavior: 'smooth', block: 'start' });")
+        html_parts.append("            }")
+        html_parts.append("        }")
+        html_parts.append("        function updateMinimap() {")
+        html_parts.append("            var minimap = document.getElementById('minimap');")
+        html_parts.append("            if (!minimap) return;")
+        html_parts.append("            var sections = document.querySelectorAll('.section');")
+        html_parts.append("            var minimapContent = '';")
+        html_parts.append("            console.log('Found ' + sections.length + ' sections');")
+        html_parts.append("            sections.forEach(function(section, index) {")
+        html_parts.append("                var h2 = section.querySelector('h2');")
+        html_parts.append("                if (h2) {")
+        html_parts.append("                    var onclick = h2.getAttribute('onclick');")
+        html_parts.append("                    var title = h2.textContent.replace(' +', '').replace(' -', '').trim();")
+        html_parts.append("                    console.log('Section ' + index + ': onclick=\"' + onclick + '\", title=\"' + title + '\"');")
+        html_parts.append("                    if (onclick && onclick.includes('toggleSection')) {")
+        html_parts.append("                        var match = onclick.match(/toggleSection\\('([^']+)'\\)/);")
+        html_parts.append("                        if (match) {")
+        html_parts.append("                            var sectionId = match[1];")
+        html_parts.append("                            minimapContent += '<div class=\"minimap-item\" data-section=\"' + sectionId + '\" onclick=\"scrollToSection(\\'' + sectionId + '\\')\">' + title + '</div>';")
+        html_parts.append("                        }")
+        html_parts.append("                    }")
+        html_parts.append("                }")
+        html_parts.append("            });")
+        html_parts.append("            console.log('Generated minimap content: ' + minimapContent);")
+        html_parts.append("            minimap.innerHTML = '<h4>Navigation</h4>' + minimapContent;")
+        html_parts.append("        }")
+        html_parts.append("        function updateActiveSection() {")
+        html_parts.append("            var sections = document.querySelectorAll('.section');")
+        html_parts.append("            var scrollTop = window.pageYOffset || document.documentElement.scrollTop;")
+        html_parts.append("            var windowHeight = window.innerHeight;")
+        html_parts.append("            var activeSectionId = null;")
+        html_parts.append("            var minDistance = Infinity;")
+        html_parts.append("            ")
+        html_parts.append("            sections.forEach(function(section) {")
+        html_parts.append("                var rect = section.getBoundingClientRect();")
+        html_parts.append("                var distance = Math.abs(rect.top);")
+        html_parts.append("                if (distance < minDistance && rect.top <= 100) {")
+        html_parts.append("                    minDistance = distance;")
+        html_parts.append("                    var h2 = section.querySelector('h2');")
+        html_parts.append("                    if (h2) {")
+        html_parts.append("                        var onclick = h2.getAttribute('onclick');")
+        html_parts.append("                        if (onclick && onclick.includes('toggleSection')) {")
+        html_parts.append("                            var match = onclick.match(/toggleSection\\('([^']+)'\\)/);")
+        html_parts.append("                            if (match) {")
+        html_parts.append("                                activeSectionId = match[1];")
+        html_parts.append("                            }")
+        html_parts.append("                        }")
+        html_parts.append("                    }")
+        html_parts.append("                }")
+        html_parts.append("            });")
+        html_parts.append("            ")
+        html_parts.append("            // Update minimap active state")
+        html_parts.append("            var minimapItems = document.querySelectorAll('.minimap-item');")
+        html_parts.append("            minimapItems.forEach(function(item) {")
+        html_parts.append("                item.classList.remove('active');")
+        html_parts.append("            });")
+        html_parts.append("            ")
+        html_parts.append("            if (activeSectionId) {")
+        html_parts.append("                var activeItem = document.querySelector('.minimap-item[data-section=\"' + activeSectionId + '\"]');")
+        html_parts.append("                if (activeItem) {")
+        html_parts.append("                    activeItem.classList.add('active');")
+        html_parts.append("                }")
+        html_parts.append("            }")
+        html_parts.append("        }")
+        html_parts.append("        ")
+        html_parts.append("        window.addEventListener('load', function() {")
+        html_parts.append("            updateMinimap();")
+        html_parts.append("            updateActiveSection();")
+        html_parts.append("        });")
+        html_parts.append("        ")
+        html_parts.append("        window.addEventListener('scroll', function() {")
+        html_parts.append("            updateActiveSection();")
+        html_parts.append("        });")
         html_parts.append("    </script>")
         html_parts.append("</head>")
         
@@ -276,14 +397,26 @@ class HTMLReportGenerator:
         html_parts.append("        </div>")
         html_parts.append("    </div>")
         
+        # Minimap navigation
+        html_parts.append("    <div class=\"minimap\" id=\"minimap\">")
+        html_parts.append("        <h4>Navigation</h4>")
+        html_parts.append("        <div class=\"minimap-item\">Loading...</div>")
+        html_parts.append("    </div>")
+        
+        # Close all button
+        html_parts.append("    <button class=\"close-all-btn\" onclick=\"closeAllSections()\">Close All Sections</button>")
+        
         # Container start
         html_parts.append("    <div class=\"container\">")
         html_parts.append("        <h1>EnneadTab - View Template Comparison Report</h1>")
         html_parts.append("        <div style=\"text-align: center; color: #cccccc; font-size: 1.1em; margin-bottom: 20px; font-weight: 400;\">Powered by EnneadTab Ecosystem</div>")
         html_parts.append("        <div class=\"timestamp\">Generated on: " + timestamp + "</div>")
-        html_parts.append("        <div class=\"summary\">")
-        html_parts.append("            <h3>Templates Compared:</h3>")
-        html_parts.append("            <ul>")
+        
+        # Summary section (collapsible)
+        html_parts.extend(self._open_section('summary-content', 'Summary'))
+        html_parts.append("                <div class=\"summary\">")
+        html_parts.append("                    <h3>Templates Compared:</h3>")
+        html_parts.append("                    <ul>")
         
         # Template names list
         for template_name in self.template_names:
@@ -296,8 +429,63 @@ class HTMLReportGenerator:
                 ERROR_HANDLE.print_note("Error processing template name in header: {}".format(str(e)))
                 html_parts.append("                <li>Error: Invalid Template Name</li>")
         
-        # Close template list and summary
-        html_parts.append("            </ul>")
+        # Close template list
+        html_parts.append("                    </ul>")
+        
+        # Add summary statistics if available
+        if summary_stats and isinstance(summary_stats, dict):
+            # Safely get values with defaults to prevent KeyError
+            total_differences = summary_stats.get('total_differences', 0)
+            category_graphic_overrides = summary_stats.get('category_graphic_overrides', 0)
+            category_visibility_settings = summary_stats.get('category_visibility_settings', 0)
+            workset_visibility_settings = summary_stats.get('workset_visibility_settings', 0)
+            template_controlled_parameters = summary_stats.get('template_controlled_parameters', 0)
+            dangerous_uncontrolled_parameters = summary_stats.get('dangerous_uncontrolled_parameters', 0)
+            filter_settings = summary_stats.get('filter_settings', 0)
+            import_category_overrides = summary_stats.get('import_category_overrides', 0)
+            revit_link_overrides = summary_stats.get('revit_link_overrides', 0)
+            category_detail_levels = summary_stats.get('category_detail_levels', 0)
+            view_behavior_properties = summary_stats.get('view_behavior_properties', 0)
+            
+            # Create file path display for JSON file if path is provided
+            json_path_html = ""
+            if json_file_path:
+                try:
+                    import os
+                    absolute_path = os.path.abspath(json_file_path)
+                    json_path_html = '<strong>JSON File Path:</strong> <span style="font-family: \'JetBrains Mono\', monospace; color: #cccccc; background: #2a2a2a; padding: 4px 8px; border-radius: 4px; border: 1px solid #404040;">{}</span>'.format(absolute_path)
+                except Exception as e:
+                    ERROR_HANDLE.print_note("Error creating JSON file path display: {}".format(str(e)))
+                    json_path_html = ""
+            
+            html_parts.append("                    <h3>Summary Statistics:</h3>")
+            html_parts.append("                    <p><strong>Total differences found:</strong> {}".format(total_differences))
+            if json_path_html:
+                html_parts.append("                    <p>{}</p>".format(json_path_html))
+            html_parts.append("                    <ul>")
+            html_parts.append("                        <li>Category Graphic Overrides: {}</li>".format(category_graphic_overrides))
+            html_parts.append("                        <li>Category Visibility Settings: {}</li>".format(category_visibility_settings))
+            html_parts.append("                        <li>Workset Visibility Settings: {}</li>".format(workset_visibility_settings))
+            html_parts.append("                        <li>Template-Controlled Parameters: {}</li>".format(template_controlled_parameters))
+            html_parts.append("                        <li>Dangerous Uncontrolled Parameters: {} <span style=\"color: red; font-weight: bold;\">DANGEROUS</span></li>".format(dangerous_uncontrolled_parameters))
+            html_parts.append("                        <li>Filter Settings: {}</li>".format(filter_settings))
+            html_parts.append("                        <li>Import Category Overrides: {}</li>".format(import_category_overrides))
+            html_parts.append("                        <li>Revit Link Overrides: {}</li>".format(revit_link_overrides))
+            html_parts.append("                        <li>Category Detail Levels: {}</li>".format(category_detail_levels))
+            html_parts.append("                        <li>View Behavior Properties: {}</li>".format(view_behavior_properties))
+            html_parts.append("                    </ul>")
+            
+            html_parts.append("                    <div style=\"margin-top: 15px; padding: 10px; background-color: #333333; border-left: 4px solid #666666; border-radius: 3px;\">")
+            html_parts.append("                        <p style=\"margin: 0; font-size: 0.9em; color: #cccccc;\">")
+            html_parts.append("                            <strong>Note:</strong> Complete template data has been saved as a JSON file in the EnneadTab dump folder.")
+            html_parts.append("                        </p>")
+            html_parts.append("                        <p style=\"margin: 10px 0 0 0; font-size: 0.9em; color: #999999;\">")
+            html_parts.append("                            Check the JSON file for detailed settings of all categories, filters, and parameters.")
+            html_parts.append("                        </p>")
+            html_parts.append("                    </div>")
+        
+        html_parts.append("                </div>")
+        html_parts.append("            </div>")
         html_parts.append("        </div>")
         
         return "\n".join(html_parts)
@@ -312,118 +500,86 @@ class HTMLReportGenerator:
         Returns:
             str: HTML for comprehensive comparison section
         """
-        html_parts = []
-        
-        html_parts.append("        <div class=\"summary\">")
-        html_parts.append("            <h3>Comprehensive Comparison - All Settings</h3>")
-        html_parts.append("            <p>Below is a complete side-by-side comparison of all settings across the selected templates:</p>")
-        html_parts.append("        </div>")
-        
+        parts = []
+        parts.append("        <div class=\"summary\">")
+        parts.append("            <h3>Comprehensive Comparison - All Settings</h3>")
+        parts.append("            <p>Below is a complete side-by-side comparison of all settings across the selected templates:</p>")
+        parts.append("        </div>")
+
         # Category Overrides Comprehensive Table
-        html_parts.append("        <div class=\"section\">")
-        html_parts.append("            <h2 class=\"toggle\" onclick=\"toggleSection('comprehensive_categories')\">All Category Overrides (Click to expand)</h2>")
-        html_parts.append("            <div id=\"comprehensive_categories\" class=\"collapsible\">")
-        html_parts.append("                <table>")
-        html_parts.append("                    <tr>")
-        html_parts.append("                        <th>Category</th>")
-        
-        for template_name in self.template_names:
-            html_parts.append("                        <th>" + template_name + "</th>")
-        
-        html_parts.append("                    </tr>")
-        
-        # Get all categories from all templates
+        parts.extend(self._open_section('comprehensive_categories', 'All Category Overrides'))
+        parts.extend(self._open_table_with_header('Category/SubCategory'))
+
+        # Get all categories from all templates (overrides)
         all_categories = set()
-        for template_name, data in comparison_data.items():
+        for data in comparison_data.values():
             if 'category_overrides' in data:
                 all_categories.update(data['category_overrides'].keys())
-        
+
         for category in sorted(all_categories):
-            html_parts.append("                    <tr>")
-            html_parts.append("                        <td class=\"template-col\">" + category + "</td>")
-            
+            parts.append("                    <tr>")
+            parts.append("                        <td class=\"template-col\">{}</td>".format(category))
             for template_name in self.template_names:
                 try:
                     template_data = comparison_data.get(template_name, {})
                     category_overrides = template_data.get('category_overrides', {})
                     override_data = category_overrides.get(category, None)
-                    
+
                     if override_data is None:
-                        html_parts.append("                        <td class=\"same\">No Override</td>")
+                        parts.append("                        <td class=\"same\">No Override</td>")
                     elif override_data == "UNCONTROLLED":
-                        html_parts.append("                        <td style=\"background: linear-gradient(135deg, rgba(255, 165, 2, 0.3) 0%, rgba(255, 165, 2, 0.2) 100%); color: #ffa502; font-weight: bold;\">UNCONTROLLED</td>")
+                        parts.append("                        <td style=\"background: linear-gradient(135deg, rgba(255, 165, 2, 0.3) 0%, rgba(255, 165, 2, 0.2) 100%); color: #ffa502; font-weight: bold;\">UNCONTROLLED</td>")
                     else:
                         summary = self._create_override_summary(override_data)
-                        html_parts.append("                        <td class=\"different\" style=\"white-space: pre-line;\">" + summary + "</td>")
+                        parts.append("                        <td class=\"different\" style=\"white-space: pre-line;\">{}</td>".format(summary))
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing category override for {} in {}: {}".format(category, template_name, str(e)))
-                    html_parts.append("                        <td class=\"error\">Error</td>")
-            
-            html_parts.append("                    </tr>")
-        
-        html_parts.append("                </table>")
-        html_parts.append("            </div>")
-        html_parts.append("        </div>")
-        
+                    parts.append("                        <td class=\"error\">Error</td>")
+            parts.append("                    </tr>")
+
+        parts.extend(self._close_table())
+        parts.extend(self._close_section())
+
         # Category Visibility Comprehensive Table
-        html_parts.append("        <div class=\"section\">")
-        html_parts.append("            <h2 class=\"toggle\" onclick=\"toggleSection('comprehensive_visibility')\">All Category Visibility (Click to expand)</h2>")
-        html_parts.append("            <div id=\"comprehensive_visibility\" class=\"collapsible\">")
-        html_parts.append("                <table>")
-        html_parts.append("                    <tr>")
-        html_parts.append("                        <th>Category</th>")
-        
-        for template_name in self.template_names:
-            html_parts.append("                        <th>" + template_name + "</th>")
-        
-        html_parts.append("                    </tr>")
-        
-        # Get all categories from all templates
+        parts.extend(self._open_section('comprehensive_visibility', 'All Category Visibility'))
+        parts.extend(self._open_table_with_header('Category/SubCategory'))
+
+        # Get all categories from all templates (visibility)
         all_categories = set()
-        for template_name, data in comparison_data.items():
+        for data in comparison_data.values():
             if 'category_visibility' in data:
                 all_categories.update(data['category_visibility'].keys())
-        
+
         for category in sorted(all_categories):
-            html_parts.append("                    <tr>")
-            html_parts.append("                        <td class=\"template-col\">" + category + "</td>")
-            
+            parts.append("                    <tr>")
+            parts.append("                        <td class=\"template-col\">{}</td>".format(category))
+
             for template_name in self.template_names:
                 try:
                     template_data = comparison_data.get(template_name, {})
                     category_visibility = template_data.get('category_visibility', {})
                     visibility = category_visibility.get(category, 'N/A')
-                    
+
                     if visibility == "UNCONTROLLED":
-                        html_parts.append("                        <td style=\"background: linear-gradient(135deg, rgba(255, 165, 2, 0.3) 0%, rgba(255, 165, 2, 0.2) 100%); color: #ffa502; font-weight: bold;\">UNCONTROLLED</td>")
+                        parts.append("                        <td style=\"background: linear-gradient(135deg, rgba(255, 165, 2, 0.3) 0%, rgba(255, 165, 2, 0.2) 100%); color: #ffa502; font-weight: bold;\">UNCONTROLLED</td>")
                     elif visibility in ['On', 'Visible']:
-                        html_parts.append("                        <td class=\"visible-cell\">" + visibility + "</td>")
+                        parts.append("                        <td class=\"visible-cell\">{}</td>".format(visibility))
                     elif visibility == 'Hidden':
-                        html_parts.append("                        <td class=\"hidden-cell\">" + visibility + "</td>")
+                        parts.append("                        <td class=\"hidden-cell\">Hidden</td>")
                     else:
-                        html_parts.append("                        <td class=\"different\">" + str(visibility) + "</td>")
+                        parts.append("                        <td class=\"different\">{}</td>".format(str(visibility)))
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing category visibility for {} in {}: {}".format(category, template_name, str(e)))
-                    html_parts.append("                        <td class=\"error\">Error</td>")
-            
-            html_parts.append("                    </tr>")
-        
-        html_parts.append("                </table>")
-        html_parts.append("            </div>")
-        html_parts.append("        </div>")
+                    parts.append("                        <td class=\"error\">Error</td>")
+
+            parts.append("                    </tr>")
+
+        parts.extend(self._close_table())
+        parts.extend(self._close_section())
         
         # Workset Visibility Comprehensive Table
-        html_parts.append("        <div class=\"section\">")
-        html_parts.append("            <h2 class=\"toggle\" onclick=\"toggleSection('comprehensive_worksets')\">All Workset Visibility (Click to expand)</h2>")
-        html_parts.append("            <div id=\"comprehensive_worksets\" class=\"collapsible\">")
-        html_parts.append("                <table>")
-        html_parts.append("                    <tr>")
-        html_parts.append("                        <th>Workset</th>")
-        
-        for template_name in self.template_names:
-            html_parts.append("                        <th>" + template_name + "</th>")
-        
-        html_parts.append("                    </tr>")
+        parts.extend(self._open_section('comprehensive_worksets', 'All Workset Visibility'))
+        parts.extend(self._open_table_with_header('Workset'))
         
         # Get all worksets from all templates
         all_worksets = set()
@@ -432,60 +588,40 @@ class HTMLReportGenerator:
                 all_worksets.update(data['workset_visibility'].keys())
         
         for workset in sorted(all_worksets):
-            html_parts.append("                    <tr>")
-            html_parts.append("                        <td class=\"template-col\">" + workset + "</td>")
-            
+            parts.append("                    <tr>")
+            parts.append("                        <td class=\"template-col\">{}</td>".format(workset))
             for template_name in self.template_names:
                 try:
                     template_data = comparison_data.get(template_name, {})
                     workset_visibility = template_data.get('workset_visibility', {})
                     visibility = workset_visibility.get(workset, 'N/A')
-                    
-                    if visibility == "UNCONTROLLED":
-                        html_parts.append("                        <td style=\"background: linear-gradient(135deg, rgba(255, 165, 2, 0.3) 0%, rgba(255, 165, 2, 0.2) 100%); color: #ffa502; font-weight: bold;\">UNCONTROLLED</td>")
-                    elif visibility in ['On', 'Visible']:
-                        html_parts.append("                        <td class=\"same\">" + visibility + "</td>")
-                    elif visibility == 'Hidden':
-                        html_parts.append("                        <td class=\"different\">" + visibility + "</td>")
-                    else:
-                        html_parts.append("                        <td class=\"different\">" + str(visibility) + "</td>")
+                    parts.append(self._render_value_cell_simple(visibility))
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing workset visibility for {} in {}: {}".format(workset, template_name, str(e)))
-                    html_parts.append("                        <td class=\"error\">Error</td>")
-            
-            html_parts.append("                    </tr>")
+                    parts.append("                        <td class=\"error\">Error</td>")
+            parts.append("                    </tr>")
         
-        html_parts.append("                </table>")
-        html_parts.append("            </div>")
-        html_parts.append("        </div>")
+        parts.extend(self._close_table())
+        parts.extend(self._close_section())
         
         # View Parameters Comprehensive Table
-        html_parts.append("        <div class=\"section\">")
-        html_parts.append("            <h2 class=\"toggle\" onclick=\"toggleSection('comprehensive_parameters')\">All View Parameters (Click to expand)</h2>")
-        html_parts.append("            <div id=\"comprehensive_parameters\" class=\"collapsible\">")
+        parts.extend(self._open_section('comprehensive_parameters', 'All View Parameters'))
         
         # Identify parameters that commonly return "N/A" for comprehensive section
         na_parameters_comprehensive = self._identify_na_parameters_comprehensive(comparison_data)
         
-        html_parts.append("                <div style=\"background-color: #e7f3ff; border: 1px solid #b3d9ff; padding: 10px; margin-bottom: 15px; border-radius: 5px; color: #0066cc;\">")
-        html_parts.append("                    <strong>Note:</strong> Some parameters may show \"N/A\" due to Revit API limitations. These parameters cannot be read programmatically but may still have values in the actual view template.")
+        parts.append("                <div style=\"background-color: #e7f3ff; border: 1px solid #b3d9ff; padding: 10px; margin-bottom: 15px; border-radius: 5px; color: #0066cc;\">")
+        parts.append("                    <strong>Note:</strong> Some parameters may show \"N/A\" due to Revit API limitations. These parameters cannot be read programmatically but may still have values in the actual view template.")
         
         if na_parameters_comprehensive:
-            html_parts.append("                    <br><br><strong>Parameters showing \"N/A\" in this comparison:</strong><br>")
-            html_parts.append("                    <ul style=\"margin: 5px 0; padding-left: 20px;\">")
+            parts.append("                    <br><br><strong>Parameters showing \"N/A\" in this comparison:</strong><br>")
+            parts.append("                    <ul style=\"margin: 5px 0; padding-left: 20px;\">")
             for param in na_parameters_comprehensive:
-                html_parts.append("                        <li>" + param + "</li>")
-            html_parts.append("                    </ul>")
+                parts.append("                        <li>" + param + "</li>")
+            parts.append("                    </ul>")
         
-        html_parts.append("                </div>")
-        html_parts.append("                <table>")
-        html_parts.append("                    <tr>")
-        html_parts.append("                        <th>Parameter</th>")
-        
-        for template_name in self.template_names:
-            html_parts.append("                        <th>" + template_name + "</th>")
-        
-        html_parts.append("                    </tr>")
+        parts.append("                </div>")
+        parts.extend(self._open_table_with_header('Parameter'))
         
         # Get all parameters from all templates
         all_parameters = set()
@@ -498,8 +634,8 @@ class HTMLReportGenerator:
             if parameter.lower() == "workset":
                 continue
                 
-            html_parts.append("                    <tr>")
-            html_parts.append("                        <td class=\"template-col\">" + parameter + "</td>")
+            parts.append("                    <tr>")
+            parts.append("                        <td class=\"template-col\">" + parameter + "</td>")
             
             for template_name in self.template_names:
                 try:
@@ -508,41 +644,27 @@ class HTMLReportGenerator:
                     uncontrolled_parameters = template_data.get('uncontrolled_parameters', [])
                     
                     if parameter in view_parameters:
-                        # Parameter is controlled, show its value
                         param_value = view_parameters[parameter]
-                        html_parts.append("                        <td style=\"background-color: #d1ecf1; color: #0c5460; font-weight: bold; text-align: center;\">{}</td>".format(str(param_value)))
+                        parts.append(self._render_view_parameter_cell(param_value))
                     elif parameter in uncontrolled_parameters:
-                        # Parameter is not controlled
-                        html_parts.append("                        <td style=\"background-color: #fff3cd; color: #856404; font-weight: bold; text-align: center;\">Not Controlled</td>")
+                        parts.append(self._render_view_parameter_cell("Not Controlled"))
                     else:
-                        # Parameter not present
-                        html_parts.append("                        <td style=\"background-color: #f8f9fa; color: #6c757d; font-style: italic; text-align: center;\">Not Present</td>")
+                        parts.append(self._render_view_parameter_cell("Not Present"))
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing view parameter {} in {}: {}".format(parameter, template_name, str(e)))
-                    html_parts.append("                        <td class=\"error\">Error</td>")
-            
-            html_parts.append("                    </tr>")
+                    parts.append("                        <td class=\"error\">Error</td>")
+            parts.append("                    </tr>")
         
-        html_parts.append("                </table>")
-        html_parts.append("            </div>")
-        html_parts.append("        </div>")
+        parts.extend(self._close_table())
+        parts.extend(self._close_section())
         
         # Uncontrolled Parameters Comprehensive Table
-        html_parts.append("        <div class=\"section\">")
-        html_parts.append("            <h2 class=\"toggle\" onclick=\"toggleSection('comprehensive_uncontrolled')\" style=\"color: #ff6b6b;\">All Uncontrolled Parameters - DANGEROUS (Click to expand)</h2>")
-        html_parts.append("            <div id=\"comprehensive_uncontrolled\" class=\"collapsible\">")
-        html_parts.append("                <div class=\"warning\">")
-        html_parts.append("                    <strong>WARNING:</strong> Uncontrolled parameters are NOT marked as included when the view is used as a template.")
-        html_parts.append("                    This can cause inconsistent behavior across views using the same template.")
-        html_parts.append("                </div>")
-        html_parts.append("                <table>")
-        html_parts.append("                    <tr>")
-        html_parts.append("                        <th>Parameter</th>")
-        
-        for template_name in self.template_names:
-            html_parts.append("                        <th>" + template_name + "</th>")
-        
-        html_parts.append("                    </tr>")
+        parts.extend(self._open_section('comprehensive_uncontrolled', 'All Uncontrolled Parameters - DANGEROUS'))
+        parts.append("                <div class=\"warning\">")
+        parts.append("                    <strong>WARNING:</strong> Uncontrolled parameters are NOT marked as included when the view is used as a template.")
+        parts.append("                    This can cause inconsistent behavior across views using the same template.")
+        parts.append("                </div>")
+        parts.extend(self._open_table_with_header('Parameter'))
         
         # Get all uncontrolled parameters from all templates
         all_uncontrolled = set()
@@ -555,8 +677,8 @@ class HTMLReportGenerator:
             if parameter.lower() == "workset":
                 continue
                 
-            html_parts.append("                    <tr>")
-            html_parts.append("                        <td class=\"template-col\">" + parameter + "</td>")
+            parts.append("                    <tr>")
+            parts.append("                        <td class=\"template-col\">" + parameter + "</td>")
             
             for template_name in self.template_names:
                 try:
@@ -565,31 +687,21 @@ class HTMLReportGenerator:
                     is_uncontrolled = parameter in uncontrolled_parameters
                     
                     if is_uncontrolled:
-                        html_parts.append("                        <td style=\"background: linear-gradient(135deg, rgba(255, 107, 107, 0.3) 0%, rgba(255, 107, 107, 0.2) 100%); color: #ff6b6b; font-weight: bold;\">Uncontrolled</td>")
+                        parts.append("                        <td style=\"background: linear-gradient(135deg, rgba(255, 107, 107, 0.3) 0%, rgba(255, 107, 107, 0.2) 100%); color: #ff6b6b; font-weight: bold;\">Uncontrolled</td>")
                     else:
-                        html_parts.append("                        <td class=\"same\">Controlled</td>")
+                        parts.append("                        <td class=\"same\">Controlled</td>")
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing uncontrolled parameter {} in {}: {}".format(parameter, template_name, str(e)))
-                    html_parts.append("                        <td class=\"error\">Error</td>")
+                    parts.append("                        <td class=\"error\">Error</td>")
             
-            html_parts.append("                    </tr>")
+            parts.append("                    </tr>")
         
-        html_parts.append("                </table>")
-        html_parts.append("            </div>")
-        html_parts.append("        </div>")
+        parts.extend(self._close_table())
+        parts.extend(self._close_section())
         
         # Filters Comprehensive Table
-        html_parts.append("        <div class=\"section\">")
-        html_parts.append("            <h2 class=\"toggle\" onclick=\"toggleSection('comprehensive_filters')\">All Filters (Click to expand)</h2>")
-        html_parts.append("            <div id=\"comprehensive_filters\" class=\"collapsible\">")
-        html_parts.append("                <table>")
-        html_parts.append("                    <tr>")
-        html_parts.append("                        <th>Filter</th>")
-        
-        for template_name in self.template_names:
-            html_parts.append("                        <th>" + template_name + "</th>")
-        
-        html_parts.append("                    </tr>")
+        parts.extend(self._open_section('comprehensive_filters', 'All Filters'))
+        parts.extend(self._open_table_with_header('Filter'))
         
         # Get all filters from all templates
         all_filters = set()
@@ -598,8 +710,8 @@ class HTMLReportGenerator:
                 all_filters.update(data['filters'].keys())
         
         for filter_name in sorted(all_filters):
-            html_parts.append("                    <tr>")
-            html_parts.append("                        <td class=\"template-col\">" + filter_name + "</td>")
+            parts.append("                    <tr>")
+            parts.append("                        <td class=\"template-col\">" + filter_name + "</td>")
             
             for template_name in self.template_names:
                 try:
@@ -608,33 +720,22 @@ class HTMLReportGenerator:
                     filter_data = filters.get(filter_name, None)
                     
                     if filter_data is None:
-                        html_parts.append("                        <td class=\"same\">Not Applied</td>")
+                        parts.append("                        <td class=\"same\">Not Applied</td>")
                     else:
-                        # Use the new filter summary method for enhanced data structure
                         summary = self._create_filter_summary(filter_data)
-                        html_parts.append("                        <td class=\"different\" style=\"white-space: pre-line;\">" + summary + "</td>")
+                        parts.append("                        <td class=\"different\" style=\"white-space: pre-line;\">" + summary + "</td>")
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing filter {} in {}: {}".format(filter_name, template_name, str(e)))
-                    html_parts.append("                        <td class=\"error\">Error</td>")
+                    parts.append("                        <td class=\"error\">Error</td>")
             
-            html_parts.append("                    </tr>")
+            parts.append("                    </tr>")
         
-        html_parts.append("                </table>")
-        html_parts.append("            </div>")
-        html_parts.append("        </div>")
+        parts.extend(self._close_table())
+        parts.extend(self._close_section())
         
         # Import Categories Comprehensive Table
-        html_parts.append("        <div class=\"section\">")
-        html_parts.append("            <h2 class=\"toggle\" onclick=\"toggleSection('comprehensive_imports')\">All Import Categories (Click to expand)</h2>")
-        html_parts.append("            <div id=\"comprehensive_imports\" class=\"collapsible\">")
-        html_parts.append("                <table>")
-        html_parts.append("                    <tr>")
-        html_parts.append("                        <th>Import Category</th>")
-        
-        for template_name in self.template_names:
-            html_parts.append("                        <th>" + template_name + "</th>")
-        
-        html_parts.append("                    </tr>")
+        parts.extend(self._open_section('comprehensive_imports', 'All Import Categories'))
+        parts.extend(self._open_table_with_header('Import Category'))
         
         # Get all import categories from all templates
         all_imports = set()
@@ -643,8 +744,8 @@ class HTMLReportGenerator:
                 all_imports.update(data['import_categories'].keys())
         
         for import_name in sorted(all_imports):
-            html_parts.append("                    <tr>")
-            html_parts.append("                        <td class=\"template-col\">" + import_name + "</td>")
+            parts.append("                    <tr>")
+            parts.append("                        <td class=\"template-col\">" + import_name + "</td>")
             
             for template_name in self.template_names:
                 try:
@@ -653,34 +754,24 @@ class HTMLReportGenerator:
                     import_data = import_categories.get(import_name, None)
                     
                     if import_data is None:
-                        html_parts.append("                        <td class=\"same\">No Override</td>")
+                        parts.append("                        <td class=\"same\">No Override</td>")
                     elif import_data == "UNCONTROLLED":
-                        html_parts.append("                        <td style=\"background: linear-gradient(135deg, rgba(255, 165, 2, 0.3) 0%, rgba(255, 165, 2, 0.2) 100%); color: #ffa502; font-weight: bold;\">UNCONTROLLED</td>")
+                        parts.append("                        <td style=\"background: linear-gradient(135deg, rgba(255, 165, 2, 0.3) 0%, rgba(255, 165, 2, 0.2) 100%); color: #ffa502; font-weight: bold;\">UNCONTROLLED</td>")
                     else:
                         summary = self._create_override_summary(import_data)
-                        html_parts.append("                        <td class=\"different\" style=\"white-space: pre-line;\">" + summary + "</td>")
+                        parts.append("                        <td class=\"different\" style=\"white-space: pre-line;\">" + summary + "</td>")
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing import category {} in {}: {}".format(import_name, template_name, str(e)))
-                    html_parts.append("                        <td class=\"error\">Error</td>")
+                    parts.append("                        <td class=\"error\">Error</td>")
             
-            html_parts.append("                    </tr>")
+            parts.append("                    </tr>")
         
-        html_parts.append("                </table>")
-        html_parts.append("            </div>")
-        html_parts.append("        </div>")
+        parts.extend(self._close_table())
+        parts.extend(self._close_section())
         
         # Revit Links Comprehensive Table
-        html_parts.append("        <div class=\"section\">")
-        html_parts.append("            <h2 class=\"toggle\" onclick=\"toggleSection('comprehensive_links')\">All Revit Links (Click to expand)</h2>")
-        html_parts.append("            <div id=\"comprehensive_links\" class=\"collapsible\">")
-        html_parts.append("                <table>")
-        html_parts.append("                    <tr>")
-        html_parts.append("                        <th>Revit Link</th>")
-        
-        for template_name in self.template_names:
-            html_parts.append("                        <th>" + template_name + "</th>")
-        
-        html_parts.append("                    </tr>")
+        parts.extend(self._open_section('comprehensive_links', 'All Revit Links'))
+        parts.extend(self._open_table_with_header('Revit Link'))
         
         # Get all Revit links from all templates
         all_links = set()
@@ -689,8 +780,8 @@ class HTMLReportGenerator:
                 all_links.update(data['revit_links'].keys())
         
         for link_name in sorted(all_links):
-            html_parts.append("                    <tr>")
-            html_parts.append("                        <td class=\"template-col\">" + link_name + "</td>")
+            parts.append("                    <tr>")
+            parts.append("                        <td class=\"template-col\">" + link_name + "</td>")
             
             for template_name in self.template_names:
                 try:
@@ -699,7 +790,7 @@ class HTMLReportGenerator:
                     link_data = revit_links.get(link_name, {})
                     
                     if not link_data:
-                        html_parts.append("                        <td class=\"same\">No Override</td>")
+                        parts.append("                        <td class=\"same\">No Override</td>")
                     else:
                         # Create summary of link settings
                         settings = []
@@ -713,31 +804,21 @@ class HTMLReportGenerator:
                             settings.append("Display: " + str(link_data['display_settings']))
                         
                         if settings:
-                            html_parts.append("                        <td class=\"different\">" + "; ".join(settings) + "</td>")
+                            parts.append("                        <td class=\"different\">" + "; ".join(settings) + "</td>")
                         else:
-                            html_parts.append("                        <td class=\"same\">Default</td>")
+                            parts.append("                        <td class=\"same\">Default</td>")
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing Revit link {} in {}: {}".format(link_name, template_name, str(e)))
-                    html_parts.append("                        <td class=\"error\">Error</td>")
+                    parts.append("                        <td class=\"error\">Error</td>")
             
-            html_parts.append("                    </tr>")
+            parts.append("                    </tr>")
         
-        html_parts.append("                </table>")
-        html_parts.append("            </div>")
-        html_parts.append("        </div>")
+        parts.extend(self._close_table())
+        parts.extend(self._close_section())
         
         # Detail Levels Comprehensive Table
-        html_parts.append("        <div class=\"section\">")
-        html_parts.append("            <h2 class=\"toggle\" onclick=\"toggleSection('comprehensive_detail_levels')\">All Detail Levels (Click to expand)</h2>")
-        html_parts.append("            <div id=\"comprehensive_detail_levels\" class=\"collapsible\">")
-        html_parts.append("                <table>")
-        html_parts.append("                    <tr>")
-        html_parts.append("                        <th>Category</th>")
-        
-        for template_name in self.template_names:
-            html_parts.append("                        <th>" + template_name + "</th>")
-        
-        html_parts.append("                    </tr>")
+        parts.extend(self._open_section('comprehensive_detail_levels', 'All Detail Levels'))
+        parts.extend(self._open_table_with_header('Category'))
         
         # Get all detail levels from all templates
         all_detail_levels = set()
@@ -746,8 +827,8 @@ class HTMLReportGenerator:
                 all_detail_levels.update(data['detail_levels'].keys())
         
         for category_name in sorted(all_detail_levels):
-            html_parts.append("                    <tr>")
-            html_parts.append("                        <td class=\"template-col\">" + category_name + "</td>")
+            parts.append("                    <tr>")
+            parts.append("                        <td class=\"template-col\">" + category_name + "</td>")
             
             for template_name in self.template_names:
                 try:
@@ -756,31 +837,21 @@ class HTMLReportGenerator:
                     detail_level = detail_levels.get(category_name, "By View")
                     
                     if detail_level == "By View":
-                        html_parts.append("                        <td class=\"same\">" + detail_level + "</td>")
+                        parts.append("                        <td class=\"same\">" + detail_level + "</td>")
                     else:
-                        html_parts.append("                        <td class=\"different\">" + detail_level + "</td>")
+                        parts.append("                        <td class=\"different\">" + detail_level + "</td>")
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing detail level for {} in {}: {}".format(category_name, template_name, str(e)))
-                    html_parts.append("                        <td class=\"error\">Error</td>")
+                    parts.append("                        <td class=\"error\">Error</td>")
             
-            html_parts.append("                    </tr>")
+            parts.append("                    </tr>")
         
-        html_parts.append("                </table>")
-        html_parts.append("            </div>")
-        html_parts.append("        </div>")
+        parts.extend(self._close_table())
+        parts.extend(self._close_section())
         
         # Linetypes Comprehensive Table
-        html_parts.append("        <div class=\"section\">")
-        html_parts.append("            <h2 class=\"toggle\" onclick=\"toggleSection('comprehensive_linetypes')\">All Linetypes (Click to expand)</h2>")
-        html_parts.append("            <div id=\"comprehensive_linetypes\" class=\"collapsible\">")
-        html_parts.append("                <table>")
-        html_parts.append("                    <tr>")
-        html_parts.append("                        <th>Linetype</th>")
-        
-        for template_name in self.template_names:
-            html_parts.append("                        <th>" + template_name + "</th>")
-        
-        html_parts.append("                    </tr>")
+        parts.extend(self._open_section('comprehensive_linetypes', 'All Linetypes'))
+        parts.extend(self._open_table_with_header('Linetype'))
         
         # Get all linetypes from all templates
         all_linetypes = set()
@@ -789,8 +860,8 @@ class HTMLReportGenerator:
                 all_linetypes.update(data['linetypes'].keys())
         
         for linetype_name in sorted(all_linetypes):
-            html_parts.append("                    <tr>")
-            html_parts.append("                        <td class=\"template-col\">" + linetype_name + "</td>")
+            parts.append("                    <tr>")
+            parts.append("                        <td class=\"template-col\">" + linetype_name + "</td>")
             
             for template_name in self.template_names:
                 try:
@@ -799,7 +870,7 @@ class HTMLReportGenerator:
                     linetype_data = linetypes.get(linetype_name, {})
                     
                     if not linetype_data:
-                        html_parts.append("                        <td class=\"same\">Not Available</td>")
+                        parts.append("                        <td class=\"same\">Not Available</td>")
                     else:
                         # Show linetype information
                         info = []
@@ -809,20 +880,19 @@ class HTMLReportGenerator:
                             info.append("Used: " + str(linetype_data['is_used']))
                         
                         if info:
-                            html_parts.append("                        <td class=\"different\">" + "; ".join(info) + "</td>")
+                            parts.append("                        <td class=\"different\">" + "; ".join(info) + "</td>")
                         else:
-                            html_parts.append("                        <td class=\"same\">Available</td>")
+                            parts.append("                        <td class=\"same\">Available</td>")
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing linetype {} in {}: {}".format(linetype_name, template_name, str(e)))
-                    html_parts.append("                        <td class=\"error\">Error</td>")
+                    parts.append("                        <td class=\"error\">Error</td>")
             
-            html_parts.append("                    </tr>")
+            parts.append("                    </tr>")
         
-        html_parts.append("                </table>")
-        html_parts.append("            </div>")
-        html_parts.append("        </div>")
-        
-        return "\n".join(html_parts)
+        parts.extend(self._close_table())
+        parts.extend(self._close_section())
+
+        return "\n".join(parts)
     
     def _generate_summary_section(self, summary_stats, json_file_path=None):
         """
@@ -1019,6 +1089,103 @@ class HTMLReportGenerator:
         
         return html
     
+    # --------------------------
+    # Reusable HTML helpers
+    # --------------------------
+    def _open_section(self, section_id, section_title):
+        """Return opening HTML for a toggle section.
+
+        Args:
+            section_id (str): Unique id used by the toggle behavior
+            section_title (str): Title displayed for the section
+
+        Returns:
+            list[str]: HTML lines
+        """
+        parts = []
+        # Normalize title by stripping any inline hint text the callers may pass
+        try:
+            clean_title = section_title.replace(" (Click to expand)", "").replace("(Click to expand)", "").replace(" (Click to toggle expansion)", "").replace("(Click to toggle expansion)", "").replace(" (Click to close)", "").replace("(Click to close)", "")
+        except Exception:
+            clean_title = section_title
+        parts.append("        <div class=\"section\">")
+        parts.append("            <h2 class=\"toggle\" onclick=\"toggleSection('{}')\">{} <span class=\"toggle-hint\" data-section=\"{}\">+</span></h2>".format(section_id, clean_title, section_id))
+        parts.append("            <div id=\"{}\" class=\"collapsible\">".format(section_id))
+        return parts
+
+    def _close_section(self):
+        """Return closing HTML for a toggle section."""
+        return ["            </div>", "        </div>"]
+
+    def _open_table_with_header(self, header_title):
+        """Return opening table lines with a header row including template names.
+
+        Args:
+            header_title (str): Title for the first column
+
+        Returns:
+            list[str]: HTML lines
+        """
+        parts = []
+        parts.append("                <table>")
+        parts.append("                    <tr>")
+        parts.append("                        <th>{}</th>".format(header_title))
+        # Render template headers safely
+        for template_name in self.template_names:
+            try:
+                title_text = str(template_name) if template_name else "Unknown"
+                parts.append("                        <th>{}</th>".format(title_text))
+            except Exception as e:
+                ERROR_HANDLE.print_note("Error processing template name for header: {}".format(str(e)))
+                parts.append("                        <th>Error</th>")
+        parts.append("                    </tr>")
+        return parts
+
+    def _close_table(self):
+        """Return closing tags for a table within a section."""
+        return ["                </table"]
+
+    def _render_value_cell_simple(self, value):
+        """Render a generic value cell with standard coloring rules used by simple sections."""
+        try:
+            if value == "UNCONTROLLED":
+                return "<td style='background-color: #dc3545; color: white; font-weight: bold;'>UNCONTROLLED <span style='color: #FFD700;'>DANGEROUS</span></td>"
+            elif value == "Visible" or value == "On":
+                return "<td class='visible-cell'>{}</td>".format(str(value))
+            elif value == "Hidden":
+                return "<td class='hidden-cell'>{}</td>".format(str(value))
+            else:
+                return "<td class='different'>{}</td>".format(str(value))
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error rendering value cell: {}".format(str(e)))
+            return "<td class='different'>Error</td>"
+
+    def _render_boolean_cell(self, value, true_text, false_text):
+        """Render a boolean value cell with custom true/false text and UNCONTROLLED handling."""
+        try:
+            if value == "UNCONTROLLED":
+                return "<td style='background-color: #dc3545; color: white; font-weight: bold;'>UNCONTROLLED <span style='color: #FFD700;'>DANGEROUS</span></td>"
+            elif value:
+                return "<td class='same'>{}</td>".format(str(true_text))
+            else:
+                return "<td class='different'>{}</td>".format(str(false_text))
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error rendering boolean cell: {}".format(str(e)))
+            return "<td class='different'>Error</td>"
+
+    def _render_view_parameter_cell(self, value):
+        """Render a value cell for view parameters with special styles for 'Not Controlled' and 'Not Present'."""
+        try:
+            if value == "Not Controlled":
+                return "<td style='background-color: #dc3545; color: white; font-weight: bold; text-align: center;'>Not Controlled <span style='color: #FFD700;'>DANGEROUS</span></td>"
+            elif value == "Not Present":
+                return "<td style='background-color: #e9ecef; color: #495057; font-style: italic; text-align: center;'>Not Present</td>"
+            else:
+                return "<td style='background-color: #d1ecf1; color: #0c5460; font-weight: bold; text-align: center;'>{}</td>".format(str(value))
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error rendering view parameter cell: {}".format(str(e)))
+            return "<td class='different'>Error</td>"
+
     def _generate_category_overrides_section(self, differences):
         """
         Generate the category overrides comparison section.
@@ -1030,68 +1197,59 @@ class HTMLReportGenerator:
             str: HTML for category overrides section
         """
         try:
-            html = """
-        <div class="section">
-            <h2 class="toggle" onclick="toggleSection('category_overrides')">Category Overrides (Click to expand)</h2>
-            <div id="category_overrides" class="collapsible">
-                <table>
-                    <tr>
-                        <th>Category</th>
-"""
+            parts = []
+            parts.extend(self._open_section('category_overrides', 'Category Overrides'))
+            parts.extend(self._open_table_with_header('Category/SubCategory'))
             
             for template_name in self.template_names:
-                html += "                        <th>{}</th>\n".format(template_name)
+                parts.append("                        <th>{}</th>".format(template_name))
             
-            html += "                    </tr>\n"
+            parts.append("                    </tr>")
             
             # Render rows directly from differences (engine already filtered to only-different)
             if differences:
                 for category, values in differences.items():
-                    html += "                    <tr><td class='template-col'>{}</td>".format(category)
+                    parts.append("                    <tr><td class='template-col'>{}</td>".format(category))
                     # Build a lookup of all template values for diff summary
                     for template_name in self.template_names:
                         value = values.get(template_name, None)
                         if value == "UNCONTROLLED":
-                            html += "<td style='background-color: #FF8C00; color: white; font-weight: bold;'>UNCONTROLLED</td>"
+                            parts.append("<td style='background-color: #FF8C00; color: white; font-weight: bold;'>UNCONTROLLED</td>")
                         elif value:
                             # Show the actual override summary for this template
                             summary = self._create_override_summary(value)
                             if summary:
                                 # Process the summary to make section headers bold
                                 processed_summary = self._process_summary_for_bold_headers(summary)
-                                html += "<td class='different' style='white-space: pre-line;'>{}</td>".format(processed_summary)
+                                parts.append("<td class='different' style='white-space: pre-line;'>{}</td>".format(processed_summary))
                             else:
-                                html += "<td class='same'>No Override</td>"
+                                parts.append("<td class='same'>No Override</td>")
                         else:
                             # No local override
-                            html += "<td class='same'></td>"
+                            parts.append("<td class='same'></td>")
                     
-                    html += "</tr>\n"
+                    parts.append("</tr>")
             else:
                 # No categories with differences were found by the engine
-                html += """
-                    <tr>
-                        <td colspan=\"{}\" style=\"text-align: center; color: #999999; font-style: italic; padding: 20px;\">
-                            All templates have identical category override settings. No differences found.
-                        </td>
-                    </tr>
-""".format(len(self.template_names) + 1)
+                parts.append("                    <tr>")
+                parts.append("                        <td colspan=\"{}\" style=\"text-align: center; color: #999999; font-style: italic; padding: 20px;\">".format(len(self.template_names) + 1))
+                parts.append("                            All templates have identical category override settings. No differences found.")
+                parts.append("                        </td>")
+                parts.append("                    </tr>")
             
-            html += "                </table></div></div>\n"
-            return html
+            parts.extend(self._close_table())
+            parts.extend(self._close_section())
+            return "\n".join(parts)
             
         except Exception as e:
             # Return error section if generation fails
-            return """
-        <div class="section">
-            <h2 class="toggle" onclick="toggleSection('category_overrides')">Category Overrides (Click to expand)</h2>
-            <div id="category_overrides" class="collapsible">
-                <div class="error">
-                    <p>Error generating category overrides section: {}</p>
-                </div>
-            </div>
-        </div>
-""".format(str(e))
+            parts = []
+            parts.extend(self._open_section('category_overrides', 'Category Overrides'))
+            parts.append("                <div class=\"error\">")
+            parts.append("                    <p>Error generating category overrides section: {}</p>".format(str(e)))
+            parts.append("                </div>")
+            parts.extend(self._close_section())
+            return "\n".join(parts)
     
     def _create_override_summary(self, override_data):
         """
@@ -1267,7 +1425,7 @@ class HTMLReportGenerator:
             for prop in properties_to_check:
                 # Get all values for this property across all templates
                 all_values = []
-                for template_name, template_data in all_template_values.items():
+                for template_data in all_template_values.values():
                     if isinstance(template_data, dict):
                         value = template_data.get(prop)
                         if value is not None:
@@ -1328,7 +1486,7 @@ class HTMLReportGenerator:
         Returns:
             str: HTML for category visibility section
         """
-        return self._generate_simple_comparison_section('category_visibility', 'Category Visibility', differences)
+        return self._generate_simple_comparison_section('category_visibility', 'Category Visibility', differences, "Category/SubCategory")
     
     def _generate_workset_visibility_section(self, differences):
         """
@@ -1340,7 +1498,7 @@ class HTMLReportGenerator:
         Returns:
             str: HTML for workset visibility section
         """
-        return self._generate_simple_comparison_section('workset_visibility', 'Workset Visibility', differences)
+        return self._generate_simple_comparison_section('workset_visibility', 'Workset Visibility', differences, "Workset")
     
     def _generate_view_parameters_section(self, differences):
         """
@@ -1360,41 +1518,22 @@ class HTMLReportGenerator:
             # Identify parameters that commonly return "N/A"
             na_parameters = self._identify_na_parameters(differences)
             
-            html = """
-        <div class="section">
-            <h2 class="toggle" onclick="toggleSection('view_parameters')">View Parameters (Click to expand)</h2>
-            <div id="view_parameters" class="collapsible">
-                <div style="background-color: #e7f3ff; border: 1px solid #b3d9ff; padding: 10px; margin-bottom: 15px; border-radius: 5px; color: #0066cc;">
-                    <strong>Note:</strong> Due to Revit API limitations, not all parameters of template can be read programmatically(model display mode, lighting, shadows, etc.). Be mindful the comparision in this specificsection might not be a complete picture.
-"""
+            # Open section and advisory note
+            parts = []
+            parts.extend(self._open_section('view_parameters', 'View Parameters'))
+            parts.append("                <div style=\"background-color: #e7f3ff; border: 1px solid #b3d9ff; padding: 10px; margin-bottom: 15px; border-radius: 5px; color: #0066cc;\">")
+            parts.append("                    <strong>Note:</strong> Due to Revit API limitations, not all parameters of template can be read programmatically(model display mode, lighting, shadows, etc.). Be mindful the comparision in this specificsection might not be a complete picture.")
             
             if na_parameters:
-                html += """
-                    <br><br><strong>Parameters showing "N/A" in this comparison:</strong><br>
-                    <ul style="margin: 5px 0; padding-left: 20px;">
-"""
+                parts.append("                    <br><br><strong>Parameters showing \"N/A\" in this comparison:</strong><br>")
+                parts.append("                    <ul style=\"margin: 5px 0; padding-left: 20px;\">")
                 for param in na_parameters:
-                    html += "                        <li>{}</li>\n".format(param)
-                html += "                    </ul>\n"
+                    parts.append("                        <li>{}</li>".format(param))
+                parts.append("                    </ul>")
             
-            html += """
-                </div>
-                <table>
-                    <tr>
-                        <th>Parameter</th>
-"""
-            
-            for template_name in self.template_names:
-                try:
-                    if template_name:
-                        html += "                        <th>{}</th>\n".format(str(template_name))
-                    else:
-                        html += "                        <th>Unknown</th>\n"
-                except Exception as e:
-                    ERROR_HANDLE.print_note("Error processing template name in view parameters: {}".format(str(e)))
-                    html += "                        <th>Error</th>\n"
-            
-            html += "                    </tr>\n"
+            parts.append("                </div>")
+            # Table header
+            parts.extend(self._open_table_with_header("Parameter"))
             
             for param_name, values in differences.items():
                 # Skip the "Workset" parameter as it's not relevant for template comparison
@@ -1402,27 +1541,24 @@ class HTMLReportGenerator:
                     continue
                     
                 try:
-                    html += "                    <tr><td class='template-col'>{}</td>".format(str(param_name))
+                    parts.append("                    <tr><td class='template-col'>{}</td>".format(str(param_name)))
                     for template_name in self.template_names:
                         try:
                             value = values.get(template_name, 'N/A')
-                            if value == "Not Controlled":
-                                html += "<td style='background-color: #dc3545; color: white; font-weight: bold; text-align: center;'>{} <span style='color: #FFD700;'>DANGEROUS</span></td>".format(str(value))
-                            elif value == "Not Present":
-                                html += "<td style='background-color: #e9ecef; color: #495057; font-style: italic; text-align: center;'>{}</td>".format(str(value))
-                            else:
-                                # Show the actual parameter value
-                                html += "<td style='background-color: #d1ecf1; color: #0c5460; font-weight: bold; text-align: center;'>{}</td>".format(str(value))
+                            parts.append(self._render_view_parameter_cell(value))
                         except Exception as e:
                             ERROR_HANDLE.print_note("Error processing parameter value for template {}: {}".format(template_name, str(e)))
-                            html += "<td class='different'>Error</td>"
-                    html += "</tr>\n"
+                            parts.append("<td class='different'>Error</td>")
+                    parts.append("</tr>")
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing parameter {}: {}".format(param_name, str(e)))
                     continue
-            
-            html += "                </table></div></div>\n"
-            return html
+
+            # Close table and section
+            parts.extend(self._close_table())
+            parts.extend(self._close_section())
+            parts.append("")
+            return "\n".join(parts)
             
         except Exception as e:
             ERROR_HANDLE.print_note("Error generating view parameters section: {}".format(str(e)))
@@ -1516,43 +1652,33 @@ class HTMLReportGenerator:
         Returns:
             str: HTML for uncontrolled parameters section
         """
-        html = """
-        <div class="section">
-            <h2 class="toggle" onclick="toggleSection('uncontrolled_parameters')" style="color: red;">Uncontrolled Parameters - DANGEROUS (Click to expand)</h2>
-            <div id="uncontrolled_parameters" class="collapsible">
-                <div style="background-color: #8B0000; border: 2px solid #ff0000; padding: 15px; margin-bottom: 15px; border-radius: 5px; color: #ffffff;">
-                    <strong style="color: #FFD700;">WARNING:</strong> Uncontrolled parameters are NOT marked as included when the view is used as a template. 
-                    This can cause inconsistent behavior across views using the same template. 
-                    These parameters should be reviewed and controlled if needed for consistency.
-                </div>
-                <table>
-                    <tr>
-                        <th>Parameter</th>
-"""
-        
-        for template_name in self.template_names:
-            html += "                        <th>{}</th>\n".format(template_name)
-        
-        html += "                    </tr>\n"
-        
+        parts = []
+        parts.extend(self._open_section('uncontrolled_parameters', 'Uncontrolled Parameters - DANGEROUS'))
+        parts.append("                <div style=\"background-color: #8B0000; border: 2px solid #ff0000; padding: 15px; margin-bottom: 15px; border-radius: 5px; color: #ffffff;\">")
+        parts.append("                    <strong style=\"color: #FFD700;\">WARNING:</strong> Uncontrolled parameters are NOT marked as included when the view is used as a template. ")
+        parts.append("                    This can cause inconsistent behavior across views using the same template. ")
+        parts.append("                    These parameters should be reviewed and controlled if needed for consistency.")
+        parts.append("                </div>")
+        parts.extend(self._open_table_with_header("Parameter"))
+
         for param, values in differences.items():
-            # Skip the "Workset" parameter as it's not relevant for template comparison
             if param.lower() == "workset":
                 continue
-                
-            html += "                    <tr><td class='template-col'>{}</td>".format(param)
+            parts.append("                    <tr><td class='template-col'>{}</td>".format(param))
             for template_name in self.template_names:
                 value = values.get(template_name, False)
                 if value == "UNCONTROLLED":
-                    html += "<td style='background-color: #dc3545; color: white; font-weight: bold; text-align: center;'>UNCONTROLLED</td>"
+                    parts.append("<td style='background-color: #dc3545; color: white; font-weight: bold; text-align: center;'>UNCONTROLLED</td>")
                 elif value:
-                    html += "<td style='background-color: #f8d7da; color: #721c24; font-weight: bold; text-align: center;'>Uncontrolled</td>"
+                    parts.append("<td style='background-color: #f8d7da; color: #721c24; font-weight: bold; text-align: center;'>Uncontrolled</td>")
                 else:
-                    html += "<td style='background-color: #d4edda; color: #155724; font-weight: bold; text-align: center;'>Controlled</td>"
-            html += "</tr>\n"
-        
-        html += "                </table></div></div>\n"
-        return html
+                    parts.append("<td style='background-color: #d4edda; color: #155724; font-weight: bold; text-align: center;'>Controlled</td>")
+            parts.append("</tr>")
+
+        parts.extend(self._close_table())
+        parts.extend(self._close_section())
+        parts.append("")
+        return "\n".join(parts)
     
     def _generate_filters_section(self, differences):
         """
@@ -1564,34 +1690,25 @@ class HTMLReportGenerator:
         Returns:
             str: HTML for filters section
         """
-        html = """
-        <div class="section">
-            <h2 class="toggle" onclick="toggleSection('filters')">Filters (Click to expand)</h2>
-            <div id="filters" class="collapsible">
-                <table>
-                    <tr>
-                        <th>Filter</th>
-"""
-        
-        for template_name in self.template_names:
-            html += "                        <th>{}</th>\n".format(template_name)
-        
-        html += "                    </tr>\n"
-        
+        parts = []
+        parts.extend(self._open_section('filters', 'Filters'))
+        parts.extend(self._open_table_with_header("Filter"))
+
         for filter_name, values in differences.items():
-            html += "                    <tr><td class='template-col'>{}</td>".format(filter_name)
+            parts.append("                    <tr><td class='template-col'>{}</td>".format(filter_name))
             for template_name in self.template_names:
                 filter_data = values.get(template_name, None)
                 if filter_data is None:
-                    html += "<td class='same'>Not Applied</td>"
+                    parts.append("<td class='same'>Not Applied</td>")
                 else:
-                    # Create summary for the new filter data structure
                     summary = self._create_filter_summary(filter_data)
-                    html += "<td class='different' style='white-space: pre-line;'>{}</td>".format(summary)
-            html += "</tr>\n"
-        
-        html += "                </table></div></div>\n"
-        return html
+                    parts.append("<td class='different' style='white-space: pre-line;'>{}</td>".format(summary))
+            parts.append("</tr>")
+
+        parts.extend(self._close_table())
+        parts.extend(self._close_section())
+        parts.append("")
+        return "\n".join(parts)
     
     def _create_filter_summary(self, filter_data):
         """
@@ -1641,11 +1758,8 @@ class HTMLReportGenerator:
             str: HTML for template usage section
         """
         try:
-            html = """
-        <div class="section">
-            <h2 class="toggle" onclick="toggleSection('template_usage')">Template Usage - Views Using Each Template (Click to expand)</h2>
-            <div id="template_usage" class="collapsible">
-"""
+            parts = []
+            parts.extend(self._open_section('template_usage', 'Template Usage - Views Using Each Template'))
             
             if comparison_data and isinstance(comparison_data, dict):
                 # Generate usage data for each template
@@ -1653,72 +1767,60 @@ class HTMLReportGenerator:
                     template_data = comparison_data.get(template_name, {})
                     usage_data = template_data.get('template_usage', {})
                     
-                    html += """
-                <div style="margin-bottom: 30px; padding: 20px; background: #333333; border-radius: 8px; border: 1px solid #404040;">
-                    <h3 style="color: #ffffff; margin-top: 0; margin-bottom: 15px; font-size: 1.3em;">{}</h3>
-""".format(template_name)
+                    parts.append("                <div style=\"margin-bottom: 30px; padding: 20px; background: #333333; border-radius: 8px; border: 1px solid #404040;\">")
+                    parts.append("                    <h3 style=\"color: #ffffff; margin-top: 0; margin-bottom: 15px; font-size: 1.3em;\">{}</h3>".format(template_name))
                     
                     views = usage_data.get('views', [])
                     total_count = usage_data.get('total_count', 0)
                     
                     if views:
-                        html += """
-                    <p style="color: #cccccc; margin-bottom: 15px;"><strong>Total Views Using This Template: {}</strong></p>
-                    <table style="width: 100%; margin-bottom: 15px;">
-                        <tr>
-                            <th style="background: #404040; color: #ffffff; padding: 10px; text-align: left;">Sheet Number</th>
-                            <th style="background: #404040; color: #ffffff; padding: 10px; text-align: left;">Sheet Name</th>
-                            <th style="background: #404040; color: #ffffff; padding: 10px; text-align: left;">View Name</th>
-                            <th style="background: #404040; color: #ffffff; padding: 10px; text-align: left;">View Type</th>
-                            <th style="background: #404040; color: #ffffff; padding: 10px; text-align: left;">View ID</th>
-                        </tr>
-""".format(total_count)
+                        parts.append("                    <p style=\"color: #cccccc; margin-bottom: 15px;\"><strong>Total Views Using This Template: {}</strong></p>".format(total_count))
+                        parts.append("                    <table style=\"width: 100%; margin-bottom: 15px;\">")
+                        parts.append("                        <tr>")
+                        parts.append("                            <th style=\"background: #404040; color: #ffffff; padding: 10px; text-align: left;\">Sheet Number</th>")
+                        parts.append("                            <th style=\"background: #404040; color: #ffffff; padding: 10px; text-align: left;\">Sheet Name</th>")
+                        parts.append("                            <th style=\"background: #404040; color: #ffffff; padding: 10px; text-align: left;\">View Name</th>")
+                        parts.append("                            <th style=\"background: #404040; color: #ffffff; padding: 10px; text-align: left;\">View Type</th>")
+                        parts.append("                            <th style=\"background: #404040; color: #ffffff; padding: 10px; text-align: left;\">View ID</th>")
+                        parts.append("                        </tr>")
                         
                         for view in views:
-                            html += """
-                        <tr>
-                            <td style="padding: 8px; border-bottom: 1px solid #404040; color: #cccccc;">{}</td>
-                            <td style="padding: 8px; border-bottom: 1px solid #404040; color: #cccccc;">{}</td>
-                            <td style="padding: 8px; border-bottom: 1px solid #404040; color: #ffffff;">{}</td>
-                            <td style="padding: 8px; border-bottom: 1px solid #404040; color: #cccccc;">{}</td>
-                            <td style="padding: 8px; border-bottom: 1px solid #404040; color: #999999; font-family: 'JetBrains Mono', monospace; font-size: 0.9em;">{}</td>
-                        </tr>
-""".format(view.get('sheet_number', 'Unknown'), view.get('sheet_name', 'Unknown'), view.get('name', 'Unknown'), view.get('type', 'Unknown'), view.get('id', 'Unknown'))
+                            parts.append("                        <tr>")
+                            parts.append("                            <td style=\"padding: 8px; border-bottom: 1px solid #404040; color: #cccccc;\">{}</td>".format(view.get('sheet_number', 'Unknown')))
+                            parts.append("                            <td style=\"padding: 8px; border-bottom: 1px solid #404040; color: #cccccc;\">{}</td>".format(view.get('sheet_name', 'Unknown')))
+                            parts.append("                            <td style=\"padding: 8px; border-bottom: 1px solid #404040; color: #ffffff;\">{}</td>".format(view.get('name', 'Unknown')))
+                            parts.append("                            <td style=\"padding: 8px; border-bottom: 1px solid #404040; color: #cccccc;\">{}</td>".format(view.get('type', 'Unknown')))
+                            parts.append("                            <td style=\"padding: 8px; border-bottom: 1px solid #404040; color: #999999; font-family: 'JetBrains Mono', monospace; font-size: 0.9em;\">{}</td>".format(view.get('id', 'Unknown')))
+                            parts.append("                        </tr>")
                         
-                        html += "                    </table>"
+                        parts.append("                    </table>")
                     else:
-                        html += """
-                    <p style="color: #999999; font-style: italic;">No views are currently using this template.</p>
-"""
+                        parts.append("                    <p style=\"color: #999999; font-style: italic;\">No views are currently using this template.</p>")
                     
-                    html += "                </div>"
+                    parts.append("                </div>")
             else:
-                html += """
-                <p style="color: #cccccc; font-style: italic;">Template usage data is not available.</p>
-                <p style="color: #999999; font-size: 0.9em;">This section shows which views are currently using each template, sorted alphabetically by view name.</p>
-"""
+                parts.append("                <p style=\"color: #cccccc; font-style: italic;\">Template usage data is not available.</p>")
+                parts.append("                <p style=\"color: #999999; font-size: 0.9em;\">This section shows which views are currently using each template, sorted alphabetically by view name.</p>")
             
             # Add footnote about the feature
-            html += """
-                <div style="margin-top: 20px; padding: 15px; background: #2a2a2a; border-radius: 8px; border: 1px solid #404040;">
-                    <p style="color: #999999; font-size: 0.9em; margin: 0;">
-                        <strong>Note:</strong> This section shows which views are currently using each template, 
-                        including sheet information where available. Views are sorted alphabetically by name.
-                    </p>
-                </div>
-            </div></div>\n"""
-            return html
+            parts.append("                <div style=\"margin-top: 20px; padding: 15px; background: #2a2a2a; border-radius: 8px; border: 1px solid #404040;\">")
+            parts.append("                    <p style=\"color: #999999; font-size: 0.9em; margin: 0;\">")
+            parts.append("                        <strong>Note:</strong> This section shows which views are currently using each template,")
+            parts.append("                        including sheet information where available. Views are sorted alphabetically by name.")
+            parts.append("                    </p>")
+            parts.append("                </div>")
+            parts.extend(self._close_section())
+            return "\n".join(parts)
             
         except Exception as e:
-            return """
-        <div class="section">
-            <h2 style="color: red;">Error Generating Template Usage Section</h2>
-            <div class="error">
-                <p>An error occurred while generating template usage section:</p>
-                <p><strong>{}</strong></p>
-            </div>
-        </div>
-""".format(str(e))
+            parts = []
+            parts.extend(self._open_section('template_usage', 'Template Usage - Views Using Each Template'))
+            parts.append("                <div class=\"error\">")
+            parts.append("                    <p>An error occurred while generating template usage section:</p>")
+            parts.append("                    <p><strong>{}</strong></p>".format(str(e)))
+            parts.append("                </div>")
+            parts.extend(self._close_section())
+            return "\n".join(parts)
     
     def _generate_simple_comparison_section(self, section_id, section_title, differences, header_title = "Item"):
         """
@@ -1737,64 +1839,39 @@ class HTMLReportGenerator:
             if not isinstance(self.template_names, list):
                 self.template_names = []
             
-            html = """
-        <div class="section">
-            <h2 class="toggle" onclick="toggleSection('{}')">{} (Click to expand)</h2>
-            <div id="{}" class="collapsible">
-                <table>
-                    <tr>
-                        <th>{}</th>
-""".format(section_id, section_title, section_id, header_title)
-            
-            for template_name in self.template_names:
-                try:
-                    if template_name:
-                        html += "                        <th>{}</th>\n".format(str(template_name))
-                    else:
-                        html += "                        <th>Unknown</th>\n"
-                except Exception as e:
-                    ERROR_HANDLE.print_note("Error processing template name in simple comparison: {}".format(str(e)))
-                    html += "                        <th>Error</th>\n"
-            
-            html += "                    </tr>\n"
+            parts = []
+            parts.extend(self._open_section(section_id, section_title))
+            parts.extend(self._open_table_with_header(header_title))
             
             for item, values in differences.items():
                 try:
-                    html += "                    <tr><td class='template-col'>{}</td>".format(str(item))
+                    parts.append("                    <tr><td class='template-col'>{}</td>".format(str(item)))
                     for template_name in self.template_names:
                         try:
                             value = values.get(template_name, 'N/A')
-                            if value == "UNCONTROLLED":
-                                html += "<td style='background-color: #dc3545; color: white; font-weight: bold;'>UNCONTROLLED <span style='color: #FFD700;'>DANGEROUS</span></td>"
-                            elif value == "Visible" or value == "On":
-                                html += "<td class='visible-cell'>{}</td>".format(str(value))
-                            elif value == "Hidden":
-                                html += "<td class='hidden-cell'>{}</td>".format(str(value))
-                            else:
-                                html += "<td class='different'>{}</td>".format(str(value))
+                            parts.append(self._render_value_cell_simple(value))
                         except Exception as e:
                             ERROR_HANDLE.print_note("Error processing value for template {}: {}".format(template_name, str(e)))
-                            html += "<td class='different'>Error</td>"
-                    html += "</tr>\n"
+                            parts.append("<td class='different'>Error</td>")
+                    parts.append("</tr>")
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing item {}: {}".format(item, str(e)))
                     continue
             
-            html += "                </table></div></div>\n"
-            return html
+            parts.extend(self._close_table())
+            parts.extend(self._close_section())
+            parts.append("")
+            return "\n".join(parts)
                 
         except Exception as e:
             ERROR_HANDLE.print_note("Error generating simple comparison section: {}".format(str(e)))
-            return """
-        <div class="section">
-            <h2 class="toggle" onclick="toggleSection('{}')">{} (Click to expand)</h2>
-            <div id="{}" class="collapsible">
-                <div class="error">
-                    <p>Error generating {} section: {}</p>
-                </div>
-            </div>
-        </div>
-""".format(section_id, section_title, section_id, section_title, str(e))
+            parts = []
+            parts.extend(self._open_section(section_id, section_title))
+            parts.append("                <div class=\"error\">")
+            parts.append("                    <p>Error generating {} section: {}</p>".format(section_title, str(e)))
+            parts.append("                </div>")
+            parts.extend(self._close_section())
+            return "\n".join(parts)
     
     def _generate_boolean_comparison_section(self, section_id, section_title, differences, true_text, false_text):
         """
@@ -1815,62 +1892,39 @@ class HTMLReportGenerator:
             if not isinstance(self.template_names, list):
                 self.template_names = []
             
-            html = """
-        <div class="section">
-            <h2 class="toggle" onclick="toggleSection('{}')">{} (Click to expand)</h2>
-            <div id="{}" class="collapsible">
-                <table>
-                    <tr>
-                        <th>Parameter</th>
-""".format(section_id, section_title, section_id)
-            
-            for template_name in self.template_names:
-                try:
-                    if template_name:
-                        html += "                        <th>{}</th>\n".format(str(template_name))
-                    else:
-                        html += "                        <th>Unknown</th>\n"
-                except Exception as e:
-                    ERROR_HANDLE.print_note("Error processing template name in boolean comparison: {}".format(str(e)))
-                    html += "                        <th>Error</th>\n"
-            
-            html += "                    </tr>\n"
+            parts = []
+            parts.extend(self._open_section(section_id, section_title))
+            parts.extend(self._open_table_with_header("Parameter"))
             
             for item, values in differences.items():
                 try:
-                    html += "                    <tr><td class='template-col'>{}</td>".format(str(item))
+                    parts.append("                    <tr><td class='template-col'>{}</td>".format(str(item)))
                     for template_name in self.template_names:
                         try:
                             value = values.get(template_name, False)
-                            if value == "UNCONTROLLED":
-                                html += "<td style='background-color: #dc3545; color: white; font-weight: bold;'>UNCONTROLLED <span style='color: #FFD700;'>DANGEROUS</span></td>"
-                            elif value:
-                                html += "<td class='same'>{}</td>".format(str(true_text))
-                            else:
-                                html += "<td class='different'>{}</td>".format(str(false_text))
+                            parts.append(self._render_boolean_cell(value, true_text, false_text))
                         except Exception as e:
                             ERROR_HANDLE.print_note("Error processing boolean value for template {}: {}".format(template_name, str(e)))
-                            html += "<td class='different'>Error</td>"
-                    html += "</tr>\n"
+                            parts.append("<td class='different'>Error</td>")
+                    parts.append("</tr>")
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing boolean item {}: {}".format(item, str(e)))
                     continue
             
-            html += "                </table></div></div>\n"
-            return html
+            parts.extend(self._close_table())
+            parts.extend(self._close_section())
+            parts.append("")
+            return "\n".join(parts)
             
         except Exception as e:
             ERROR_HANDLE.print_note("Error generating boolean comparison section: {}".format(str(e)))
-            return """
-        <div class="section">
-            <h2 class="toggle" onclick="toggleSection('{}')">{} (Click to expand)</h2>
-            <div id="{}" class="collapsible">
-                <div class="error">
-                    <p>Error generating {} section: {}</p>
-                </div>
-            </div>
-        </div>
-""".format(section_id, section_title, section_id, section_title, str(e))
+            parts = []
+            parts.extend(self._open_section(section_id, section_title))
+            parts.append("                <div class=\"error\">")
+            parts.append("                    <p>Error generating {} section: {}</p>".format(section_title, str(e)))
+            parts.append("                </div>")
+            parts.extend(self._close_section())
+            return "\n".join(parts)
     
     def _generate_html_footer(self):
         """
