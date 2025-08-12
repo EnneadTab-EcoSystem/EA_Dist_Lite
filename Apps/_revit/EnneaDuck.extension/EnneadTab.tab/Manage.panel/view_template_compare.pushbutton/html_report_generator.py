@@ -1666,6 +1666,8 @@ class HTMLReportGenerator:
                     <p style="color: #cccccc; margin-bottom: 15px;"><strong>Total Views Using This Template: {}</strong></p>
                     <table style="width: 100%; margin-bottom: 15px;">
                         <tr>
+                            <th style="background: #404040; color: #ffffff; padding: 10px; text-align: left;">Sheet Number</th>
+                            <th style="background: #404040; color: #ffffff; padding: 10px; text-align: left;">Sheet Name</th>
                             <th style="background: #404040; color: #ffffff; padding: 10px; text-align: left;">View Name</th>
                             <th style="background: #404040; color: #ffffff; padding: 10px; text-align: left;">View Type</th>
                             <th style="background: #404040; color: #ffffff; padding: 10px; text-align: left;">View ID</th>
@@ -1675,11 +1677,13 @@ class HTMLReportGenerator:
                         for view in views:
                             html += """
                         <tr>
+                            <td style="padding: 8px; border-bottom: 1px solid #404040; color: #cccccc;">{}</td>
+                            <td style="padding: 8px; border-bottom: 1px solid #404040; color: #cccccc;">{}</td>
                             <td style="padding: 8px; border-bottom: 1px solid #404040; color: #ffffff;">{}</td>
                             <td style="padding: 8px; border-bottom: 1px solid #404040; color: #cccccc;">{}</td>
                             <td style="padding: 8px; border-bottom: 1px solid #404040; color: #999999; font-family: 'JetBrains Mono', monospace; font-size: 0.9em;">{}</td>
                         </tr>
-""".format(view.get('name', 'Unknown'), view.get('type', 'Unknown'), view.get('id', 'Unknown'))
+""".format(view.get('sheet_number', 'Unknown'), view.get('sheet_name', 'Unknown'), view.get('name', 'Unknown'), view.get('type', 'Unknown'), view.get('id', 'Unknown'))
                         
                         html += "                    </table>"
                     else:
@@ -1694,12 +1698,12 @@ class HTMLReportGenerator:
                 <p style="color: #999999; font-size: 0.9em;">This section shows which views are currently using each template, sorted alphabetically by view name.</p>
 """
             
-            # Add footnote about upcoming feature
+            # Add footnote about the feature
             html += """
                 <div style="margin-top: 20px; padding: 15px; background: #2a2a2a; border-radius: 8px; border: 1px solid #404040;">
                     <p style="color: #999999; font-size: 0.9em; margin: 0;">
-                        <strong>Note:</strong> Template usage detection is currently in development. 
-                        This feature will show which views are using each template in future updates.
+                        <strong>Note:</strong> This section shows which views are currently using each template, 
+                        including sheet information where available. Views are sorted alphabetically by name.
                     </p>
                 </div>
             </div></div>\n"""
@@ -1716,7 +1720,7 @@ class HTMLReportGenerator:
         </div>
 """.format(str(e))
     
-    def _generate_simple_comparison_section(self, section_id, section_title, differences):
+    def _generate_simple_comparison_section(self, section_id, section_title, differences, header_title = "Item"):
         """
         Generate a simple comparison section for basic values.
         
@@ -1739,8 +1743,8 @@ class HTMLReportGenerator:
             <div id="{}" class="collapsible">
                 <table>
                     <tr>
-                        <th>Item</th>
-""".format(section_id, section_title, section_id)
+                        <th>{}</th>
+""".format(section_id, section_title, section_id, header_title)
             
             for template_name in self.template_names:
                 try:

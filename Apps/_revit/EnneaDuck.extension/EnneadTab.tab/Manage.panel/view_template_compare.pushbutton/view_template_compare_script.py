@@ -217,68 +217,57 @@ def select_templates_for_comparison(doc):
     Returns:
         list: Selected view templates
     """
-    try:
-        # Get all view templates with error handling
-        collector = DB.FilteredElementCollector(doc).OfClass(DB.View)
-        view_templates = []
-        
-        for view in collector:
-            try:
-                if view and view.IsTemplate and view.IsValidObject:
-                    view_templates.append(view)
-            except Exception as e:
-                ERROR_HANDLE.print_note("Error checking view template: {}".format(str(e)))
-                continue
-        
-        if not view_templates:
-            ERROR_HANDLE.print_note("No view templates found in the document.")
-            return None
-        
 
-
-
-        
-        # If in DEVELOPER mode, automatically select test templates
-        # if USER.IS_DEVELOPER:
-        #     test_templates = []
-        #     for template in view_templates:
-        #         if "0__test1" in template.Name or "0__test2" in template.Name:
-        #             test_templates.append(template)
-
-            
-        #     if len(test_templates) >= 2:
-        #         ERROR_HANDLE.print_note("DEVELOPER mode: Auto-selected test templates: {}".format([t.Name for t in test_templates]))
-        #         return test_templates
-        #     elif len(test_templates) == 1:
-        #         ERROR_HANDLE.print_note("DEVELOPER mode: Only found 1 test template ({}), proceeding with manual selection".format(test_templates[0].Name))
-        #     else:
-        #         ERROR_HANDLE.print_note("DEVELOPER mode: No test templates found, proceeding with manual selection")
-        #     return test_templates
-        
-        # Create custom template list items for selection that show template names
-        class TemplateOption(forms.TemplateListItem):
-            @property
-            def name(self):
-                return self.item.Name
-        
-        template_items = sorted([TemplateOption(template) for template in view_templates], key=lambda x: x.name)
-        
-        # Show selection dialog
-        selected_templates = forms.SelectFromList.show(
-            template_items,
-            title="Select View Templates to Compare",
-            multiselect=True,
-            button_name="Compare Templates"
-        )
-        
-        if not selected_templates:
-            return None
-        
-        return selected_templates
-        
-    except Exception as e:
-        ERROR_HANDLE.print_note("Error selecting templates: {}".format(str(e)))
+    # Get all view templates with error handling
+    collector = DB.FilteredElementCollector(doc).OfClass(DB.View)
+    view_templates = []
+    
+    for view in collector:
+        try:
+            if view and view.IsTemplate and view.IsValidObject:
+                view_templates.append(view)
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error checking view template: {}".format(str(e)))
+            continue
+    
+    if not view_templates:
+        ERROR_HANDLE.print_note("No view templates found in the document.")
         return None
+    
+
+    template_usage_count = {}
+    for view in collector:
+        if view.IsTemplate:
+            continue
+        view_template = DOC.GetElement(view.ViewTemplateId)
+        if view_template is None:
+            continue
+        if view_template.Name not in template_usage_count:
+            template_usage_count[view_template.Name] = 0
+        template_usage_count[view_template.Name] += 1
+
+    # Create custom template list items for selection that show template names
+    class TemplateOption(forms.TemplateListItem):
+        @property
+        def name(self):
+            return "{} [{} usage]".format(self.item.Name, template_usage_count.get(self.item.Name, 0))
+    
+    template_items = sorted([TemplateOption(template) for template in view_templates], key=lambda x: x.name)
+    
+    # Show selection dialog
+    selected_templates = forms.SelectFromList.show(
+        template_items,
+        title="Select View Templates to Compare",
+        multiselect=True,
+        button_name="Compare Templates"
+    )
+    
+    if not selected_templates:
+        return None
+    
+    return selected_templates
+    
+
 
 
 def collect_template_data(doc, templates):

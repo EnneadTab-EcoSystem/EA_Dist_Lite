@@ -150,6 +150,9 @@ def get_project_data_name(doc):
                                                         [DB.Category.GetCategory(doc,DB.BuiltInCategory.OST_ProjectInformation)])
 
         para = REVIT_PARAMETER.get_project_info_para_by_name(doc, PROJECT_DATA_PARA_NAME)
+        if para is None:
+            raise Exception("Failed to get project data parameter... this si not right because we just setup the parameter")
+
         para.Set(doc.Title)  # Set initial value to document title
 
     # Get the parameter value

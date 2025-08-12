@@ -1393,10 +1393,14 @@ class TemplateDataCollector:
                                 # Get view name and type
                                 view_name = view.Name if hasattr(view, 'Name') else "Unknown View"
                                 view_type = view.ViewType.ToString() if hasattr(view, 'ViewType') else "Unknown Type"
+                                sheet_number = view.LookupParameter("Sheet Number").AsString() 
+                                sheet_name = view.LookupParameter("Sheet Name").AsString() 
                                 
                                 usage_data['views'].append({
                                     'name': view_name,
                                     'type': view_type,
+                                    'sheet_number': sheet_number,
+                                    'sheet_name': sheet_name,
                                     'id': view.Id.ToString()
                                 })
                                 
