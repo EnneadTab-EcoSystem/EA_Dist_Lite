@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>EnneadTab InDesign Repather</title>
+                <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Floating Logo -->
+    <div id="floatingLogo" class="floating-logo">
+        <img src="logo_vertical_light.png" alt="EnneadTab Logo" />
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>EnneadTab InDesign Repather</h1>
+            <p>Repath all links in your InDesign document when folders are renamed</p>
+        </div>
+
+        <div class="content">
+            <div id="status" class="status info">
+                Ready to connect to InDesign
+            </div>
+
+                                      <!-- Connect to InDesign -->
+              <div class="step">
+                  <h3>Connect to InDesign</h3>
+                  <p>Detect and connect to your InDesign application. Make sure InDesign is open with your document.</p>
+                 
+                                                                          <!-- Auto-connect option -->
+                    <div class="auto-connect-section">
+                        <h4>Quick Connect (Recommended)</h4>
+                        <p>Automatically connect to your currently open InDesign and active documents.</p>
+                                             <button id="autoConnectBtn" class="btn btn-success btn-rectangular">
+                           Detect InDesign & Open Documents
+                       </button>
+                      <div id="autoConnectLoading" class="loading">
+                          <div class="spinner"></div>
+                          <p>Auto-connecting to InDesign...</p>
+                      </div>
+                      
+                                                                     <!-- Auto-detection status -->
+                        <div id="autoDetectionStatus" class="auto-detection-status">
+                            <span id="autoDetectionText">Auto-detecting InDesign every 1 second...</span>
+                            <button id="stopAutoDetectionBtn" class="btn" style="margin-left: 8px; padding: 4px 8px; font-size: 0.8em;">Stop</button>
+                        </div>
+                  </div>
+                 
+                                   <div class="divider">- OR -</div>
+                 
+                 <!-- Manual connect option -->
+                 <button id="detectVersionsBtn" class="btn btn-rectangular">Detect InDesign Versions</button>
+                 <div id="detectLoading" class="loading">
+                     <div class="spinner"></div>
+                     <p>Detecting InDesign versions...</p>
+                 </div>
+                 
+                 <div id="versionSelection" class="hidden">
+                     <div class="form-group">
+                         <label for="indesignVersion">Select InDesign Version:</label>
+                         <select id="indesignVersion">
+                             <option value="">Loading versions...</option>
+                         </select>
+                     </div>
+                     <button id="connectBtn" class="btn btn-success btn-rectangular">Connect to Selected Version</button>
+                     <div id="connectLoading" class="loading">
+                         <div class="spinner"></div>
+                         <p>Connecting to InDesign...</p>
+                     </div>
+                 </div>
+             </div>
+
+                         <!-- Open Document (Hidden by default) -->
+             <div id="step2" class="step hidden">
+                 <h3>Open InDesign Document</h3>
+                 <p>Select the InDesign document (.indd file) you want to repath links in.</p>
+                <div class="form-group">
+                    <label for="documentPath">Document Path:</label>
+                    <input type="text" id="documentPath" placeholder="C:\path\to\your\document.indd" readonly>
+                    <button id="browseBtn" class="btn btn-rectangular">Browse for Document</button>
+                </div>
+                <button id="openDocBtn" class="btn btn-success btn-rectangular" disabled>Open Document</button>
+                <div id="openLoading" class="loading">
+                    <div class="spinner"></div>
+                    <p>Opening document...</p>
+                </div>
+            </div>
+
+                                                   <!-- View Links -->
+              <div id="step3" class="step hidden">
+                  <h3>Review Current Links</h3>
+                  <p>Review the current links in your document before repathing.</p>
+                 
+                                                                          <!-- Document Info Display -->
+                    <div id="documentInfo" class="document-info">
+                        <div class="document-info-content">
+                            <div class="document-icon"></div>
+                            <div class="document-info-text">
+                                <div class="document-label">Current Document:</div>
+                                <div id="currentDocumentName" class="document-name">
+                                    <span id="documentFolder" class="document-folder">Loading...</span>
+                                    <span id="documentFilename" class="document-filename"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                 
+                                                       <div class="action-buttons">
+                        <button id="refreshLinksBtn" class="btn btn-info" title="Refresh Links">
+                            <span class="btn-icon">↻</span>
+                        </button>
+                        <button id="refreshConnectionBtn" class="btn btn-info" title="Refresh Connection">
+                            <span class="btn-icon">🔗</span>
+                        </button>
+                        <div id="connectionStatus" class="connection-status">
+                            Connected
+                        </div>
+                    </div>
+                 
+                                   <div id="linksContainer"></div>
+             </div>
+
+                                                   <!-- Repath Links -->
+              <div id="step4" class="step hidden">
+                  <h3>Repath Links</h3>
+                  <p>Enter the old folder path and select the new folder path to repath all links.</p>
+                 
+
+                 
+                 <div class="form-group">
+                     <label for="oldFolder">Old Folder Path:</label>
+                     <input type="text" id="oldFolder" placeholder="C:\old\folder\path">
+
+                 </div>
+                                                                       <div class="form-group">
+                       <label for="newFolder">New Folder Path:</label>
+                       <input type="text" id="newFolder" placeholder="C:\new\folder\path">
+                       <small class="form-help">Enter the new folder path where your files are located</small>
+                   </div>
+                 <button id="previewBtn" class="btn btn-info btn-rectangular">Preview Changes</button>
+                 <div id="previewLoading" class="loading">
+                     <div class="spinner"></div>
+                     <p>Checking new file locations...</p>
+                 </div>
+             </div>
+
+                           <!-- Preview Changes -->
+              <div id="step5" class="step hidden">
+                  <h3>Preview Changes</h3>
+                  <p>Review the changes before applying them to your document.</p>
+                 <div id="previewContainer"></div>
+                 <div class="action-buttons">
+                     <button id="confirmRepathBtn" class="btn btn-warning btn-rectangular">Confirm and Repath All Links</button>
+                     <button id="backToStep4Btn" class="btn btn-rectangular">Back to Edit</button>
+                 </div>
+                 <div id="repathLoading" class="loading">
+                     <div class="spinner"></div>
+                     <p>Repathing links...</p>
+                 </div>
+             </div>
+
+                         <!-- Results -->
+             <div id="results" class="results hidden">
+                 <h4>Repathing Results</h4>
+                 <div id="resultsGrid" class="results-grid"></div>
+                 <div id="resultsDetails"></div>
+                 
+                 <!-- Action buttons for successful repathing -->
+                 <div id="actionButtons" class="action-buttons hidden">
+                     <button id="refreshLinksActionBtn" class="btn btn-info" title="Refresh Links">
+                         <span class="btn-icon">↻</span>
+                     </button>
+                 </div>
+             </div>
+             
+             <!-- Celebration Animation Container -->
+             <div id="celebrationContainer" class="celebration-container hidden">
+                 <div class="celebration-text">🎉 Success! 🎉</div>
+                 <div class="celebration-subtext">Links have been successfully repathed!</div>
+                 <div class="celebration-refresh-message">Refresh the page to start a new repath job</div>
+             </div>
+        </div>
+    </div>
+
+    <script>
+            class InDesignLinkRepather {
+                                                   constructor() {
+                // Use current origin to avoid CORS mismatches between 127.0.0.1 and localhost
+                this.baseUrl = window.location.origin;
+                this.init();
+            }
+
+                         init() {
+                 this.bindEvents();
+                 this.checkConnection();
+                 this.startAutoDetection();
+             }
+
+                         bindEvents() {
+                 document.getElementById('autoConnectBtn').addEventListener('click', () => this.autoConnectToInDesign());
+                 document.getElementById('stopAutoDetectionBtn').addEventListener('click', () => this.stopAutoDetection());
+                 document.getElementById('detectVersionsBtn').addEventListener('click', () => this.detectInDesignVersions());
+                 document.getElementById('connectBtn').addEventListener('click', () => this.connectToInDesign());
+                 document.getElementById('browseBtn').addEventListener('click', () => this.browseForDocument());
+                 document.getElementById('openDocBtn').addEventListener('click', () => this.openDocument());
+                                   document.getElementById('refreshLinksBtn').addEventListener('click', () => this.getLinks());
+                  document.getElementById('refreshConnectionBtn').addEventListener('click', () => this.refreshConnection());
+                  document.getElementById('previewBtn').addEventListener('click', () => this.previewChanges());
+                 document.getElementById('confirmRepathBtn').addEventListener('click', () => this.repathLinks());
+                 document.getElementById('backToStep4Btn').addEventListener('click', () => this.backToStep4());
+                 document.getElementById('refreshLinksActionBtn').addEventListener('click', () => this.refreshLinks());
+
+             }
+
+            async checkConnection() {
+                try {
+                    const response = await fetch(`${this.baseUrl}/api/status`);
+                    if (response.ok) {
+                        this.showStatus('Server is running', 'success');
+                    } else {
+                        this.showStatus('Server not responding', 'error');
+                    }
+                } catch (error) {
+                    this.showStatus('Cannot connect to server. Make sure the Python script is running.', 'error');
+                }
+            }
+
+            showStatus(message, type = 'info', details = null) {
+                const statusEl = document.getElementById('status');
+                statusEl.innerHTML = message;
+                statusEl.className = `status ${type}`;
+                
+                // Add error details if provided
+                if (details && type === 'error') {
+                    statusEl.innerHTML += `<div class="error-details">${details}</div>`;
+                }
+            }
+            
+            showWarnings(warnings) {
+                if (!warnings || !Array.isArray(warnings) || warnings.length === 0) return;
+                
+                const warningHtml = `
+                    <div class="warning-list">
+                        <strong>Warnings:</strong>
+                        <ul>
+                            ${warnings.map(warning => `<li>${warning}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+                
+                const statusEl = document.getElementById('status');
+                statusEl.innerHTML += warningHtml;
+            }
+
+            showLoading(elementId) {
+                document.getElementById(elementId).style.display = 'block';
+            }
+
+            hideLoading(elementId) {
+                document.getElementById(elementId).style.display = 'none';
+            }
+
+            showStep(stepId) {
+                document.getElementById(stepId).classList.remove('hidden');
+            }
+
+            async detectInDesignVersions() {
+                this.showLoading('detectLoading');
+                try {
+                    const response = await fetch(`${this.baseUrl}/api/get_indesign_versions`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({})
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.displayInDesignVersions(data.versions);
+                        document.getElementById('versionSelection').classList.remove('hidden');
+                        
+                        let statusMessage = `Found ${data.total_found} InDesign version(s)`;
+                        if (data.total_found === 0) {
+                            statusMessage = 'No InDesign versions found';
+                            this.showStatus(statusMessage, 'warning');
+                        } else {
+                            this.showStatus(statusMessage, 'success');
+                        }
+                        
+                        // Show warnings if any
+                        if (data.warnings) {
+                            this.showWarnings(data.warnings);
+                        }
+                    } else {
+                        this.showStatus('Failed to detect InDesign versions', 'error', data.error);
+                    }
+                } catch (error) {
+                    this.showStatus('Failed to detect InDesign versions', 'error', error.message);
+                } finally {
+                    this.hideLoading('detectLoading');
+                }
+            }
+
+            displayInDesignVersions(versions) {
+                const select = document.getElementById('indesignVersion');
+                select.innerHTML = '';
+                
+                if (versions.length === 0) {
+                    select.innerHTML = '<option value="">No InDesign versions found</option>';
+                    return;
+                }
+                
+                versions.forEach(version => {
+                    const option = document.createElement('option');
+                    option.value = version.registry_path;
+                    option.textContent = `${version.version} (${version.path})`;
+                    select.appendChild(option);
+                });
+            }
+
+                         async autoConnectToInDesign() {
+                 this.showLoading('autoConnectLoading');
+                 try {
+                     const response = await fetch(`${this.baseUrl}/api/auto_connect`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({})
+                     });
+                     
+                     const data = await response.json();
+                     
+                                                                                       if (data.success && data.connected) {
+                           let statusMessage = `Connected to ${data.app_name} ${data.app_version}`;
+                           
+                           if (data.document_count > 0) {
+                               statusMessage += ` with ${data.document_count} document(s)`;
+                               if (data.current_document) {
+                                   statusMessage += ` (Active: ${data.current_document})`;
+                               }
+                               this.showStatus(statusMessage, 'success');
+                               
+                               // Update document name display
+                               this.updateDocumentDisplay(data);
+                               
+                               // Show step 3 (view links) when documents are detected
+                               this.showStep('step3');
+                               // Add a longer delay to ensure connection is stable before getting links
+                               setTimeout(() => {
+                                   this.getLinks(); // Automatically load links
+                               }, 1000);
+                           } else {
+                               statusMessage += ' (No documents open)';
+                               this.showStatus(statusMessage + ' - Please open a document in InDesign', 'warning');
+                               // Don't proceed - wait for user to open a document
+                           }
+                         
+                         // Display active documents info
+                         if (data.active_documents && data.active_documents.length > 0) {
+                             const docInfo = data.active_documents.map(doc => 
+                                 `• ${doc.name}${doc.is_active ? ' (Active)' : ''}`
+                             ).join('\n');
+                             console.log('Active documents:', docInfo);
+                         }
+                         
+                     } else {
+                         this.showStatus('Auto-connect failed', 'error', data.error);
+                     }
+                 } catch (error) {
+                     this.showStatus('Auto-connect failed', 'error', error.message);
+                 } finally {
+                     this.hideLoading('autoConnectLoading');
+                 }
+             }
+
+            async connectToInDesign() {
+                const selectedVersion = document.getElementById('indesignVersion').value;
+                if (!selectedVersion) {
+                    this.showStatus('Please select an InDesign version first', 'error');
+                    return;
+                }
+
+                this.showLoading('connectLoading');
+                try {
+                    const response = await fetch(`${this.baseUrl}/api/connect`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ version_path: selectedVersion })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        this.showStatus(data.message, 'success');
+                        this.showStep('step2');
+                    } else {
+                        this.showStatus('Failed to connect to InDesign', 'error', data.error);
+                    }
+                } catch (error) {
+                    this.showStatus('Failed to connect to InDesign', 'error', error.message);
+                } finally {
+                    this.hideLoading('connectLoading');
+                }
+            }
+
+                         browseForDocument() {
+                 // Create a file input element
+                 const input = document.createElement('input');
+                 input.type = 'file';
+                 input.accept = '.indd';
+                 input.onchange = (e) => {
+                     const file = e.target.files[0];
+                     if (file) {
+                         document.getElementById('documentPath').value = file.path || file.name;
+                         document.getElementById('openDocBtn').disabled = false;
+                     }
+                 };
+                 input.click();
+             }
+
+                                                                                                               
+
+                         async openDocument() {
+                 const filePath = document.getElementById('documentPath').value;
+                 if (!filePath) {
+                     this.showStatus('Please select a document first', 'error');
+                     return;
+                 }
+ 
+                 this.showLoading('openLoading');
+                 try {
+                     const response = await fetch(`${this.baseUrl}/api/open_document`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ file_path: filePath })
+                     });
+                     
+                     const data = await response.json();
+                     
+                     if (data.success) {
+                         this.showStatus(data.message, 'success');
+                         
+                         // Get document info to display the name
+                         const docResponse = await fetch(`${this.baseUrl}/api/document_info`, {
+                             method: 'POST',
+                             headers: { 'Content-Type': 'application/json' },
+                             body: JSON.stringify({})
+                         });
+                         
+                         if (docResponse.ok) {
+                             const docData = await docResponse.json();
+                             if (docData.success && docData.info && !docData.info.error) {
+                                 const displayData = {
+                                     current_document: docData.info.name,
+                                     document_count: 1,
+                                     app_name: 'InDesign',
+                                     app_version: 'Unknown'
+                                 };
+                                 this.updateDocumentDisplay(displayData);
+                             }
+                         }
+                         
+                         this.showStep('step3');
+                         this.getLinks();
+                     } else {
+                         this.showStatus('Failed to open document', 'error', data.error);
+                     }
+                 } catch (error) {
+                     this.showStatus('Failed to open document', 'error', error.message);
+                 } finally {
+                     this.hideLoading('openLoading');
+                 }
+             }
+
+                         async getLinks() {
+                 try {
+                     // First check if we're connected
+                     const statusResponse = await fetch(`${this.baseUrl}/api/auto_connect`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({})
+                     });
+                     
+                     const statusData = await statusResponse.json();
+                     
+                     if (!statusData.success || !statusData.connected) {
+                         this.showStatus('Not connected to InDesign. Please connect first.', 'error');
+                         return;
+                     }
+                     
+                     // Now get the links
+                     const response = await fetch(`${this.baseUrl}/api/get_links`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({})
+                     });
+                     
+                     const data = await response.json();
+                     
+                     if (data.success) {
+                         this.displayLinks(data.links);
+                         this.showStep('step4');
+                     } else {
+                         this.showStatus('Failed to get links', 'error', data.error);
+                     }
+                 } catch (error) {
+                     this.showStatus('Failed to get links', 'error', error.message);
+                 }
+             }
+
+                                     displayLinks(links) {
+                const container = document.getElementById('linksContainer');
+                
+                if (links.length === 0) {
+                    container.innerHTML = '<p>No links found in the document.</p>';
+                    return;
+                }
+
+                // Count missing files
+                const missingLinks = links.filter(link => !link.file_exists);
+                const existingLinks = links.filter(link => link.file_exists);
+                
+                // Create summary section for missing files
+                let summaryHtml = '';
+                if (missingLinks.length > 0) {
+                    summaryHtml = `
+                        <div class="missing-files-alert">
+                            <div class="alert-header">
+                                <span class="alert-icon">⚠️</span>
+                                <span class="alert-title">Missing Files Detected</span>
+                            </div>
+                            <div class="alert-content">
+                                <p><strong>${missingLinks.length} file(s) are missing</strong> and need to be located or repathed. These are highlighted below and should be your primary focus.</p>
+                                <div class="missing-summary">
+                                    <span class="missing-count">${missingLinks.length}</span> missing files
+                                    <span class="existing-count">${existingLinks.length}</span> existing files
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                // Show the detailed table
+                let html = summaryHtml + `
+                    <div class="table-container">
+                        <table class="links-table" id="linksTable">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-sort="name">Name <span class="sort-icon">↕</span></th>
+                                    <th class="sortable" data-sort="path">Original Path <span class="sort-icon">↕</span></th>
+                                    <th>Preview</th>
+                                    <th class="sortable" data-sort="status">Status <span class="sort-icon">↕</span></th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+
+                links.forEach(link => {
+                    const statusClass = this.getStatusClass(link.status);
+                    const statusText = this.getStatusText(link.status);
+                    const isImage = this.isImageFile(link.name);
+                    const isMissing = !link.file_exists;
+                    
+                    // Add special styling for missing files
+                    const rowClass = isMissing ? 'missing-file-row' : '';
+                    const statusBadgeClass = isMissing ? 'status-badge missing urgent' : `status-badge ${statusClass}`;
+                    const statusDisplayText = isMissing ? 'MISSING FILE' : statusText;
+                    
+                    html += `
+                        <tr class="${rowClass}">
+                            <td>
+                                ${isMissing ? '<span class="missing-indicator">⚠️</span>' : ''}
+                                ${link.name}
+                            </td>
+                            <td class="${isMissing ? 'missing-path' : ''}">${link.file_path}</td>
+                            <td>
+                                ${isImage ? 
+                                    `<div class="preview-container" data-path="${link.file_path.replace(/"/g, '&quot;')}">
+                                        <span class="preview-loading">Loading...</span>
+                                    </div>` : 
+                                    '<span class="no-preview">No preview</span>'
+                                }
+                            </td>
+                            <td><span class="${statusBadgeClass}">${statusDisplayText}</span></td>
+                            <td>
+                                <button class="btn-copy-path" data-filepath="${link.file_path.replace(/"/g, '&quot;')}" onclick="window.copyPathToRepather(this.getAttribute('data-filepath'))" title="Copy path to repather">
+                                    Copy Path
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+
+                html += '</tbody></table></div>';
+                container.innerHTML = html;
+                
+                // Setup table sorting after the table is created
+                this.setupTableSorting();
+                
+                // Load previews for the links table
+                this.loadLinksPreviews();
+                
+
+            }
+
+            getStatusClass(status) {
+                switch (status) {
+                    case 1: return 'linked';
+                    case 2: return 'missing';
+                    case 3: return 'modified';
+                    default: return 'linked';
+                }
+            }
+
+            getStatusText(status) {
+                switch (status) {
+                    case 1: return 'Linked';
+                    case 2: return 'Missing';
+                    case 3: return 'Modified';
+                    default: return 'Unknown';
+                }
+            }
+
+                         async previewChanges() {
+                 const oldFolder = document.getElementById('oldFolder').value.trim();
+                 const newFolder = document.getElementById('newFolder').value.trim();
+
+                 if (!oldFolder || !newFolder) {
+                     this.showStatus('Please enter both old and new folder paths', 'error');
+                     return;
+                 }
+
+                 this.showLoading('previewLoading');
+                 try {
+                     const response = await fetch(`${this.baseUrl}/api/preview_repath`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({
+                             old_folder: oldFolder,
+                             new_folder: newFolder
+                         })
+                     });
+                     
+                     const data = await response.json();
+                     
+                     if (data.success) {
+                         this.displayPreview(data.preview);
+                         this.showStep('step5');
+                         this.hideStep('step4');
+                     } else {
+                         this.showStatus('Failed to preview changes', 'error', data.error);
+                     }
+                 } catch (error) {
+                     this.showStatus('Failed to preview changes', 'error', error.message);
+                 } finally {
+                     this.hideLoading('previewLoading');
+                 }
+             }
+
+             displayPreview(preview) {
+                 const container = document.getElementById('previewContainer');
+                 
+                 // Count missing files for summary
+                 const missingFiles = preview.details.filter(item => item.status === 'missing');
+                 const foundFiles = preview.details.filter(item => item.status === 'found');
+                 const unchangedFiles = preview.details.filter(item => item.status === 'unchanged');
+                 
+                 // Create summary section for missing files
+                 let summaryHtml = '';
+                 if (missingFiles.length > 0) {
+                     summaryHtml = `
+                         <div class="missing-files-alert">
+                             <div class="alert-header">
+                                 <span class="alert-icon">⚠️</span>
+                                 <span class="alert-title">Missing Files in Preview</span>
+                             </div>
+                             <div class="alert-content">
+                                 <p><strong>${missingFiles.length} file(s) will remain missing</strong> after repathing. These files need to be located manually or the paths need to be corrected.</p>
+                                 <div class="missing-summary">
+                                     <span class="missing-count">${missingFiles.length}</span> will remain missing
+                                     <span class="existing-count">${foundFiles.length}</span> will be found
+                                     <span class="existing-count">${unchangedFiles.length}</span> unchanged
+                                 </div>
+                             </div>
+                         </div>
+                     `;
+                 }
+                 
+                 let html = summaryHtml + `
+                    <div class="preview-summary">
+                        <h4>Preview Summary</h4>
+                        <div class="preview-stats">
+                            <div class="stat-item">
+                                <span class="stat-number">${preview.found || 0}</span>
+                                <span class="stat-label">Files Found</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">${preview.missing || 0}</span>
+                                <span class="stat-label">Files Missing</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">${preview.unchanged || 0}</span>
+                                <span class="stat-label">Unchanged</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">${preview.total || 0}</span>
+                                <span class="stat-label">Total Links</span>
+                            </div>
+                        </div>
+                    </div>
+                        <div class="table-container">
+                            <table class="links-table preview-table">
+                                <thead>
+                                    <tr>
+                                        <th class="sortable" data-sort="name">Name <span class="sort-icon">↕</span></th>
+                                        <th class="sortable" data-sort="paths">Paths <span class="sort-icon">↕</span></th>
+                                        <th>Old Preview</th>
+                                        <th>New Preview</th>
+                                        <th class="sortable" data-sort="status">Status <span class="sort-icon">↕</span></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+
+                 preview.details.forEach(item => {
+                     let statusClass, statusText;
+                     const isMissing = item.status === 'missing';
+                     
+                     if (item.status === 'unchanged') {
+                         statusClass = 'unchanged';
+                         statusText = 'Unchanged';
+                     } else if (item.status === 'found') {
+                         statusClass = 'found';
+                         statusText = 'Found';
+                     } else if (item.status === 'missing') {
+                         statusClass = 'missing urgent';
+                         statusText = 'MISSING FILE';
+                     } else if (item.status === 'error') {
+                         statusClass = 'error';
+                         statusText = 'Error';
+                     } else {
+                         statusClass = 'found';
+                         statusText = 'Found';
+                     }
+                     
+                     // Check if this is an image file that can be previewed
+                    const isImageFile = this.isImageFile(item.name);
+                    const oldPreviewCell = isImageFile ? 
+                        `<td><div class="preview-container" data-path="${item.old_path}">Loading...</div></td>` : 
+                        '<td>-</td>';
+                    const newPreviewCell = isImageFile && item.new_path && item.new_path !== 'N/A' && item.new_path !== 'unknown' ?
+                        `<td><div class="preview-container" data-path="${item.new_path}">Loading...</div></td>` : 
+                        '<td>-</td>';
+                    
+                    // Add special styling for missing files
+                    const rowClass = isMissing ? 'missing-file-row' : '';
+                    const pathClass = isMissing ? 'missing-path' : '';
+                    
+                    html += `
+                        <tr class="${rowClass}">
+                            <td>
+                                ${isMissing ? '<span class="missing-indicator">⚠️</span>' : ''}
+                                ${item.name}
+                            </td>
+                            <td class="paths-cell">
+                                <div class="path-item">
+                                    <span class="path-label">Old:</span>
+                                    <span class="path-value ${pathClass}">${item.old_path}</span>
+                                </div>
+                                <div class="path-item">
+                                    <span class="path-label">New:</span>
+                                    <span class="path-value ${pathClass}">${item.new_path || 'N/A'}</span>
+                                </div>
+                            </td>
+                            ${oldPreviewCell}
+                            ${newPreviewCell}
+                            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                        </tr>
+                    `;
+                 });
+
+                                   html += '</tbody></table></div>';
+                  container.innerHTML = html;
+                  
+                  // Add sorting functionality for preview table
+                  this.setupPreviewTableSorting();
+                  
+                  // Load previews for the preview table
+                  this.loadPreviewPreviews();
+             }
+             
+             setupTableSorting() {
+                 const table = document.getElementById('linksTable');
+                 if (!table) return;
+                 
+                 const headers = table.querySelectorAll('th.sortable');
+                 headers.forEach(header => {
+                     header.addEventListener('click', () => {
+                         const sortBy = header.getAttribute('data-sort');
+                         this.sortTable(sortBy);
+                         this.updateSortIcons(sortBy);
+                     });
+                 });
+             }
+             
+             sortTable(sortBy) {
+                 const table = document.getElementById('linksTable');
+                 if (!table) return;
+                 
+                 const tbody = table.querySelector('tbody');
+                 const rows = Array.from(tbody.querySelectorAll('tr'));
+                 
+                 // Get current sort direction
+                 const currentDirection = table.getAttribute('data-sort-direction') || 'asc';
+                 const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+                 
+                 // Sort rows
+                 rows.sort((a, b) => {
+                     let aValue, bValue;
+                     
+                     switch (sortBy) {
+                         case 'name':
+                             aValue = a.cells[0].textContent.toLowerCase();
+                             bValue = b.cells[0].textContent.toLowerCase();
+                             break;
+                         case 'path':
+                             aValue = a.cells[1].textContent.toLowerCase();
+                             bValue = b.cells[1].textContent.toLowerCase();
+                             break;
+                         case 'status':
+                             // Get status text from the status badge
+                             const aStatusBadge = a.cells[3].querySelector('.status-badge');
+                             const bStatusBadge = b.cells[3].querySelector('.status-badge');
+                             aValue = aStatusBadge ? aStatusBadge.textContent.toLowerCase() : '';
+                             bValue = bStatusBadge ? bStatusBadge.textContent.toLowerCase() : '';
+                             
+                             // Custom status priority: Missing > Modified > Linked
+                             const statusPriority = {
+                                 'missing file': 0,
+                                 'missing': 0,
+                                 'modified': 1,
+                                 'linked': 2,
+                                 'found': 2,
+                                 'unchanged': 3
+                             };
+                             
+                             const aPriority = statusPriority[aValue] !== undefined ? statusPriority[aValue] : 999;
+                             const bPriority = statusPriority[bValue] !== undefined ? statusPriority[bValue] : 999;
+                             
+                             if (aPriority !== bPriority) {
+                                 return aPriority - bPriority;
+                             }
+                             break;
+                         default:
+                             return 0;
+                     }
+                     
+                     if (newDirection === 'asc') {
+                         return aValue.localeCompare(bValue);
+                     } else {
+                         return bValue.localeCompare(aValue);
+                     }
+                 });
+                 
+                 // Reorder rows
+                 rows.forEach(row => tbody.appendChild(row));
+                 
+                 // Update sort direction
+                 table.setAttribute('data-sort-direction', newDirection);
+                 table.setAttribute('data-sort-by', sortBy);
+             }
+             
+             updateSortIcons(sortBy) {
+                 const table = document.getElementById('linksTable');
+                 if (!table) return;
+                 
+                 const headers = table.querySelectorAll('th.sortable');
+                 const direction = table.getAttribute('data-sort-direction') || 'asc';
+                 
+                 headers.forEach(header => {
+                     const icon = header.querySelector('.sort-icon');
+                     const headerSortBy = header.getAttribute('data-sort');
+                     
+                     if (headerSortBy === sortBy) {
+                         icon.textContent = direction === 'asc' ? '↑' : '↓';
+                     } else {
+                         icon.textContent = '↕';
+                     }
+                 });
+             }
+             
+             setupPreviewTableSorting() {
+                 const table = document.querySelector('.preview-table');
+                 if (!table) return;
+                 
+                 const headers = table.querySelectorAll('th.sortable');
+                 headers.forEach(header => {
+                     header.addEventListener('click', () => {
+                         const sortBy = header.getAttribute('data-sort');
+                         this.sortPreviewTable(sortBy);
+                         this.updatePreviewSortIcons(sortBy);
+                     });
+                 });
+             }
+             
+             sortPreviewTable(sortBy) {
+                 const table = document.querySelector('.preview-table');
+                 if (!table) return;
+                 
+                 const tbody = table.querySelector('tbody');
+                 const rows = Array.from(tbody.querySelectorAll('tr'));
+                 
+                 // Get current sort direction
+                 const currentDirection = table.getAttribute('data-sort-direction') || 'asc';
+                 const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+                 
+                 // Sort rows
+                 rows.sort((a, b) => {
+                     let aValue, bValue;
+                     
+                     switch (sortBy) {
+                         case 'name':
+                             aValue = a.cells[0].textContent.toLowerCase();
+                             bValue = b.cells[0].textContent.toLowerCase();
+                             break;
+                         case 'paths':
+                             // Get the old path from the paths cell
+                             const aOldPath = a.cells[1].querySelector('.path-value')?.textContent.toLowerCase() || '';
+                             const bOldPath = b.cells[1].querySelector('.path-value')?.textContent.toLowerCase() || '';
+                             aValue = aOldPath;
+                             bValue = bOldPath;
+                             break;
+                         case 'status':
+                             // Get status text from the status badge
+                             const aStatusBadge = a.cells[4].querySelector('.status-badge');
+                             const bStatusBadge = b.cells[4].querySelector('.status-badge');
+                             aValue = aStatusBadge ? aStatusBadge.textContent.toLowerCase() : '';
+                             bValue = bStatusBadge ? bStatusBadge.textContent.toLowerCase() : '';
+                             
+                             // Custom status priority: Missing > Found > Unchanged
+                             const statusPriority = {
+                                 'missing file': 0,
+                                 'missing': 0,
+                                 'found': 1,
+                                 'unchanged': 2,
+                                 'error': 3
+                             };
+                             
+                             const aPriority = statusPriority[aValue] !== undefined ? statusPriority[aValue] : 999;
+                             const bPriority = statusPriority[bValue] !== undefined ? statusPriority[bValue] : 999;
+                             
+                             if (aPriority !== bPriority) {
+                                 return aPriority - bPriority;
+                             }
+                             break;
+                         default:
+                             return 0;
+                     }
+                     
+                     if (newDirection === 'asc') {
+                         return aValue.localeCompare(bValue);
+                     } else {
+                         return bValue.localeCompare(aValue);
+                     }
+                 });
+                 
+                 // Reorder rows
+                 rows.forEach(row => tbody.appendChild(row));
+                 
+                 // Update sort direction
+                 table.setAttribute('data-sort-direction', newDirection);
+                 table.setAttribute('data-sort-by', sortBy);
+             }
+             
+             updatePreviewSortIcons(sortBy) {
+                 const table = document.querySelector('.preview-table');
+                 if (!table) return;
+                 
+                 const headers = table.querySelectorAll('th.sortable');
+                 const direction = table.getAttribute('data-sort-direction') || 'asc';
+                 
+                 headers.forEach(header => {
+                     const icon = header.querySelector('.sort-icon');
+                     const headerSortBy = header.getAttribute('data-sort');
+                     
+                     if (headerSortBy === sortBy) {
+                         icon.textContent = direction === 'asc' ? '↑' : '↓';
+                     } else {
+                         icon.textContent = '↕';
+                     }
+                 });
+             }
+             
+             setupResultsTableSorting() {
+                 const table = document.querySelector('.results-table');
+                 if (!table) return;
+                 
+                 const headers = table.querySelectorAll('th.sortable');
+                 headers.forEach(header => {
+                     header.addEventListener('click', () => {
+                         const sortBy = header.getAttribute('data-sort');
+                         this.sortResultsTable(sortBy);
+                         this.updateResultsSortIcons(sortBy);
+                     });
+                 });
+             }
+             
+             sortResultsTable(sortBy) {
+                 const table = document.querySelector('.results-table');
+                 if (!table) return;
+                 
+                 const tbody = table.querySelector('tbody');
+                 const rows = Array.from(tbody.querySelectorAll('tr'));
+                 
+                 // Get current sort direction
+                 const currentDirection = table.getAttribute('data-sort-direction') || 'asc';
+                 const newDirection = currentDirection === 'asc' ? 'desc' : 'asc';
+                 
+                 // Sort rows
+                 rows.sort((a, b) => {
+                     let aValue, bValue;
+                     
+                     switch (sortBy) {
+                         case 'name':
+                             aValue = a.cells[0].textContent.toLowerCase();
+                             bValue = b.cells[0].textContent.toLowerCase();
+                             break;
+                         case 'paths':
+                             // Get the old path from the paths cell
+                             const aOldPath = a.cells[1].querySelector('.path-value')?.textContent.toLowerCase() || '';
+                             const bOldPath = b.cells[1].querySelector('.path-value')?.textContent.toLowerCase() || '';
+                             aValue = aOldPath;
+                             bValue = bOldPath;
+                             break;
+                         case 'status':
+                             // Get status text from the status badge
+                             const aStatusBadge = a.cells[4].querySelector('.status-badge');
+                             const bStatusBadge = b.cells[4].querySelector('.status-badge');
+                             aValue = aStatusBadge ? aStatusBadge.textContent.toLowerCase() : '';
+                             bValue = bStatusBadge ? bStatusBadge.textContent.toLowerCase() : '';
+                             
+                             // Custom status priority: Failed > Missing > Success > Skipped
+                             const statusPriority = {
+                                 'failed': 0,
+                                 'missing file': 0,
+                                 'missing': 0,
+                                 'success': 1,
+                                 'found': 1,
+                                 'skipped': 2,
+                                 'unchanged': 2
+                             };
+                             
+                             const aPriority = statusPriority[aValue] !== undefined ? statusPriority[aValue] : 999;
+                             const bPriority = statusPriority[bValue] !== undefined ? statusPriority[bValue] : 999;
+                             
+                             if (aPriority !== bPriority) {
+                                 return aPriority - bPriority;
+                             }
+                             break;
+                         default:
+                             return 0;
+                     }
+                     
+                     if (newDirection === 'asc') {
+                         return aValue.localeCompare(bValue);
+                     } else {
+                         return bValue.localeCompare(aValue);
+                     }
+                 });
+                 
+                 // Reorder rows
+                 rows.forEach(row => tbody.appendChild(row));
+                 
+                 // Update sort direction
+                 table.setAttribute('data-sort-direction', newDirection);
+                 table.setAttribute('data-sort-by', sortBy);
+             }
+             
+             updateResultsSortIcons(sortBy) {
+                 const table = document.querySelector('.results-table');
+                 if (!table) return;
+                 
+                 const headers = table.querySelectorAll('th.sortable');
+                 const direction = table.getAttribute('data-sort-direction') || 'asc';
+                 
+                 headers.forEach(header => {
+                     const icon = header.querySelector('.sort-icon');
+                     const headerSortBy = header.getAttribute('data-sort');
+                     
+                     if (headerSortBy === sortBy) {
+                         icon.textContent = direction === 'asc' ? '↑' : '↓';
+                     } else {
+                         icon.textContent = '↕';
+                     }
+                 });
+             }
+
+             hideStep(stepId) {
+                 document.getElementById(stepId).classList.add('hidden');
+             }
+
+             backToStep4() {
+                 this.hideStep('step5');
+                 this.showStep('step4');
+             }
+
+                            async repathLinks() {
+                   const oldFolder = document.getElementById('oldFolder').value.trim();
+                   const newFolder = document.getElementById('newFolder').value.trim();
+
+                   if (!oldFolder || !newFolder) {
+                       this.showStatus('Please enter both old and new folder paths', 'error');
+                       return;
+                   }
+
+                   this.showLoading('repathLoading');
+                   try {
+                       const response = await fetch(`${this.baseUrl}/api/repath_links`, {
+                           method: 'POST',
+                           headers: { 'Content-Type': 'application/json' },
+                           body: JSON.stringify({
+                               old_folder: oldFolder,
+                               new_folder: newFolder
+                           })
+                       });
+                       
+                       const data = await response.json();
+                       
+                       if (data.success) {
+                           this.showStatus('Links repathed successfully!', 'success');
+                           this.displayResults(data.results);
+                           document.getElementById('results').classList.remove('hidden');
+                           this.hideStep('step5');
+                           
+                                                       // Check if any links were successful and trigger celebration
+                            if (data.results.success > 0) {
+                                this.triggerCelebration();
+                            }
+                       } else {
+                           this.showStatus('Failed to repath links', 'error', data.error);
+                       }
+                   } catch (error) {
+                       this.showStatus('Failed to repath links', 'error', error.message);
+                   } finally {
+                       this.hideLoading('repathLoading');
+                   }
+               }
+
+            displayResults(results) {
+                const grid = document.getElementById('resultsGrid');
+                const details = document.getElementById('resultsDetails');
+
+                // Count different result types
+                const failedResults = results.details.filter(detail => (typeof detail.status === 'object' && detail.status && ('error' in detail.status)) || detail.status === 'error' || detail.status === 'file_not_found');
+                const successfulResults = results.details.filter(detail => detail.status === 'success');
+                const skippedResults = results.details.filter(detail => detail.status === 'skipped' || detail.status === 'unchanged');
+
+                // Display summary
+                grid.innerHTML = `
+                    <div class="result-card success">
+                        <div class="number">${results.success}</div>
+                        <div>Successfully Repathed</div>
+                    </div>
+                    <div class="result-card failed">
+                        <div class="number">${results.failed}</div>
+                        <div>Failed</div>
+                    </div>
+                    <div class="result-card skipped">
+                        <div class="number">${results.skipped}</div>
+                        <div>Skipped</div>
+                    </div>
+                `;
+
+                // Create summary section for failed/missing files
+                let summaryHtml = '';
+                if (failedResults.length > 0) {
+                    summaryHtml = `
+                        <div class="missing-files-alert">
+                            <div class="alert-header">
+                                <span class="alert-icon">⚠️</span>
+                                <span class="alert-title">Failed/Missing Files</span>
+                            </div>
+                            <div class="alert-content">
+                                <p><strong>${failedResults.length} file(s) failed to repath</strong> or are still missing. These need manual attention.</p>
+                                <div class="missing-summary">
+                                    <span class="missing-count">${failedResults.length}</span> failed/missing
+                                    <span class="existing-count">${successfulResults.length}</span> successful
+                                    <span class="existing-count">${skippedResults.length}</span> skipped
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                                                 // Display details
+                if (results.details && results.details.length > 0) {
+                    let detailsHtml = summaryHtml + '<h4>Details:</h4><table class="links-table results-table">';
+                    detailsHtml += '<thead><tr><th class="sortable" data-sort="name">Name <span class="sort-icon">↕</span></th><th class="sortable" data-sort="paths">Paths <span class="sort-icon">↕</span></th><th>Old Preview</th><th>New Preview</th><th class="sortable" data-sort="status">Status <span class="sort-icon">↕</span></th></tr></thead><tbody>';
+                    
+                    results.details.forEach(detail => {
+                        let statusText = 'Found';
+                        let statusClass = 'status-found';
+                        const isFailed = (typeof detail.status === 'object' && detail.status && ('error' in detail.status)) || detail.status === 'error' || detail.status === 'file_not_found';
+                        
+                        if (detail.status === 'missing' || detail.status === 'file_not_found') {
+                            statusClass = 'status-missing';
+                            statusText = 'MISSING FILE';
+                        } else if (detail.status === 'unchanged') {
+                            statusClass = 'status-unchanged';
+                            statusText = 'Unchanged';
+                        } else if (detail.status === 'error' || isFailed) {
+                            statusClass = 'status-error';
+                            statusText = 'FAILED';
+                        }
+                        
+                        // Check if this is an image file that can be previewed
+                        const isImageFile = this.isImageFile(detail.name);
+                        const oldPreviewCell = isImageFile ? 
+                            `<td><div class="preview-container" data-path="${detail.old_path}">Loading...</div></td>` : 
+                            '<td>-</td>';
+                        const newPreviewCell = isImageFile && detail.new_path ? 
+                            `<td><div class="preview-container" data-path="${detail.new_path}">Loading...</div></td>` : 
+                            '<td>-</td>';
+                        
+                        // Add special styling for failed/missing files
+                        const rowClass = isFailed ? 'missing-file-row' : '';
+                        const pathClass = isFailed ? 'missing-path' : '';
+                        
+                        detailsHtml += `
+                            <tr class="${rowClass}">
+                                <td>
+                                    ${isFailed ? '<span class="missing-indicator">⚠️</span>' : ''}
+                                    ${detail.name}
+                                </td>
+                                <td class="paths-cell">
+                                    <div class="path-item">
+                                        <span class="path-label">Old:</span>
+                                        <span class="path-value ${pathClass}">${detail.old_path}</span>
+                                    </div>
+                                    <div class="path-item">
+                                        <span class="path-label">New:</span>
+                                        <span class="path-value ${pathClass}">${detail.new_path || 'N/A'}</span>
+                                    </div>
+                                </td>
+                                ${oldPreviewCell}
+                                ${newPreviewCell}
+                                <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+                            </tr>
+                        `;
+                    });
+                    
+                    detailsHtml += '</tbody></table>';
+                    details.innerHTML = detailsHtml;
+                    
+                    // Setup sorting for results table
+                    this.setupResultsTableSorting();
+                    
+                    // Load previews asynchronously
+                    this.loadResultsPreviews();
+                }
+                 
+                 // Show action buttons if repathing was successful
+                 if (results.success > 0) {
+                     document.getElementById('actionButtons').classList.remove('hidden');
+                 }
+             }
+             
+             // Refresh links functionality - refreshes all links in InDesign and reloads page
+             async refreshLinks() {
+                 try {
+                     this.showStatus('Refreshing links in InDesign...', 'info');
+                     
+                     // Call the backend to refresh all links in InDesign
+                     const response = await fetch(`${this.baseUrl}/api/refresh_links`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' }
+                     });
+                     
+                     // Check if response is ok before trying to parse JSON
+                     if (!response.ok) {
+                         const errorText = await response.text();
+                         throw new Error(`Server error (${response.status}): ${errorText}`);
+                     }
+                     
+                     const data = await response.json();
+                     
+                     if (data.success) {
+                         this.showStatus('Links refreshed successfully! Refreshing page...', 'success');
+                         
+                         // Play a shorter success sound for refresh
+                         this.playSuccessSound();
+                         
+                         // Wait a moment for the user to see the success message
+                         setTimeout(() => {
+                             // Refresh the entire page to bring user to a new stage
+                             window.location.reload();
+                         }, 1500);
+                     } else {
+                         this.showStatus('Failed to refresh links', 'error', data.error);
+                     }
+                     
+                 } catch (error) {
+                     console.error('Refresh links error:', error);
+                     this.showStatus('Failed to refresh links', 'error', error.message);
+                 }
+             }
+             
+             // Auto-detection functionality
+                                        startAutoDetection() {
+                 this.autoDetectionInterval = setInterval(() => {
+                     this.performAutoDetection();
+                 }, 1000); // Every 1 second
+                 
+                 // Update status to show auto-detection is active
+                 this.showStatus('Auto-detection started - checking for InDesign every 1 second', 'info');
+                 console.log('Auto-detection started');
+             }
+             
+             stopAutoDetection() {
+                 if (this.autoDetectionInterval) {
+                     clearInterval(this.autoDetectionInterval);
+                     this.autoDetectionInterval = null;
+                     document.getElementById('autoDetectionText').textContent = 'Auto-detection stopped';
+                 }
+             }
+             
+             async performAutoDetection() {
+                 try {
+                     console.log('Auto-detection: Checking for InDesign...');
+                     const response = await fetch(`${this.baseUrl}/api/auto_connect`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({})
+                     });
+                     
+                     const data = await response.json();
+                     console.log('Auto-detection: Response received:', data);
+                     
+                     if (data.success && data.connected && data.document_count > 0) {
+                         // Auto-connect successful with documents
+                         console.log('Auto-detection: Success! Found documents');
+                         this.updateDocumentDisplay(data);
+                         this.showStep('step3');
+                         this.stopAutoDetection(); // Stop auto-detection once connected
+                         
+                         // Add a longer delay to ensure connection is stable before getting links
+                         setTimeout(() => {
+                             this.getLinks();
+                         }, 1000);
+                         
+                         let statusMessage = `Detected InDesign with open document: ${data.app_name} ${data.app_version}`;
+                         if (data.current_document) {
+                             statusMessage += ` (Active: ${data.current_document})`;
+                         }
+                         this.showStatus(statusMessage, 'success');
+                     } else if (data.success && data.connected) {
+                         console.log('Auto-detection: Connected but no documents open');
+                     } else {
+                         console.log('Auto-detection: Not connected or failed:', data.error || 'Unknown error');
+                     }
+                 } catch (error) {
+                     // Silent fail for auto-detection
+                     console.log('Auto-detection check failed:', error.message);
+                 }
+             }
+             
+             updateDocumentDisplay(data) {
+                 const folderElement = document.getElementById('documentFolder');
+                 const filenameElement = document.getElementById('documentFilename');
+                 
+                 console.log('Document data:', data); // Debug log
+                 
+                 if (data.current_document) {
+                     // Split the full path into folder and filename
+                     const fullPath = data.current_document;
+                     console.log('Full path:', fullPath); // Debug log
+                     const lastBackslash = fullPath.lastIndexOf('\\');
+                     
+                     if (lastBackslash !== -1) {
+                         const folder = fullPath.substring(0, lastBackslash + 1); // Include the backslash
+                         const filename = fullPath.substring(lastBackslash + 1);
+                         
+                         console.log('Folder:', folder, 'Filename:', filename); // Debug log
+                         
+                         folderElement.textContent = folder;
+                         filenameElement.textContent = filename;
+                         
+                         // Reset colors to use CSS classes
+                         folderElement.style.color = '';
+                         filenameElement.style.color = '';
+                         
+                         // Ensure filename is visible
+                         filenameElement.style.display = 'inline';
+                     } else {
+                         // If no backslash found, treat as filename only
+                         folderElement.textContent = '';
+                         filenameElement.textContent = fullPath;
+                         folderElement.style.color = '';
+                         filenameElement.style.color = '';
+                         filenameElement.style.display = 'inline';
+                     }
+                 } else if (data.document_count > 0) {
+                     folderElement.textContent = `${data.document_count} document(s) open (no active document)`;
+                     filenameElement.textContent = '';
+                     folderElement.style.color = '#d29922'; // Yellow for warning
+                     filenameElement.style.color = '';
+                     filenameElement.style.display = 'none';
+                 } else {
+                     folderElement.textContent = 'No documents open';
+                     filenameElement.textContent = '';
+                     folderElement.style.color = '#f85149'; // Red for error
+                     filenameElement.style.color = '';
+                     filenameElement.style.display = 'none';
+                 }
+             }
+             
+             async refreshConnection() {
+                 try {
+                     const response = await fetch(`${this.baseUrl}/api/auto_connect`, {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({})
+                     });
+                     
+                     const data = await response.json();
+                     
+                     if (data.success && data.connected) {
+                         this.updateDocumentDisplay(data);
+                         
+                                                   if (data.document_count > 0) {
+                              this.getLinks(); // Refresh links if documents are open
+                              this.showStatus(`Connection refreshed - ${data.current_document || 'Document connected'}`, 'success');
+                          } else {
+                              this.showStatus('Connection refreshed - No documents open', 'warning');
+                          }
+                      } else {
+                          this.showStatus('Connection lost', 'error', data.error);
+                         // Hide step 3 if connection is lost
+                         document.getElementById('step3').classList.add('hidden');
+                     }
+                                   } catch (error) {
+                      this.showStatus('Failed to refresh connection', 'error', error.message);
+                  }
+              }
+              
+
+              
+              isImageFile(filename) {
+                  const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico'];
+                  const extension = filename.toLowerCase().substring(filename.lastIndexOf('.'));
+                  return imageExtensions.includes(extension);
+              }
+              
+                                       async loadPreviews() {
+                const previewContainers = document.querySelectorAll('.preview-container');
+                
+                previewContainers.forEach(container => {
+                    const filePath = container.getAttribute('data-path');
+                    if (filePath) {
+                        // Add hover popup functionality immediately
+                        this.addImageHoverPopup(container, filePath);
+                        
+                        // Load the preview image
+                        this.loadPreviewImage(container, filePath);
+                    }
+                });
+            }
+            
+            async loadLinksPreviews() {
+                const previewContainers = document.querySelectorAll('#linksTable .preview-container');
+                
+                previewContainers.forEach(container => {
+                    const filePath = container.getAttribute('data-path');
+                    if (filePath) {
+                        // Add hover popup functionality immediately
+                        this.addImageHoverPopup(container, filePath);
+                        
+                        // Load the preview image
+                        this.loadPreviewImage(container, filePath);
+                    }
+                });
+            }
+            
+            async loadPreviewPreviews() {
+                const previewContainers = document.querySelectorAll('.preview-table .preview-container');
+                
+                previewContainers.forEach(container => {
+                    const filePath = container.getAttribute('data-path');
+                    if (filePath) {
+                        // Add hover popup functionality immediately
+                        this.addImageHoverPopup(container, filePath);
+                        
+                        // Load the preview image
+                        this.loadPreviewImage(container, filePath);
+                    }
+                });
+            }
+            
+            async loadResultsPreviews() {
+                const previewContainers = document.querySelectorAll('.results-table .preview-container');
+                
+                previewContainers.forEach(container => {
+                    const filePath = container.getAttribute('data-path');
+                    if (filePath) {
+                        // Add hover popup functionality immediately
+                        this.addImageHoverPopup(container, filePath);
+                        
+                        // Load the preview image
+                        this.loadPreviewImage(container, filePath);
+                    }
+                });
+            }
+              
+              async loadPreviewImage(container, filePath) {
+                  try {
+                      console.log('Loading preview for:', filePath);
+                      
+                      // Set a timeout to prevent infinite loading
+                      const timeout = setTimeout(() => {
+                          console.error('Image load timeout:', filePath);
+                          container.innerHTML = '<span class="preview-error">Timeout</span>';
+                      }, 15000); // 15 second timeout for network paths
+                      
+                      // Create a file URL for the image
+                      const img = new Image();
+                      img.onload = () => {
+                          clearTimeout(timeout);
+                          console.log('Image loaded successfully:', filePath);
+                          
+                          // Mark this file as successfully loaded for status correction
+                          this.markFileAsLoaded(filePath);
+                          
+                          // Create a 50x50 preview
+                          const canvas = document.createElement('canvas');
+                          const ctx = canvas.getContext('2d');
+                          canvas.width = 50;
+                          canvas.height = 50;
+                          
+                          // Calculate aspect ratio to maintain proportions
+                          const aspectRatio = img.width / img.height;
+                          let drawWidth = 50;
+                          let drawHeight = 50;
+                          
+                          if (aspectRatio > 1) {
+                              // Image is wider than tall
+                              drawHeight = 50 / aspectRatio;
+                          } else {
+                              // Image is taller than wide
+                              drawWidth = 50 * aspectRatio;
+                          }
+                          
+                          // Center the image
+                          const x = (50 - drawWidth) / 2;
+                          const y = (50 - drawHeight) / 2;
+                          
+                          ctx.drawImage(img, x, y, drawWidth, drawHeight);
+                          
+                          // Replace loading text with the preview
+                          container.innerHTML = '';
+                          container.appendChild(canvas);
+                      };
+                      
+                      img.onerror = (error) => {
+                          clearTimeout(timeout);
+                          console.error('Failed to load image:', filePath, error);
+                          container.innerHTML = '<span class="preview-error">File not found</span>';
+                      };
+                      
+                      // Load the image through our API endpoint
+                      const encodedPath = encodeURIComponent(filePath);
+                      const imageUrl = `${this.baseUrl}/api/preview_image/${encodedPath}`;
+                      console.log('Requesting image from:', imageUrl);
+                      img.src = imageUrl;
+                      
+                  } catch (error) {
+                      console.error('Error in loadPreviewImage:', error);
+                      container.innerHTML = '<span class="preview-error">Error</span>';
+                  }
+              }
+              
+              // Track successfully loaded files to correct status
+              markFileAsLoaded(filePath) {
+                  if (!this.loadedFiles) {
+                      this.loadedFiles = new Set();
+                  }
+                  this.loadedFiles.add(filePath);
+                  
+                  // Update the status badge if this file was marked as missing
+                  this.updateStatusForLoadedFile(filePath);
+              }
+              
+              updateStatusForLoadedFile(filePath) {
+                  // Find the row containing this file path and update its status
+                  const tables = document.querySelectorAll('.links-table, .preview-table, .results-table');
+                  
+                  tables.forEach(table => {
+                      const rows = table.querySelectorAll('tbody tr');
+                      rows.forEach(row => {
+                          const pathCell = row.querySelector('.path-value');
+                          if (pathCell && pathCell.textContent === filePath) {
+                              const statusCell = row.querySelector('.status-badge');
+                              if (statusCell && statusCell.textContent.includes('MISSING')) {
+                                  // Update the status to indicate the file is actually found
+                                  statusCell.textContent = 'FOUND';
+                                  statusCell.className = 'status-badge found';
+                                  
+                                  // Remove missing file styling
+                                  row.classList.remove('missing-file-row');
+                                  const missingIndicator = row.querySelector('.missing-indicator');
+                                  if (missingIndicator) {
+                                      missingIndicator.remove();
+                                  }
+                                  
+                                  // Update path styling
+                                  const pathValues = row.querySelectorAll('.path-value');
+                                  pathValues.forEach(path => {
+                                      path.classList.remove('missing-path');
+                                  });
+                                  
+                                  console.log(`Updated status for ${filePath} from MISSING to FOUND`);
+                              }
+                          }
+                      });
+                  });
+              }
+               
+               addImageHoverPopup(container, filePath) {
+                   // Create popup element
+                   const popup = document.createElement('div');
+                   popup.className = 'image-popup';
+                   popup.style.display = 'none';
+                   
+                   // Create popup image
+                   const popupImg = document.createElement('img');
+                   popupImg.style.maxWidth = '700px';
+                   popupImg.style.maxHeight = '700px';
+                   popupImg.style.width = 'auto';
+                   popupImg.style.height = 'auto';
+                   popupImg.style.borderRadius = '4px';
+                   
+                   // Add loading state
+                   popupImg.style.opacity = '0.7';
+                   popupImg.onload = () => {
+                       popupImg.style.opacity = '1';
+                   };
+                   
+                   popup.appendChild(popupImg);
+                   
+                   // Set image source after adding to DOM
+                   popupImg.src = `${this.baseUrl}/api/preview_image/${encodeURIComponent(filePath)}`;
+                   document.body.appendChild(popup);
+                   
+                   // Add hover events
+                   let showTimeout;
+                   
+                   container.addEventListener('mouseenter', () => {
+                       showTimeout = setTimeout(() => {
+                           popup.style.display = 'block';
+                       }, 200); // Reduced delay for better responsiveness
+                   });
+                   
+                   container.addEventListener('mouseleave', () => {
+                       clearTimeout(showTimeout);
+                       popup.style.display = 'none';
+                   });
+                   
+                   // Position popup on mouse move
+                   container.addEventListener('mousemove', (e) => {
+                       if (popup.style.display === 'block') {
+                           const rect = popup.getBoundingClientRect();
+                           const containerRect = container.getBoundingClientRect();
+                           
+                           let x = e.clientX + 10;
+                           let y = e.clientY + 10;
+                           
+                           // Ensure popup stays within viewport
+                           if (x + rect.width > window.innerWidth) {
+                               x = e.clientX - rect.width - 10;
+                           }
+                           if (y + rect.height > window.innerHeight) {
+                               y = e.clientY - rect.height - 10;
+                           }
+                           
+                           popup.style.left = x + 'px';
+                           popup.style.top = y + 'px';
+                       }
+                   });
+                   
+                   // Clean up popup when container is removed
+                   const observer = new MutationObserver(() => {
+                       if (!document.contains(container)) {
+                           document.body.removeChild(popup);
+                           observer.disconnect();
+                       }
+                   });
+                   observer.observe(document.body, { childList: true, subtree: true });
+               }
+               
+               triggerCelebration() {
+                   // Show celebration container
+                   const celebrationContainer = document.getElementById('celebrationContainer');
+                   celebrationContainer.classList.remove('hidden');
+                   
+                   // Play random celebration sound
+                   this.playCelebrationSound();
+                   
+                   // Create particles
+                   this.createParticles();
+                   
+                   // Hide celebration after 4 seconds
+                   setTimeout(() => {
+                       celebrationContainer.classList.add('hidden');
+                   }, 4000);
+               }
+               
+               playCelebrationSound() {
+                   try {
+                       // Array of available sound files
+                       const soundFiles = ['cheer1.mp3', 'cheer2.mp3', 'cheer3.mp3'];
+                       
+                       // Randomly select a sound file
+                       const randomSound = soundFiles[Math.floor(Math.random() * soundFiles.length)];
+                       
+                       // Create audio element
+                       const audio = new Audio(`sounds/${randomSound}`);
+                       audio.volume = 0.6; // Set volume to 60%
+                       
+                       // Play the sound
+                       audio.play().catch(error => {
+                           console.log('Could not play celebration sound:', error);
+                       });
+                   } catch (error) {
+                       console.log('Error playing celebration sound:', error);
+                   }
+               }
+               
+               playSuccessSound() {
+                   try {
+                       // Use cheer2.mp3 for refresh success (shorter sound)
+                       const audio = new Audio('sounds/cheer2.mp3');
+                       audio.volume = 0.4; // Lower volume for refresh success
+                       
+                       // Play the sound
+                       audio.play().catch(error => {
+                           console.log('Could not play success sound:', error);
+                       });
+                   } catch (error) {
+                       console.log('Error playing success sound:', error);
+                   }
+               }
+               
+               createParticles() {
+                   const container = document.getElementById('celebrationContainer');
+                   const colors = ['#7ee787', '#58a6ff', '#f78166', '#f0b90b', '#d29922'];
+                   
+                   // Create 50 particles
+                   for (let i = 0; i < 50; i++) {
+                       setTimeout(() => {
+                           const particle = document.createElement('div');
+                           particle.className = 'particle';
+                           
+                           // Random position
+                           const x = Math.random() * window.innerWidth;
+                           const y = Math.random() * window.innerHeight;
+                           
+                           // Random color
+                           const color = colors[Math.floor(Math.random() * colors.length)];
+                           
+                           particle.style.left = x + 'px';
+                           particle.style.top = y + 'px';
+                           particle.style.background = color;
+                           particle.style.boxShadow = `0 0 10px ${color}`;
+                           
+                           container.appendChild(particle);
+                           
+                           // Remove particle after animation
+                           setTimeout(() => {
+                               if (particle.parentNode) {
+                                   particle.parentNode.removeChild(particle);
+                               }
+                           }, 3000);
+                       }, i * 50); // Stagger particle creation
+                   }
+               }
+          }
+
+                           // Initialize the application when the page loads
+          document.addEventListener('DOMContentLoaded', () => {
+              new InDesignLinkRepather();
+              new FloatingLogo();
+          });
+
+                   // Global function for copying path to repather
+          window.copyPathToRepather = function(filePath) {
+              // Extract the folder path from the file path
+              const folderPath = filePath.split('\\').slice(0, -1).join('\\');
+              
+              // Set it as the old folder path
+              document.getElementById('oldFolder').value = folderPath;
+              
+              // Show a brief notification
+              const statusEl = document.getElementById('status');
+              const originalText = statusEl.textContent;
+              statusEl.textContent = `Copied folder path: ${folderPath}`;
+              statusEl.className = 'status success';
+              
+              // Reset after 3 seconds
+              setTimeout(() => {
+                  statusEl.textContent = originalText;
+                  statusEl.className = 'status info';
+              }, 3000);
+          };
+
+          // Floating Logo with smooth scroll tracking
+          class FloatingLogo {
+              constructor() {
+                  this.logo = document.getElementById('floatingLogo');
+                  this.targetY = 0;
+                  this.currentY = 0;
+                  this.isScrolling = false;
+                  this.scrollTimeout = null;
+                  this.animationFrame = null;
+                  
+                  this.init();
+              }
+              
+              init() {
+                  if (!this.logo) return;
+                  
+                  // Set initial position
+                  this.currentY = window.scrollY;
+                  this.targetY = window.scrollY;
+                  
+                  // Add scroll event listener
+                  window.addEventListener('scroll', () => this.handleScroll());
+                  
+                  // Start animation loop
+                  this.animate();
+              }
+              
+              handleScroll() {
+                  // Update target position
+                  this.targetY = window.scrollY;
+                  
+                  // Mark as scrolling
+                  if (!this.isScrolling) {
+                      this.isScrolling = true;
+                      this.logo.classList.add('scrolling');
+                  }
+                  
+                  // Clear existing timeout
+                  if (this.scrollTimeout) {
+                      clearTimeout(this.scrollTimeout);
+                  }
+                  
+                  // Set timeout to stop scrolling state
+                  this.scrollTimeout = setTimeout(() => {
+                      this.isScrolling = false;
+                      this.logo.classList.remove('scrolling');
+                  }, 150);
+              }
+              
+                             animate() {
+                   // Smooth interpolation between current and target position
+                   const diff = this.targetY - this.currentY;
+                   const easing = this.isScrolling ? 0.3 : 0.1; // Faster during scroll, slower when stopped
+                   
+                   this.currentY += diff * easing;
+                   
+                   // Only apply transform during scrolling, otherwise keep logo in lower left corner
+                   if (this.isScrolling) {
+                       this.logo.style.transform = `translateY(${-this.currentY * 0.1}px)`;
+                   } else {
+                       // Reset to lower left corner when not scrolling
+                       this.logo.style.transform = 'translateY(0px)';
+                   }
+                   
+                   // Continue animation
+                   this.animationFrame = requestAnimationFrame(() => this.animate());
+               }
+              
+              destroy() {
+                  if (this.scrollTimeout) {
+                      clearTimeout(this.scrollTimeout);
+                  }
+                  if (this.animationFrame) {
+                      cancelAnimationFrame(this.animationFrame);
+                  }
+                  window.removeEventListener('scroll', () => this.handleScroll());
+              }
+          }
+    </script>
+</body>
+</html>

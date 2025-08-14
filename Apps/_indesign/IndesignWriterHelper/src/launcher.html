@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EnneadTab InDesign Writer Helper - Launcher</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #333;
+        }
+
+        .launcher-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+            backdrop-filter: blur(10px);
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: white;
+            font-weight: bold;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .status {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border-left: 4px solid #28a745;
+        }
+
+        .status.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .status.warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+
+        .status-text {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .status-text.error {
+            color: #721c24;
+        }
+
+        .status-text.warning {
+            color: #856404;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            min-width: 150px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #6c757d, #495057);
+        }
+
+        .features {
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .features h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .features li {
+            padding: 8px 0;
+            color: #666;
+            position: relative;
+            padding-left: 25px;
+        }
+
+        .features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .loading {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .version-info {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="launcher-container">
+        <div class="logo">WA</div>
+        <h1>InDesign Writer Helper</h1>
+        <p class="subtitle">Professional Text Management Tool</p>
+
+        <div id="status" class="status">
+            <div class="status-text">Checking system status...</div>
+        </div>
+
+        <div id="pythonError" class="status error" style="display: none;">
+            <div class="status-text error">
+                <strong>Python Not Found</strong><br>
+                Python 3.13 is not installed on your computer.<br>
+                Please install Python 3.13 from the Microsoft Store:<br>
+                <a href="https://www.microsoft.com/store/apps/9PJPW5LDXLZ5" target="_blank" style="color: #007bff; text-decoration: underline;">
+                    Install Python 3.13
+                </a><br>
+                After installing Python, restart this application.
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Connecting to InDesign...</div>
+        </div>
+
+        <button id="connectBtn" class="btn" onclick="connectToInDesign()">
+            Connect to InDesign
+        </button>
+        <button id="autoConnectBtn" class="btn btn-secondary" onclick="autoConnect()">
+            Auto Connect
+        </button>
+
+        <div class="features">
+            <h3>Features:</h3>
+            <ul>
+                <li>Auto-detect InDesign and open documents</li>
+                <li>View all text frames in your document</li>
+                <li>Navigate between text frames and pages</li>
+                <li>Preview text content in a large text box</li>
+                <li>Search and filter text content</li>
+                <li>Future: AI-powered text suggestions</li>
+            </ul>
+        </div>
+
+                 <div class="version-info">
+             EnneadTab InDesign Writer Helper v1.0
+         </div>
+    </div>
+
+    <script>
+        let isConnected = false;
+
+        // Check server status on load
+        window.onload = function() {
+            checkServerStatus();
+        };
+
+        async function checkServerStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                if (data.status === 'ready') {
+                    updateStatus('Server is ready. Click "Connect to InDesign" to start.', 'success');
+                } else {
+                    updateStatus('Server is not ready. Please wait...', 'warning');
+                }
+            } catch (error) {
+                // Check if it's a Python installation error
+                if (error.message.includes('Python') || error.message.includes('python')) {
+                    showPythonError();
+                } else {
+                    updateStatus('Cannot connect to server. Please restart the application.', 'error');
+                    disableButtons();
+                }
+            }
+        }
+
+        function showPythonError() {
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('pythonError').style.display = 'block';
+            document.getElementById('connectBtn').style.display = 'none';
+            document.getElementById('autoConnectBtn').style.display = 'none';
+        }
+
+        async function connectToInDesign() {
+            showLoading(true);
+            updateStatus('Connecting to InDesign...', 'warning');
+            
+            try {
+                const response = await fetch('/api/connect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateStatus('Successfully connected to InDesign!', 'success');
+                    isConnected = true;
+                    setTimeout(() => {
+                        window.location.href = 'IndesignWriterHelper.html';
+                    }, 1000);
+                } else {
+                    updateStatus('Failed to connect to InDesign. Please make sure InDesign is running.', 'error');
+                }
+            } catch (error) {
+                updateStatus('Connection failed: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function autoConnect() {
+            showLoading(true);
+            updateStatus('Attempting auto-connection...', 'warning');
+            
+            try {
+                const response = await fetch('/api/auto_connect', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateStatus('Auto-connected to InDesign!', 'success');
+                    isConnected = true;
+                    setTimeout(() => {
+                        window.location.href = 'IndesignWriterHelper.html';
+                    }, 1000);
+                } else {
+                    updateStatus('No running InDesign instance found. Please start InDesign first.', 'error');
+                }
+            } catch (error) {
+                updateStatus('Auto-connection failed: ' + error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function updateStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            const statusText = statusDiv.querySelector('.status-text');
+            
+            statusDiv.className = 'status ' + (type || '');
+            statusText.className = 'status-text ' + (type || '');
+            statusText.textContent = message;
+        }
+
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            const connectBtn = document.getElementById('connectBtn');
+            const autoConnectBtn = document.getElementById('autoConnectBtn');
+            
+            if (show) {
+                loading.style.display = 'block';
+                connectBtn.disabled = true;
+                autoConnectBtn.disabled = true;
+            } else {
+                loading.style.display = 'none';
+                connectBtn.disabled = false;
+                autoConnectBtn.disabled = false;
+            }
+        }
+
+        function disableButtons() {
+            const connectBtn = document.getElementById('connectBtn');
+            const autoConnectBtn = document.getElementById('autoConnectBtn');
+            
+            connectBtn.disabled = true;
+            autoConnectBtn.disabled = true;
+        }
+    </script>
+</body>
+</html>

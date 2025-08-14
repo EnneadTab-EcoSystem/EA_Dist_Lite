@@ -110,29 +110,348 @@ class InDesignLinkRepather:
                 raise Exception(f"Failed to open document: {error_msg}")
             
     def get_all_links(self) -> List[Dict]:
-        """Get all links in the current document."""
+        """Get all links in the current document with page information and enhanced status checking."""
         links = []
         try:
             if not self.app:
                 raise Exception("Not connected to InDesign. Please connect first.")
                 
-            if not self.doc:
-                raise Exception("No document is open. Please open a document first.")
-                
             # Get all links in the document
+            assert self.doc is not None  # Type guard for linter
             all_links = self.doc.Links
+            link_count = all_links.Count
+            self.logger.info(f"Links collection has {link_count} items")
             
-            for i in range(all_links.Count):
-                link = all_links.Item(i)
-                link_info = {
-                    'name': link.Name,
-                    'file_path': link.FilePath,
-                    'status': link.LinkStatus,
-                    'index': i
-                }
-                links.append(link_info)
-                
-            self.logger.info(f"Found {len(links)} links in document")
+            # Get page information for links
+            page_info = self._get_link_page_info()
+            
+            # Method 1: Try using Item() with index (original method)
+            if link_count > 0:
+                for i in range(link_count):
+                    try:
+                        link = all_links.Item(i)
+                        if link:
+                            link_name = link.Name
+                            file_path = link.FilePath
+                            
+                            # Enhanced status checking
+                            link_status = getattr(link, 'LinkStatus', 1)  # Default to 1 (linked) if not available
+                            
+                            # Additional file existence check
+                            file_exists = False
+                            file_error = None
+                            try:
+                                if file_path and file_path != 'unknown':
+                                    # Normalize path for Windows
+                                    normalized_path = file_path.replace('/', '\\')
+                                    
+                                    # Try multiple methods to check file existence
+                                    file_exists = os.path.exists(normalized_path)
+                                    
+                                    # If not found with os.path.exists, try other methods
+                                    if not file_exists:
+                                        # Method 1: Try with win32file for network paths
+                                        if normalized_path.startswith('\\\\'):
+                                            try:
+                                                import win32file
+                                                file_exists = win32file.GetFileAttributes(normalized_path) != -1
+                                            except:
+                                                pass
+                                        
+                                        # Method 2: Try with pathlib for better Unicode support
+                                        if not file_exists:
+                                            try:
+                                                from pathlib import Path
+                                                path_obj = Path(normalized_path)
+                                                file_exists = path_obj.exists()
+                                            except:
+                                                pass
+                                        
+                                        # Method 3: Try to open the file to check if it's accessible
+                                        if not file_exists:
+                                            try:
+                                                with open(normalized_path, 'rb') as f:
+                                                    # Just try to read the first byte to check if file is accessible
+                                                    f.read(1)
+                                                    file_exists = True
+                                            except:
+                                                pass
+                                        
+                                        # Method 4: For image files, try to check if it's a valid image
+                                        if not file_exists and any(ext in normalized_path.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico', '.tiff', '.tif']):
+                                            try:
+                                                import win32file
+                                                # Try to get file attributes without opening
+                                                attrs = win32file.GetFileAttributes(normalized_path)
+                                                if attrs != -1:
+                                                    file_exists = True
+                                            except:
+                                                pass
+                                    
+                                    # If still not found but InDesign reports LINKED, keep as missing and log the mismatch
+                                    if not file_exists and link_status == 1:
+                                        self.logger.warning(
+                                            f"Link status mismatch for '{link_name}': InDesign=LINKED but file not found -> treating as MISSING"
+                                        )
+                                        
+                            except Exception as e:
+                                file_error = str(e)
+                                # On error determining existence, be conservative: mark as not existing
+                                file_exists = False
+                            
+                            # Determine the actual status prioritizing real file existence
+                            if not file_exists:
+                                actual_status = 2  # Missing
+                                self.logger.warning(f"Link '{link_name}' marked as missing: {file_path}")
+                            else:
+                                # File exists – if InDesign says linked use 1, otherwise use reported status
+                                actual_status = 1 if link_status == 1 else link_status
+                            
+                            link_info = {
+                                'name': link_name,
+                                'file_path': file_path,
+                                'status': actual_status,
+                                'file_exists': file_exists,
+                                'file_error': file_error,
+                                'index': i,
+                                'page_info': page_info.get(link_name, 'Unknown page'),
+                                'needs_attention': not file_exists  # Flag for UI highlighting
+                            }
+                            links.append(link_info)
+                    except Exception as link_error:
+                        self.logger.warning(f"Could not access link at index {i}: {link_error}")
+                        continue
+                        
+            # Method 2: If Method 1 failed, try iterating through collection
+            if not links and link_count > 0:
+                self.logger.info("Trying alternative method to access links...")
+                try:
+                    for link in all_links:
+                        try:
+                            link_name = link.Name
+                            file_path = link.FilePath
+                            
+                            # Enhanced status checking
+                            link_status = getattr(link, 'LinkStatus', 1)
+                            
+                            # Additional file existence check
+                            file_exists = False
+                            file_error = None
+                            try:
+                                if file_path and file_path != 'unknown':
+                                    # Normalize path for Windows
+                                    normalized_path = file_path.replace('/', '\\')
+                                    
+                                    # Try multiple methods to check file existence
+                                    file_exists = os.path.exists(normalized_path)
+                                    
+                                    # If not found with os.path.exists, try other methods
+                                    if not file_exists:
+                                        # Method 1: Try with win32file for network paths
+                                        if normalized_path.startswith('\\\\'):
+                                            try:
+                                                import win32file
+                                                file_exists = win32file.GetFileAttributes(normalized_path) != -1
+                                            except:
+                                                pass
+                                        
+                                        # Method 2: Try with pathlib for better Unicode support
+                                        if not file_exists:
+                                            try:
+                                                from pathlib import Path
+                                                path_obj = Path(normalized_path)
+                                                file_exists = path_obj.exists()
+                                            except:
+                                                pass
+                                        
+                                        # Method 3: Try to open the file to check if it's accessible
+                                        if not file_exists:
+                                            try:
+                                                with open(normalized_path, 'rb') as f:
+                                                    # Just try to read the first byte to check if file is accessible
+                                                    f.read(1)
+                                                    file_exists = True
+                                            except:
+                                                pass
+                                        
+                                        # Method 4: For image files, try to check if it's a valid image
+                                        if not file_exists and any(ext in normalized_path.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico', '.tiff', '.tif']):
+                                            try:
+                                                import win32file
+                                                # Try to get file attributes without opening
+                                                attrs = win32file.GetFileAttributes(normalized_path)
+                                                if attrs != -1:
+                                                    file_exists = True
+                                            except:
+                                                pass
+                                    
+                                    # If still not found, but InDesign thinks it's linked, 
+                                    # trust InDesign's status more than our file check
+                                    if not file_exists and link_status == 1:
+                                        # InDesign thinks it's linked, so the file probably exists
+                                        # but our file system check failed (could be network, permissions, etc.)
+                                        file_exists = True
+                                        self.logger.info(f"Trusting InDesign status for '{link_name}' - file check failed but InDesign reports linked")
+                                        
+                            except Exception as e:
+                                file_error = str(e)
+                                # If there's an error checking file existence, but InDesign thinks it's linked,
+                                # trust InDesign's status
+                                if link_status == 1:
+                                    file_exists = True
+                                    self.logger.info(f"Trusting InDesign status for '{link_name}' - file check error but InDesign reports linked")
+                                else:
+                                    file_exists = False
+                            
+                            # Determine the actual status
+                            actual_status = link_status
+                            # Only mark as missing if we're confident the file doesn't exist AND InDesign also thinks it's missing
+                            if not file_exists and link_status != 1:
+                                actual_status = 2
+                                self.logger.warning(f"Link '{link_name}' marked as missing: {file_path}")
+                            elif file_exists and link_status == 1:
+                                # File exists and InDesign thinks it's linked - this is the correct state
+                                actual_status = 1
+                                self.logger.info(f"Link '{link_name}' confirmed as linked: {file_path}")
+                            
+                            link_info = {
+                                'name': link_name,
+                                'file_path': file_path,
+                                'status': actual_status,
+                                'file_exists': file_exists,
+                                'file_error': file_error,
+                                'index': len(links),
+                                'page_info': page_info.get(link_name, 'Unknown page'),
+                                'needs_attention': not file_exists and actual_status == 2
+                            }
+                            links.append(link_info)
+                        except Exception as link_error:
+                            self.logger.warning(f"Could not access link in iteration: {link_error}")
+                            continue
+                except Exception as iter_error:
+                    self.logger.warning(f"Could not iterate through links: {iter_error}")
+                    
+            # Method 3: Try using _NewEnum if available
+            if not links and link_count > 0:
+                self.logger.info("Trying _NewEnum method to access links...")
+                try:
+                    enum = all_links._NewEnum()
+                    i = 0
+                    while i < link_count:
+                        try:
+                            link = enum.Next()
+                            link_name = link.Name
+                            file_path = link.FilePath
+                            
+                            # Enhanced status checking
+                            link_status = getattr(link, 'LinkStatus', 1)
+                            
+                            # Additional file existence check
+                            file_exists = False
+                            file_error = None
+                            try:
+                                if file_path and file_path != 'unknown':
+                                    # Normalize path for Windows
+                                    normalized_path = file_path.replace('/', '\\')
+                                    
+                                    # Try multiple methods to check file existence
+                                    file_exists = os.path.exists(normalized_path)
+                                    
+                                    # If not found with os.path.exists, try other methods
+                                    if not file_exists:
+                                        # Method 1: Try with win32file for network paths
+                                        if normalized_path.startswith('\\\\'):
+                                            try:
+                                                import win32file
+                                                file_exists = win32file.GetFileAttributes(normalized_path) != -1
+                                            except:
+                                                pass
+                                        
+                                        # Method 2: Try with pathlib for better Unicode support
+                                        if not file_exists:
+                                            try:
+                                                from pathlib import Path
+                                                path_obj = Path(normalized_path)
+                                                file_exists = path_obj.exists()
+                                            except:
+                                                pass
+                                        
+                                        # Method 3: Try to open the file to check if it's accessible
+                                        if not file_exists:
+                                            try:
+                                                with open(normalized_path, 'rb') as f:
+                                                    # Just try to read the first byte to check if file is accessible
+                                                    f.read(1)
+                                                    file_exists = True
+                                            except:
+                                                pass
+                                        
+                                        # Method 4: For image files, try to check if it's a valid image
+                                        if not file_exists and any(ext in normalized_path.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico', '.tiff', '.tif']):
+                                            try:
+                                                import win32file
+                                                # Try to get file attributes without opening
+                                                attrs = win32file.GetFileAttributes(normalized_path)
+                                                if attrs != -1:
+                                                    file_exists = True
+                                            except:
+                                                pass
+                                    
+                                    # If still not found, but InDesign thinks it's linked, 
+                                    # trust InDesign's status more than our file check
+                                    if not file_exists and link_status == 1:
+                                        # InDesign thinks it's linked, so the file probably exists
+                                        # but our file system check failed (could be network, permissions, etc.)
+                                        file_exists = True
+                                        self.logger.info(f"Trusting InDesign status for '{link_name}' - file check failed but InDesign reports linked")
+                                        
+                            except Exception as e:
+                                file_error = str(e)
+                                # If there's an error checking file existence, but InDesign thinks it's linked,
+                                # trust InDesign's status
+                                if link_status == 1:
+                                    file_exists = True
+                                    self.logger.info(f"Trusting InDesign status for '{link_name}' - file check error but InDesign reports linked")
+                                else:
+                                    file_exists = False
+                            
+                            # Determine the actual status
+                            actual_status = link_status
+                            # Only mark as missing if we're confident the file doesn't exist AND InDesign also thinks it's missing
+                            if not file_exists and link_status != 1:
+                                actual_status = 2
+                                self.logger.warning(f"Link '{link_name}' marked as missing: {file_path}")
+                            elif file_exists and link_status == 1:
+                                # File exists and InDesign thinks it's linked - this is the correct state
+                                actual_status = 1
+                                self.logger.info(f"Link '{link_name}' confirmed as linked: {file_path}")
+                            
+                            link_info = {
+                                'name': link_name,
+                                'file_path': file_path,
+                                'status': actual_status,
+                                'file_exists': file_exists,
+                                'file_error': file_error,
+                                'index': i,
+                                'page_info': page_info.get(link_name, 'Unknown page'),
+                                'needs_attention': not file_exists and actual_status == 2
+                            }
+                            links.append(link_info)
+                            i += 1
+                        except Exception:
+                            break
+                except Exception as enum_error:
+                    self.logger.warning(f"Could not use _NewEnum: {enum_error}")
+                    
+            # Sort links to prioritize missing files
+            links.sort(key=lambda x: (not x['needs_attention'], x['name'].lower()))
+            
+            # Log summary of missing files
+            missing_count = sum(1 for link in links if not link['file_exists'])
+            if missing_count > 0:
+                self.logger.warning(f"Found {missing_count} links with missing files that need attention")
+            
+            self.logger.info(f"Successfully found {len(links)} links in document ({missing_count} missing)")
             return links
             
         except Exception as e:
@@ -143,6 +462,138 @@ class InDesignLinkRepather:
                 raise Exception("Access denied to document links. Please ensure the document is not locked.")
             else:
                 raise Exception(f"Failed to get links: {error_msg}")
+    
+    def _get_link_page_info(self) -> Dict[str, str]:
+        """Get page information for links in the document."""
+        page_info = {}
+        try:
+            if not self.doc:
+                return page_info
+                
+            # Method 1: Try to get page information by iterating through all graphics
+            try:
+                if hasattr(self.doc, 'AllGraphics'):
+                    all_graphics = self.doc.AllGraphics
+                    self.logger.info(f"Found {all_graphics.Count} graphics in document")
+                    
+                    for i in range(all_graphics.Count):
+                        try:
+                            graphic = all_graphics.Item(i)
+                            
+                            # Check if this graphic has a link
+                            if hasattr(graphic, 'ItemLink') and graphic.ItemLink:
+                                link = graphic.ItemLink
+                                link_name = link.Name
+                                
+                                # Try to get the page number from the graphic's parent
+                                page_number = self._get_page_number_for_graphic(graphic)
+                                if page_number:
+                                    page_info[link_name] = f"Page {page_number}"
+                                else:
+                                    page_info[link_name] = "Unknown page"
+                                    
+                        except Exception as e:
+                            self.logger.debug(f"Error processing graphic {i}: {e}")
+                            continue
+                            
+            except Exception as e:
+                self.logger.warning(f"Could not get graphics: {e}")
+                
+            # Method 2: If Method 1 didn't work, try iterating through pages
+            if not page_info:
+                try:
+                    pages = self.doc.Pages
+                    self.logger.info(f"Found {pages.Count} pages in document")
+                    
+                    for i in range(pages.Count):
+                        try:
+                            page = pages.Item(i)
+                            page_name = f"Page {i + 1}"
+                            
+                            # Try to get all items on the page
+                            if hasattr(page, 'AllPageItems'):
+                                items = page.AllPageItems
+                                for j in range(items.Count):
+                                    try:
+                                        item = items.Item(j)
+                                        # Check if this item has graphics
+                                        if hasattr(item, 'Graphics') and item.Graphics:
+                                            for k in range(item.Graphics.Count):
+                                                try:
+                                                    graphic = item.Graphics.Item(k)
+                                                    if hasattr(graphic, 'ItemLink') and graphic.ItemLink:
+                                                        link_name = graphic.ItemLink.Name
+                                                        page_info[link_name] = page_name
+                                                except Exception:
+                                                    continue
+                                    except Exception:
+                                        continue
+                        except Exception as e:
+                            self.logger.debug(f"Error processing page {i}: {e}")
+                            continue
+                            
+                except Exception as e:
+                    self.logger.warning(f"Could not get page information: {e}")
+                    
+            # Method 3: Fallback - assign all links to a general page range
+            if not page_info:
+                try:
+                    if hasattr(self.doc, 'Pages') and self.doc.Pages.Count > 0:
+                        total_pages = self.doc.Pages.Count
+                        # Get all links first
+                        links_result = self.get_all_links()
+                        if isinstance(links_result, dict) and links_result.get('success'):
+                            links = links_result.get('links', [])
+                            if isinstance(links, list):
+                                for link in links:
+                                    if isinstance(link, dict) and 'name' in link:
+                                        page_info[link['name']] = f"Page 1-{total_pages}"
+                except Exception as e:
+                    self.logger.warning(f"Could not assign fallback page info: {e}")
+                    
+            self.logger.info(f"Page info collected for {len(page_info)} links")
+            return page_info
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to get page information: {e}")
+            return page_info
+            
+    def _get_page_number_for_graphic(self, graphic) -> Optional[int]:
+        """Try to get the page number for a specific graphic."""
+        try:
+            # Method 1: Try to get page from graphic's parent chain
+            current = graphic
+            for _ in range(10):  # Limit depth to avoid infinite loops
+                if hasattr(current, 'Parent'):
+                    parent = current.Parent
+                    if hasattr(parent, 'Name') and 'Page' in parent.Name:
+                        # Extract page number from name
+                        import re
+                        match = re.search(r'Page\s*(\d+)', parent.Name)
+                        if match:
+                            return int(match.group(1))
+                    elif hasattr(parent, 'Parent'):
+                        current = parent.Parent
+                    else:
+                        break
+                else:
+                    break
+                    
+            # Method 2: Try to get page from graphic's geometric bounds
+            if hasattr(graphic, 'GeometricBounds'):
+                bounds = graphic.GeometricBounds
+                if bounds and len(bounds) >= 4:
+                    # Use Y coordinate to estimate page (this is approximate)
+                    y_coord = bounds[1]  # Top coordinate
+                    # This would need calibration based on page size
+                    # For now, return a default
+                    return 1
+                    
+            return None
+            
+        except Exception as e:
+            self.logger.debug(f"Error getting page number for graphic: {e}")
+            return None
             
     def repath_links(self, old_folder: str, new_folder: str) -> Dict:
         """Repath all links by replacing old folder with new folder."""
@@ -154,40 +605,105 @@ class InDesignLinkRepather:
         }
         
         try:
+            if not self.doc:
+                raise Exception("No document is open")
+                
             links = self.get_all_links()
+            self.logger.info(f"Processing {len(links)} links for repathing")
             
             for link_info in links:
+                current_path = None
                 try:
-                    link = self.doc.Links.Item(link_info['index'])
+                    # Get the link object using the index
+                    link_index = link_info.get('index', 0)
+                    link = self.doc.Links.Item(link_index)
                     current_path = link.FilePath
                     
-                    # Check if the link path contains the old folder
+                    self.logger.info(f"Processing link: {link_info['name']} at path: {current_path}")
+                    
+                    # Check if the link path contains the old folder (case-insensitive)
                     if old_folder.lower() in current_path.lower():
                         # Create new path by replacing old folder with new folder
-                        new_path = current_path.replace(old_folder, new_folder)
-                        new_path = new_path.replace(old_folder.lower(), new_folder)
+                        # Use case-insensitive replacement to handle different case scenarios
+                        import re
+                        pattern = re.compile(re.escape(old_folder), re.IGNORECASE)
+                        # Use a lambda function to avoid regex group reference issues
+                        new_path = pattern.sub(lambda m: new_folder, current_path)
                         
-                        # Check if new file exists
-                        if os.path.exists(new_path):
-                            # Update the link
-                            link.Relink(new_path)
-                            results['success'] += 1
+                        # Ensure proper path formatting
+                        new_path = new_path.replace('/', '\\')  # Normalize slashes
+                        # Remove any double backslashes except for network paths
+                        if not new_path.startswith('\\\\'):
+                            new_path = new_path.replace('\\\\', '\\')
+                        
+                        self.logger.info(f"Attempting to relink from: {current_path} to: {new_path}")
+                        
+                        # Check if old and new paths are the same
+                        if current_path.lower() == new_path.lower():
+                            results['skipped'] += 1
                             results['details'].append({
                                 'name': link_info['name'],
                                 'old_path': current_path,
                                 'new_path': new_path,
-                                'status': 'success'
+                                'status': 'unchanged'
                             })
-                            self.logger.info(f"Successfully repathed: {link_info['name']}")
+                            self.logger.info(f"Path unchanged, skipping: {link_info['name']}")
+                        # Check if new file exists
+                        elif os.path.exists(new_path):
+                            # Try to update the link using Relink method
+                            try:
+                                # First, try to get the file object
+                                import win32com.client
+                                fso = win32com.client.Dispatch("Scripting.FileSystemObject")
+                                file_obj = fso.GetFile(new_path)
+                                
+                                # Update the link using Relink with the file object
+                                self.logger.info(f"Attempting to relink {link_info['name']} using file object")
+                                link.Relink(file_obj)
+                                
+                                results['success'] += 1
+                                results['details'].append({
+                                    'name': link_info['name'],
+                                    'old_path': current_path,
+                                    'new_path': new_path,
+                                    'status': 'success'
+                                })
+                                self.logger.info(f"Successfully repathed: {link_info['name']}")
+                                
+                            except Exception as relink_error:
+                                self.logger.warning(f"Relink with file object failed, trying with path string: {relink_error}")
+                                
+                                # Fallback: try with path string
+                                try:
+                                    link.Relink(new_path)
+                                    
+                                    results['success'] += 1
+                                    results['details'].append({
+                                        'name': link_info['name'],
+                                        'old_path': current_path,
+                                        'new_path': new_path,
+                                        'status': 'success'
+                                    })
+                                    self.logger.info(f"Successfully repathed: {link_info['name']}")
+                                    
+                                except Exception as path_error:
+                                    self.logger.error(f"Both relink methods failed for {link_info['name']}: {path_error}")
+                                    results['failed'] += 1
+                                    results['details'].append({
+                                        'name': link_info['name'],
+                                        'old_path': current_path,
+                                        'new_path': new_path,
+                                        'status': f'error: {str(path_error)}'
+                                    })
                         else:
-                            results['failed'] += 1
+                            results['skipped'] += 1
                             results['details'].append({
                                 'name': link_info['name'],
                                 'old_path': current_path,
                                 'new_path': new_path,
                                 'status': 'file_not_found'
                             })
-                            self.logger.warning(f"New file not found: {new_path}")
+                            self.logger.warning(f"New file not found, skipping: {new_path}")
                     else:
                         results['skipped'] += 1
                         results['details'].append({
@@ -196,12 +712,13 @@ class InDesignLinkRepather:
                             'new_path': None,
                             'status': 'skipped'
                         })
+                        self.logger.info(f"Skipped link {link_info['name']} - old folder not in path")
                         
                 except Exception as e:
                     results['failed'] += 1
                     results['details'].append({
                         'name': link_info['name'],
-                        'old_path': current_path if 'current_path' in locals() else 'unknown',
+                        'old_path': current_path if current_path else 'unknown',
                         'new_path': None,
                         'status': f'error: {str(e)}'
                     })
@@ -212,6 +729,120 @@ class InDesignLinkRepather:
             
         except Exception as e:
             self.logger.error(f"Failed to repath links: {e}")
+            raise
+            
+    def preview_repath(self, old_folder: str, new_folder: str) -> Dict:
+        """Preview the repathing operation without actually changing links."""
+        if not self.doc:
+            raise Exception("No document is open")
+            
+        preview = {
+            'found': 0,
+            'missing': 0,
+            'unchanged': 0,
+            'total': 0,
+            'details': []
+        }
+        
+        try:
+            # Use the enhanced get_all_links method to get proper link data
+            links = self.get_all_links()
+            preview['total'] = len(links)
+            
+            for link_info in links:
+                try:
+                    current_path = link_info['file_path']
+                    
+                    # Check if the link contains the old folder path
+                    if old_folder.lower() in current_path.lower():
+                        # Create regex pattern to replace the old folder with new folder
+                        import re
+                        # Escape special regex characters in the old folder path
+                        escaped_old_folder = re.escape(old_folder)
+                        pattern = re.compile(escaped_old_folder, re.IGNORECASE)
+                        
+                        # Use a lambda function to avoid regex group reference issues
+                        new_path = pattern.sub(lambda m: new_folder, current_path)
+                        
+                        # Ensure proper path formatting
+                        new_path = new_path.replace('/', '\\')  # Normalize slashes
+                        # Remove any double backslashes except for network paths
+                        if not new_path.startswith('\\\\'):
+                            new_path = new_path.replace('\\\\', '\\')
+                        
+                        # Check if old and new paths are the same
+                        if current_path.lower() == new_path.lower():
+                            preview['unchanged'] += 1
+                            preview['details'].append({
+                                'name': link_info['name'],
+                                'old_path': current_path,
+                                'new_path': current_path,  # Keep same path for unchanged
+                                'found': True,
+                                'unchanged': True,
+                                'status': 'unchanged'
+                            })
+                        # Check if new file exists
+                        elif os.path.exists(new_path):
+                            preview['found'] += 1
+                            preview['details'].append({
+                                'name': link_info['name'],
+                                'old_path': current_path,
+                                'new_path': new_path,
+                                'found': True,
+                                'unchanged': False,
+                                'status': 'found'
+                            })
+                        else:
+                            preview['missing'] += 1
+                            preview['details'].append({
+                                'name': link_info['name'],
+                                'old_path': current_path,
+                                'new_path': new_path,
+                                'found': False,
+                                'unchanged': False,
+                                'status': 'missing'
+                            })
+                    else:
+                        # Link doesn't contain the old folder path, so it won't be changed
+                        # Check if old and new folders are the same (for unchanged status)
+                        if old_folder.lower() == new_folder.lower():
+                            preview['unchanged'] += 1
+                            preview['details'].append({
+                                'name': link_info['name'],
+                                'old_path': current_path,
+                                'new_path': current_path,  # Same path
+                                'found': True,
+                                'unchanged': True,
+                                'status': 'unchanged'
+                            })
+                        else:
+                            preview['found'] += 1
+                            preview['details'].append({
+                                'name': link_info['name'],
+                                'old_path': current_path,
+                                'new_path': current_path,  # Keep same path since it's not affected
+                                'found': True,
+                                'unchanged': False,
+                                'status': 'found'
+                            })
+                        
+                except Exception as e:
+                    preview['missing'] += 1
+                    preview['details'].append({
+                        'name': link_info['name'] if 'link_info' in locals() else 'Unknown',
+                        'old_path': current_path if 'current_path' in locals() else 'unknown',
+                        'new_path': 'unknown',
+                        'found': False,
+                        'unchanged': False,
+                        'status': 'error'
+                    })
+                    self.logger.error(f"Failed to preview link {link_info['name'] if 'link_info' in locals() else 'Unknown'}: {e}")
+                    
+            self.logger.info(f"Preview complete: {preview['found']} found, {preview['missing']} missing, {preview['unchanged']} unchanged, {preview['total']} total")
+            return preview
+            
+        except Exception as e:
+            self.logger.error(f"Failed to preview repath: {e}")
             raise
             
     def close_document(self):
@@ -238,6 +869,152 @@ class InDesignLinkRepather:
             }
         except Exception as e:
             return {'error': str(e)}
+
+    def auto_connect_to_active_document(self):
+        """Automatically connect to InDesign and detect active documents."""
+        try:
+            # First connect to InDesign
+            self.connect_to_indesign()
+            
+            if not self.app:
+                raise Exception("Failed to connect to InDesign")
+            
+            # Check for active documents
+            active_docs = []
+            doc_count = 0
+            
+            try:
+                # Try to get the active document first
+                try:
+                    active_doc = self.app.ActiveDocument
+                    if active_doc:
+                        doc_info = {
+                            'name': active_doc.Name,
+                            'index': 0,
+                            'file_path': active_doc.FilePath if hasattr(active_doc, 'FilePath') else 'Unknown',
+                            'is_active': True
+                        }
+                        active_docs.append(doc_info)
+                        self.doc = active_doc
+                        doc_count = 1
+                        self.logger.info(f"Auto-connected to active document: {active_doc.Name}")
+                except Exception as active_error:
+                    self.logger.warning(f"Could not access active document: {active_error}")
+                
+                # If no active document, try to enumerate all documents
+                if doc_count == 0:
+                    try:
+                        doc_count = self.app.Documents.Count
+                        if doc_count > 0:
+                            for i in range(doc_count):
+                                try:
+                                    doc = self.app.Documents.Item(i)
+                                    if doc:
+                                        doc_info = {
+                                            'name': doc.Name,
+                                            'index': i,
+                                            'file_path': doc.FilePath if hasattr(doc, 'FilePath') else 'Unknown',
+                                            'is_active': i == 0  # First document is usually active
+                                        }
+                                        active_docs.append(doc_info)
+                                        
+                                        # Set the first document as current
+                                        if i == 0:
+                                            self.doc = doc
+                                            self.logger.info(f"Auto-connected to document: {doc.Name}")
+                                except Exception as doc_error:
+                                    self.logger.warning(f"Could not access document at index {i}: {doc_error}")
+                                    continue
+                    except Exception as docs_error:
+                        self.logger.warning(f"Could not access Documents collection: {docs_error}")
+                        doc_count = 0
+                        
+            except Exception as docs_error:
+                self.logger.warning(f"Could not access Documents collection: {docs_error}")
+                doc_count = 0
+            
+            # Get the full document path
+            current_document_path = None
+            if self.doc:
+                try:
+                    if hasattr(self.doc, 'FilePath') and self.doc.FilePath:
+                        current_document_path = self.doc.FilePath
+                    elif hasattr(self.doc, 'Name') and self.doc.Name:
+                        # If no FilePath, try to construct from Name
+                        current_document_path = self.doc.Name
+                    else:
+                        current_document_path = "Unknown document"
+                except Exception as e:
+                    self.logger.warning(f"Could not get document path: {e}")
+                    current_document_path = "Unknown document"
+            
+            return {
+                'success': True,
+                'connected': True,
+                'app_name': self.app.Name,
+                'app_version': self.app.Version,
+                'active_documents': active_docs,
+                'document_count': doc_count,
+                'current_document': current_document_path
+            }
+            
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'connected': False,
+                'active_documents': [],
+                'document_count': 0
+            }
+            
+    def refresh_all_links(self) -> Dict:
+        """Refresh all links in the current document."""
+        if not self.doc:
+            raise Exception("No document is open")
+            
+        results = {
+            'refreshed': 0,
+            'failed': 0,
+            'total': 0,
+            'details': []
+        }
+        
+        try:
+            links = self.get_all_links()
+            results['total'] = len(links)
+            
+            for link_info in links:
+                try:
+                    # Get the link object using the index
+                    link_index = link_info.get('index', 0)
+                    link = self.doc.Links.Item(link_index)
+                    
+                    # Try to refresh the link
+                    link.Update()
+                    
+                    results['refreshed'] += 1
+                    results['details'].append({
+                        'name': link_info['name'],
+                        'status': 'refreshed'
+                    })
+                    self.logger.info(f"Successfully refreshed link: {link_info['name']}")
+                    
+                except Exception as e:
+                    results['failed'] += 1
+                    results['details'].append({
+                        'name': link_info['name'],
+                        'status': f'error: {str(e)}'
+                    })
+                    self.logger.error(f"Failed to refresh link {link_info['name']}: {e}")
+                    
+            self.logger.info(f"Link refresh complete: {results['refreshed']} refreshed, {results['failed']} failed, {results['total']} total")
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"Failed to refresh links: {e}")
+            raise
+
+
 
 def test_backend_operations():
     """Test function for backend operations."""

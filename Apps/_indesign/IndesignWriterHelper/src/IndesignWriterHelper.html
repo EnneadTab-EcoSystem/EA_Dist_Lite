@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EnneadTab InDesign Writer Helper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .header-info {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .document-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .main-container {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+
+        .sidebar {
+            width: 300px;
+            background: white;
+            border-right: 1px solid #e1e5e9;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e1e5e9;
+            background: #f8f9fa;
+        }
+
+        .sidebar-header h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .stat-item {
+            background: white;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e1e5e9;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .navigation-panel {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .nav-section {
+            margin-bottom: 25px;
+        }
+
+        .nav-section h4 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 16px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 5px;
+        }
+
+        .frame-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+        }
+
+        .frame-item {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .frame-item:hover {
+            background: #f8f9fa;
+        }
+
+        .frame-item.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .frame-item:last-child {
+            border-bottom: none;
+        }
+
+        .frame-name {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .frame-details {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .frame-item.active .frame-details {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .page-selector {
+            margin-bottom: 15px;
+        }
+
+        .page-select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            background: white;
+            font-size: 14px;
+        }
+
+        .search-box {
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .content-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .toolbar {
+            padding: 15px 20px;
+            border-bottom: 1px solid #e1e5e9;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background: #5a6fd8;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .frame-counter {
+            background: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #666;
+            border: 1px solid #e1e5e9;
+        }
+
+        .text-area {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .text-header {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e1e5e9;
+        }
+
+        .text-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .text-meta {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .text-content {
+            flex: 1;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 20px;
+            font-size: 16px;
+            line-height: 1.6;
+            background: #fafbfc;
+            resize: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .text-content:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px;
+            border: 1px solid #c3e6cb;
+        }
+
+        .no-content {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .no-content h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>InDesign Writer Helper</h1>
+        <div class="header-info">
+            <div class="document-info" id="documentInfo">
+                No document connected
+            </div>
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>Document Statistics</h3>
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalFrames">0</div>
+                        <div class="stat-label">Text Frames</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalPages">0</div>
+                        <div class="stat-label">Pages</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalWords">0</div>
+                        <div class="stat-label">Words</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="totalChars">0</div>
+                        <div class="stat-label">Characters</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="navigation-panel">
+                <div class="nav-section">
+                    <h4>Page Navigation</h4>
+                    <div class="page-selector">
+                        <select class="page-select" id="pageSelect" onchange="filterByPage()">
+                            <option value="">All Pages</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <h4>Search Text</h4>
+                    <div class="search-box">
+                        <input type="text" class="search-input" id="searchInput" placeholder="Search text content..." oninput="searchText()">
+                    </div>
+                </div>
+
+                <div class="nav-section">
+                    <h4>Text Frames</h4>
+                    <div class="frame-list" id="frameList">
+                        <div class="no-content">
+                            <h3>No text frames found</h3>
+                            <p>Connect to an InDesign document to view text frames</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-area">
+            <div class="toolbar">
+                <button class="btn" onclick="previousFrame()" id="prevBtn">← Previous</button>
+                <button class="btn" onclick="nextFrame()" id="nextBtn">Next →</button>
+                <div class="frame-counter" id="frameCounter">
+                    Frame 0 of 0
+                </div>
+                <button class="btn btn-secondary" onclick="refreshFrames()">Refresh</button>
+                <button class="btn btn-secondary" onclick="saveChanges()" id="saveBtn">Save Changes</button>
+            </div>
+
+            <div class="text-area">
+                <div class="text-header" id="textHeader">
+                    <div class="text-title">No text frame selected</div>
+                    <div class="text-meta">
+                        <span>Page: -</span>
+                        <span>Words: 0</span>
+                        <span>Characters: 0</span>
+                    </div>
+                </div>
+                <textarea class="text-content" id="textContent" placeholder="No text content available..." oninput="markAsModified()"></textarea>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <div>Loading...</div>
+    </div>
+
+    <script>
+        let currentFrame = null;
+        let allFrames = [];
+        let filteredFrames = [];
+        let currentFrameIndex = 0;
+        let isModified = false;
+        let pageNames = [];
+
+        // Initialize on page load
+        window.onload = function() {
+            loadDocumentInfo();
+            loadTextFrames();
+        };
+
+        async function loadDocumentInfo() {
+            try {
+                const response = await fetch('/api/get_document_info', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('documentInfo').textContent = data.document.name;
+                }
+            } catch (error) {
+                console.error('Failed to load document info:', error);
+            }
+        }
+
+        async function loadTextFrames() {
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/api/extract_text_frames', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    allFrames = data.frames;
+                    filteredFrames = [...allFrames];
+                    updateFrameList();
+                    updateStatistics();
+                    loadPageNames();
+                    
+                    if (allFrames.length > 0) {
+                        navigateToFrame(0);
+                    }
+                } else {
+                    showError('Failed to load text frames');
+                }
+            } catch (error) {
+                showError('Failed to load text frames: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function updateFrameList() {
+            const frameList = document.getElementById('frameList');
+            
+            if (filteredFrames.length === 0) {
+                frameList.innerHTML = '<div class="no-content"><h3>No text frames found</h3><p>No frames match the current filter</p></div>';
+                return;
+            }
+            
+            frameList.innerHTML = filteredFrames.map((frame, index) => `
+                <div class="frame-item ${index === currentFrameIndex ? 'active' : ''}" onclick="selectFrame(${index})">
+                    <div class="frame-name">${frame.name}</div>
+                    <div class="frame-details">
+                        Page: ${frame.page_name} | Words: ${frame.word_count} | Chars: ${frame.character_count}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateStatistics() {
+            const stats = calculateStatistics();
+            document.getElementById('totalFrames').textContent = stats.totalFrames;
+            document.getElementById('totalPages').textContent = stats.totalPages;
+            document.getElementById('totalWords').textContent = stats.totalWords;
+            document.getElementById('totalChars').textContent = stats.totalChars;
+        }
+
+        function calculateStatistics() {
+            if (allFrames.length === 0) return { totalFrames: 0, totalPages: 0, totalWords: 0, totalChars: 0 };
+            
+            const totalWords = allFrames.reduce((sum, frame) => sum + frame.word_count, 0);
+            const totalChars = allFrames.reduce((sum, frame) => sum + frame.character_count, 0);
+            const totalPages = new Set(allFrames.map(frame => frame.page_name)).size;
+            
+            return {
+                totalFrames: allFrames.length,
+                totalPages: totalPages,
+                totalWords: totalWords,
+                totalChars: totalChars
+            };
+        }
+
+        async function loadPageNames() {
+            try {
+                const response = await fetch('/api/get_page_names', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    pageNames = data.page_names;
+                    updatePageSelect();
+                }
+            } catch (error) {
+                console.error('Failed to load page names:', error);
+            }
+        }
+
+        function updatePageSelect() {
+            const pageSelect = document.getElementById('pageSelect');
+            pageSelect.innerHTML = '<option value="">All Pages</option>' + 
+                pageNames.map(page => `<option value="${page}">${page}</option>`).join('');
+        }
+
+        function selectFrame(index) {
+            if (index >= 0 && index < filteredFrames.length) {
+                currentFrameIndex = index;
+                currentFrame = filteredFrames[index];
+                updateFrameDisplay();
+                updateFrameList();
+            }
+        }
+
+        function navigateToFrame(index) {
+            if (index >= 0 && index < filteredFrames.length) {
+                selectFrame(index);
+            }
+        }
+
+        async function nextFrame() {
+            if (currentFrameIndex < filteredFrames.length - 1) {
+                await saveCurrentChanges();
+                navigateToFrame(currentFrameIndex + 1);
+            }
+        }
+
+        async function previousFrame() {
+            if (currentFrameIndex > 0) {
+                await saveCurrentChanges();
+                navigateToFrame(currentFrameIndex - 1);
+            }
+        }
+
+        function updateFrameDisplay() {
+            if (!currentFrame) {
+                document.getElementById('textHeader').innerHTML = `
+                    <div class="text-title">No text frame selected</div>
+                    <div class="text-meta">
+                        <span>Page: -</span>
+                        <span>Words: 0</span>
+                        <span>Characters: 0</span>
+                    </div>
+                `;
+                document.getElementById('textContent').value = '';
+                document.getElementById('frameCounter').textContent = 'Frame 0 of 0';
+                return;
+            }
+
+            document.getElementById('textHeader').innerHTML = `
+                <div class="text-title">${currentFrame.name}</div>
+                <div class="text-meta">
+                    <span>Page: ${currentFrame.page_name}</span>
+                    <span>Words: ${currentFrame.word_count}</span>
+                    <span>Characters: ${currentFrame.character_count}</span>
+                </div>
+            `;
+            
+            document.getElementById('textContent').value = currentFrame.text_content;
+            document.getElementById('frameCounter').textContent = `Frame ${currentFrameIndex + 1} of ${filteredFrames.length}`;
+            
+            // Update navigation buttons
+            document.getElementById('prevBtn').disabled = currentFrameIndex === 0;
+            document.getElementById('nextBtn').disabled = currentFrameIndex === filteredFrames.length - 1;
+            
+            isModified = false;
+            updateSaveButton();
+        }
+
+        function filterByPage() {
+            const selectedPage = document.getElementById('pageSelect').value;
+            
+            if (selectedPage === '') {
+                filteredFrames = [...allFrames];
+            } else {
+                filteredFrames = allFrames.filter(frame => frame.page_name === selectedPage);
+            }
+            
+            currentFrameIndex = 0;
+            updateFrameList();
+            
+            if (filteredFrames.length > 0) {
+                navigateToFrame(0);
+            } else {
+                updateFrameDisplay();
+            }
+        }
+
+        function searchText() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            
+            if (searchTerm === '') {
+                filteredFrames = [...allFrames];
+            } else {
+                filteredFrames = allFrames.filter(frame => 
+                    frame.text_content.toLowerCase().includes(searchTerm)
+                );
+            }
+            
+            currentFrameIndex = 0;
+            updateFrameList();
+            
+            if (filteredFrames.length > 0) {
+                navigateToFrame(0);
+            } else {
+                updateFrameDisplay();
+            }
+        }
+
+        function markAsModified() {
+            isModified = true;
+            updateSaveButton();
+        }
+
+        function updateSaveButton() {
+            document.getElementById('saveBtn').disabled = !isModified;
+        }
+
+        async function saveCurrentChanges() {
+            if (!isModified || !currentFrame) return;
+            
+            const newContent = document.getElementById('textContent').value;
+            
+            try {
+                const response = await fetch('/api/update_text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        frame_index: currentFrame.index,
+                        content: newContent
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    // Update local copy
+                    currentFrame.text_content = newContent;
+                    currentFrame.character_count = newContent.length;
+                    currentFrame.word_count = newContent.split(/\s+/).filter(word => word.length > 0).length;
+                    
+                    isModified = false;
+                    updateSaveButton();
+                    updateStatistics();
+                    showSuccess('Text updated successfully');
+                } else {
+                    showError('Failed to update text');
+                }
+            } catch (error) {
+                showError('Failed to update text: ' + error.message);
+            }
+        }
+
+        async function saveChanges() {
+            await saveCurrentChanges();
+        }
+
+        async function refreshFrames() {
+            await loadTextFrames();
+        }
+
+        function showLoading(show) {
+            document.getElementById('loading').style.display = show ? 'block' : 'none';
+        }
+
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.textContent = message;
+            document.body.appendChild(errorDiv);
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success-message';
+            successDiv.textContent = message;
+            document.body.appendChild(successDiv);
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

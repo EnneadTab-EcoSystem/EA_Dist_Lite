@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EnneadTab InDesign Repather - Professional Link Management</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2d2d2d 100%);
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        .launcher-container {
+            text-align: center;
+            background: rgba(45, 45, 45, 0.9);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 600px;
+            width: 90%;
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: spin 3s linear infinite;
+        }
+        
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            font-weight: 300;
+            color: #7ee787;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: #8b949e;
+            margin-bottom: 30px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(126, 231, 135, 0.3);
+            border-radius: 50%;
+            border-top-color: #7ee787;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        .error-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(248, 81, 73, 0.3);
+            border-radius: 50%;
+            border-top-color: #f85149;
+            margin-right: 10px;
+        }
+        
+        .success-icon {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(126, 231, 135, 0.3);
+            border-radius: 50%;
+            border-top-color: #7ee787;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .status {
+            font-size: 14px;
+            color: #8b949e;
+            margin-top: 20px;
+        }
+        
+        .status.error {
+            color: #f85149;
+        }
+        
+        .status.success {
+            color: #7ee787;
+        }
+        
+        .python-check {
+            background: rgba(248, 81, 73, 0.1);
+            border: 1px solid rgba(248, 81, 73, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .python-check h3 {
+            color: #f85149;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .install-steps {
+            background: rgba(88, 166, 255, 0.1);
+            border: 1px solid rgba(88, 166, 255, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .install-steps h3 {
+            color: #58a6ff;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .install-steps ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .install-steps li {
+            margin: 8px 0;
+            color: #c9d1d9;
+        }
+        
+        .ms-store-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #0078d4, #106ebe);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .ms-store-button:hover {
+            background: linear-gradient(135deg, #106ebe, #0078d4);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 120, 212, 0.3);
+        }
+        
+        .retry-button {
+            display: inline-block;
+            background: rgba(126, 231, 135, 0.1);
+            color: #7ee787;
+            padding: 10px 20px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(126, 231, 135, 0.3);
+            cursor: pointer;
+        }
+        
+        .retry-button:hover {
+            background: rgba(126, 231, 135, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .features {
+            margin-top: 30px;
+            text-align: left;
+            font-size: 14px;
+            color: #8b949e;
+        }
+        
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .features li {
+            padding: 5px 0;
+            position: relative;
+            padding-left: 20px;
+        }
+        
+        .features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #7ee787;
+            font-weight: bold;
+        }
+        
+        .version {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 12px;
+            color: #6e7681;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="launcher-container">
+        <div class="logo">
+            <img src="logo_outline_white.png" alt="EnneadTab Logo" />
+        </div>
+        <h1>EnneadTab InDesign Repather</h1>
+        <div class="subtitle">Professional Link Management Tool</div>
+        
+        <!-- Python Check Section -->
+        <div id="pythonCheckSection">
+            <div class="loading"></div>
+            <span id="status" class="status">Checking Python installation...</span>
+        </div>
+        
+        <!-- Python Missing Section -->
+        <div id="pythonMissingSection" class="hidden">
+            <div class="error-icon"></div>
+            <span class="status error">Python is not installed or not accessible</span>
+            
+            <div class="python-check">
+                <h3>⚠️ Python Required</h3>
+                <p>This application requires Python to run. Python is not currently installed on your system or is not accessible from the command line.</p>
+            </div>
+            
+            <div class="install-steps">
+                <h3>📥 Install Python from Microsoft Store (Recommended)</h3>
+                <ol>
+                    <li>Click the "Install Python from Microsoft Store" button below</li>
+                    <li>In the Microsoft Store, click "Get" or "Install"</li>
+                    <li>Wait for the installation to complete</li>
+                    <li>Restart your computer if prompted</li>
+                    <li>Return to this application and click "Retry"</li>
+                </ol>
+                
+                <a href="ms-windows-store://pdp/?ProductId=9NRWMJP3717K" class="ms-store-button">
+                    🏪 Install Python from Microsoft Store
+                </a>
+                
+                <div style="margin-top: 20px;">
+                    <button onclick="retryPythonCheck()" class="retry-button">
+                        🔄 Retry Python Check
+                    </button>
+                </div>
+            </div>
+            
+            <div class="install-steps">
+                <h3>🌐 Alternative: Download from python.org</h3>
+                <ol>
+                    <li>Visit <a href="https://www.python.org/downloads/" target="_blank" style="color: #58a6ff;">python.org/downloads</a></li>
+                    <li>Download the latest Python version for Windows</li>
+                    <li>Run the installer and check "Add Python to PATH"</li>
+                    <li>Complete the installation</li>
+                    <li>Return here and click "Retry"</li>
+                </ol>
+            </div>
+            
+            <div class="install-steps">
+                                 <h3>🔧 Advanced Troubleshooting</h3>
+                 <p>If you're still having issues after installing Python, you can run our diagnostic tool:</p>
+                 <ol>
+                     <li>Open Command Prompt or PowerShell</li>
+                     <li>Navigate to this folder</li>
+                     <li>Run: <code style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 3px;">powershell -ExecutionPolicy Bypass -File "check_python.ps1"</code></li>
+                     <li>Follow the troubleshooting instructions provided</li>
+                 </ol>
+                
+                <div style="margin-top: 20px;">
+                    <button onclick="runPowerShellCheck()" class="retry-button">
+                        🚀 Run Application with Check
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Python Found Section -->
+        <div id="pythonFoundSection" class="hidden">
+            <div class="success-icon"></div>
+            <span class="status success">Python is installed and ready!</span>
+            
+            <div class="features">
+                <h3>Instructions:</h3>
+                <ul>
+                    <li>Make sure InDesign is open with your document</li>
+                    <li>The app will automatically detect and connect</li>
+                    <li>No need to manually open documents</li>
+                </ul>
+                
+                <h3>Features:</h3>
+                <ul>
+                    <li>Auto-detect InDesign and open documents</li>
+                    <li>View and manage all document links</li>
+                    <li>Repath links when folders are renamed</li>
+                    <li>Preview changes before applying</li>
+                    <li>Professional dark theme interface</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <div class="version">v1.0.0</div>
+    
+    <script>
+        let pythonCheckAttempts = 0;
+        const maxAttempts = 3;
+        
+        // Check Python installation using PowerShell script
+        async function checkPythonInstallation() {
+            const statusElement = document.getElementById('status');
+            const pythonCheckSection = document.getElementById('pythonCheckSection');
+            const pythonMissingSection = document.getElementById('pythonMissingSection');
+            const pythonFoundSection = document.getElementById('pythonFoundSection');
+            
+            try {
+                statusElement.textContent = 'Checking Python installation...';
+                
+                // Try to make a request to the Python server first
+                const response = await fetch('http://127.0.0.1:8080/api/status', {
+                    method: 'GET',
+                    timeout: 3000
+                });
+                
+                if (response.ok) {
+                    // Python server is already running
+                    showPythonFound();
+                    return;
+                }
+            } catch (error) {
+                // Server not running, continue with PowerShell check
+            }
+            
+            // Try to start the Python server
+            try {
+                statusElement.textContent = 'Attempting to start Python server...';
+                
+                // Try to start the server using a simple HTTP request
+                                    const startResponse = await fetch('http://127.0.0.1:8080/api/status', {
+                    method: 'GET',
+                    timeout: 2000
+                });
+                
+                if (startResponse.ok) {
+                    showPythonFound();
+                    return;
+                }
+            } catch (startError) {
+                console.log('Failed to start server:', startError);
+            }
+            
+            // If we get here, Python is not available
+            showPythonMissing();
+        }
+        
+        function showPythonFound() {
+            document.getElementById('pythonCheckSection').classList.add('hidden');
+            document.getElementById('pythonMissingSection').classList.add('hidden');
+            document.getElementById('pythonFoundSection').classList.remove('hidden');
+            
+                         // Redirect to main application after a short delay
+             setTimeout(() => {
+                 window.location.href = 'http://127.0.0.1:8080/IndesignRepather.html';
+             }, 2000);
+        }
+        
+        function showPythonMissing() {
+            document.getElementById('pythonCheckSection').classList.add('hidden');
+            document.getElementById('pythonMissingSection').classList.remove('hidden');
+            document.getElementById('pythonFoundSection').classList.add('hidden');
+        }
+        
+        function retryPythonCheck() {
+            pythonCheckAttempts++;
+            
+            if (pythonCheckAttempts >= maxAttempts) {
+                alert('Maximum retry attempts reached. Please ensure Python is properly installed and try again.');
+                return;
+            }
+            
+            // Reset UI
+            document.getElementById('pythonMissingSection').classList.add('hidden');
+            document.getElementById('pythonCheckSection').classList.remove('hidden');
+            
+            // Retry the check
+            setTimeout(() => {
+                checkPythonInstallation();
+            }, 1000);
+        }
+        
+        function runPowerShellCheck() {
+            // This function would ideally run the PowerShell script
+            // For now, we'll show instructions to run the batch file
+            alert('Please run the "start_repather.bat" file to check Python installation and start the application.');
+        }
+        
+        // Start the Python check when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                checkPythonInstallation();
+            }, 500);
+        });
+        
+                 // Fallback redirect after 10 seconds if still on launcher
+         setTimeout(() => {
+             if (window.location.pathname.includes('launcher.html')) {
+                 // If we're still on launcher after 10 seconds, try to redirect anyway
+                 // (in case Python check failed but server is actually running)
+                 window.location.href = 'http://127.0.0.1:8080/IndesignRepather.html';
+             }
+         }, 10000);
+    </script>
+</body>
+</html>
