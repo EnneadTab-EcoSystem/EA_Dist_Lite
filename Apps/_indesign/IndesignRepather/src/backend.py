@@ -9,7 +9,8 @@ import os
 import sys
 import logging
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Add current directory to Python path for imports
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -110,8 +111,15 @@ class InDesignLinkRepather:
                 raise Exception(f"Failed to open document: {error_msg}")
             
     def get_all_links(self) -> List[Dict]:
-        """Get all links in the current document with page information and enhanced status checking."""
-        links = []
+        """Get all links in the current document with page information and optimized file checking.
+
+        Optimizations:
+        - Collect basic link metadata in a single COM pass (name, path, status)
+        - Perform filesystem existence checks in parallel outside COM using a thread pool
+        - Cache results per path to avoid duplicate checks
+        - Prefer real filesystem existence over InDesign's status when they disagree
+        """
+        links: List[Dict] = []
         try:
             if not self.app:
                 raise Exception("Not connected to InDesign. Please connect first.")
@@ -122,107 +130,122 @@ class InDesignLinkRepather:
             link_count = all_links.Count
             self.logger.info(f"Links collection has {link_count} items")
             
-            # Get page information for links
+            # Get page information for links (best-effort)
             page_info = self._get_link_page_info()
+
+            # -------------------------------
+            # First pass: collect raw link data via COM
+            # -------------------------------
+            raw_links: List[Dict] = []
+            unique_paths: Dict[str, str] = {}
             
-            # Method 1: Try using Item() with index (original method)
             if link_count > 0:
                 for i in range(link_count):
                     try:
                         link = all_links.Item(i)
-                        if link:
-                            link_name = link.Name
-                            file_path = link.FilePath
-                            
-                            # Enhanced status checking
-                            link_status = getattr(link, 'LinkStatus', 1)  # Default to 1 (linked) if not available
-                            
-                            # Additional file existence check
-                            file_exists = False
-                            file_error = None
-                            try:
-                                if file_path and file_path != 'unknown':
-                                    # Normalize path for Windows
-                                    normalized_path = file_path.replace('/', '\\')
-                                    
-                                    # Try multiple methods to check file existence
-                                    file_exists = os.path.exists(normalized_path)
-                                    
-                                    # If not found with os.path.exists, try other methods
-                                    if not file_exists:
-                                        # Method 1: Try with win32file for network paths
-                                        if normalized_path.startswith('\\\\'):
-                                            try:
-                                                import win32file
-                                                file_exists = win32file.GetFileAttributes(normalized_path) != -1
-                                            except:
-                                                pass
-                                        
-                                        # Method 2: Try with pathlib for better Unicode support
-                                        if not file_exists:
-                                            try:
-                                                from pathlib import Path
-                                                path_obj = Path(normalized_path)
-                                                file_exists = path_obj.exists()
-                                            except:
-                                                pass
-                                        
-                                        # Method 3: Try to open the file to check if it's accessible
-                                        if not file_exists:
-                                            try:
-                                                with open(normalized_path, 'rb') as f:
-                                                    # Just try to read the first byte to check if file is accessible
-                                                    f.read(1)
-                                                    file_exists = True
-                                            except:
-                                                pass
-                                        
-                                        # Method 4: For image files, try to check if it's a valid image
-                                        if not file_exists and any(ext in normalized_path.lower() for ext in ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico', '.tiff', '.tif']):
-                                            try:
-                                                import win32file
-                                                # Try to get file attributes without opening
-                                                attrs = win32file.GetFileAttributes(normalized_path)
-                                                if attrs != -1:
-                                                    file_exists = True
-                                            except:
-                                                pass
-                                    
-                                    # If still not found but InDesign reports LINKED, keep as missing and log the mismatch
-                                    if not file_exists and link_status == 1:
-                                        self.logger.warning(
-                                            f"Link status mismatch for '{link_name}': InDesign=LINKED but file not found -> treating as MISSING"
-                                        )
-                                        
-                            except Exception as e:
-                                file_error = str(e)
-                                # On error determining existence, be conservative: mark as not existing
-                                file_exists = False
-                            
-                            # Determine the actual status prioritizing real file existence
-                            if not file_exists:
-                                actual_status = 2  # Missing
-                                self.logger.warning(f"Link '{link_name}' marked as missing: {file_path}")
-                            else:
-                                # File exists – if InDesign says linked use 1, otherwise use reported status
-                                actual_status = 1 if link_status == 1 else link_status
-                            
-                            link_info = {
-                                'name': link_name,
-                                'file_path': file_path,
-                                'status': actual_status,
-                                'file_exists': file_exists,
-                                'file_error': file_error,
-                                'index': i,
-                                'page_info': page_info.get(link_name, 'Unknown page'),
-                                'needs_attention': not file_exists  # Flag for UI highlighting
-                            }
-                            links.append(link_info)
+                        if not link:
+                            continue
+                        link_name = link.Name
+                        file_path = getattr(link, 'FilePath', '')
+                        link_status = getattr(link, 'LinkStatus', 1)
+                        # Detect embedded via URI if available
+                        is_embedded = False
+                        try:
+                            uri = getattr(link, 'LinkResourceURI', '')
+                            if isinstance(uri, str) and uri.lower().startswith('embedded:'):
+                                is_embedded = True
+                        except Exception:
+                            pass
+
+                        # Try to get page directly from this link's parent chain
+                        page_text = None
+                        try:
+                            page_text = self._get_page_for_link(link)
+                        except Exception:
+                            page_text = None
+
+                        normalized_path = ''
+                        if file_path and file_path != 'unknown':
+                            normalized_path = file_path.replace('/', '\\')
+                            unique_paths[normalized_path] = normalized_path
+
+                        raw_links.append({
+                            'index': i,
+                            'name': link_name,
+                            'file_path': file_path,
+                            'normalized_path': normalized_path,
+                            'link_status': link_status,
+                            'is_embedded': is_embedded,
+                            'page_text': page_text,
+                        })
                     except Exception as link_error:
                         self.logger.warning(f"Could not access link at index {i}: {link_error}")
                         continue
+
+            # -------------------------------
+            # Second pass: check file existence in parallel
+            # -------------------------------
+            def fast_exists(path: str) -> Tuple[str, bool, Optional[str]]:
+                try:
+                    if not path:
+                        return (path, False, None)
+                    # Quick check
+                    if os.path.exists(path):
+                        return (path, True, None)
+                    # Network/alternate check
+                    if path.startswith('\\\\'):
+                        try:
+                            import win32file
+                            return (path, win32file.GetFileAttributes(path) != -1, None)
+                        except Exception as e:
+                            return (path, False, str(e))
+                    # Pathlib check
+                    try:
+                        return (path, Path(path).exists(), None)
+                    except Exception as e:
+                        return (path, False, str(e))
+                except Exception as e:
+                    return (path, False, str(e))
+
+            path_results: Dict[str, Tuple[bool, Optional[str]]] = {}
+            if unique_paths:
+                max_workers = min(16, max(1, os.cpu_count() or 4))
+                with ThreadPoolExecutor(max_workers=max_workers) as pool:
+                    futures = [pool.submit(fast_exists, p) for p in unique_paths.values()]
+                    for fut in as_completed(futures):
+                        path, exists, err = fut.result()
+                        path_results[path] = (exists, err)
+
+            # -------------------------------
+            # Final pass: assemble link info
+            # -------------------------------
+            for item in raw_links:
+                normalized_path = item['normalized_path']
+                exists, err = (False, None)
+                if normalized_path:
+                    exists, err = path_results.get(normalized_path, (False, None))
+
+                # Determine final status: prefer actual existence
+                if item.get('is_embedded'):
+                    actual_status = 4  # LinkStatus.LINK_EMBEDDED
+                elif not exists and item['link_status'] != 4:
+                    actual_status = 2  # LinkStatus.LINK_MISSING
+                else:
+                    # 1=OK, 3=OUT_OF_DATE, others pass through
+                    actual_status = 1 if item['link_status'] == 1 else item['link_status']
+
+                links.append({
+                    'name': item['name'],
+                    'file_path': item['file_path'],
+                    'status': actual_status,
+                    'file_exists': exists,
+                    'file_error': err,
+                    'index': item['index'],
+                    'page_info': item.get('page_text') or page_info.get(item['name'], 'Unknown page'),
+                    'needs_attention': not exists,
+                })
                         
-            # Method 2: If Method 1 failed, try iterating through collection
+            # Method 2: If Method 1 (indexing) failed to produce any, try enumerating collection
             if not links and link_count > 0:
                 self.logger.info("Trying alternative method to access links...")
                 try:
@@ -590,6 +613,35 @@ class InDesignLinkRepather:
                     return 1
                     
             return None
+    def _get_page_for_link(self, link) -> Optional[str]:
+        """Attempt to resolve the page label for a given Link by traversing its parents."""
+        try:
+            current = getattr(link, 'Parent', None)
+            for _ in range(10):
+                if current is None:
+                    break
+                # If the parent has a ParentPage, use it
+                if hasattr(current, 'ParentPage') and current.ParentPage is not None:
+                    try:
+                        page = current.ParentPage
+                        # Use page.Name if available, else build 'Page N'
+                        if hasattr(page, 'Name') and page.Name:
+                            return str(page.Name)
+                        if hasattr(page, 'DocumentOffset'):
+                            return f"Page {int(page.DocumentOffset) + 1}"
+                    except Exception:
+                        pass
+                # Direct Name may contain 'Page N'
+                if hasattr(current, 'Name') and isinstance(current.Name, str) and 'Page' in current.Name:
+                    import re
+                    match = re.search(r'Page\s*(\d+)', current.Name)
+                    if match:
+                        return f"Page {int(match.group(1))}"
+                # Walk up
+                current = getattr(current, 'Parent', None)
+        except Exception:
+            return None
+        return None
             
         except Exception as e:
             self.logger.debug(f"Error getting page number for graphic: {e}")
