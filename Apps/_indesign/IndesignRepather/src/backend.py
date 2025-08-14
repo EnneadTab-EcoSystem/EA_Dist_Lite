@@ -118,7 +118,29 @@ class InDesignLinkRepather:
         - Perform filesystem existence checks in parallel outside COM using a thread pool
         - Cache results per path to avoid duplicate checks
         - Prefer real filesystem existence over InDesign's status when they disagree
+        https://developer.adobe.com/indesign/dom/api/l/LinkStatus/
+
+
+        LinkStatus Constants (from Adobe InDesign DOM API):
+        - NORMAL = 1852797549 (1 in simplified mapping)
+        - LINK_OUT_OF_DATE = 1819242340 (3 in simplified mapping) 
+        - LINK_MISSING = 1819109747 (2 in simplified mapping)
+        - LINK_EMBEDDED = 1282237028 (4 in simplified mapping)
+        - LINK_INACCESSIBLE = 1818848865 (5 in simplified mapping)
         """
+        # Define LinkStatus constants for easier comparison
+        LINK_STATUS = {
+            1852797549: 1,  # NORMAL
+            1819242340: 3,  # LINK_OUT_OF_DATE  
+            1819109747: 2,  # LINK_MISSING
+            1282237028: 4,  # LINK_EMBEDDED
+            1818848865: 5,  # LINK_INACCESSIBLE
+        }
+        
+        def normalize_link_status(raw_status):
+            """Convert InDesign's raw status to simplified status code"""
+            return LINK_STATUS.get(raw_status, 1)  # Default to NORMAL if unknown
+
         links: List[Dict] = []
         try:
             if not self.app:
@@ -147,7 +169,8 @@ class InDesignLinkRepather:
                             continue
                         link_name = link.Name
                         file_path = getattr(link, 'FilePath', '')
-                        link_status = getattr(link, 'LinkStatus', 1)
+                        raw_link_status = getattr(link, 'LinkStatus', 1852797549)  # Default to NORMAL
+                        link_status = normalize_link_status(raw_link_status)
                         # Detect embedded via URI if available
                         is_embedded = False
                         try:
@@ -225,14 +248,32 @@ class InDesignLinkRepather:
                 if normalized_path:
                     exists, err = path_results.get(normalized_path, (False, None))
 
-                # Determine final status: prefer actual existence
-                if item.get('is_embedded'):
-                    actual_status = 4  # LinkStatus.LINK_EMBEDDED
-                elif not exists and item['link_status'] != 4:
-                    actual_status = 2  # LinkStatus.LINK_MISSING
+                # Determine final status: respect InDesign's status but enhance with file existence check
+                indesign_status = item['link_status']
+                
+                # If InDesign says it's embedded, trust that
+                if indesign_status == 4:  # LINK_EMBEDDED
+                    actual_status = 4
+                # If InDesign says it's missing, trust that
+                elif indesign_status == 2:  # LINK_MISSING
+                    actual_status = 2
+                # If InDesign says it's out of date, trust that
+                elif indesign_status == 3:  # LINK_OUT_OF_DATE
+                    actual_status = 3
+                # If InDesign says it's inaccessible, trust that
+                elif indesign_status == 5:  # LINK_INACCESSIBLE
+                    actual_status = 5
+                # For NORMAL status, verify with file existence check
+                elif indesign_status == 1:  # NORMAL
+                    if not exists:
+                        # File doesn't exist but InDesign thinks it's normal - this is suspicious
+                        actual_status = 2  # Mark as missing
+                        self.logger.warning(f"Link '{item['name']}' marked as missing: InDesign reports NORMAL but file doesn't exist")
+                    else:
+                        actual_status = 1  # Confirm as normal
                 else:
-                    # 1=OK, 3=OUT_OF_DATE, others pass through
-                    actual_status = 1 if item['link_status'] == 1 else item['link_status']
+                    # Unknown status, default to normal
+                    actual_status = 1
 
                 links.append({
                     'name': item['name'],
@@ -613,6 +654,10 @@ class InDesignLinkRepather:
                     return 1
                     
             return None
+        except Exception as e:
+            self.logger.debug(f"Error getting page number for graphic: {e}")
+            return None
+            
     def _get_page_for_link(self, link) -> Optional[str]:
         """Attempt to resolve the page label for a given Link by traversing its parents."""
         try:
@@ -642,10 +687,6 @@ class InDesignLinkRepather:
         except Exception:
             return None
         return None
-            
-        except Exception as e:
-            self.logger.debug(f"Error getting page number for graphic: {e}")
-            return None
             
     def repath_links(self, old_folder: str, new_folder: str) -> Dict:
         """Repath all links by replacing old folder with new folder."""

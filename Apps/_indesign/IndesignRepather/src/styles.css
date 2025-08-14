@@ -810,6 +810,37 @@ body {
     border: 1px solid rgba(35, 134, 54, 0.3);
 }
 
+/* Additional status badge styles for InDesign LinkStatus */
+.status-badge.linked {
+    background: rgba(35, 134, 54, 0.1);
+    color: #7ee787;
+    border: 1px solid rgba(35, 134, 54, 0.3);
+}
+
+.status-badge.missing {
+    background: rgba(248, 81, 73, 0.1);
+    color: #f85149;
+    border: 1px solid rgba(248, 81, 73, 0.3);
+}
+
+.status-badge.modified {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+    border: 1px solid rgba(255, 193, 7, 0.3);
+}
+
+.status-badge.embedded {
+    background: rgba(102, 16, 242, 0.1);
+    color: #6610f2;
+    border: 1px solid rgba(102, 16, 242, 0.3);
+}
+
+.status-badge.inaccessible {
+    background: rgba(108, 117, 125, 0.1);
+    color: #6c757d;
+    border: 1px solid rgba(108, 117, 125, 0.3);
+}
+
 /* Container for scrollable table */
 .table-container {
     max-height: 500px; /* Reduced height for minimalism */

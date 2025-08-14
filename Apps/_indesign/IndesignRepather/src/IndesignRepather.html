@@ -606,18 +606,22 @@
 
             getStatusClass(status) {
                 switch (status) {
-                    case 1: return 'linked';
-                    case 2: return 'missing';
-                    case 3: return 'modified';
+                    case 1: return 'linked';      // NORMAL
+                    case 2: return 'missing';     // LINK_MISSING
+                    case 3: return 'modified';    // LINK_OUT_OF_DATE
+                    case 4: return 'embedded';    // LINK_EMBEDDED
+                    case 5: return 'inaccessible'; // LINK_INACCESSIBLE
                     default: return 'linked';
                 }
             }
 
             getStatusText(status) {
                 switch (status) {
-                    case 1: return 'Linked';
-                    case 2: return 'Missing';
-                    case 3: return 'Modified';
+                    case 1: return 'Linked';      // NORMAL
+                    case 2: return 'Missing';     // LINK_MISSING
+                    case 3: return 'Modified';    // LINK_OUT_OF_DATE
+                    case 4: return 'Embedded';    // LINK_EMBEDDED
+                    case 5: return 'Inaccessible'; // LINK_INACCESSIBLE
                     default: return 'Unknown';
                 }
             }

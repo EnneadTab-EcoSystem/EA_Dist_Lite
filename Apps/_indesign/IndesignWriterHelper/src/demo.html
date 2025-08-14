@@ -3,588 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InDesign Writer Helper - Demo</title>
+    <title>EnneadTab InDesign Writer Helper - Demo</title>
+    <link rel="stylesheet" href="styles.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f5f7fa;
-            color: #333;
-            overflow: hidden;
-        }
-
-        .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .header h1 {
-            font-size: 24px;
-            font-weight: 600;
-        }
-
-        .header-info {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .document-info {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-        }
-
-        .demo-banner {
-            background: #ffc107;
-            color: #856404;
-            padding: 10px 20px;
+        .demo-container {
             text-align: center;
-            font-size: 14px;
-            border-bottom: 1px solid #ffeaa7;
+            background: rgba(45, 45, 45, 0.9);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 600px;
+            width: 90%;
+            margin: 50px auto;
         }
-
-        .main-container {
-            display: flex;
-            height: calc(100vh - 120px);
-        }
-
-        .sidebar {
-            width: 300px;
-            background: white;
-            border-right: 1px solid #e1e5e9;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .sidebar-header {
-            padding: 20px;
-            border-bottom: 1px solid #e1e5e9;
-            background: #f8f9fa;
-        }
-
-        .sidebar-header h3 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .stat-item {
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            border: 1px solid #e1e5e9;
-        }
-
-        .stat-value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #667eea;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            color: #666;
-            margin-top: 5px;
-        }
-
-        .navigation-panel {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-        }
-
-        .nav-section {
-            margin-bottom: 25px;
-        }
-
-        .nav-section h4 {
-            color: #333;
-            margin-bottom: 15px;
-            font-size: 16px;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 5px;
-        }
-
-        .frame-list {
-            max-height: 300px;
-            overflow-y: auto;
-            border: 1px solid #e1e5e9;
-            border-radius: 8px;
-        }
-
-        .frame-item {
-            padding: 12px;
-            border-bottom: 1px solid #f0f0f0;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-
-        .frame-item:hover {
-            background: #f8f9fa;
-        }
-
-        .frame-item.active {
-            background: #667eea;
-            color: white;
-        }
-
-        .frame-item:last-child {
-            border-bottom: none;
-        }
-
-        .frame-name {
-            font-weight: 600;
-            margin-bottom: 5px;
-        }
-
-        .frame-details {
-            font-size: 12px;
-            color: #666;
-        }
-
-        .frame-item.active .frame-details {
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        .page-selector {
-            margin-bottom: 15px;
-        }
-
-        .page-select {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #e1e5e9;
-            border-radius: 8px;
-            background: white;
-            font-size: 14px;
-        }
-
-        .search-box {
-            margin-bottom: 15px;
-        }
-
-        .search-input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #e1e5e9;
-            border-radius: 8px;
-            font-size: 14px;
-        }
-
-        .content-area {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            background: white;
-        }
-
-        .toolbar {
-            padding: 15px 20px;
-            border-bottom: 1px solid #e1e5e9;
-            background: #f8f9fa;
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
             display: flex;
             align-items: center;
-            gap: 15px;
+            justify-content: center;
+            animation: spin 3s linear infinite;
         }
-
-        .btn {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 8px 15px;
+        
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        
+        .demo-content {
+            background: rgba(126, 231, 135, 0.1);
+            border: 1px solid rgba(126, 231, 135, 0.3);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        
+        .demo-content h3 {
+            color: #7ee787;
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+        
+        .demo-text {
+            background: #161b22;
+            border: 1px solid #30363d;
             border-radius: 6px;
-            cursor: pointer;
+            padding: 15px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
             font-size: 14px;
-            transition: background-color 0.2s;
+            line-height: 1.5;
+            color: #c9d1d9;
+            max-height: 200px;
+            overflow-y: auto;
         }
-
-        .btn:hover {
-            background: #5a6fd8;
-        }
-
-        .btn:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-        }
-
-        .btn-secondary:hover {
-            background: #5a6268;
-        }
-
-        .frame-counter {
-            background: white;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 14px;
-            color: #666;
-            border: 1px solid #e1e5e9;
-        }
-
-        .text-area {
-            flex: 1;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .text-header {
-            margin-bottom: 15px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #e1e5e9;
-        }
-
-        .text-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 5px;
-        }
-
-        .text-meta {
-            display: flex;
-            gap: 20px;
-            font-size: 14px;
-            color: #666;
-        }
-
-        .text-content {
-            flex: 1;
-            border: 1px solid #e1e5e9;
-            border-radius: 8px;
-            padding: 20px;
-            font-size: 16px;
-            line-height: 1.6;
-            background: #fafbfc;
-            resize: none;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        .text-content:focus {
-            outline: none;
-            border-color: #667eea;
-            background: white;
-        }
-
-        .no-content {
-            text-align: center;
-            padding: 60px 20px;
-            color: #666;
-        }
-
-        .no-content h3 {
-            margin-bottom: 10px;
-            color: #333;
+        
+        .version {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 12px;
+            color: #6e7681;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>InDesign Writer Helper</h1>
-        <div class="header-info">
-            <div class="document-info" id="documentInfo">
-                Demo Mode - Sample Document
-            </div>
+    <div class="demo-container">
+        <div class="logo">
+            <img src="logo_outline_white.png" alt="EnneadTab Logo" />
         </div>
-    </div>
+        <h1>EnneadTab InDesign Writer Helper</h1>
+        <div class="subtitle">Professional Text Management Tool - Demo Mode</div>
 
-    <div class="demo-banner">
-        🎯 <strong>Demo Mode</strong> - This is a preview of the interface. Connect to InDesign to use the full functionality.
-    </div>
+        <div class="demo-content">
+            <h3>📝 Demo Content</h3>
+            <p>This is a demonstration of the InDesign Writer Helper interface. In the actual application, this would display text content from your InDesign document.</p>
+            
+            <div class="demo-text">
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
 
-    <div class="main-container">
-        <div class="sidebar">
-            <div class="sidebar-header">
-                <h3>Document Statistics</h3>
-                <div class="stats-grid" id="statsGrid">
-                    <div class="stat-item">
-                        <div class="stat-value" id="totalFrames">5</div>
-                        <div class="stat-label">Text Frames</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="totalPages">3</div>
-                        <div class="stat-label">Pages</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="totalWords">1,247</div>
-                        <div class="stat-label">Words</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value" id="totalChars">7,892</div>
-                        <div class="stat-label">Characters</div>
-                    </div>
-                </div>
-            </div>
+                Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
 
-            <div class="navigation-panel">
-                <div class="nav-section">
-                    <h4>Page Navigation</h4>
-                    <div class="page-selector">
-                        <select class="page-select" id="pageSelect" onchange="filterByPage()">
-                            <option value="">All Pages</option>
-                            <option value="Page 1">Page 1</option>
-                            <option value="Page 2">Page 2</option>
-                            <option value="Page 3">Page 3</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="nav-section">
-                    <h4>Search Text</h4>
-                    <div class="search-box">
-                        <input type="text" class="search-input" id="searchInput" placeholder="Search text content..." oninput="searchText()">
-                    </div>
-                </div>
-
-                <div class="nav-section">
-                    <h4>Text Frames</h4>
-                    <div class="frame-list" id="frameList">
-                        <!-- Demo frames will be populated by JavaScript -->
-                    </div>
-                </div>
+                Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
             </div>
         </div>
 
-        <div class="content-area">
-            <div class="toolbar">
-                <button class="btn" onclick="previousFrame()" id="prevBtn">← Previous</button>
-                <button class="btn" onclick="nextFrame()" id="nextBtn">Next →</button>
-                <div class="frame-counter" id="frameCounter">
-                    Frame 1 of 5
-                </div>
-                <button class="btn btn-secondary" onclick="refreshFrames()">Refresh</button>
-                <button class="btn btn-secondary" onclick="saveChanges()" id="saveBtn" disabled>Save Changes</button>
-            </div>
+        <div class="features">
+            <h3>Features:</h3>
+            <ul>
+                <li>Auto-detect InDesign and open documents</li>
+                <li>View all text frames in your document</li>
+                <li>Navigate between text frames and pages</li>
+                <li>Preview text content in a large text box</li>
+                <li>Search and filter text content</li>
+                <li>Future: AI-powered text suggestions</li>
+            </ul>
+        </div>
 
-            <div class="text-area">
-                <div class="text-header" id="textHeader">
-                    <div class="text-title">Main Heading Frame</div>
-                    <div class="text-meta">
-                        <span>Page: Page 1</span>
-                        <span>Words: 3</span>
-                        <span>Characters: 15</span>
-                    </div>
-                </div>
-                <textarea class="text-content" id="textContent" placeholder="No text content available..." oninput="markAsModified()">Welcome to InDesign Writer Helper</textarea>
-            </div>
+        <div class="version">
+            EnneadTab InDesign Writer Helper v1.0 - Demo Mode
         </div>
     </div>
-
-    <script>
-        // Demo data
-        const demoFrames = [
-            {
-                index: 0,
-                name: "Main Heading Frame",
-                page_name: "Page 1",
-                text_content: "Welcome to InDesign Writer Helper",
-                word_count: 3,
-                character_count: 15
-            },
-            {
-                index: 1,
-                name: "Introduction Text",
-                page_name: "Page 1",
-                text_content: "This is a powerful tool for managing text content in your InDesign documents. You can view, edit, and navigate through all text frames with ease.",
-                word_count: 25,
-                character_count: 156
-            },
-            {
-                index: 2,
-                name: "Feature List",
-                page_name: "Page 2",
-                text_content: "• Auto-detect InDesign and open documents\n• View all text frames in your document\n• Navigate between text frames and pages\n• Preview text content in a large text box\n• Search and filter text content\n• Future: AI-powered text suggestions",
-                word_count: 45,
-                character_count: 298
-            },
-            {
-                index: 3,
-                name: "Technical Details",
-                page_name: "Page 2",
-                text_content: "The application uses COM automation to connect to InDesign and extract text frame information. It provides a modern web interface for easy text management and editing.",
-                word_count: 28,
-                character_count: 189
-            },
-            {
-                index: 4,
-                name: "Future Plans",
-                page_name: "Page 3",
-                text_content: "In future versions, we plan to integrate OpenAI for intelligent text suggestions, add batch operations for multiple frames, and provide advanced search capabilities with regex support.",
-                word_count: 32,
-                character_count: 234
-            }
-        ];
-
-        let currentFrame = demoFrames[0];
-        let allFrames = [...demoFrames];
-        let filteredFrames = [...demoFrames];
-        let currentFrameIndex = 0;
-        let isModified = false;
-
-        // Initialize on page load
-        window.onload = function() {
-            updateFrameList();
-            updateFrameDisplay();
-        };
-
-        function updateFrameList() {
-            const frameList = document.getElementById('frameList');
-            
-            frameList.innerHTML = filteredFrames.map((frame, index) => `
-                <div class="frame-item ${index === currentFrameIndex ? 'active' : ''}" onclick="selectFrame(${index})">
-                    <div class="frame-name">${frame.name}</div>
-                    <div class="frame-details">
-                        Page: ${frame.page_name} | Words: ${frame.word_count} | Chars: ${frame.character_count}
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function selectFrame(index) {
-            if (index >= 0 && index < filteredFrames.length) {
-                currentFrameIndex = index;
-                currentFrame = filteredFrames[index];
-                updateFrameDisplay();
-                updateFrameList();
-            }
-        }
-
-        function updateFrameDisplay() {
-            if (!currentFrame) {
-                document.getElementById('textHeader').innerHTML = `
-                    <div class="text-title">No text frame selected</div>
-                    <div class="text-meta">
-                        <span>Page: -</span>
-                        <span>Words: 0</span>
-                        <span>Characters: 0</span>
-                    </div>
-                `;
-                document.getElementById('textContent').value = '';
-                document.getElementById('frameCounter').textContent = 'Frame 0 of 0';
-                return;
-            }
-
-            document.getElementById('textHeader').innerHTML = `
-                <div class="text-title">${currentFrame.name}</div>
-                <div class="text-meta">
-                    <span>Page: ${currentFrame.page_name}</span>
-                    <span>Words: ${currentFrame.word_count}</span>
-                    <span>Characters: ${currentFrame.character_count}</span>
-                </div>
-            `;
-            
-            document.getElementById('textContent').value = currentFrame.text_content;
-            document.getElementById('frameCounter').textContent = `Frame ${currentFrameIndex + 1} of ${filteredFrames.length}`;
-            
-            // Update navigation buttons
-            document.getElementById('prevBtn').disabled = currentFrameIndex === 0;
-            document.getElementById('nextBtn').disabled = currentFrameIndex === filteredFrames.length - 1;
-            
-            isModified = false;
-            updateSaveButton();
-        }
-
-        function filterByPage() {
-            const selectedPage = document.getElementById('pageSelect').value;
-            
-            if (selectedPage === '') {
-                filteredFrames = [...allFrames];
-            } else {
-                filteredFrames = allFrames.filter(frame => frame.page_name === selectedPage);
-            }
-            
-            currentFrameIndex = 0;
-            updateFrameList();
-            
-            if (filteredFrames.length > 0) {
-                selectFrame(0);
-            } else {
-                updateFrameDisplay();
-            }
-        }
-
-        function searchText() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
-            
-            if (searchTerm === '') {
-                filteredFrames = [...allFrames];
-            } else {
-                filteredFrames = allFrames.filter(frame => 
-                    frame.text_content.toLowerCase().includes(searchTerm)
-                );
-            }
-            
-            currentFrameIndex = 0;
-            updateFrameList();
-            
-            if (filteredFrames.length > 0) {
-                selectFrame(0);
-            } else {
-                updateFrameDisplay();
-            }
-        }
-
-        function nextFrame() {
-            if (currentFrameIndex < filteredFrames.length - 1) {
-                selectFrame(currentFrameIndex + 1);
-            }
-        }
-
-        function previousFrame() {
-            if (currentFrameIndex > 0) {
-                selectFrame(currentFrameIndex - 1);
-            }
-        }
-
-        function markAsModified() {
-            isModified = true;
-            updateSaveButton();
-        }
-
-        function updateSaveButton() {
-            document.getElementById('saveBtn').disabled = !isModified;
-        }
-
-        function saveChanges() {
-            if (isModified && currentFrame) {
-                const newContent = document.getElementById('textContent').value;
-                currentFrame.text_content = newContent;
-                currentFrame.character_count = newContent.length;
-                currentFrame.word_count = newContent.split(/\s+/).filter(word => word.length > 0).length;
-                
-                isModified = false;
-                updateSaveButton();
-                updateFrameDisplay();
-                updateFrameList();
-                
-                alert('Changes saved! (Demo mode - changes are not persistent)');
-            }
-        }
-
-        function refreshFrames() {
-            alert('Refresh functionality would reload text frames from InDesign');
-        }
-    </script>
 </body>
 </html>
