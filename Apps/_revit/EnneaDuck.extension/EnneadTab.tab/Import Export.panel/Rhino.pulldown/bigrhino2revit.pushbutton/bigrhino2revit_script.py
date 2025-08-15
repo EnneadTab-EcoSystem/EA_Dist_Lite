@@ -21,7 +21,7 @@ import proDUCKtion # pyright: ignore
 proDUCKtion.validify()
 
 from pyrevit import script
-from EnneadTab import ERROR_HANDLE, LOG, DATA_FILE, NOTIFICATION, FOLDER, TIME, ENVIRONMENT, UI, SAMPLE_FILE
+from EnneadTab import ERROR_HANDLE, LOG, DATA_FILE, NOTIFICATION, FOLDER, TIME, ENVIRONMENT, UI, SAMPLE_FILE, FILE_NAME_UTILITY
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FORMS, REVIT_UNIT, REVIT_FAMILY, REVIT_MATERIAL, REVIT_CATEGORY
 from Autodesk.Revit import DB # pyright: ignore 
 from pyrevit.revit import ErrorSwallower # pyright: ignore 
@@ -71,20 +71,8 @@ def create_family_from_template():
 
 
 def sanitize_revit_name(name):
-    """Remove all prohibited characters from a name for use in Revit subcategories/materials, and replace '.' with '_'."""
-    original_name = name
-    name = name.replace('.', '_')
-    # Remove all forbidden characters for Revit names
-    # Based on Revit error message: "{, }, [, ], |, ;, less-than sign, greater-than sign, ?, `, ~"
-    # Also including other common problematic characters: \, :, <, >
-    prohibited = r'[\\:\{\}\[\]\|;<>\?`~]'
-    cleaned_name = re.sub(prohibited, '', name)
-    
-    # Debug logging if name was changed
-    if cleaned_name != name:
-        print("Sanitized name '{}' -> '{}'".format(original_name, cleaned_name))
-    
-    return cleaned_name
+    """Remove all prohibited characters from a name for use in Revit subcategories/materials."""
+    return FILE_NAME_UTILITY.sanitize_revit_name(name, replacement_char="_")
 
 
 def convert_file_to_family_elements(family_doc, file_path, log_messages):

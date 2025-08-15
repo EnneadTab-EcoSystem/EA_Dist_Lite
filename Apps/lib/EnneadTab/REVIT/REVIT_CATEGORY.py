@@ -119,7 +119,7 @@ def get_or_create_subcategory_with_material(doc, subc_name):
     # Assign material if mapping exists
     try:
         from EnneadTab.REVIT import REVIT_MATERIAL
-        from EnneadTab import DATA_FILE
+        from EnneadTab import DATA_FILE, FILE_NAME_UTILITY
         recent_out_data = DATA_FILE.get_data("rhino2revit_out_paths")
         
         # Initialize variables
@@ -131,10 +131,7 @@ def get_or_create_subcategory_with_material(doc, subc_name):
             mat_data = recent_out_data["layer_material_mapping"].get(subc_name)
             if not mat_data:
                 # If not found, try with sanitized name (in case the mapping uses sanitized keys)
-                import re
-                sanitized_key = subc_name.replace('.', '_')
-                prohibited = r'[\\:\{\}\[\]\|;<>\\?`~]'
-                sanitized_key = re.sub(prohibited, '', sanitized_key)
+                sanitized_key = FILE_NAME_UTILITY.sanitize_revit_name(subc_name)
                 mat_data = recent_out_data["layer_material_mapping"].get(sanitized_key)
                 if mat_data:
                     print("Found material data using sanitized key: '{}' -> '{}'".format(subc_name, sanitized_key))
@@ -151,7 +148,7 @@ def get_or_create_subcategory_with_material(doc, subc_name):
         if mat_name:
             # Sanitize material name before using it
             original_mat_name = mat_name
-            mat_name = REVIT_MATERIAL.sanitize_material_name(mat_name)
+            mat_name = FILE_NAME_UTILITY.sanitize_revit_name(mat_name)
             if mat_name != original_mat_name:
                 print("Material name sanitized: '{}' -> '{}'".format(original_mat_name, mat_name))
             

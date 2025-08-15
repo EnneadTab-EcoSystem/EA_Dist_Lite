@@ -134,11 +134,3 @@ def window_wall_ratio_sum(doc):
 ################## main code below #####################
 if __name__ == "__main__":
     window_wall_ratio_sum(DOC)
-
-
-
-
-
-
-
- 

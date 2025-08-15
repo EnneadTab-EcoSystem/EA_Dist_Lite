@@ -3,7 +3,7 @@ __doc__ = """Convert EACH and EVERY selected geometry to INDIVIDUAL Revit famili
 
 import rhinoscriptsyntax as rs
 import scriptcontext as sc
-from EnneadTab import ENVIRONMENT, ERROR_HANDLE, LOG, NOTIFICATION, DATA_FILE
+from EnneadTab import ENVIRONMENT, ERROR_HANDLE, LOG, NOTIFICATION, DATA_FILE, FILE_NAME_UTILITY
 from EnneadTab.RHINO import RHINO_OBJ_DATA, RHINO_UI
 import Eto # pyright: ignore
 import Rhino # pyright: ignore
@@ -94,8 +94,9 @@ def shape2revit():
             continue
         center = RHINO_OBJ_DATA.get_center(geo)
         
-        # Create temporary block name
-        block_name = "{}{}".format(S2F_PREFIX, str(geo)) # using guid from rs.parsing
+        # Create temporary block name with sanitization
+        raw_block_name = "{}{}".format(S2F_PREFIX, str(geo)) # using guid from rs.parsing
+        block_name = FILE_NAME_UTILITY.sanitize_revit_name(raw_block_name)
         
         # Create block from geometry
         if rs.IsBlock(block_name):

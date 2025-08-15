@@ -18,16 +18,18 @@ def get_file(file_name):
     path = os.path.join(ENVIRONMENT.DOCUMENT_FOLDER, ENVIRONMENT.get_app_name(), file_name)
 
     if ENVIRONMENT.get_app_name() == "revit":
-        try:
-            from EnneadTab.REVIT import REVIT_APPLICATION
-            revit_version = REVIT_APPLICATION.get_revit_version()
-            path = os.path.join(ENVIRONMENT.DOCUMENT_FOLDER, 
-                                ENVIRONMENT.get_app_name(), 
-                                str(revit_version), 
-                                file_name)
-        except Exception as e:
-            print("Warning: Could not get Revit version, using default path: {}".format(e))
-            # Fallback to default path if version detection fails
+        if file_name.endswith(".rfa") or file_name.endswith(".rvt"):
+            try:
+                from EnneadTab.REVIT import REVIT_APPLICATION
+                revit_version = REVIT_APPLICATION.get_revit_version()
+                path = os.path.join(ENVIRONMENT.DOCUMENT_FOLDER, 
+                                    ENVIRONMENT.get_app_name(), 
+                                    str(revit_version), 
+                                    file_name)
+            except Exception as e:
+                print("Warning: Could not get Revit version, using default path: {}".format(e))
+                # Fallback to default path if version detection fails
+                
     
     if os.path.exists(path):
         return path

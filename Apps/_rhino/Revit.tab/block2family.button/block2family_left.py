@@ -7,7 +7,7 @@ import scriptcontext as sc # pyright: ignore
 import os
 import shutil
 import clr # pyright: ignore
-from EnneadTab import ERROR_HANDLE, LOG, DATA_FILE, NOTIFICATION, FOLDER, ENVIRONMENT
+from EnneadTab import ERROR_HANDLE, LOG, DATA_FILE, NOTIFICATION, FOLDER, ENVIRONMENT, FILE_NAME_UTILITY
 
 B2F_KEY_PREFIX = "BLOCKS2FAMILY"
 
@@ -27,8 +27,15 @@ def block2family(blocks = None):
     if not blocks:
         return
 
+    # Sanitize all block names before processing
     for block_name in rs.BlockNames():
-        rs.RenameBlock(block_name, block_name.replace("/", ""))
+        sanitized_name = FILE_NAME_UTILITY.sanitize_revit_name(block_name)
+        if sanitized_name != block_name:
+            try:
+                rs.RenameBlock(block_name, sanitized_name)
+                NOTIFICATION.messenger("Renamed block '{}' to '{}' for export compatibility".format(block_name, sanitized_name))
+            except Exception as e:
+                NOTIFICATION.messenger("Failed to rename block '{}': {}".format(block_name, str(e)))
     # for block_id in blocks:
 
     #     for key in rs.GetUserText(block_id):
@@ -81,12 +88,11 @@ def block2family(blocks = None):
 
 def process_block_name(block_name,block_ids):
 
-    # Check for illegal Windows filename characters
-    illegal_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
-    for char in illegal_chars:
-        if char in block_name:
-            NOTIFICATION.messenger("Block name contains illegal character '{}'.\nPlease rename block to use valid filename characters and try again.".format(char))
-            return
+    # Sanitize block name for export (should already be sanitized, but double-check)
+    sanitized_block_name = FILE_NAME_UTILITY.sanitize_revit_name(block_name)
+    if sanitized_block_name != block_name:
+        NOTIFICATION.messenger("Block name '{}' was sanitized to '{}' for export".format(block_name, sanitized_block_name))
+        block_name = sanitized_block_name
             
     working_folder = FOLDER.get_local_dump_folder_folder(B2F_KEY_PREFIX + "_" + block_name)
     
@@ -211,7 +217,7 @@ def export_sample_block(block_name, output_folder):
         rs.SelectObjects(objs)
 
 
-        file_name_naked = layer.replace("::", "_").replace("/", "-").replace("\\", "-").replace(":", "-").replace("*", "-").replace("?", "-").replace("<", "-").replace(">", "-").replace("|", "-")
+        file_name_naked = FILE_NAME_UTILITY.sanitize_revit_name(layer)
         file = "{}.3dm".format(file_name_naked)
         filepath = "{}\{}".format(output_folder, file)
         # print (filepath)

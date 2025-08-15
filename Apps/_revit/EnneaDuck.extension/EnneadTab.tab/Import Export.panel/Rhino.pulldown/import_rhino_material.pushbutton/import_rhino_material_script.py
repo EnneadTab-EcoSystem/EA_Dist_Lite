@@ -7,7 +7,7 @@ __title__ = "Import Rhino Material"
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 
-from EnneadTab import ERROR_HANDLE, LOG, DATA_FILE, NOTIFICATION
+from EnneadTab import ERROR_HANDLE, LOG, DATA_FILE, NOTIFICATION, FILE_NAME_UTILITY
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_MATERIAL, REVIT_SELECTION
 from Autodesk.Revit import DB # pyright: ignore 
 from pyrevit import script, forms
@@ -124,7 +124,7 @@ class MaterialImporter:
         imported_material_names = []
         for _, mat_data in material_data.items():
             original_name = mat_data["name"]
-            material_name = REVIT_MATERIAL.sanitize_material_name(original_name)
+            material_name = FILE_NAME_UTILITY.sanitize_revit_name(original_name)
             if material_name != original_name:
                 self.output.print_md("Material name sanitized: '{}' -> '{}'".format(original_name, material_name))
             imported_material_names.append(material_name)
@@ -149,7 +149,7 @@ class MaterialImporter:
             
         for _, mat_data in material_data.items():
             original_name = mat_data["name"]
-            material_name = REVIT_MATERIAL.sanitize_material_name(original_name)
+            material_name = FILE_NAME_UTILITY.sanitize_revit_name(original_name)
             if material_name not in selected_materials:
                 continue
                 
