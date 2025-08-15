@@ -1,186 +1,539 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-Simple HTTP Server for InDesign Writer Helper
-A basic HTTP server implementation using sockets.
+EnneadTab InDesign Writer Helper - Web Server
+A simple Flask server to provide a web interface for InDesign document management
 """
 
 import os
 import sys
 import json
-import socket
 import threading
 import time
-from urllib.parse import urlparse, parse_qs
+from flask import Flask, render_template, request, jsonify, send_from_directory
+import win32com.client
+from werkzeug.serving import make_server
 
-class SimpleHTTPServer:
-    def __init__(self, host='localhost', port=8081):
-        self.host = host
-        self.port = port
-        self.server_socket = None
-        self.running = False
+# Add current directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'enneadtab_indesign_helper_2024'
+
+# Global variables
+indesign_app = None
+current_document = None
+server_thread = None
+server_instance = None
+
+class InDesignHelper:
+    """Helper class to interact with InDesign"""
+    
+    def __init__(self):
+        self.app = None
+        self.document = None
+        self.connect_to_indesign()
+    
+    def connect_to_indesign(self):
+        """Connect to InDesign application"""
+        try:
+            self.app = win32com.client.Dispatch("InDesign.Application")
+            print("✅ Connected to InDesign")
+            return True
+        except Exception as e:
+            print(f"❌ Failed to connect to InDesign: {e}")
+            return False
+    
+    def get_active_document(self):
+        """Get the currently active document"""
+        try:
+            if self.app and self.app.Documents.Count > 0:
+                self.document = self.app.ActiveDocument
+                return self.document
+            return None
+        except Exception as e:
+            print(f"❌ Error getting active document: {e}")
+            return None
+    
+    def get_document_info(self):
+        """Get basic information about the current document"""
+        if not self.document:
+            return None
         
-    def start(self):
-        """Start the HTTP server."""
         try:
-            # Check if Python is available
-            import subprocess
-            try:
-                subprocess.run(['python', '--version'], capture_output=True, check=True)
-            except (subprocess.CalledProcessError, FileNotFoundError):
-                print("ERROR: Python is not installed on this computer.")
-                print("Please install Python 3.13 from the Microsoft Store:")
-                print("https://www.microsoft.com/store/apps/9PJPW5LDXLZ5")
-                return
-            
-            self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            self.server_socket.bind((self.host, self.port))
-            self.server_socket.listen(5)
-            self.running = True
-            
-            print(f"Server started on http://{self.host}:{self.port}")
-            
-            while self.running:
-                try:
-                    client_socket, address = self.server_socket.accept()
-                    client_thread = threading.Thread(target=self.handle_client, args=(client_socket,))
-                    client_thread.daemon = True
-                    client_thread.start()
-                except Exception as e:
-                    if self.running:
-                        print(f"Error accepting connection: {e}")
-                        
-        except Exception as e:
-            print(f"Failed to start server: {e}")
-            
-    def stop(self):
-        """Stop the HTTP server."""
-        self.running = False
-        if self.server_socket:
-            self.server_socket.close()
-            
-    def handle_client(self, client_socket):
-        """Handle a client connection."""
-        try:
-            request = client_socket.recv(1024).decode('utf-8')
-            if not request:
-                return
-                
-            lines = request.split('\n')
-            if not lines:
-                return
-                
-            # Parse request line
-            request_line = lines[0].strip()
-            parts = request_line.split()
-            if len(parts) < 2:
-                return
-                
-            method = parts[0]
-            path = parts[1]
-            
-            # Handle different paths
-            if method == 'GET':
-                self.handle_get(client_socket, path)
-            elif method == 'POST':
-                self.handle_post(client_socket, path, request)
-            else:
-                self.send_response(client_socket, 405, "Method Not Allowed")
-                
-        except Exception as e:
-            print(f"Error handling client: {e}")
-        finally:
-            client_socket.close()
-            
-    def handle_get(self, client_socket, path):
-        """Handle GET requests."""
-        if path == '/':
-            path = '/launcher.html'
-        elif path == '/api/status':
-            self.send_json_response(client_socket, {'status': 'ready'})
-            return
-            
-        # Serve static files
-        file_path = os.path.join(os.path.dirname(__file__), path.lstrip('/'))
-        if os.path.exists(file_path) and os.path.isfile(file_path):
-            self.serve_file(client_socket, file_path)
-        else:
-            self.send_response(client_socket, 404, "File Not Found")
-            
-    def handle_post(self, client_socket, path, request):
-        """Handle POST requests."""
-        if path == '/api/status':
-            self.send_json_response(client_socket, {'status': 'ready'})
-        else:
-            self.send_response(client_socket, 404, "API endpoint not found")
-            
-    def serve_file(self, client_socket, file_path):
-        """Serve a static file."""
-        try:
-            with open(file_path, 'rb') as f:
-                content = f.read()
-                
-            # Determine content type
-            ext = os.path.splitext(file_path)[1].lower()
-            content_types = {
-                '.html': 'text/html',
-                '.css': 'text/css',
-                '.js': 'application/javascript',
-                '.png': 'image/png',
-                '.jpg': 'image/jpeg',
-                '.jpeg': 'image/jpeg',
-                '.gif': 'image/gif',
-                '.ico': 'image/x-icon'
+            info = {
+                'name': self.document.Name,
+                'path': self.document.FilePath,
+                'pages_count': self.document.Pages.Count,
+                'text_frames_count': len(self.get_text_frames())
             }
-            content_type = content_types.get(ext, 'text/plain')
-            
-            response = f"HTTP/1.1 200 OK\r\n"
-            response += f"Content-Type: {content_type}; charset=utf-8\r\n"
-            response += f"Content-Length: {len(content)}\r\n"
-            response += "Access-Control-Allow-Origin: *\r\n"
-            response += "\r\n"
-            
-            client_socket.send(response.encode('utf-8'))
-            client_socket.send(content)
-            
+            return info
         except Exception as e:
-            print(f"Error serving file {file_path}: {e}")
-            self.send_response(client_socket, 500, "Internal Server Error")
-            
-    def send_json_response(self, client_socket, data):
-        """Send JSON response."""
-        content = json.dumps(data).encode('utf-8')
-        response = "HTTP/1.1 200 OK\r\n"
-        response += "Content-Type: application/json\r\n"
-        response += f"Content-Length: {len(content)}\r\n"
-        response += "Access-Control-Allow-Origin: *\r\n"
-        response += "\r\n"
+            print(f"❌ Error getting document info: {e}")
+            return None
+    
+    def get_text_frames(self):
+        """Get all text frames in the document"""
+        if not self.document:
+            return []
         
-        client_socket.send(response.encode('utf-8'))
-        client_socket.send(content)
-        
-    def send_response(self, client_socket, status_code, message):
-        """Send a simple response."""
-        response = f"HTTP/1.1 {status_code} {message}\r\n"
-        response += "Content-Type: text/plain\r\n"
-        response += "Access-Control-Allow-Origin: *\r\n"
-        response += "\r\n"
-        response += message
-        
-        client_socket.send(response.encode('utf-8'))
+        try:
+            text_frames = []
+            for page in self.document.Pages:
+                for item in page.AllPageItems:
+                    if item.Constructor.Name == "TextFrame":
+                        text_frames.append({
+                            'id': item.id,
+                            'name': getattr(item, 'Name', 'Unnamed'),
+                            'page': page.Name,
+                            'content': item.Contents[:100] + "..." if len(item.Contents) > 100 else item.Contents
+                        })
+            return text_frames
+        except Exception as e:
+            print(f"❌ Error getting text frames: {e}")
+            return []
 
-def main():
-    """Main function to start the server."""
-    server = SimpleHTTPServer()
+# Initialize InDesign helper
+indesign_helper = InDesignHelper()
+
+@app.route('/')
+def index():
+    """Main page"""
+    return render_template('index.html')
+
+@app.route('/api/status')
+def api_status():
+    """API endpoint to get application status"""
+    try:
+        doc_info = indesign_helper.get_document_info()
+        return jsonify({
+            'status': 'success',
+            'indesign_connected': indesign_helper.app is not None,
+            'document_active': doc_info is not None,
+            'document_info': doc_info
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/document/info')
+def api_document_info():
+    """API endpoint to get document information"""
+    try:
+        doc_info = indesign_helper.get_document_info()
+        if doc_info:
+            return jsonify({
+                'status': 'success',
+                'data': doc_info
+            })
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': 'No active document found'
+            }), 404
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/document/text-frames')
+def api_text_frames():
+    """API endpoint to get all text frames"""
+    try:
+        text_frames = indesign_helper.get_text_frames()
+        return jsonify({
+            'status': 'success',
+            'data': text_frames
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/api/refresh')
+def api_refresh():
+    """API endpoint to refresh document connection"""
+    try:
+        indesign_helper.connect_to_indesign()
+        doc = indesign_helper.get_active_document()
+        return jsonify({
+            'status': 'success',
+            'message': 'Document connection refreshed',
+            'document_active': doc is not None
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+def create_templates():
+    """Create the templates directory and HTML files"""
+    templates_dir = os.path.join(os.path.dirname(__file__), 'templates')
+    os.makedirs(templates_dir, exist_ok=True)
+    
+    # Create index.html template
+    index_html = '''<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EnneadTab InDesign Writer Helper</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .status-connected { background-color: #4CAF50; }
+        .status-disconnected { background-color: #f44336; }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .text-frames-list {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+        }
+        
+        .text-frame-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+        
+        .text-frame-item:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .text-frame-item:last-child {
+            border-bottom: none;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        .error {
+            color: #f44336;
+            padding: 10px;
+            background-color: #ffebee;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .success {
+            color: #4CAF50;
+            padding: 10px;
+            background-color: #e8f5e8;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🦆 EnneadTab InDesign Writer Helper</h1>
+            <p>Manage your InDesign documents with ease</p>
+        </div>
+        
+        <div class="card">
+            <h2>📊 Connection Status</h2>
+            <div id="status-container">
+                <div class="loading">Checking connection...</div>
+            </div>
+            <button class="btn" onclick="refreshConnection()">🔄 Refresh Connection</button>
+        </div>
+        
+        <div class="card" id="document-info" style="display: none;">
+            <h2>📄 Document Information</h2>
+            <div id="document-details"></div>
+        </div>
+        
+        <div class="card" id="text-frames-section" style="display: none;">
+            <h2>📝 Text Frames</h2>
+            <button class="btn" onclick="loadTextFrames()">📋 Load Text Frames</button>
+            <div id="text-frames-container"></div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let isConnected = false;
+        let hasDocument = false;
+        
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            checkStatus();
+            // Refresh status every 30 seconds
+            setInterval(checkStatus, 30000);
+        });
+        
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    updateStatusDisplay(data);
+                } else {
+                    showError('Failed to check status: ' + data.message);
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+        
+        function updateStatusDisplay(data) {
+            const container = document.getElementById('status-container');
+            isConnected = data.indesign_connected;
+            hasDocument = data.document_active;
+            
+            let statusHtml = `
+                <div>
+                    <span class="status-indicator ${data.indesign_connected ? 'status-connected' : 'status-disconnected'}"></span>
+                    InDesign: ${data.indesign_connected ? 'Connected' : 'Disconnected'}
+                </div>
+                <div>
+                    <span class="status-indicator ${data.document_active ? 'status-connected' : 'status-disconnected'}"></span>
+                    Document: ${data.document_active ? 'Active' : 'No Document'}
+                </div>
+            `;
+            
+            if (data.document_info) {
+                statusHtml += `
+                    <div style="margin-top: 15px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+                        <strong>Document Details:</strong><br>
+                        Name: ${data.document_info.name}<br>
+                        Pages: ${data.document_info.pages_count}<br>
+                        Text Frames: ${data.document_info.text_frames_count}
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = statusHtml;
+            
+            // Show/hide sections based on status
+            document.getElementById('document-info').style.display = data.document_active ? 'block' : 'none';
+            document.getElementById('text-frames-section').style.display = data.document_active ? 'block' : 'none';
+            
+            if (data.document_active) {
+                loadDocumentInfo();
+            }
+        }
+        
+        async function refreshConnection() {
+            try {
+                const response = await fetch('/api/refresh');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    showSuccess('Connection refreshed successfully');
+                    checkStatus();
+                } else {
+                    showError('Failed to refresh connection: ' + data.message);
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            }
+        }
+        
+        async function loadDocumentInfo() {
+            try {
+                const response = await fetch('/api/document/info');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    const container = document.getElementById('document-details');
+                    container.innerHTML = `
+                        <div style="padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+                            <strong>Name:</strong> ${data.data.name}<br>
+                            <strong>Path:</strong> ${data.data.path}<br>
+                            <strong>Pages:</strong> ${data.data.pages_count}<br>
+                            <strong>Text Frames:</strong> ${data.data.text_frames_count}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                showError('Failed to load document info: ' + error.message);
+            }
+        }
+        
+        async function loadTextFrames() {
+            try {
+                const container = document.getElementById('text-frames-container');
+                container.innerHTML = '<div class="loading">Loading text frames...</div>';
+                
+                const response = await fetch('/api/document/text-frames');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    if (data.data.length === 0) {
+                        container.innerHTML = '<div class="loading">No text frames found in the document.</div>';
+                    } else {
+                        let framesHtml = '<div class="text-frames-list">';
+                        data.data.forEach(frame => {
+                            framesHtml += `
+                                <div class="text-frame-item" onclick="selectTextFrame('${frame.id}')">
+                                    <strong>${frame.name}</strong> (Page: ${frame.page})<br>
+                                    <small>${frame.content}</small>
+                                </div>
+                            `;
+                        });
+                        framesHtml += '</div>';
+                        container.innerHTML = framesHtml;
+                    }
+                } else {
+                    showError('Failed to load text frames: ' + data.message);
+                }
+            } catch (error) {
+                showError('Failed to load text frames: ' + error.message);
+            }
+        }
+        
+        function selectTextFrame(frameId) {
+            // TODO: Implement text frame selection functionality
+            showSuccess('Text frame selected: ' + frameId);
+        }
+        
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = message;
+            document.querySelector('.container').insertBefore(errorDiv, document.querySelector('.card'));
+            
+            setTimeout(() => {
+                errorDiv.remove();
+            }, 5000);
+        }
+        
+        function showSuccess(message) {
+            const successDiv = document.createElement('div');
+            successDiv.className = 'success';
+            successDiv.textContent = message;
+            document.querySelector('.container').insertBefore(successDiv, document.querySelector('.card'));
+            
+            setTimeout(() => {
+                successDiv.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>'''
+    
+    with open(os.path.join(templates_dir, 'index.html'), 'w', encoding='utf-8') as f:
+        f.write(index_html)
+
+def start_server():
+    """Start the Flask server"""
+    global server_instance
+    
+    # Create templates if they don't exist
+    create_templates()
+    
+    print("🚀 Starting InDesign Writer Helper server...")
+    print("🌐 Server will be available at: http://localhost:8081")
+    print("💡 Keep this window open while using the application")
+    print("🛑 Press Ctrl+C to stop the server")
+    print()
     
     try:
-        print("Starting InDesign Writer Helper server...")
-        server.start()
+        # Run the Flask app
+        app.run(host='0.0.0.0', port=8081, debug=False, use_reloader=False)
     except KeyboardInterrupt:
-        print("\nShutting down server...")
-        server.stop()
-        print("Server stopped")
+        print("\n🛑 Server stopped by user")
+    except Exception as e:
+        print(f"❌ Server error: {e}")
+        return 1
+    
+    return 0
 
 if __name__ == "__main__":
-    main()
+    try:
+        exit_code = start_server()
+        sys.exit(exit_code)
+    except Exception as e:
+        print(f"❌ Fatal error: {e}")
+        sys.exit(1)

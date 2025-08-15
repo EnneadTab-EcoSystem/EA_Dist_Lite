@@ -328,18 +328,45 @@ def try_catch_error(is_silent=False, is_pass = False):
                     try:
                         error_file = FOLDER.get_local_dump_folder_file("error_general_log.txt")
                         
-              
-                        error += "\n\n######If you have " + plugin_name + " UI window open, just close the original " + plugin_name + " window. Do no more action, otherwise the program might crash.##########\n#########Not sure what to do? Msg Sen Zhang, you have dicovered a important bug and we need to fix it ASAP!!!!!########BTW, a local copy of the error is available at {}".format(error_file)
+                        # Ensure the directory exists before writing the file
+                        import os
+                        error_dir = os.path.dirname(error_file)
+                        if not os.path.exists(error_dir):
+                            try:
+                                os.makedirs(error_dir)
+                            except Exception as dir_error:
+                                print_note("Cannot create error directory [{}]: {}".format(error_dir, str(dir_error)))
+                                # Fallback to current directory
+                                error_file = "error_general_log.txt"
                     except Exception as path_error:
-                        # Fallback if FOLDER is not available
-                        error_file = "error_general_log.txt"
+                        # Fallback if FOLDER is not available - create a simple path
+                        try:
+                            import os
+                            # Try to get user documents folder as fallback
+                            user_docs = os.path.expanduser("~/Documents")
+                            if not os.path.exists(user_docs):
+                                user_docs = os.path.join(os.environ.get("USERPROFILE", ""), "Documents")
+                            
+                            # Create EnneadTab folder in documents if it doesn't exist
+                            enneadtab_folder = os.path.join(user_docs, "EnneadTab Ecosystem", "Dump")
+                            if not os.path.exists(enneadtab_folder):
+                                try:
+                                    os.makedirs(enneadtab_folder)
+                                except:
+                                    pass
+                            
+                            error_file = os.path.join(enneadtab_folder, "error_general_log.txt")
+                        except:
+                            # Ultimate fallback to current directory
+                            error_file = "error_general_log.txt"
+              
                         error += "\n\n######If you have " + plugin_name + " UI window open, just close the original " + plugin_name + " window. Do no more action, otherwise the program might crash.##########\n#########Not sure what to do? Msg Sen Zhang, you have dicovered a important bug and we need to fix it ASAP!!!!!########BTW, a local copy of the error is available at {}".format(error_file)
                     try:
                         import io
                         with io.open(error_file, "w", encoding="utf-8") as f:
                             f.write(error)
                     except IOError as e:
-                        print_note(e)
+                        print_note("Cannot write error file [{}]: {}".format(error_file, str(e)))
 
                     if OUTPUT is not None:
                         output = OUTPUT.get_output()

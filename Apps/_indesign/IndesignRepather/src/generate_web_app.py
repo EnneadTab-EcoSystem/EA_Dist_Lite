@@ -113,6 +113,12 @@ class WebHandler(SimpleHTTPRequestHandler):
             self.handle_refresh_links()
         elif self.path == '/api/document_info':
             self.handle_document_info()
+        elif self.path == '/api/batch_preview':
+            self.handle_batch_preview()
+        elif self.path == '/api/batch_repath':
+            self.handle_batch_repath()
+        elif self.path == '/api/find_indesign_files':
+            self.handle_find_indesign_files()
 
         elif self.path.startswith('/api/preview_image/'):
             self.handle_preview_image()
@@ -252,6 +258,58 @@ class WebHandler(SimpleHTTPRequestHandler):
         try:
             info = self.repatcher.get_document_info()
             self.send_json_response({'success': True, 'info': info})
+        except Exception as e:
+            self.send_json_response({'success': False, 'error': str(e)})
+            
+    def handle_find_indesign_files(self):
+        """Handle find InDesign files request."""
+        try:
+            data = self.get_post_data()
+            folder_path = data.get('folder_path')
+            
+            if not folder_path:
+                raise ValueError("folder_path is required")
+                
+            files = self.repatcher.find_indesign_files(folder_path)
+            self.send_json_response({'success': True, 'files': files})
+        except Exception as e:
+            self.send_json_response({'success': False, 'error': str(e)})
+            
+    def handle_batch_preview(self):
+        """Handle batch preview request."""
+        try:
+            data = self.get_post_data()
+            folder_path = data.get('folder_path')
+            old_folder = data.get('old_folder')
+            new_folder = data.get('new_folder')
+            
+            if not folder_path or not old_folder or not new_folder:
+                raise ValueError("folder_path, old_folder, and new_folder are required")
+                
+            preview = self.repatcher.preview_batch_repath(folder_path, old_folder, new_folder)
+            self.send_json_response({'success': True, 'preview': preview})
+        except Exception as e:
+            self.send_json_response({'success': False, 'error': str(e)})
+            
+    def handle_batch_repath(self):
+        """Handle batch repath request."""
+        try:
+            data = self.get_post_data()
+            folder_path = data.get('folder_path')
+            old_folder = data.get('old_folder')
+            new_folder = data.get('new_folder')
+            
+            if not folder_path or not old_folder or not new_folder:
+                raise ValueError("folder_path, old_folder, and new_folder are required")
+                
+            # Define progress callback for real-time updates
+            def progress_callback(current, total, current_file):
+                # For now, we'll just log progress
+                # In a real implementation, you might want to use WebSockets or Server-Sent Events
+                print(f"Progress: {current + 1}/{total} - {current_file}")
+                
+            results = self.repatcher.batch_repath_files(folder_path, old_folder, new_folder, progress_callback)
+            self.send_json_response({'success': True, 'results': results})
         except Exception as e:
             self.send_json_response({'success': False, 'error': str(e)})
             

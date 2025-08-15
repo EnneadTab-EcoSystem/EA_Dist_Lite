@@ -1,3 +1,4 @@
+
 @echo off
 title EnneadTab InDesign Repather
 echo ========================================
@@ -19,3 +20,4 @@ echo [INFO] The new launcher should open automatically.
 echo [INFO] If it doesn't, please run start_repather.bat manually.
 echo.
 pause
+

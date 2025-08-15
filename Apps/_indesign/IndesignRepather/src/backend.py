@@ -1107,6 +1107,241 @@ class InDesignLinkRepather:
             self.logger.error(f"Failed to refresh links: {e}")
             raise
 
+    def find_indesign_files(self, folder_path: str) -> List[str]:
+        """Find all InDesign files (.indd) in the specified folder and subfolders."""
+        if not os.path.exists(folder_path):
+            raise FileNotFoundError(f"Folder not found: {folder_path}")
+            
+        if not os.path.isdir(folder_path):
+            raise ValueError(f"Path is not a directory: {folder_path}")
+            
+        indesign_files = []
+        
+        try:
+            for root, dirs, files in os.walk(folder_path):
+                for file in files:
+                    if file.lower().endswith('.indd'):
+                        full_path = os.path.join(root, file)
+                        indesign_files.append(full_path)
+                        
+            self.logger.info(f"Found {len(indesign_files)} InDesign files in {folder_path}")
+            return indesign_files
+            
+        except Exception as e:
+            self.logger.error(f"Failed to scan folder {folder_path}: {e}")
+            raise
+
+    def batch_repath_files(self, folder_path: str, old_folder: str, new_folder: str, 
+                          progress_callback=None) -> Dict:
+        """Process all InDesign files in a folder for link repathing."""
+        if not self.app:
+            raise Exception("Not connected to InDesign. Please connect first.")
+            
+        results = {
+            'total_files': 0,
+            'processed': 0,
+            'success': 0,
+            'failed': 0,
+            'skipped': 0,
+            'file_details': []
+        }
+        
+        try:
+            # Find all InDesign files
+            indesign_files = self.find_indesign_files(folder_path)
+            results['total_files'] = len(indesign_files)
+            
+            if results['total_files'] == 0:
+                self.logger.warning(f"No InDesign files found in {folder_path}")
+                return results
+            
+            # Process each file
+            for i, file_path in enumerate(indesign_files):
+                try:
+                    if progress_callback:
+                        progress_callback(i, results['total_files'], file_path)
+                    
+                    self.logger.info(f"Processing file {i+1}/{results['total_files']}: {file_path}")
+                    
+                    # Open the document
+                    self.open_document(file_path)
+                    
+                    # Get current links
+                    links = self.get_all_links()
+                    
+                    # Check if any links need repathing
+                    needs_repath = False
+                    for link in links:
+                        if old_folder.lower() in link['file_path'].lower():
+                            needs_repath = True
+                            break
+                    
+                    if not needs_repath:
+                        self.logger.info(f"No links need repathing in {file_path}")
+                        results['skipped'] += 1
+                        results['file_details'].append({
+                            'file_path': file_path,
+                            'status': 'skipped',
+                            'reason': 'No links need repathing'
+                        })
+                        self.close_document()
+                        continue
+                    
+                    # Perform repathing
+                    repath_results = self.repath_links(old_folder, new_folder)
+                    
+                    # Save the document
+                    try:
+                        if self.doc:
+                            self.doc.Save()
+                            self.logger.info(f"Saved document: {file_path}")
+                    except Exception as save_error:
+                        self.logger.error(f"Failed to save document {file_path}: {save_error}")
+                        # Continue processing other files
+                    
+                    # Close the document
+                    self.close_document()
+                    
+                    # Record results
+                    results['processed'] += 1
+                    if repath_results['success'] > 0:
+                        results['success'] += 1
+                        results['file_details'].append({
+                            'file_path': file_path,
+                            'status': 'success',
+                            'links_updated': repath_results['success'],
+                            'links_failed': repath_results['failed'],
+                            'links_skipped': repath_results['skipped']
+                        })
+                    else:
+                        results['failed'] += 1
+                        results['file_details'].append({
+                            'file_path': file_path,
+                            'status': 'failed',
+                            'reason': 'No links were successfully updated'
+                        })
+                        
+                except Exception as file_error:
+                    self.logger.error(f"Failed to process file {file_path}: {file_error}")
+                    results['failed'] += 1
+                    results['file_details'].append({
+                        'file_path': file_path,
+                        'status': 'error',
+                        'reason': str(file_error)
+                    })
+                    
+                    # Try to close document if it's open
+                    try:
+                        if self.doc:
+                            self.close_document()
+                    except:
+                        pass
+            
+            self.logger.info(f"Batch processing complete: {results['processed']} processed, "
+                           f"{results['success']} success, {results['failed']} failed, "
+                           f"{results['skipped']} skipped")
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"Failed to perform batch repathing: {e}")
+            raise
+
+    def preview_batch_repath(self, folder_path: str, old_folder: str, new_folder: str) -> Dict:
+        """Preview batch repathing operation without making changes."""
+        if not self.app:
+            raise Exception("Not connected to InDesign. Please connect first.")
+            
+        preview = {
+            'total_files': 0,
+            'files_with_links': 0,
+            'files_without_links': 0,
+            'total_links': 0,
+            'links_to_update': 0,
+            'links_unchanged': 0,
+            'file_details': []
+        }
+        
+        try:
+            # Find all InDesign files
+            indesign_files = self.find_indesign_files(folder_path)
+            preview['total_files'] = len(indesign_files)
+            
+            if preview['total_files'] == 0:
+                return preview
+            
+            # Preview each file
+            for file_path in indesign_files:
+                try:
+                    self.logger.info(f"Previewing file: {file_path}")
+                    
+                    # Open the document
+                    self.open_document(file_path)
+                    
+                    # Get current links
+                    links = self.get_all_links()
+                    preview['total_links'] += len(links)
+                    
+                    file_preview = {
+                        'file_path': file_path,
+                        'total_links': len(links),
+                        'links_to_update': 0,
+                        'links_unchanged': 0,
+                        'link_details': []
+                    }
+                    
+                    # Check each link
+                    for link in links:
+                        if old_folder.lower() in link['file_path'].lower():
+                            file_preview['links_to_update'] += 1
+                            preview['links_to_update'] += 1
+                            file_preview['link_details'].append({
+                                'name': link['name'],
+                                'old_path': link['file_path'],
+                                'status': 'will_update'
+                            })
+                        else:
+                            file_preview['links_unchanged'] += 1
+                            preview['links_unchanged'] += 1
+                            file_preview['link_details'].append({
+                                'name': link['name'],
+                                'old_path': link['file_path'],
+                                'status': 'unchanged'
+                            })
+                    
+                    # Close the document
+                    self.close_document()
+                    
+                    # Record file results
+                    if file_preview['links_to_update'] > 0:
+                        preview['files_with_links'] += 1
+                    else:
+                        preview['files_without_links'] += 1
+                    
+                    preview['file_details'].append(file_preview)
+                    
+                except Exception as file_error:
+                    self.logger.error(f"Failed to preview file {file_path}: {file_error}")
+                    preview['file_details'].append({
+                        'file_path': file_path,
+                        'error': str(file_error)
+                    })
+                    
+                    # Try to close document if it's open
+                    try:
+                        if self.doc:
+                            self.close_document()
+                    except:
+                        pass
+            
+            self.logger.info(f"Batch preview complete: {preview['total_files']} files, "
+                           f"{preview['files_with_links']} with links to update, "
+                           f"{preview['links_to_update']} links to update")
+            return preview
+            
+        except Exception as e:
+            self.logger.error(f"Failed to preview batch repathing: {e}")
+            raise
+
 
 
 def test_backend_operations():

@@ -23,6 +23,31 @@
                 Ready to connect to InDesign
             </div>
 
+            <!-- Mode Selection -->
+            <div class="step">
+                <h3>Select Mode</h3>
+                <p>Choose how you want to repath your InDesign links:</p>
+                
+                <div class="mode-selection">
+                    <div class="mode-option" data-mode="single">
+                        <div class="mode-icon">📄</div>
+                        <div class="mode-content">
+                            <h4>Single Document Mode</h4>
+                            <p>Repath links in one currently open InDesign document</p>
+                        </div>
+                    </div>
+                    <div class="mode-option" data-mode="batch">
+                        <div class="mode-icon">📁</div>
+                        <div class="mode-content">
+                            <h4>Batch Mode</h4>
+                            <p>Repath links in all InDesign files within a folder</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Single Document Mode -->
+            <div id="singleMode" class="mode-content hidden">
                                       <!-- Connect to InDesign -->
               <div class="step">
                   <h3>Connect to InDesign</h3>
@@ -180,6 +205,114 @@
                  <div class="celebration-subtext">Links have been successfully repathed!</div>
                  <div class="celebration-refresh-message">Refresh the page to start a new repath job</div>
              </div>
+            </div>
+
+            <!-- Batch Mode -->
+            <div id="batchMode" class="mode-content hidden">
+                <div class="step">
+                    <h3>Batch Mode - Connect to InDesign</h3>
+                    <p>Connect to InDesign for batch processing. No documents need to be open.</p>
+                    
+                    <div class="auto-connect-section">
+                        <h4>Quick Connect (Recommended)</h4>
+                        <p>Automatically connect to your InDesign application.</p>
+                        <button id="batchAutoConnectBtn" class="btn btn-success btn-rectangular">
+                            Connect to InDesign
+                        </button>
+                        <div id="batchAutoConnectLoading" class="loading">
+                            <div class="spinner"></div>
+                            <p>Connecting to InDesign...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="batchStep2" class="step hidden">
+                    <h3>Select Folder</h3>
+                    <p>Choose the folder containing InDesign files to process:</p>
+                    
+                    <div class="form-group">
+                        <label for="batchFolderPath">Folder Path:</label>
+                        <input type="text" id="batchFolderPath" placeholder="C:\path\to\your\folder" readonly>
+                        <button id="batchBrowseBtn" class="btn btn-rectangular">Browse for Folder</button>
+                    </div>
+                    
+                    <button id="batchScanBtn" class="btn btn-info btn-rectangular" disabled>Scan for InDesign Files</button>
+                    <div id="batchScanLoading" class="loading">
+                        <div class="spinner"></div>
+                        <p>Scanning for InDesign files...</p>
+                    </div>
+                </div>
+
+                <div id="batchStep3" class="step hidden">
+                    <h3>File List</h3>
+                    <p>InDesign files found in the selected folder:</p>
+                    
+                    <div id="batchFileList" class="file-list">
+                        <!-- File list will be populated here -->
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="batchOldFolder">Old Folder Path:</label>
+                        <input type="text" id="batchOldFolder" placeholder="C:\old\folder\path">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="batchNewFolder">New Folder Path:</label>
+                        <input type="text" id="batchNewFolder" placeholder="C:\new\folder\path">
+                        <small class="form-help">Enter the new folder path where your files are located</small>
+                    </div>
+                    
+                    <button id="batchPreviewBtn" class="btn btn-info btn-rectangular">Preview Changes</button>
+                    <div id="batchPreviewLoading" class="loading">
+                        <div class="spinner"></div>
+                        <p>Previewing changes...</p>
+                    </div>
+                </div>
+
+                <div id="batchStep4" class="step hidden">
+                    <h3>Batch Preview</h3>
+                    <p>Review the changes before applying them to all files:</p>
+                    
+                    <div id="batchPreviewContainer"></div>
+                    
+                    <div class="action-buttons">
+                        <button id="batchConfirmBtn" class="btn btn-warning btn-rectangular">Confirm and Process All Files</button>
+                        <button id="batchBackBtn" class="btn btn-rectangular">Back to Edit</button>
+                    </div>
+                    
+                    <div id="batchProcessLoading" class="loading">
+                        <div class="spinner"></div>
+                        <p>Processing files...</p>
+                    </div>
+                </div>
+
+                <div id="batchProgress" class="step hidden">
+                    <h3>Processing Progress</h3>
+                    <p>Processing InDesign files...</p>
+                    
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div id="batchProgressBar" class="progress-fill"></div>
+                        </div>
+                        <div id="batchProgressText" class="progress-text">0%</div>
+                    </div>
+                    
+                    <div id="batchProgressDetails" class="progress-details">
+                        <div id="batchCurrentFile" class="current-file">Ready to start...</div>
+                        <div id="batchProcessedCount" class="processed-count">0 of 0 files processed</div>
+                    </div>
+                    
+                    <div id="batchFileStatus" class="file-status">
+                        <!-- File status list will be populated here -->
+                    </div>
+                </div>
+
+                <div id="batchResults" class="results hidden">
+                    <h4>Batch Processing Results</h4>
+                    <div id="batchResultsGrid" class="results-grid"></div>
+                    <div id="batchResultsDetails"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -198,18 +331,32 @@
              }
 
                          bindEvents() {
+                 // Mode selection
+                 document.querySelectorAll('.mode-option').forEach(option => {
+                     option.addEventListener('click', (e) => this.selectMode(e.currentTarget.dataset.mode));
+                 });
+                 
+                 // Single mode events
                  document.getElementById('autoConnectBtn').addEventListener('click', () => this.autoConnectToInDesign());
                  document.getElementById('stopAutoDetectionBtn').addEventListener('click', () => this.stopAutoDetection());
                  document.getElementById('detectVersionsBtn').addEventListener('click', () => this.detectInDesignVersions());
                  document.getElementById('connectBtn').addEventListener('click', () => this.connectToInDesign());
                  document.getElementById('browseBtn').addEventListener('click', () => this.browseForDocument());
                  document.getElementById('openDocBtn').addEventListener('click', () => this.openDocument());
-                                   document.getElementById('refreshLinksBtn').addEventListener('click', () => this.getLinks());
-                  document.getElementById('refreshConnectionBtn').addEventListener('click', () => this.refreshConnection());
-                  document.getElementById('previewBtn').addEventListener('click', () => this.previewChanges());
+                 document.getElementById('refreshLinksBtn').addEventListener('click', () => this.getLinks());
+                 document.getElementById('refreshConnectionBtn').addEventListener('click', () => this.refreshConnection());
+                 document.getElementById('previewBtn').addEventListener('click', () => this.previewChanges());
                  document.getElementById('confirmRepathBtn').addEventListener('click', () => this.repathLinks());
                  document.getElementById('backToStep4Btn').addEventListener('click', () => this.backToStep4());
                  document.getElementById('refreshLinksActionBtn').addEventListener('click', () => this.refreshLinks());
+
+                 // Batch mode events
+                 document.getElementById('batchAutoConnectBtn').addEventListener('click', () => this.batchAutoConnect());
+                 document.getElementById('batchBrowseBtn').addEventListener('click', () => this.batchBrowseForFolder());
+                 document.getElementById('batchScanBtn').addEventListener('click', () => this.batchScanFiles());
+                 document.getElementById('batchPreviewBtn').addEventListener('click', () => this.batchPreviewChanges());
+                 document.getElementById('batchConfirmBtn').addEventListener('click', () => this.batchProcessFiles());
+                 document.getElementById('batchBackBtn').addEventListener('click', () => this.batchBackToEdit());
 
              }
 
@@ -1754,39 +1901,378 @@
                    }
                }
                
-               createParticles() {
-                   const container = document.getElementById('celebrationContainer');
-                   const colors = ['#7ee787', '#58a6ff', '#f78166', '#f0b90b', '#d29922'];
-                   
-                   // Create 50 particles
-                   for (let i = 0; i < 50; i++) {
-                       setTimeout(() => {
-                           const particle = document.createElement('div');
-                           particle.className = 'particle';
-                           
-                           // Random position
-                           const x = Math.random() * window.innerWidth;
-                           const y = Math.random() * window.innerHeight;
-                           
-                           // Random color
-                           const color = colors[Math.floor(Math.random() * colors.length)];
-                           
-                           particle.style.left = x + 'px';
-                           particle.style.top = y + 'px';
-                           particle.style.background = color;
-                           particle.style.boxShadow = `0 0 10px ${color}`;
-                           
-                           container.appendChild(particle);
-                           
-                           // Remove particle after animation
+                                  createParticles() {
+                       const container = document.getElementById('celebrationContainer');
+                       const colors = ['#7ee787', '#58a6ff', '#f78166', '#f0b90b', '#d29922'];
+                       
+                       // Create 50 particles
+                       for (let i = 0; i < 50; i++) {
                            setTimeout(() => {
-                               if (particle.parentNode) {
-                                   particle.parentNode.removeChild(particle);
-                               }
-                           }, 3000);
-                       }, i * 50); // Stagger particle creation
+                               const particle = document.createElement('div');
+                               particle.className = 'particle';
+                               
+                               // Random position
+                               const x = Math.random() * window.innerWidth;
+                               const y = Math.random() * window.innerHeight;
+                               
+                               // Random color
+                               const color = colors[Math.floor(Math.random() * colors.length)];
+                               
+                               particle.style.left = x + 'px';
+                               particle.style.top = y + 'px';
+                               particle.style.background = color;
+                               particle.style.boxShadow = `0 0 10px ${color}`;
+                               
+                               container.appendChild(particle);
+                               
+                               // Remove particle after animation
+                               setTimeout(() => {
+                                   if (particle.parentNode) {
+                                       particle.parentNode.removeChild(particle);
+                                   }
+                               }, 3000);
+                           }, i * 50); // Stagger particle creation
+                       }
                    }
-               }
+
+                   // Batch Mode Methods
+                   selectMode(mode) {
+                       // Remove selected class from all options
+                       document.querySelectorAll('.mode-option').forEach(option => {
+                           option.classList.remove('selected');
+                       });
+                       
+                       // Add selected class to clicked option
+                       document.querySelector(`[data-mode="${mode}"]`).classList.add('selected');
+                       
+                       // Hide all mode content
+                       document.getElementById('singleMode').classList.add('hidden');
+                       document.getElementById('batchMode').classList.add('hidden');
+                       
+                       // Show selected mode content
+                       if (mode === 'single') {
+                           document.getElementById('singleMode').classList.remove('hidden');
+                       } else if (mode === 'batch') {
+                           document.getElementById('batchMode').classList.remove('hidden');
+                       }
+                   }
+
+                   async batchAutoConnect() {
+                       try {
+                           this.showBatchStatus('Connecting to InDesign...', 'info');
+                           this.showBatchLoading('batchAutoConnectLoading', true);
+                           
+                           const response = await fetch(`${this.baseUrl}/api/auto_connect`, {
+                               method: 'POST',
+                               headers: { 'Content-Type': 'application/json' },
+                               body: JSON.stringify({})
+                           });
+                           
+                           const data = await response.json();
+                           
+                           if (data.success) {
+                               this.showBatchStatus('Connected to InDesign successfully', 'success');
+                               this.showBatchStep('batchStep2');
+                           } else {
+                               this.showBatchStatus(`Connection failed: ${data.error}`, 'error');
+                           }
+                       } catch (error) {
+                           this.showBatchStatus(`Connection error: ${error.message}`, 'error');
+                       } finally {
+                           this.showBatchLoading('batchAutoConnectLoading', false);
+                       }
+                   }
+
+                   async batchBrowseForFolder() {
+                       try {
+                           // Create a file input for folder selection
+                           const input = document.createElement('input');
+                           input.type = 'file';
+                           input.webkitdirectory = true;
+                           input.multiple = false;
+                           
+                           input.onchange = (e) => {
+                               if (e.target.files.length > 0) {
+                                   // Get the folder path from the first file
+                                   const filePath = e.target.files[0].webkitRelativePath || e.target.files[0].name;
+                                   const folderPath = filePath.split('/')[0];
+                                   
+                                   // For Windows, we need to get the full path
+                                   // This is a simplified approach - in a real app you might want to use a native dialog
+                                   const fullPath = prompt('Please enter the full folder path:', folderPath);
+                                   if (fullPath) {
+                                       document.getElementById('batchFolderPath').value = fullPath;
+                                       document.getElementById('batchScanBtn').disabled = false;
+                                   }
+                               }
+                           };
+                           
+                           input.click();
+                       } catch (error) {
+                           this.showBatchStatus(`Error selecting folder: ${error.message}`, 'error');
+                       }
+                   }
+
+                   async batchScanFiles() {
+                       try {
+                           const folderPath = document.getElementById('batchFolderPath').value.trim();
+                           if (!folderPath) {
+                               this.showBatchStatus('Please select a folder first', 'error');
+                               return;
+                           }
+                           
+                           this.showBatchStatus('Scanning for InDesign files...', 'info');
+                           this.showBatchLoading('batchScanLoading', true);
+                           
+                           const response = await fetch(`${this.baseUrl}/api/find_indesign_files`, {
+                               method: 'POST',
+                               headers: { 'Content-Type': 'application/json' },
+                               body: JSON.stringify({ folder_path: folderPath })
+                           });
+                           
+                           const data = await response.json();
+                           
+                           if (data.success) {
+                               this.batchFiles = data.files;
+                               this.displayBatchFileList();
+                               this.showBatchStatus(`Found ${data.files.length} InDesign files`, 'success');
+                               this.showBatchStep('batchStep3');
+                           } else {
+                               this.showBatchStatus(`Scan failed: ${data.error}`, 'error');
+                           }
+                       } catch (error) {
+                           this.showBatchStatus(`Scan error: ${error.message}`, 'error');
+                       } finally {
+                           this.showBatchLoading('batchScanLoading', false);
+                       }
+                   }
+
+                   displayBatchFileList() {
+                       const fileList = document.getElementById('batchFileList');
+                       fileList.innerHTML = '';
+                       
+                       this.batchFiles.forEach((file, index) => {
+                           const fileItem = document.createElement('div');
+                           fileItem.className = 'file-item';
+                           fileItem.dataset.index = index;
+                           
+                           fileItem.innerHTML = `
+                               <div class="file-icon">📄</div>
+                               <div class="file-name">${file.split('\\').pop()}</div>
+                               <div class="file-status">Pending</div>
+                           `;
+                           
+                           fileList.appendChild(fileItem);
+                       });
+                   }
+
+                   async batchPreviewChanges() {
+                       try {
+                           const oldFolder = document.getElementById('batchOldFolder').value.trim();
+                           const newFolder = document.getElementById('batchNewFolder').value.trim();
+                           const folderPath = document.getElementById('batchFolderPath').value.trim();
+                           
+                           if (!oldFolder || !newFolder || !folderPath) {
+                               this.showBatchStatus('Please fill in all fields', 'error');
+                               return;
+                           }
+                           
+                           this.showBatchStatus('Previewing changes...', 'info');
+                           this.showBatchLoading('batchPreviewLoading', true);
+                           
+                           const response = await fetch(`${this.baseUrl}/api/batch_preview`, {
+                               method: 'POST',
+                               headers: { 'Content-Type': 'application/json' },
+                               body: JSON.stringify({
+                                   folder_path: folderPath,
+                                   old_folder: oldFolder,
+                                   new_folder: newFolder
+                               })
+                           });
+                           
+                           const data = await response.json();
+                           
+                           if (data.success) {
+                               this.batchPreview = data.preview;
+                               this.displayBatchPreview();
+                               this.showBatchStatus('Preview completed', 'success');
+                               this.showBatchStep('batchStep4');
+                           } else {
+                               this.showBatchStatus(`Preview failed: ${data.error}`, 'error');
+                           }
+                       } catch (error) {
+                           this.showBatchStatus(`Preview error: ${error.message}`, 'error');
+                       } finally {
+                           this.showBatchLoading('batchPreviewLoading', false);
+                       }
+                   }
+
+                   displayBatchPreview() {
+                       const container = document.getElementById('batchPreviewContainer');
+                       const preview = this.batchPreview;
+                       
+                       container.innerHTML = `
+                           <div class="batch-results">
+                               <div class="batch-results-summary">
+                                   <div class="batch-result-stat">
+                                       <div class="batch-result-number">${preview.total_files}</div>
+                                       <div class="batch-result-label">Total Files</div>
+                                   </div>
+                                   <div class="batch-result-stat success">
+                                       <div class="batch-result-number">${preview.files_with_links}</div>
+                                       <div class="batch-result-label">Files with Links</div>
+                                   </div>
+                                   <div class="batch-result-stat">
+                                       <div class="batch-result-number">${preview.links_to_update}</div>
+                                       <div class="batch-result-label">Links to Update</div>
+                                   </div>
+                                   <div class="batch-result-stat">
+                                       <div class="batch-result-number">${preview.links_unchanged}</div>
+                                       <div class="batch-result-label">Links Unchanged</div>
+                                   </div>
+                               </div>
+                               
+                               <div class="file-list">
+                                   ${preview.file_details.map(file => `
+                                       <div class="file-item ${file.error ? 'error' : ''}">
+                                           <div class="file-icon">📄</div>
+                                           <div class="file-name">${file.file_path.split('\\').pop()}</div>
+                                           <div class="file-status">
+                                               ${file.error ? 'Error' : `${file.links_to_update} links to update`}
+                                           </div>
+                                       </div>
+                                   `).join('')}
+                               </div>
+                           </div>
+                       `;
+                   }
+
+                   async batchProcessFiles() {
+                       try {
+                           const oldFolder = document.getElementById('batchOldFolder').value.trim();
+                           const newFolder = document.getElementById('batchNewFolder').value.trim();
+                           const folderPath = document.getElementById('batchFolderPath').value.trim();
+                           
+                           if (!oldFolder || !newFolder || !folderPath) {
+                               this.showBatchStatus('Please fill in all fields', 'error');
+                               return;
+                           }
+                           
+                           this.showBatchStep('batchProgress');
+                           this.initializeBatchProgress();
+                           
+                           const response = await fetch(`${this.baseUrl}/api/batch_repath`, {
+                               method: 'POST',
+                               headers: { 'Content-Type': 'application/json' },
+                               body: JSON.stringify({
+                                   folder_path: folderPath,
+                                   old_folder: oldFolder,
+                                   new_folder: newFolder
+                               })
+                           });
+                           
+                           const data = await response.json();
+                           
+                           if (data.success) {
+                               this.displayBatchResults(data.results);
+                               this.showBatchStep('batchResults');
+                           } else {
+                               this.showBatchStatus(`Processing failed: ${data.error}`, 'error');
+                           }
+                       } catch (error) {
+                           this.showBatchStatus(`Processing error: ${error.message}`, 'error');
+                       }
+                   }
+
+                   initializeBatchProgress() {
+                       const progressBar = document.getElementById('batchProgressBar');
+                       const progressText = document.getElementById('batchProgressText');
+                       const currentFile = document.getElementById('batchCurrentFile');
+                       const processedCount = document.getElementById('batchProcessedCount');
+                       const fileStatus = document.getElementById('batchFileStatus');
+                       
+                       progressBar.style.width = '0%';
+                       progressText.textContent = '0%';
+                       currentFile.textContent = 'Ready to start...';
+                       processedCount.textContent = `0 of ${this.batchFiles.length} files processed`;
+                       fileStatus.innerHTML = '';
+                       
+                       // Initialize file status list
+                       this.batchFiles.forEach((file, index) => {
+                           const statusItem = document.createElement('div');
+                           statusItem.className = 'file-status-item pending';
+                           statusItem.dataset.index = index;
+                           statusItem.innerHTML = `
+                               <span>📄</span>
+                               <span>${file.split('\\').pop()}</span>
+                               <span>Pending</span>
+                           `;
+                           fileStatus.appendChild(statusItem);
+                       });
+                   }
+
+                   displayBatchResults(results) {
+                       const grid = document.getElementById('batchResultsGrid');
+                       const details = document.getElementById('batchResultsDetails');
+                       
+                       grid.innerHTML = `
+                           <div class="batch-results-summary">
+                               <div class="batch-result-stat success">
+                                   <div class="batch-result-number">${results.success}</div>
+                                   <div class="batch-result-label">Success</div>
+                               </div>
+                               <div class="batch-result-stat error">
+                                   <div class="batch-result-number">${results.failed}</div>
+                                   <div class="batch-result-label">Failed</div>
+                               </div>
+                               <div class="batch-result-stat skipped">
+                                   <div class="batch-result-number">${results.skipped}</div>
+                                   <div class="batch-result-label">Skipped</div>
+                               </div>
+                               <div class="batch-result-stat">
+                                   <div class="batch-result-number">${results.processed}</div>
+                                   <div class="batch-result-label">Processed</div>
+                               </div>
+                           </div>
+                       `;
+                       
+                       details.innerHTML = `
+                           <div class="file-list">
+                               ${results.file_details.map(file => `
+                                   <div class="file-item ${file.status}">
+                                       <div class="file-icon">📄</div>
+                                       <div class="file-name">${file.file_path.split('\\').pop()}</div>
+                                       <div class="file-status">${file.status}</div>
+                                   </div>
+                               `).join('')}
+                           </div>
+                       `;
+                   }
+
+                   batchBackToEdit() {
+                       this.showBatchStep('batchStep3');
+                   }
+
+                   showBatchStep(stepId) {
+                       // Hide all batch steps
+                       document.querySelectorAll('#batchMode .step').forEach(step => {
+                           step.classList.add('hidden');
+                       });
+                       
+                       // Show the specified step
+                       document.getElementById(stepId).classList.remove('hidden');
+                   }
+
+                   showBatchStatus(message, type = 'info') {
+                       this.showStatus(message, type);
+                   }
+
+                   showBatchLoading(loadingId, show) {
+                       const loadingEl = document.getElementById(loadingId);
+                       if (loadingEl) {
+                           loadingEl.style.display = show ? 'flex' : 'none';
+                       }
+                   }
           }
 
                            // Initialize the application when the page loads
