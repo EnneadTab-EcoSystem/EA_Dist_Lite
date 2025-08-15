@@ -2484,8 +2484,8 @@
         "tab_icon": null
     },
     "EnneadTab.tab\\Manage.panel\\handle_internal_textnote.pushbutton\\handle_internal_textnote_script.py": {
-        "alias": "Internal Textnote Handler",
-        "doc": "Handle internal textnotes in the project.\nThis tool allows you to show or hide all internal textnotes at once.",
+        "alias": "Internal Annotation Handler",
+        "doc": "Handle internal textnotes and dimensions in the project.\nThis tool allows you to show or hide all internal textnotes and dimensions at once.\nFilters elements by type names that begin with '_internal_note' prefix.\nWorks across all views including dependent views while respecting ownership permissions.",
         "icon": "EnneadTab.tab\\Manage.panel\\handle_internal_textnote.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\Manage.panel\\handle_internal_textnote.pushbutton\\handle_internal_textnote_script.py",
