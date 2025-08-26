@@ -132,8 +132,8 @@
 
                 <GroupBox Header="Export Method" Margin="0,10,0,0">
                     <StackPanel>
-                        <RadioButton Content="Export to Rhino (.3dm file)" x:Name="radio_bt_rhino" IsChecked="True" Click="export_method_changed"/>
-                        <RadioButton Content="Create Floor Plan with Filled Regions" x:Name="radio_bt_drafting" IsChecked="False" Click="export_method_changed"/>
+                        <RadioButton Content="Export to Rhino (.3dm file) [DISABLED]" x:Name="radio_bt_rhino" IsChecked="False" Click="export_method_changed" IsEnabled="False"/>
+                        <RadioButton Content="Create Floor Plan with Filled Regions" x:Name="radio_bt_drafting" IsChecked="True" Click="export_method_changed"/>
                     </StackPanel>
                 </GroupBox>
 

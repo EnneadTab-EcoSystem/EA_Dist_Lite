@@ -49,11 +49,16 @@ def delete_views(view):
 
     return is_success
 
-
+def filter_out_app_views(views):
+    views = [x for x in views if "BubbleDiagram_" not in x.Name]
+    views = [x for x in views if ENVIRONMENT.PLUGIN_NAME.lower() not in x.Name.lower()]
+    views = [x for x in views if "Area Calculator Collection" not in x.Name]
+    return views
 
 @ERROR_HANDLE.try_catch_error()
 def modify_creator_in_view_name(views, is_adding_creator):
     views = REVIT_SELECTION.filter_elements_changable(views)
+    views = filter_out_app_views(views)
 
     t = DB.Transaction(doc, "Rename Views")
     try:
@@ -69,8 +74,7 @@ def modify_creator_in_view_name(views, is_adding_creator):
             continue
         if "{" in view.Name:
             continue
-        if ENVIRONMENT.PLUGIN_NAME.lower() in view.Name.lower():
-            continue
+
         creator = DB.WorksharingUtils.GetWorksharingTooltipInfo(doc, view.Id).Creator
         simple_creator = creator.split("@")[0] if "@" in creator else creator
 

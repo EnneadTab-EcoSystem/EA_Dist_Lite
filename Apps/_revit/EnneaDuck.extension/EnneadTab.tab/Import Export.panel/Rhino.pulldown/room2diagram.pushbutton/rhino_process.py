@@ -12,13 +12,18 @@ try:
     import System  # pyright: ignore
     clr.AddReference('RhinoCommon')
     import Rhino  # pyright: ignore
-    clr.AddReference('RhinoInside.Revit')
-    from RhinoInside.Revit.Convert.Geometry import GeometryDecoder as RIR_DECODER  # pyright: ignore
-    from RhinoInside.Revit.Convert.Geometry import GeometryEncoder as RIR_ENCODER  # pyright: ignore
-   
     IMPORT_OK = True
 except:
     IMPORT_OK = False
+
+# Try to import RhinoInside converters if available
+try:
+    clr.AddReference('RhinoInside.Revit')
+    from RhinoInside.Revit.Convert.Geometry import GeometryDecoder as RIR_DECODER  # pyright: ignore
+    from RhinoInside.Revit.Convert.Geometry import GeometryEncoder as RIR_ENCODER  # pyright: ignore
+    RIR_IMPORT_OK = True
+except:
+    RIR_IMPORT_OK = False
 
 from EnneadTab import FOLDER, ENVIRONMENT
 from EnneadTab.REVIT import REVIT_RHINO, REVIT_UNIT

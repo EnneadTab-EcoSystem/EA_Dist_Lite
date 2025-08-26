@@ -106,8 +106,12 @@ class BaseProcessor:
             
             # Process the view using the integrated approach
             try:
+                # Determine if we need to convert to Rhino format based on processor type
+                # Use class name to avoid circular import issues
+                convert_to_rhino = self.__class__.__name__ == "RhinoProcess"
+                
                 # Use the integrated view processing method
-                results = self.process_view_with_elements(config.element_type, view, level_name)
+                results = self.process_view_with_elements(config.element_type, view, level_name, convert_to_rhino)
                 if results:
                     # Delegate to appropriate processor with processed results
                     success = self.process_spaces_from_results(results, source_view=view)
@@ -209,13 +213,7 @@ class BaseProcessor:
                         #
                         return input_curves
                 
-                #
-                # For Rhino input, return processed Rhino curves
-                if curve_type.lower() == "rhino":
-                    return [joined_curves[0]]
-                
-                # For Revit input, return the processed Rhino curve for RevitProcessor to convert
-                # This allows RevitProcessor to handle the specific Revit conversion logic
+  
                 return [joined_curves[0]]
                 
             except Exception as e:
@@ -332,7 +330,7 @@ class BaseProcessor:
     # VIEW PROCESSING METHODS
     # ============================================================================
     
-    def process_view_with_elements(self, element_type, source_view, level_name):
+    def process_view_with_elements(self, element_type, source_view, level_name, convert_to_rhino=False):
         """Main processing function for a single view with comprehensive error handling.
         
         This method orchestrates the view processing workflow including validation,
@@ -342,6 +340,7 @@ class BaseProcessor:
             element_type: Type of element ("Rooms" or "Areas")
             source_view: Source view to process
             level_name: Optional level name override
+            convert_to_rhino: Boolean indicating if curves should be converted to Rhino format
             
         Returns:
             dict: Processing results or None if failed
@@ -757,6 +756,7 @@ class BaseProcessor:
             list: List of Rhino curves or None if conversion fails
         """
         if not RHINO_IMPORT_OK:
+            print("Rhino libraries not available - cannot convert curves")
             return None
         
         rhino_curves = []

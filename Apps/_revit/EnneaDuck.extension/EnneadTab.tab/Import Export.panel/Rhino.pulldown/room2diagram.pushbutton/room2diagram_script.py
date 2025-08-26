@@ -206,19 +206,24 @@ def process_diagram_export(config):
         _processing_depth -= 1
         return
     
+    # Class-level error collection for review
+    collected_errors = []
+    
     try:
         print("Starting Room/Area diagram export...")
         
         # Validate that we have a document
         if not doc:
-            NOTIFICATION.messenger("No active document available")
-           
+            error_msg = "No active document available"
+            collected_errors.append(error_msg)
+            NOTIFICATION.messenger(error_msg)
             return
         
         # Always require views to be selected - no fallback to current view
         if not config.selected_views:
-            NOTIFICATION.messenger("No views selected. Please use 'Pick Views' button to select views for processing.")
-            
+            error_msg = "No views selected. Please use 'Pick Views' button to select views for processing."
+            collected_errors.append(error_msg)
+            NOTIFICATION.messenger(error_msg)
             return
         
         print("Processing {} views... (depth: {})".format(len(config.selected_views), _processing_depth))
@@ -246,11 +251,15 @@ def process_diagram_export(config):
                 
                 valid_views.append(view)
             except Exception as e:
-                print("Error validating view: {}. Skipping.".format(str(e)))
+                error_msg = "Error validating view: {}. Skipping.".format(str(e))
+                collected_errors.append(error_msg)
+                print(error_msg)
                 continue
         
         if not valid_views:
-            print("No valid views found for processing. Please select floor plans, area plans, or similar views.")
+            error_msg = "No valid views found for processing. Please select floor plans, area plans, or similar views."
+            collected_errors.append(error_msg)
+            print(error_msg)
             REVIT_FORMS.notification(
                 main_text="No Valid Views Found",
                 sub_text="Please select floor plans or area plans for processing.\nCurrent views are not suitable for room/area diagram export.",
@@ -297,7 +306,9 @@ def process_diagram_export(config):
                     else:
                         print("Found unique level: {} (Level: {})".format(unique_identifier, level_name))
             except Exception as e:
-                print("Error processing view {}: {}. Skipping.".format(view.Name if view else "Unknown", str(e)))
+                error_msg = "Error processing view {}: {}. Skipping.".format(view.Name if view else "Unknown", str(e))
+                collected_errors.append(error_msg)
+                print(error_msg)
                 continue
         
         print("Processing {} unique levels (filtered from {} views)...".format(len(unique_level_views), len(config.selected_views)))
@@ -309,7 +320,9 @@ def process_diagram_export(config):
                 
                 # SAFEGUARD: Check if view is still valid before processing
                 if not view or not view.IsValidObject:
-                    print("View no longer valid, skipping: {}".format(view.Name if view else "Unknown"))
+                    error_msg = "View no longer valid, skipping: {}".format(view.Name if view else "Unknown")
+                    collected_errors.append(error_msg)
+                    print(error_msg)
                     continue
                 
                 # Process the view with level name using BaseProcessor
@@ -326,13 +339,26 @@ def process_diagram_export(config):
                 gc.collect()
                 
             except Exception as e:
-                print("Error processing level {}: {}. Continuing with next level...".format(level_name, str(e)))
+                error_msg = "Error processing level {}: {}. Continuing with next level...".format(level_name, str(e))
+                collected_errors.append(error_msg)
+                print(error_msg)
                 print(traceback.format_exc())
                 continue
         
         # Show completion notification with more detailed information
         processed_count = len(unique_level_views)
         total_selected = len(config.selected_views)
+        
+        # Display collected errors if any
+        if collected_errors:
+            print("\n" + "="*50)
+            print("ERROR SUMMARY - {} errors collected:".format(len(collected_errors)))
+            print("="*50)
+            for i, error in enumerate(collected_errors, 1):
+                print("{}. {}".format(i, error))
+            print("="*50)
+            print("Full error details have been logged above.")
+            print("="*50 + "\n")
         
         if processed_count == total_selected:
             REVIT_FORMS.notification(
@@ -352,7 +378,10 @@ def process_diagram_export(config):
             )
         
     except Exception as e:
-        print("CRITICAL ERROR in process_diagram_export: {}. Stopping processing.".format(str(e)))
+        error_msg = "CRITICAL ERROR in process_diagram_export: {}. Stopping processing.".format(str(e))
+        collected_errors.append(error_msg)
+        print(error_msg)
+        print(traceback.format_exc())
     finally:
         # Always decrement processing depth
         _processing_depth -= 1
@@ -763,13 +792,14 @@ class room2diagram_ModelessForm(WPFWindow):
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def room2diagram(doc):
-    # Check if Rhino Inside is available 
+    """Main entry point for the Room/Area diagram export tool."""
+    
+    # Check if Rhino Inside is available - if not, block execution completely
     if not RHINO_INSIDE_IMPORT_OK:
-        print("Rhino Inside Required.\nPlease initiate Rhino Inside first for Rhino export method.")
+        print("Rhino Inside Required.\nPlease initiate Rhino Inside first for this tool to work.")
+
         return
     
-
-    """Main entry point for the Room/Area diagram export tool."""
     # Show the GUI for settings and view selection
     room2diagram_ModelessForm()
 
