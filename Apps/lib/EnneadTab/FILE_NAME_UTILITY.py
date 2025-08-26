@@ -116,7 +116,7 @@ def sanitize_revit_name(name, replacement_char="_"):
     # Define Revit-specific forbidden characters
     # Based on Revit error messages: "{, }, [, ], |, ;, less-than sign, greater-than sign, ?, `, ~"
     # Also including other common problematic characters: \, :
-    prohibited_chars = '{}[]|;<>?`~\\:'
+    prohibited_chars = r'{}[]|;<>?`~\\:'
     
     # Replace forbidden characters with replacement character
     sanitized_name = name
