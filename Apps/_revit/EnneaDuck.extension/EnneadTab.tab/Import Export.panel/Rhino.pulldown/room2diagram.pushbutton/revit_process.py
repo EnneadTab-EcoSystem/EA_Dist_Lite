@@ -23,7 +23,7 @@ except:
 # ============================================================================
 import System  # pyright: ignore
 from EnneadTab import TIME, SAMPLE_FILE
-from EnneadTab.REVIT import REVIT_VIEW, REVIT_SELECTION, REVIT_UNIT, REVIT_FAMILY
+from EnneadTab.REVIT import REVIT_VIEW, REVIT_SELECTION, REVIT_UNIT, REVIT_FAMILY, REVIT_APPLICATION
 from Autodesk.Revit import DB # pyright: ignore
 from base_processor import BaseProcessor
 
@@ -214,7 +214,7 @@ class RevitProcess(BaseProcessor):
             family_file_path = SAMPLE_FILE.get_file("BubbleDiagram Tag.rfa")
             
             if family_file_path:
-                print("Found BubbleDiagram Tag.rfa at: {}".format(family_file_path))
+                # print("Found BubbleDiagram Tag.rfa at: {}".format(family_file_path))
                 # Use get_family_by_name with load_path_if_not_exist parameter
                 tag_family = REVIT_FAMILY.get_family_by_name(
                     tag_family_name, 
@@ -223,7 +223,7 @@ class RevitProcess(BaseProcessor):
                 )
                 
                 if tag_family:
-                    print("Successfully loaded BubbleDiagram Tag family")
+                    # print("Successfully loaded BubbleDiagram Tag family")
                     return tag_family
                 else:
                     print("Failed to load BubbleDiagram Tag family from file")
@@ -282,8 +282,8 @@ class RevitProcess(BaseProcessor):
                 t.Start()
                 try:
                     # Create tag for the filled region using the tag type
-                    # Determine a placement point from the filled region's bounding box
-                    bbox = filled_region.get_BoundingBox(filled_region)
+                    # Determine a placement point from the filled region's bounding box (in view coordinates)
+                    bbox = filled_region.get_BoundingBox(floor_plan_view)
                     if bbox and bbox.Min and bbox.Max:
                         center = DB.XYZ(
                             (bbox.Min.X + bbox.Max.X) / 2.0,
@@ -293,30 +293,32 @@ class RevitProcess(BaseProcessor):
                     else:
                         center = DB.XYZ(0, 0, 0)
 
-                    # Create tag using standard overload, then set type if available
-                    tag = DB.IndependentTag.Create(
-                        self.revit_doc,
-                        floor_plan_view.Id,
-                        DB.Reference(filled_region),
-                        False,
-                        DB.TagMode.TM_ADDBY_CATEGORY,
-                        DB.TagOrientation.Horizontal,
-                        center,
-                    )
-                    if tag and tag_type:
-                        try:
-                            tag.ChangeTypeId(tag_type.Id)
-                        except Exception as change_type_err:
-                            print("Warning: Could not change tag type: {}".format(str(change_type_err)))
+                    # Try to create an IndependentTag first (may not be supported for FilledRegion)
+                    tag = None
+                    try:
+                        tag = DB.IndependentTag.Create(
+                            self.revit_doc,
+                            floor_plan_view.Id,
+                            DB.Reference(filled_region),
+                            False,
+                            DB.TagMode.TM_ADDBY_CATEGORY,
+                            DB.TagOrientation.Horizontal,
+                            center,
+                        )
+                        if tag and tag_type:
+                            try:
+                                tag.ChangeTypeId(tag_type.Id)
+                            except Exception as change_type_err:
+                                print("Warning: Could not change tag type: {}".format(str(change_type_err)))
+                    except Exception:
+                        tag = None
                     
                     if tag:
                         t.Commit()
                         return True
-                    else:
-                        print("Failed to create tag for filled region: {}".format(space_identifier))
-                        t.RollBack()
-                        return False
-                        
+                    
+   
+                    
                 except Exception as e:
                     print("Error in transaction creating tag: {}".format(str(e)))
                     t.RollBack()
@@ -326,21 +328,21 @@ class RevitProcess(BaseProcessor):
             print("Error creating tag for filled region {}: {}".format(space_identifier, str(e)))
             return False
     
-    def _create_floor_plan_view(self, level_name):
-        """Create floor plan view for Revit export and hide all model categories except detail items."""
+    def _create_get_floor_plan_view(self, level_name, prefix):
+        """Create or get existing floor plan view for Revit export and hide all model categories except detail items."""
         try:
             # Create floor plan view name
-            view_name = "BubbleDiagram_{}".format(level_name)
+            view_name = "{}_{}".format(prefix, level_name)
             
-            # Check if view already exists and rename it
+            # First check if view already exists - if so, clean it and return it
             existing_view = REVIT_VIEW.get_view_by_name(view_name, self.revit_doc)
             if existing_view:
-                try:
-                    existing_view.Name = existing_view.Name + "_Old({})".format(TIME.get_YYYY_MM_DD())
-                except Exception as e:
-                    print("Could not rename existing view, creating new one with timestamp")
-                    current_owner = REVIT_SELECTION.get_owner(existing_view)
-                    view_name = "{}_[Ownership conflict by {}]".format(view_name, current_owner)
+                print("Found existing floor plan view: '{}'. Cleaning existing filled regions and returning view.".format(view_name))
+                
+                # Delete all filled regions with type names beginning with _ColorScheme_
+                self._delete_existing_color_scheme_filled_regions(existing_view)
+                
+                return existing_view
             
             # Find the level by name
             level = None
@@ -398,7 +400,7 @@ class RevitProcess(BaseProcessor):
                         if view_series_param and not view_series_param.IsReadOnly:
                             view_series_param.Set("BubbleDiagram")
                         
-                        print("Set Views_$Group to 'EnneadTab' and Views_$Series to 'BubbleDiagram'")
+                        # print("Set Views_$Group to 'EnneadTab' and Views_$Series to 'BubbleDiagram'")
                         
                         # Set view scale to match the original source view
                         try:
@@ -411,7 +413,7 @@ class RevitProcess(BaseProcessor):
                                         if source_scale_param:
                                             source_scale = source_scale_param.AsInteger()
                                             scale_param.Set(source_scale)
-                                            print("Set view scale to match source view: 1:{}".format(source_scale))
+                                            # print("Set view scale to match source view: 1:{}".format(source_scale))
                                         else:
                                             # Fallback to 1/8" = 1'-0" scale (1:96)
                                             scale_param.Set(96)
@@ -432,7 +434,7 @@ class RevitProcess(BaseProcessor):
                             discipline_param = floor_plan_view.LookupParameter("Discipline")
                             if discipline_param and not discipline_param.IsReadOnly:
                                 discipline_param.Set(1)  # 1 = Coordination
-                                print("Set view discipline to Coordination")
+                                # print("Set view discipline to Coordination")
                         except Exception as e:
                             print("Warning: Could not set view discipline: {}".format(str(e)))
                         
@@ -451,6 +453,57 @@ class RevitProcess(BaseProcessor):
         except Exception as e:
             print("Error creating floor plan view: {}".format(str(e)))
             return None
+    
+    def _delete_existing_color_scheme_filled_regions(self, view):
+        """Delete all filled regions in the view that have type names beginning with '_ColorScheme_'."""
+        try:
+            # Get all filled regions in the view
+            filled_regions = DB.FilteredElementCollector(self.revit_doc, view.Id) \
+                .OfClass(DB.FilledRegion) \
+                .ToElements()
+            
+            if not filled_regions:
+                return
+            
+            # Filter filled regions by type name
+            regions_to_delete = []
+            for region in filled_regions:
+                try:
+                    # Get the filled region type
+                    region_type = self.revit_doc.GetElement(region.GetTypeId())
+                    if region_type:
+                        # Get type name using LookupParameter("Type Name")
+                        type_name_param = region_type.LookupParameter("Type Name")
+                        if type_name_param:
+                            type_name = type_name_param.AsString()
+                            if type_name and type_name.startswith('_ColorScheme_'):
+                                regions_to_delete.append(region)
+                except Exception as e:
+                    print("Warning: Could not check type name for filled region: {}".format(str(e)))
+                    continue
+            
+            if not regions_to_delete:
+                return
+            
+            # Delete the filtered filled regions within a transaction
+            with DB.Transaction(self.revit_doc, "Delete Existing Color Scheme Filled Regions") as t:
+                t.Start()
+                try:
+                    for region in regions_to_delete:
+                        try:
+                            self.revit_doc.Delete(region.Id)
+                        except Exception as e:
+                            print("Warning: Could not delete filled region: {}".format(str(e)))
+                            continue
+                    
+                    t.Commit()
+                    
+                except Exception as e:
+                    print("Error in transaction deleting filled regions: {}".format(str(e)))
+                    t.RollBack()
+                    
+        except Exception as e:
+            print("Error deleting existing color scheme filled regions: {}".format(str(e)))
     
     def _configure_bubble_diagram_view_categories(self, view):
         """Configure view categories for bubble diagram - hide all except detail items, tags, grids, and dimensions."""
@@ -486,14 +539,6 @@ class RevitProcess(BaseProcessor):
                     continue
             
             # Method 2 removed per request; rely solely on category visibility control above
-            
-            # Refresh the view to ensure changes take effect
-            try:
-                view.RefreshActiveView()
-            except Exception as e:
-                print("Warning: Could not refresh view: {}".format(str(e)))
-            
-            # Done configuring visibility for bubble diagram view
             
         except Exception as e:
             print("Error hiding categories: {}".format(str(e)))
@@ -580,7 +625,8 @@ class RevitProcess(BaseProcessor):
                                     try:
                                         filled_region_success, created_filled_region = self._create_filled_region_from_curves(curve_loop, filled_region_type, floor_plan_view)
                                         if filled_region_success:
-                                            print("Created filled region with processed curves (fillet and offset applied)")
+                                            # print("Created filled region with processed curves (fillet and offset applied)")
+                                            pass
                                     except Exception as e:
                                         print("Failed to create filled region with processed curves for space {}: {}".format(space_identifier, str(e)))
                                 else:
@@ -605,15 +651,15 @@ class RevitProcess(BaseProcessor):
             if filled_region_success and created_filled_region:
                 try:
                     # Verify filled region creation and list available parameters
-                    print("Verifying filled region creation for space: {}".format(space_identifier))
+                    # print("Verifying filled region creation for space: {}".format(space_identifier))
                     self._verify_filled_region_creation(created_filled_region, space_identifier)
                     
                     # Add comment to filled region
-                    print("Adding comment to filled region for space: {}".format(space_identifier))
+                    # print("Adding comment to filled region for space: {}".format(space_identifier))
                     comment_success = self._add_comment_to_filled_region(created_filled_region, space_identifier, space_area, space)
                     
                     # Create tag for filled region
-                    print("Creating tag for filled region for space: {}".format(space_identifier))
+                    # print("Creating tag for filled region for space: {}".format(space_identifier))
                     tag_success = self._create_tag_for_filled_region(created_filled_region, space_identifier, floor_plan_view)
                 except Exception as e:
                     print("Failed to add comment/tag for space {}: {}".format(space_identifier, str(e)))
@@ -623,8 +669,9 @@ class RevitProcess(BaseProcessor):
             # Return success if filled region was created successfully
             success = filled_region_success
             if success:
-                print("Successfully processed space: {} (region: {}, comment: {}, tag: {})".format(
-                    space_identifier, filled_region_success, comment_success, tag_success))
+                # print("Successfully processed space: {} (region: {}, comment: {}, tag: {})".format(
+                #     space_identifier, filled_region_success, comment_success, tag_success))
+                pass
             else:
                 print("Failed to process space: {} (region: {}, comment: {}, tag: {})".format(
                     space_identifier, filled_region_success, comment_success, tag_success))
@@ -649,7 +696,12 @@ class RevitProcess(BaseProcessor):
             # Processing spaces for Revit export
             
             # Create floor plan view
-            floor_plan_view = self._create_floor_plan_view(level_name)
+            if self.source_view.ViewType == DB.ViewType.FloorPlan:
+                prefix = "BubbleDiagram"
+            else:
+                area_scheme_name = self.source_view.AreaScheme.Name
+                prefix = "BubbleDiagram_{}".format(area_scheme_name)
+            floor_plan_view = self._create_get_floor_plan_view(level_name, prefix)
             if not floor_plan_view:
                 return False
             
@@ -658,6 +710,14 @@ class RevitProcess(BaseProcessor):
             for space_data in processed_spaces:
                 if self._process_space_for_revit(space_data, floor_plan_view):
                     processed_count += 1
+            
+            # Set the floor plan view as active view after processing
+            try:
+                # Get the UIDocument to set active view
+                uidoc = REVIT_APPLICATION.get_uidoc()
+                uidoc.ActiveView = floor_plan_view
+            except Exception as e:
+                print("Warning: Could not set active view: {}".format(str(e)))
             
             # Done processing spaces for Revit
             return True

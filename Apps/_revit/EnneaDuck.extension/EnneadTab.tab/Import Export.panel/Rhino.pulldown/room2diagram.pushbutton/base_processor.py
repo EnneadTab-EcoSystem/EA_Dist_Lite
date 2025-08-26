@@ -958,7 +958,7 @@ class BaseProcessor:
             )
             
             if filleted_curve:
-                print("Applied fillet with radius {} feet".format(self.fillet_radius))
+                # print("Applied fillet with radius {} feet".format(self.fillet_radius))
                 return filleted_curve
             
             print("Fillet failed - using original curve")
@@ -1005,7 +1005,7 @@ class BaseProcessor:
                 # Find the closed curve (like slab offseter does)
                 for offset_curve in offset_curves:
                     if offset_curve.IsClosed:
-                        print("Applied offset with distance {} feet using pure RhinoCommon".format(self.offset_distance))
+                        # print("Applied offset with distance {} feet using pure RhinoCommon".format(self.offset_distance))
                         return offset_curve
                 
                 # If no closed curve found, use the first one
