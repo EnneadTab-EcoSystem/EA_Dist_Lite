@@ -2305,7 +2305,7 @@
     },
     "EnneadTab.tab\\Import Export.panel\\Rhino.pulldown\\room2diagram.pushbutton\\room2diagram_script.py": {
         "alias": "RoomOrArea2Diagram",
-        "doc": "Export Revit Rooms/Areas to Rhino as color-coded diagrams.\n\nThis tool creates a simplified diagram representation of Rooms or Areas in Rhino:\n- Exports boundaries with filleted corners\n- Maintains color coding from Revit color schemes\n- Adds text labels for space identifiers\n- Creates solid hatches for each space\n",
+        "doc": "Export Revit Rooms/Areas to Rhino as color-coded diagrams with XAML GUI.\n\nThis tool creates a simplified diagram representation of Rooms or Areas in Rhino:\n- Exports boundaries with filleted corners and optional inner offset\n- Maintains color coding from Revit color schemes\n- Adds text labels for space identifiers\n- Creates solid hatches for each space\n- Features XAML GUI with persistent settings\n- Supports both Rooms and Areas export\n- Configurable corner fillet radius and inner offset distance\n- Automatic settings save/restore for future use\n- Framework ready for drafting view group export (future feature)\n",
         "icon": "EnneadTab.tab\\Import Export.panel\\Rhino.pulldown\\room2diagram.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\Import Export.panel\\Rhino.pulldown\\room2diagram.pushbutton\\room2diagram_script.py",

@@ -136,6 +136,7 @@ def rename_views(doc, sheets, is_default_format, is_original_flavor, attempt = 0
     try:
         failed_sheets = set()
         all_views = DB.FilteredElementCollector(doc).OfClass(DB.View).WhereElementIsNotElementType().ToElements()
+        
         def is_user_view(view):
             if view.IsTemplate:
                 return False
@@ -149,7 +150,9 @@ def rename_views(doc, sheets, is_default_format, is_original_flavor, attempt = 0
         for sheet in sheets:
             sheet_num = sheet.SheetNumber
 
-            view_filter = REVIT_VIEW.ViewFilter(list(sheet.GetAllPlacedViews()))
+            placed_views = list(sheet.GetAllPlacedViews())
+            
+            view_filter = REVIT_VIEW.ViewFilter(placed_views)
             is_only_one_view = view_filter.filter_archi_views().to_count() == 1
 
             #for view on current sheet
@@ -212,9 +215,9 @@ def rename_views(doc, sheets, is_default_format, is_original_flavor, attempt = 0
 
                 if is_original_flavor:
                     try:
-                        if str(sheet_num) + "_" + str(detail_num) + "_" in new_view_name:
+                        if new_view_name and str(sheet_num) + "_" + str(detail_num) + "_" in new_view_name:
                             native_view_name = new_view_name.replace(str(sheet_num) + "_" + str(detail_num) + "_" , "")
-                        elif str(detail_num) + "_" + str(sheet_num) + "_" in new_view_name:
+                        elif new_view_name and str(detail_num) + "_" + str(sheet_num) + "_" in new_view_name:
                             native_view_name = new_view_name.replace(str(detail_num) + "_" + str(sheet_num) + "_" , "")
                         else:
                             native_view_name = new_view_name
@@ -231,19 +234,32 @@ def rename_views(doc, sheets, is_default_format, is_original_flavor, attempt = 0
                     try:
                         view.Parameter[title_para_id].Set(new_title)
                         view.Parameter[name_para_id].Set(new_view_name)
-                    except:
-                        if show_log:
-                            print ("Skip {}".format(view.Name))
+                    except Exception as e:
+                        if "outside of transaction" in str(e):
+                            try:
+                                local_t = DB.Transaction(doc, "Rename Views")
+                                local_t.Start()
+                                view.Parameter[title_para_id].Set(new_title)
+                                view.Parameter[name_para_id].Set(new_view_name)
+                                local_t.Commit()
+                            except Exception as e:
+                                if show_log:
+                                    print ("Skip {} because {}".format(view.Name, e))
+                        else:
+                            if show_log:
+                                print ("Skip {} because {}".format(view.Name, e))
+             
 
+        
+        # Only commit if we started the transaction
+        if transaction_started and t:
+            t.Commit()
+            
         if len(list(failed_sheets)) > 0:
             attempt += 1
             if show_log:
                 print ("\n\nAttemp = {}".format(attempt))
             rename_views(doc, list(failed_sheets), is_default_format, is_original_flavor, attempt, show_log)
-        
-        # Only commit if we started the transaction
-        if transaction_started and t:
-            t.Commit()
     except Exception as e:
         # Only rollback if we started the transaction and it hasn't ended
         if transaction_started and t and not t.HasEnded():
