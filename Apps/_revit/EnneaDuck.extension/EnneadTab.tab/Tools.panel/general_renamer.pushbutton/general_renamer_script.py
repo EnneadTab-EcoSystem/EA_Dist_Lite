@@ -107,7 +107,9 @@ def remove_creator_mark(name):
 
     return name
 
-
+def filter_out_app_views(views):
+    views = [x for x in views if "BubbleDiagram_" not in x.Name]
+    return views
 
 def get_unique_view_name(base_name, view_names_pool):
     """Generate a unique view name by appending a numeric suffix if needed."""
@@ -144,7 +146,7 @@ def rename_views(doc, sheets, is_default_format, is_original_flavor, attempt = 0
                 return False
             return True
         all_views = filter(lambda x: is_user_view(x), all_views)
-
+        all_views = filter_out_app_views(all_views)
         view_names_pool = [x.Name for x in all_views]
 
         for sheet in sheets:

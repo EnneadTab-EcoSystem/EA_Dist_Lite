@@ -143,14 +143,10 @@ class BaseProcessor:
         Returns:
             List of processed curves (same type as input)
         """
-        print("  DEBUG: BaseProcessor.process_curves called")
-        print("  DEBUG: Input curves count: {}".format(len(input_curves) if input_curves else 0))
-        print("  DEBUG: Curve type: {}".format(curve_type))
-        print("  DEBUG: Fillet radius: {}".format(self.fillet_radius))
-        print("  DEBUG: Offset distance: {}".format(self.offset_distance))
+        # DEBUG logs removed for production; keep warnings/errors elsewhere
         
         if not input_curves or len(input_curves) == 0:
-            print("  DEBUG: No input curves provided")
+            #
             return input_curves
         
         if not RHINO_IMPORT_OK:
@@ -159,22 +155,22 @@ class BaseProcessor:
         
         try:
             # Convert to Rhino curves for processing
-            print("  DEBUG: Converting to Rhino curves...")
+            #
             rhino_curves = self._convert_to_rhino_curves(input_curves, curve_type)
-            print("  DEBUG: Converted Rhino curves count: {}".format(len(rhino_curves) if rhino_curves else 0))
+            #
             
             if not rhino_curves:
-                print("  DEBUG: No Rhino curves converted, returning original")
+                # print("  DEBUG: No Rhino curves converted, returning original")
                 return input_curves
             
             # Join curves into a single curve
-            print("  DEBUG: Joining curves...")
+            #
             try:
                 joined_curves = Rhino.Geometry.Curve.JoinCurves(rhino_curves)
-                print("  DEBUG: Joined curves count: {}".format(len(joined_curves) if joined_curves else 0))
+                #
                 
                 if not joined_curves or len(joined_curves) == 0:
-                    print("  DEBUG: No joined curves, trying individual curve processing")
+                    #
                     # If joining fails, try processing each curve individually
                     processed_curves = []
                     for curve in rhino_curves:
@@ -194,26 +190,26 @@ class BaseProcessor:
                         
                         processed_curves.append(processed_curve)
                     
-                    print("  DEBUG: Processed {} individual curves".format(len(processed_curves)))
+                    #
                     return processed_curves
                 
                 # Apply fillet if specified
                 if self.fillet_radius > 0:
-                    print("  DEBUG: Applying fillet...")
+                    #
                     joined_curves[0] = self._apply_fillet_to_rhino_curve(joined_curves[0])
                     if not joined_curves[0]:
-                        print("  DEBUG: Fillet failed, returning original")
+                        #
                         return input_curves
                 
                 # Apply offset if specified
                 if self.offset_distance > 0:
-                    print("  DEBUG: Applying offset...")
+                    #
                     joined_curves[0] = self._apply_offset_to_rhino_curve(joined_curves[0])
                     if not joined_curves[0]:
-                        print("  DEBUG: Offset failed, returning original")
+                        #
                         return input_curves
                 
-                print("  DEBUG: Returning processed curves")
+                #
                 # For Rhino input, return processed Rhino curves
                 if curve_type.lower() == "rhino":
                     return [joined_curves[0]]
@@ -223,7 +219,7 @@ class BaseProcessor:
                 return [joined_curves[0]]
                 
             except Exception as e:
-                print("  DEBUG: Error joining curves: {}. Trying individual processing.".format(str(e)))
+                #
                 # If joining fails, try processing each curve individually
                 processed_curves = []
                 for curve in rhino_curves:
@@ -243,7 +239,7 @@ class BaseProcessor:
                     
                     processed_curves.append(processed_curve)
                 
-                print("  DEBUG: Processed {} individual curves after join failure".format(len(processed_curves)))
+                #
                 return processed_curves
         
         except Exception as e:
@@ -683,17 +679,17 @@ class BaseProcessor:
             curve_segments = []
             
             if not boundary_segments:
-                print("DEBUG: No boundary segments found")
+                # print("DEBUG: No boundary segments found")
                 return curve_segments
                 
-            print("DEBUG: Found {} boundary segment arrays".format(len(boundary_segments)))
+            # print("DEBUG: Found {} boundary segment arrays".format(len(boundary_segments)))
             
             for i, segment_array in enumerate(boundary_segments):
                 if not segment_array:
-                    print("DEBUG: Segment array {} is empty".format(i))
+                    # print("DEBUG: Segment array {} is empty".format(i))
                     continue
                     
-                print("DEBUG: Processing segment array {} with {} segments".format(i, len(segment_array)))
+                # print("DEBUG: Processing segment array {} with {} segments".format(i, len(segment_array)))
                 
                 for j, segment in enumerate(segment_array):
                     try:
@@ -711,30 +707,35 @@ class BaseProcessor:
                                         cloned_curve = curve.Clone()
                                         if cloned_curve and cloned_curve.IsValidObject:
                                             curve_segments.append(cloned_curve)
-                                            print("DEBUG: Added cloned Revit curve from segment {}-{}".format(i, j))
+                                            # print("DEBUG: Added cloned Revit curve from segment {}-{}".format(i, j))
                                         else:
-                                            print("DEBUG: Cloned Revit curve is invalid from segment {}-{}".format(i, j))
+                                            # print("DEBUG: Cloned Revit curve is invalid from segment {}-{}".format(i, j))
+                                            pass # Removed DEBUG print
                                     except Exception as clone_error:
-                                        print("DEBUG: Failed to clone Revit curve from segment {}-{}: {}".format(i, j, str(clone_error)))
+                                        # print("DEBUG: Failed to clone Revit curve from segment {}-{}: {}".format(i, j, str(clone_error)))
                                         # Try to use original curve as fallback if it's still valid
                                         if curve.IsValidObject:
                                             curve_segments.append(curve)
-                                            print("DEBUG: Added original Revit curve as fallback from segment {}-{}".format(i, j))
+                                            # print("DEBUG: Added original Revit curve as fallback from segment {}-{}".format(i, j))
                                         else:
-                                            print("DEBUG: Original Revit curve also invalid from segment {}-{}".format(i, j))
+                                            # print("DEBUG: Original Revit curve also invalid from segment {}-{}".format(i, j))
+                                            pass # Removed DEBUG print
                                 else:
-                                    print("DEBUG: Revit curve is invalid from segment {}-{}".format(i, j))
+                                    # print("DEBUG: Revit curve is invalid from segment {}-{}".format(i, j))
+                                    pass # Removed DEBUG print
                             else:
                                 # It's not a Revit curve - this shouldn't happen with GetCurve() from boundary segments
                                 # But if it does, try to treat it as a curve-like object
-                                print("DEBUG: Adding non-Revit curve (type: {}) from segment {}-{}".format(type(curve), i, j))
+                                # print("DEBUG: Adding non-Revit curve (type: {}) from segment {}-{}".format(type(curve), i, j))
                                 curve_segments.append(curve)
                         else:
-                            print("DEBUG: No curve from segment {}-{}".format(i, j))
+                            # print("DEBUG: No curve from segment {}-{}".format(i, j))
+                            pass # Removed DEBUG print
                     except Exception as segment_error:
-                        print("DEBUG: Error processing segment {}-{}: {}".format(i, j, str(segment_error)))
+                        # print("DEBUG: Error processing segment {}-{}: {}".format(i, j, str(segment_error)))
+                        pass # Removed DEBUG print
                         
-            print("DEBUG: Total curves extracted: {}".format(len(curve_segments)))
+            # print("DEBUG: Total curves extracted: {}".format(len(curve_segments)))
             return curve_segments
             
         except Exception as e:
@@ -780,11 +781,12 @@ class BaseProcessor:
                                 rhino_curve = RIR_DECODER.ToCurve(curve)
                                 if rhino_curve and hasattr(rhino_curve, 'IsValid') and rhino_curve.IsValid:
                                     rhino_curves.append(rhino_curve)
-                                    print("DEBUG: Converted Revit curve to Rhino curve")
+                                    # print("DEBUG: Converted Revit curve to Rhino curve")
                                 else:
-                                    print("Warning: Invalid Rhino curve converted from Revit curve")
+                                    # print("Warning: Invalid Rhino curve converted from Revit curve")
+                                    pass # Removed DEBUG print
                             except Exception as e:
-                                print("Warning: Failed to convert Revit curve to Rhino curve: {}".format(str(e)))
+                                # print("Warning: Failed to convert Revit curve to Rhino curve: {}".format(str(e)))
                                 # For Revit curves, try using GetEndPoint as fallback
                                 try:
                                     if hasattr(curve, 'GetEndPoint'):
@@ -801,20 +803,25 @@ class BaseProcessor:
                                                 rhino_curve = rhino_line.ToNurbsCurve()
                                                 if rhino_curve and rhino_curve.IsValid:
                                                     rhino_curves.append(rhino_curve)
-                                                    print("Created fallback Rhino curve from Revit curve endpoints")
+                                                    # print("Created fallback Rhino curve from Revit curve endpoints")
                                                 else:
-                                                    print("Warning: Fallback curve conversion failed")
+                                                    # print("Warning: Fallback curve conversion failed")
+                                                    pass # Removed DEBUG print
                                             else:
-                                                print("Warning: Fallback line creation failed")
+                                                # print("Warning: Fallback line creation failed")
+                                                pass # Removed DEBUG print
                                     else:
-                                        print("Warning: Revit curve has no GetEndPoint method")
+                                        # print("Warning: Revit curve has no GetEndPoint method")
+                                        pass # Removed DEBUG print
                                 except Exception as e2:
-                                    print("Warning: Fallback conversion also failed: {}".format(str(e2)))
+                                    # print("Warning: Fallback conversion also failed: {}".format(str(e2)))
+                                    pass # Removed DEBUG print
                         else:
-                            print("Warning: Revit curve is invalid")
+                            # print("Warning: Revit curve is invalid")
+                            pass # Removed DEBUG print
                     else:
                         # It's not a Revit curve - might already be a Rhino curve or other type
-                        print("DEBUG: Non-Revit curve detected (type: {}), checking if it's already a valid curve".format(type(curve)))
+                        # print("DEBUG: Non-Revit curve detected (type: {}), checking if it's already a valid curve".format(type(curve)))
                         
                         # For non-Revit curves, try to create Rhino curves from their properties
                         try:
@@ -832,11 +839,13 @@ class BaseProcessor:
                                     rhino_curve = rhino_line.ToNurbsCurve()
                                     if rhino_curve and rhino_curve.IsValid:
                                         rhino_curves.append(rhino_curve)
-                                        print("DEBUG: Created Rhino curve from Line.From/To properties")
+                                        # print("DEBUG: Created Rhino curve from Line.From/To properties")
                                     else:
-                                        print("Warning: Converted Rhino curve is invalid")
+                                        # print("Warning: Converted Rhino curve is invalid")
+                                        pass # Removed DEBUG print
                                 else:
-                                    print("Warning: Created Rhino line is invalid")
+                                    # print("Warning: Created Rhino line is invalid")
+                                    pass # Removed DEBUG print
                             elif hasattr(curve, 'GetEndPoint'):
                                 # Try using GetEndPoint method (like Revit curves)
                                 try:
@@ -853,22 +862,26 @@ class BaseProcessor:
                                             rhino_curve = rhino_line.ToNurbsCurve()
                                             if rhino_curve and rhino_curve.IsValid:
                                                 rhino_curves.append(rhino_curve)
-                                                print("DEBUG: Created Rhino curve from GetEndPoint method")
+                                                # print("DEBUG: Created Rhino curve from GetEndPoint method")
                                             else:
-                                                print("Warning: Converted Rhino curve from GetEndPoint is invalid")
+                                                # print("Warning: Converted Rhino curve from GetEndPoint is invalid")
+                                                pass # Removed DEBUG print
                                         else:
-                                            print("Warning: Created Rhino line from GetEndPoint is invalid")
+                                            # print("Warning: Created Rhino line from GetEndPoint is invalid")
+                                            pass # Removed DEBUG print
                                     else:
-                                        print("Warning: GetEndPoint returned None")
+                                        # print("Warning: GetEndPoint returned None")
+                                        pass # Removed DEBUG print
                                 except Exception as get_endpoint_error:
-                                    print("Warning: GetEndPoint failed: {}".format(str(get_endpoint_error)))
+                                    # print("Warning: GetEndPoint failed: {}".format(str(get_endpoint_error)))
+                                    pass # Removed DEBUG print
                             elif hasattr(curve, 'IsValid') and curve.IsValid:
                                 # It already has IsValid property (might be Rhino curve)
                                 rhino_curves.append(curve)
-                                print("DEBUG: Added existing valid curve (likely already Rhino)")
+                                # print("DEBUG: Added existing valid curve (likely already Rhino)")
                             else:
                                 # Try to get curve properties through reflection
-                                print("DEBUG: Attempting to inspect Line object properties")
+                                # print("DEBUG: Attempting to inspect Line object properties")
                                 try:
                                     # Try to get start and end points through different methods
                                     start_point = None
@@ -878,13 +891,13 @@ class BaseProcessor:
                                     for start_prop in ['StartPoint', 'Start', 'From', 'Point1']:
                                         if hasattr(curve, start_prop):
                                             start_point = getattr(curve, start_prop)
-                                            print("DEBUG: Found start point property: {}".format(start_prop))
+                                            # print("DEBUG: Found start point property: {}".format(start_prop))
                                             break
                                     
                                     for end_prop in ['EndPoint', 'End', 'To', 'Point2']:
                                         if hasattr(curve, end_prop):
                                             end_point = getattr(curve, end_prop)
-                                            print("DEBUG: Found end point property: {}".format(end_prop))
+                                            # print("DEBUG: Found end point property: {}".format(end_prop))
                                             break
                                     
                                     if start_point and end_point:
@@ -897,22 +910,28 @@ class BaseProcessor:
                                             rhino_curve = rhino_line.ToNurbsCurve()
                                             if rhino_curve and rhino_curve.IsValid:
                                                 rhino_curves.append(rhino_curve)
-                                                print("DEBUG: Created Rhino curve from discovered properties")
+                                                # print("DEBUG: Created Rhino curve from discovered properties")
                                             else:
-                                                print("Warning: Converted Rhino curve from discovered properties is invalid")
+                                                # print("Warning: Converted Rhino curve from discovered properties is invalid")
+                                                pass # Removed DEBUG print
                                         else:
-                                            print("Warning: Created Rhino line from discovered properties is invalid")
+                                            # print("Warning: Created Rhino line from discovered properties is invalid")
+                                            pass # Removed DEBUG print
                                     else:
-                                        print("Warning: Could not find start/end point properties on Line object")
-                                        print("DEBUG: Available attributes: {}".format([attr for attr in dir(curve) if not attr.startswith('_')]))
+                                        # print("Warning: Could not find start/end point properties on Line object")
+                                        # print("DEBUG: Available attributes: {}".format([attr for attr in dir(curve) if not attr.startswith('_')]))
+                                        pass # Removed DEBUG print
                                 except Exception as reflect_error:
-                                    print("Warning: Property reflection failed: {}".format(str(reflect_error)))
+                                    # print("Warning: Property reflection failed: {}".format(str(reflect_error)))
+                                    pass # Removed DEBUG print
                         except Exception as e:
-                             print("Warning: Failed to convert non-Revit curve to Rhino: {}".format(str(e)))
+                             # print("Warning: Failed to convert non-Revit curve to Rhino: {}".format(str(e)))
+                             pass # Removed DEBUG print
                 else:
-                    print("Warning: Null curve in input")
+                    # print("Warning: Null curve in input")
+                    pass # Removed DEBUG print
         
-        print("Converted {} valid Rhino curves from {} input curves".format(len(rhino_curves), len(input_curves) if input_curves else 0))
+        # print("Converted {} valid Rhino curves from {} input curves".format(len(rhino_curves), len(input_curves) if input_curves else 0))
         return rhino_curves
     
 

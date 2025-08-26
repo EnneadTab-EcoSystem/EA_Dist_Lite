@@ -22,16 +22,14 @@ except:
 # STANDARD IMPORTS
 # ============================================================================
 import System  # pyright: ignore
-import os
-from EnneadTab import ENVIRONMENT, ERROR_HANDLE, TIME, SAMPLE_FILE
-from EnneadTab.REVIT import REVIT_VIEW, REVIT_SELECTION, REVIT_UNIT, REVIT_FAMILY, REVIT_TAG
+from EnneadTab import TIME, SAMPLE_FILE
+from EnneadTab.REVIT import REVIT_VIEW, REVIT_SELECTION, REVIT_UNIT, REVIT_FAMILY
 from Autodesk.Revit import DB # pyright: ignore
 from base_processor import BaseProcessor
-import traceback
 
 
 class RevitProcess(BaseProcessor):
-    """Handles Revit-specific processing for drafting view export."""
+    """Handles Revit-specific processing for floor plan view export with filled regions."""
     
     def __init__(self, revit_doc, fillet_radius, offset_distance):
         """Initialize Revit processor.
@@ -135,11 +133,9 @@ class RevitProcess(BaseProcessor):
                     )
                     
                     if filled_region:
-                        print("Created filled region successfully")
                         t.Commit()
                         return True, filled_region
                     else:
-                        print("Failed to create filled region")
                         t.RollBack()
                         return False, None
                         
@@ -180,68 +176,25 @@ class RevitProcess(BaseProcessor):
                 print("Warning: Could not get original area from space: {}".format(str(e)))
                 original_area_rounded = 0
             
-            # Get department from space object
-            department = "N/A"
-            try:
-                dept_param = space_object.LookupParameter("Department")
-                if dept_param:
-                    dept_value = dept_param.AsString()
-                    if dept_value:
-                        department = dept_value
-            except Exception as e:
-                print("Warning: Could not get department from space: {}".format(str(e)))
+            
             
             # Create comment content with original area and department
-            comment_content = "{} - {} SF - Dept: {}".format(space_identifier, original_area_rounded, department)
+            comment_content = "{} - {:,} SF".format(space_identifier, original_area_rounded)
             
             # Add comment to filled region within transaction
             with DB.Transaction(self.revit_doc, "Add Comment to Filled Region") as t:
                 t.Start()
                 try:
-                    # Try multiple possible parameter names for comments
-                    comment_param = None
-                    param_names_to_try = ["Comments", "Comment", "Description", "Mark", "Type Comments"]
-                    
-                    for param_name in param_names_to_try:
-                        try:
-                            param = filled_region.LookupParameter(param_name)
-                            if param and not param.IsReadOnly:
-                                comment_param = param
-                                print("Found comment parameter: '{}'".format(param_name))
-                                break
-                        except Exception as e:
-                            print("Warning: Could not access parameter '{}': {}".format(param_name, str(e)))
-                            continue
-                    
-                    if comment_param:
+                    # Use only the "Comments" parameter per preference
+                    comment_param = filled_region.LookupParameter("Comments")
+                    if comment_param and not comment_param.IsReadOnly:
                         comment_param.Set(comment_content)
-                        print("Added comment to filled region: {}".format(comment_content))
                         t.Commit()
                         return True
-                    else:
-                        # If no comment parameter found, try to add a custom parameter or use a different approach
-                        print("Warning: No suitable comment parameter found on filled region")
-                        print("Available parameters on filled region:")
-                        try:
-                            for param in filled_region.Parameters:
-                                if param and param.Definition:
-                                    print("  - {} (ReadOnly: {})".format(param.Definition.Name, param.IsReadOnly))
-                        except Exception as e:
-                            print("  Could not list parameters: {}".format(str(e)))
-                        
-                        # Try to use the "Mark" parameter as fallback
-                        try:
-                            mark_param = filled_region.LookupParameter("Mark")
-                            if mark_param and not mark_param.IsReadOnly:
-                                mark_param.Set(comment_content)
-                                print("Added comment to filled region using Mark parameter: {}".format(comment_content))
-                                t.Commit()
-                                return True
-                        except Exception as e:
-                            print("Warning: Could not use Mark parameter: {}".format(str(e)))
-                        
-                        t.RollBack()
-                        return False
+                    
+                    print("Warning: 'Comments' parameter not found or read-only on filled region")
+                    t.RollBack()
+                    return False
                 except Exception as e:
                     print("Error in transaction adding comment: {}".format(str(e)))
                     t.RollBack()
@@ -302,43 +255,61 @@ class RevitProcess(BaseProcessor):
                 print("Warning: Could not create or find tag family. Tags will be skipped.")
                 return False
             
-            # Get tag symbol (type) - properly handle HashSet
-            tag_symbol_ids = tag_family.GetFamilySymbolIds()
-            if not tag_symbol_ids or tag_symbol_ids.Count == 0:
-                print("Warning: No tag symbols found in tag family")
-                return False
-            
-            # Convert HashSet to list and get first element
-            tag_symbol_id_list = list(tag_symbol_ids)
-            if not tag_symbol_id_list:
-                print("Warning: Could not convert tag symbol IDs to list")
-                return False
-            
-            tag_symbol = self.revit_doc.GetElement(tag_symbol_id_list[0])
-            if not tag_symbol.IsActive:
-                with DB.Transaction(self.revit_doc, "Activate Tag Symbol") as t:
-                    t.Start()
-                    tag_symbol.Activate()
-                    t.Commit()
+            # Find an IndependentTagType to use (by family or name)
+            tag_type = None
+            try:
+                candidate_types = DB.FilteredElementCollector(self.revit_doc) \
+                    .OfClass(DB.IndependentTagType) \
+                    .WhereElementIsElementType() \
+                    .ToElements()
+                for tt in candidate_types:
+                    try:
+                        if hasattr(tt, 'FamilyName') and tt.FamilyName and 'BubbleDiagram' in tt.FamilyName:
+                            tag_type = tt
+                            break
+                        if tt.Name and 'BubbleDiagram' in tt.Name:
+                            tag_type = tt
+                            break
+                    except:
+                        continue
+                if not tag_type and candidate_types:
+                    tag_type = candidate_types[0]
+            except Exception as _e:
+                tag_type = None
             
             # Create tag within transaction
             with DB.Transaction(self.revit_doc, "Create Bubble Diagram Tag") as t:
                 t.Start()
                 try:
                     # Create tag for the filled region using the tag type
+                    # Determine a placement point from the filled region's bounding box
+                    bbox = filled_region.get_BoundingBox(filled_region)
+                    if bbox and bbox.Min and bbox.Max:
+                        center = DB.XYZ(
+                            (bbox.Min.X + bbox.Max.X) / 2.0,
+                            (bbox.Min.Y + bbox.Max.Y) / 2.0,
+                            (bbox.Min.Z + bbox.Max.Z) / 2.0,
+                        )
+                    else:
+                        center = DB.XYZ(0, 0, 0)
+
+                    # Create tag using standard overload, then set type if available
                     tag = DB.IndependentTag.Create(
                         self.revit_doc,
-                        tag_symbol.Id,  # Tag type ID
                         floor_plan_view.Id,
                         DB.Reference(filled_region),
-                        True,  # HasLeader
+                        False,
+                        DB.TagMode.TM_ADDBY_CATEGORY,
                         DB.TagOrientation.Horizontal,
-                        filled_region.Location.Point
+                        center,
                     )
+                    if tag and tag_type:
+                        try:
+                            tag.ChangeTypeId(tag_type.Id)
+                        except Exception as change_type_err:
+                            print("Warning: Could not change tag type: {}".format(str(change_type_err)))
                     
                     if tag:
-                        print("Created tag for filled region: {} using tag type: {}".format(
-                            space_identifier, tag_symbol.Name))
                         t.Commit()
                         return True
                     else:
@@ -368,8 +339,8 @@ class RevitProcess(BaseProcessor):
                     existing_view.Name = existing_view.Name + "_Old({})".format(TIME.get_YYYY_MM_DD())
                 except Exception as e:
                     print("Could not rename existing view, creating new one with timestamp")
-                    import time
-                    view_name = "{}_{}".format(view_name, int(time.time()))
+                    current_owner = REVIT_SELECTION.get_owner(existing_view)
+                    view_name = "{}_[Ownership conflict by {}]".format(view_name, current_owner)
             
             # Find the level by name
             level = None
@@ -487,7 +458,7 @@ class RevitProcess(BaseProcessor):
             # Define categories to keep visible
             visible_categories = [
                 DB.BuiltInCategory.OST_DetailComponents,  # Detail items
-                DB.BuiltInCategory.OST_DetailTags,        # Detail tags
+                DB.BuiltInCategory.OST_DetailComponentTags,   
                 DB.BuiltInCategory.OST_Grids,             # Grids
                 DB.BuiltInCategory.OST_Dimensions         # Dimensions
             ]
@@ -502,72 +473,27 @@ class RevitProcess(BaseProcessor):
                         continue
                     
                     # Check if this category should be visible
-                    should_be_visible = category.Id.IntegerValue in [int(cat) for cat in visible_categories]
+                    should_be_visible = category.Id in [DB.Category.GetCategory(self.revit_doc, cat).Id for cat in visible_categories]
                     
                     # Set category visibility using the standard pattern from codebase
                     view.SetCategoryHidden(category.Id, not should_be_visible)
                     
-                    if should_be_visible:
-                        print("Showing category: {} ({})".format(category.Name, category.Id))
-                    else:
-                        print("Hiding category: {} ({})".format(category.Name, category.Id))
+                    # Keep logging minimal; only errors/warnings are printed elsewhere
                         
                 except Exception as e:
                     # Some categories might not be controllable, skip them
                     print("Warning: Could not control category {}: {}".format(category.Name, str(e)))
                     continue
             
-            # Method 2: Also explicitly hide specific model categories (backup approach)
-            try:
-                # Hide walls, doors, windows, and other model elements
-                model_categories_to_hide = [
-                    DB.BuiltInCategory.OST_Walls,
-                    DB.BuiltInCategory.OST_Doors,
-                    DB.BuiltInCategory.OST_Windows,
-                    DB.BuiltInCategory.OST_Rooms,
-                    DB.BuiltInCategory.OST_Areas,
-                    DB.BuiltInCategory.OST_Spaces,
-                    DB.BuiltInCategory.OST_Ceilings,
-                    DB.BuiltInCategory.OST_Floors,
-                    DB.BuiltInCategory.OST_Columns,
-                    DB.BuiltInCategory.OST_StructuralFraming,
-                    DB.BuiltInCategory.OST_Furniture,
-                    DB.BuiltInCategory.OST_PlumbingFixtures,
-                    DB.BuiltInCategory.OST_ElectricalFixtures,
-                    DB.BuiltInCategory.OST_MechanicalEquipment,
-                    DB.BuiltInCategory.OST_DuctCurves,
-                    DB.BuiltInCategory.OST_PipeCurves,
-                    DB.BuiltInCategory.OST_CableTray,
-                    DB.BuiltInCategory.OST_Conduit,
-                    DB.BuiltInCategory.OST_ElectricalEquipment,
-                    DB.BuiltInCategory.OST_LightingFixtures,
-                    DB.BuiltInCategory.OST_GenericModel,
-                    DB.BuiltInCategory.OST_ModelText,
-                    DB.BuiltInCategory.OST_ModelLines,
-                    DB.BuiltInCategory.OST_ModelGroups
-                ]
-                
-                for built_in_cat in model_categories_to_hide:
-                    try:
-                        category = DB.Category.GetCategory(self.revit_doc, built_in_cat)
-                        if category and view.CanCategoryBeHidden(category.Id):
-                            view.SetCategoryHidden(category.Id, True)
-                            print("Explicitly hiding model category: {}".format(category.Name))
-                    except Exception as e:
-                        print("Warning: Could not hide category {}: {}".format(built_in_cat, str(e)))
-                        continue
-                        
-            except Exception as e:
-                print("Warning: Error in Method 2 category hiding: {}".format(str(e)))
+            # Method 2 removed per request; rely solely on category visibility control above
             
             # Refresh the view to ensure changes take effect
             try:
                 view.RefreshActiveView()
-                print("Refreshed view to apply category changes")
             except Exception as e:
                 print("Warning: Could not refresh view: {}".format(str(e)))
             
-            print("Configured view categories for bubble diagram - hidden all except detail items, tags, grids, and dimensions")
+            # Done configuring visibility for bubble diagram view
             
         except Exception as e:
             print("Error hiding categories: {}".format(str(e)))
@@ -630,25 +556,25 @@ class RevitProcess(BaseProcessor):
             # Process boundary curves and create filled region
             filled_region_success = False
             created_filled_region = None
-            print("DEBUG: Processing {} boundary curves for space {}".format(len(boundary_curves) if boundary_curves else 0, space_identifier))
+            #
             if boundary_curves:
                 try:
                     # First, process the curves through BaseProcessor to apply fillet and offset
-                    print("DEBUG: Processing curves through BaseProcessor to apply fillet and offset")
+                    #
                     processed_curves = self.process_curves(boundary_curves, "revit")
                     
                     if processed_curves and len(processed_curves) > 0:
-                        print("DEBUG: BaseProcessor returned {} processed curves".format(len(processed_curves)))
+                        #
                         
                         # Get the first (and typically only) processed curve from BaseProcessor
                         processed_curve = processed_curves[0]
                         if processed_curve and hasattr(processed_curve, 'IsValid') and processed_curve.IsValid:
-                            print("DEBUG: Converting processed curve (with fillet/offset) to Revit CurveLoop")
+                            #
                             try:
                                 # Use RIR_ENCODER.ToCurveLoop() to convert the processed curve directly to Revit CurveLoop
                                 curve_loop = RIR_ENCODER.ToCurveLoop(processed_curve)
                                 if curve_loop and self._has_curves(curve_loop):
-                                    print("DEBUG: Successfully converted processed curve to Revit CurveLoop")
+                                    #
                                     
                                     # Create filled region with the CurveLoop
                                     try:
@@ -658,16 +584,16 @@ class RevitProcess(BaseProcessor):
                                     except Exception as e:
                                         print("Failed to create filled region with processed curves for space {}: {}".format(space_identifier, str(e)))
                                 else:
-                                    print("DEBUG: Failed to convert processed curve to valid Revit CurveLoop")
+                                    #
                                     curve_loop = None
                             except Exception as e:
-                                print("DEBUG: Error converting processed curve to Revit CurveLoop: {}".format(str(e)))
+                                #
                                 curve_loop = None
                         else:
-                            print("DEBUG: Processed curve is invalid")
+                            #
                             curve_loop = None
                     else:
-                        print("DEBUG: BaseProcessor failed to process curves - NO FALLBACK")
+                        #
                         curve_loop = None
                     
                     if not curve_loop:
@@ -720,7 +646,7 @@ class RevitProcess(BaseProcessor):
             level_name = results.get('level_name', 'Unknown_Level')
             processed_spaces = results.get('processed_spaces', [])
             
-            print("Processing {} spaces for Revit export (Level: {})".format(len(processed_spaces), level_name))
+            # Processing spaces for Revit export
             
             # Create floor plan view
             floor_plan_view = self._create_floor_plan_view(level_name)
@@ -733,7 +659,7 @@ class RevitProcess(BaseProcessor):
                 if self._process_space_for_revit(space_data, floor_plan_view):
                     processed_count += 1
             
-            print("Successfully processed {}/{} spaces for Revit".format(processed_count, len(processed_spaces)))
+            # Done processing spaces for Revit
             return True
             
         except Exception as e:
@@ -782,18 +708,7 @@ class RevitProcess(BaseProcessor):
                 print("WARNING: Filled region has no parameters for space: {}".format(space_identifier))
                 return False
             
-            # List available parameters for debugging
-            print("Available parameters on filled region for space '{}':".format(space_identifier))
-            try:
-                for param in filled_region.Parameters:
-                    if param and param.Definition:
-                        print("  - {} (ReadOnly: {}, StorageType: {})".format(
-                            param.Definition.Name, 
-                            param.IsReadOnly,
-                            param.StorageType
-                        ))
-            except Exception as e:
-                print("  Could not list parameters: {}".format(str(e)))
+            
             
             return True
             
