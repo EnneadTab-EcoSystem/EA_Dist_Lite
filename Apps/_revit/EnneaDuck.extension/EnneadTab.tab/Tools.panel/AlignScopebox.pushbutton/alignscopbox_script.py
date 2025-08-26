@@ -77,10 +77,10 @@ def try_fix(scopeboxs, mode, ref_line):
             else:
                 print ("conditions no exist")
 
-def update_display_text(scopeboxs):
+def update_display_text(scopeboxs, ref_line):
     scopeboxs_condition_ready = True
     for scopebox in scopeboxs:
-        if is_scopebox_ok(find_all_angles_scopbox(scopebox)) == False:
+        if is_scopebox_ok(find_all_angles_scopbox(scopebox, ref_line)) == False:
             scopeboxs_condition_ready = False
 
     if scopeboxs_condition_ready:
@@ -120,7 +120,7 @@ def main():
     with revit.Transaction("Align Scopebox"):
         display_text = "abcdefghijklmn"
         try_fix(scopeboxs,"default mode B", ref_line)
-        display_text = update_display_text(scopeboxs)
+        display_text = update_display_text(scopeboxs, ref_line)
 
     while True:
         if  "Not all scopeboxs are ready." in display_text:
@@ -133,12 +133,12 @@ def main():
         if result == "Try one more time(Clockwise)":
             with revit.Transaction("Align Scopebox"):
                 try_fix(scopeboxs,"default mode A", ref_line)
-                display_text = update_display_text(scopeboxs)
+                display_text = update_display_text(scopeboxs, ref_line)
 
         elif result == "Try one more time(Counter Clockwise)":
             with revit.Transaction("Align Scopebox"):
                 try_fix(scopeboxs,"default mode B", ref_line)
-                display_text = update_display_text(scopeboxs)
+                display_text = update_display_text(scopeboxs, ref_line)
 
         elif result == "Confirm and close":
             break
