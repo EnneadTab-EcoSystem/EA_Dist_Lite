@@ -881,6 +881,15 @@
         "tab": "Proj. 2317",
         "tab_icon": null
     },
+    "EnneadTab Tailor.tab\\Proj. 2317.panel\\Kimmel.pulldown\\transfer_door_location.pushbutton\\transfer_door_location_script.py": {
+        "alias": "Transfer Door Location",
+        "doc": "Transfer door location based on room analysis across phases. \nAutomatically sets door location parameter based on connected rooms, \nprioritizing non-corridor rooms and smaller rooms when both sides are valid.",
+        "icon": "EnneadTab Tailor.tab\\Proj. 2317.panel\\Kimmel.pulldown\\transfer_door_location.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab Tailor.tab\\Proj. 2317.panel\\Kimmel.pulldown\\transfer_door_location.pushbutton\\transfer_door_location_script.py",
+        "tab": "Proj. 2317",
+        "tab_icon": null
+    },
     "EnneadTab Tailor.tab\\Proj. 2317.panel\\Kimmel.pulldown\\update_dr_style_name.pushbutton\\update_dr_style_name_script.py": {
         "alias": "Update Dr Style Name",
         "doc": "Sen Zhang has not writed documentation for this tool, but he should!",
