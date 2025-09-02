@@ -157,11 +157,3 @@ def transfer_door_locations(doc):
 
 if __name__ == "__main__":
     transfer_door_locations(DOC)
-
-
-
-
-
-
-
- 

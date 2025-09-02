@@ -28,3 +28,5 @@ layout:
   - make_template_from_current_view
   - pim_number_fixer
   - random_deselect
+  - explode_axon
+  - area2mass
