@@ -94,6 +94,11 @@ def apply_styles_to_control(control):
     elif isinstance(control, Eto.Forms.StackLayout):
         control.BackgroundColor = dark_background_color
 
+    if hasattr(control, 'BackgroundColor'):
+            control.BackgroundColor = dark_background_color
+    if hasattr(control, 'TextColor'):
+        control.TextColor = text_color
+
     # Check and replace image path for ImageView
     # elif isinstance(control, Eto.Forms.ImageView):
     #     #  and "Ennead_Architects_Logo" in control.Image.FileName
@@ -107,6 +112,9 @@ def apply_styles_to_control(control):
     if hasattr(control, "Controls"):
         for sub_control in control.Controls:
             apply_styles_to_control(sub_control)
+    elif isinstance(control, Eto.Forms.Container):
+        for child in control.Children:
+            apply_styles_to_control(child)
     elif hasattr(control, "Items"):
         if isinstance(control, Eto.Forms.MenuItem):
             pass

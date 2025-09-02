@@ -3,139 +3,215 @@ __title__ = "ViewBlockDiagram"
 __doc__ = "This button does ViewBlockDiagram when left click"
 
 
-from EnneadTab import ERROR_HANDLE, LOG
+from EnneadTab import ERROR_HANDLE, LOG, DATA_FILE
+from EnneadTab.RHINO import RHINO_UI
 import math
 import rhinoscriptsyntax as rs
 import scriptcontext as sc
 import Rhino
-try:
-    import Eto.Forms as forms
-    import Eto.Drawing as drawing
-except Exception:
-    forms = None
-    drawing = None
+import System
+import Eto.Forms
+import Eto.Drawing
 
-# Global sampling resolution (number of rays over 360 degrees)
-RESOLUTION = 360
 SETTINGS_SECTION = "ViewBlockDiagram"
-SETTINGS_KEYS = {
-    "resolution": "resolution",
-    "ray_length": "ray_length",
+
+
+
+
+
+# Default settings dictionary
+DEFAULT_SETTINGS = {
+    "resolution": 360,
+    "ray_length": 1000.0
 }
 
-@LOG.log(__file__, __title__)
-@ERROR_HANDLE.try_catch_error()
-def _select_obstacles():
-    # Use no filter to avoid stub errors; we'll accept any and extract geometry later
-    ids = rs.GetObjects("Select obstacle objects", preselect=True, select=True)
-    return ids or []
+def _get_settings():
+    """Get current settings with defaults"""
+    settings = DATA_FILE.get_data(SETTINGS_SECTION, is_local=True) or {}
+    return {
+        "resolution": int(settings.get("resolution", DEFAULT_SETTINGS["resolution"])),
+        "ray_length": float(settings.get("ray_length", DEFAULT_SETTINGS["ray_length"]))
+    }
+
+def _save_settings(settings_dict):
+    """Save settings to DATA_FILE"""
+    DATA_FILE.set_data(settings_dict, SETTINGS_SECTION, is_local=True)
 
 
-def _pick_viewer_point():
-    return rs.GetPoint("Pick viewer point (XY plane)")
 
 
-def _load_settings(default_resolution, default_length):
-    # Try Rhino document user text first
-    res_val = rs.GetDocumentUserText(SETTINGS_SECTION + ":" + SETTINGS_KEYS["resolution"]) or ""
-    len_val = rs.GetDocumentUserText(SETTINGS_SECTION + ":" + SETTINGS_KEYS["ray_length"]) or ""
-    try:
-        res_loaded = int(res_val) if res_val else default_resolution
-    except Exception:
-        res_loaded = default_resolution
-    try:
-        len_loaded = float(len_val) if len_val else default_length
-    except Exception:
-        len_loaded = default_length
-
-    # Fallback to sticky memory if available
-    res_loaded = int(sc.sticky.get(SETTINGS_SECTION + ":" + SETTINGS_KEYS["resolution"], res_loaded))
-    len_loaded = float(sc.sticky.get(SETTINGS_SECTION + ":" + SETTINGS_KEYS["ray_length"], len_loaded))
-    return res_loaded, len_loaded
 
 
-def _save_settings(resolution, length):
-    key_res = SETTINGS_SECTION + ":" + SETTINGS_KEYS["resolution"]
-    key_len = SETTINGS_SECTION + ":" + SETTINGS_KEYS["ray_length"]
-    rs.SetDocumentUserText(key_res, str(int(resolution)))
-    rs.SetDocumentUserText(key_len, str(float(length)))
-    sc.sticky[key_res] = int(resolution)
-    sc.sticky[key_len] = float(length)
 
 
-def _apply_dark_theme(widget):
-    if drawing is None:
-        return
-    try:
-        bg = drawing.Color.FromArgb(30, 30, 30)
-        fg = drawing.Color.FromArgb(230, 230, 230)
-        if hasattr(widget, 'BackgroundColor'):
-            widget.BackgroundColor = bg
-        if hasattr(widget, 'TextColor'):
-            widget.TextColor = fg
-        if isinstance(widget, forms.Container):
-            for child in widget.Children:
-                _apply_dark_theme(child)
-    except Exception:
-        pass
-
-
-def _get_options_with_eto(default_resolution, default_length):
-    if forms is None:
-        return default_resolution, default_length
-
-    class OptionsDialog(forms.Dialog[bool]):
+class OptionsDialog(Eto.Forms.Dialog[bool]):
         def __init__(self):
             super(OptionsDialog, self).__init__()
             self.Title = "View Block Diagram Options"
-            self.Padding = drawing.Padding(10)
+            self.Padding = Eto.Drawing.Padding(10)
             self.Resizable = False
 
-            loaded_res, loaded_len = _load_settings(default_resolution, default_length)
+            settings = _get_settings()
+            loaded_res = settings["resolution"]
+            loaded_len = settings["ray_length"]
+            
+            # Initialize selections as empty
+            self.selected_obstacles = []
+            self.selected_viewer_point = None
+            
+            # Create labels
+            self.obstacle_label = Eto.Forms.Label(Text="No obstacles selected")
+            self.viewer_point_label = Eto.Forms.Label(Text="No viewer point selected")
 
-            self.resolution_updown = forms.NumericUpDown()
+            self.resolution_updown = Eto.Forms.NumericUpDown()
             self.resolution_updown.DecimalPlaces = 0
             self.resolution_updown.MinValue = 3
             self.resolution_updown.MaxValue = 4096
             self.resolution_updown.Value = loaded_res
 
-            self.length_updown = forms.NumericUpDown()
+            self.length_updown = Eto.Forms.NumericUpDown()
             self.length_updown.DecimalPlaces = 1
             self.length_updown.MinValue = 1.0
             self.length_updown.MaxValue = 1e6
             self.length_updown.Value = loaded_len
 
-            layout = forms.DynamicLayout()
-            layout.Spacing = drawing.Size(6, 6)
-            lbl1 = forms.Label(Text="Resolution (rays)")
-            lbl2 = forms.Label(Text="Ray length")
-            layout.AddRow(lbl1, self.resolution_updown)
-            layout.AddRow(lbl2, self.length_updown)
+            # Add obstacle selection button and label
+            self.select_obstacles_button = Eto.Forms.Button(Text="Select Obstacles")
+            self.select_obstacles_button.Click += self._on_select_obstacles
 
-            ok_button = forms.Button(Text="OK")
-            cancel_button = forms.Button(Text="Cancel")
-            ok_button.Click += self._on_ok
+            # Add viewer point selection button and label
+            self.select_viewer_point_button = Eto.Forms.Button(Text="Select Viewer Point")
+            self.select_viewer_point_button.Click += self._on_select_viewer_point
+
+            layout = Eto.Forms.DynamicLayout()
+            layout.Spacing = Eto.Drawing.Size(6, 6)
+            
+            # Add obstacle selection section
+            layout.AddRow(Eto.Forms.Label(Text="Obstacles:"))
+            layout.AddRow(self.obstacle_label)
+            layout.AddRow(self.select_obstacles_button)
+            layout.AddSeparateRow()
+            
+            # Add viewer point selection section
+            layout.AddRow(Eto.Forms.Label(Text="Viewer Point:"))
+            layout.AddRow(self.viewer_point_label)
+            layout.AddRow(self.select_viewer_point_button)
+            layout.AddSeparateRow()
+            
+            # Add existing controls
+            layout.AddRow(Eto.Forms.Label(Text="Resolution (rays)"), self.resolution_updown)
+            layout.AddRow(Eto.Forms.Label(Text="Ray length"), self.length_updown)
+
+            cancel_button = Eto.Forms.Button(Text="Cancel")
             cancel_button.Click += self._on_cancel
 
-            layout.AddSeparateRow(None, ok_button, cancel_button, None)
+            layout.AddSeparateRow(None, cancel_button, None)
             self.Content = layout
 
-            _apply_dark_theme(self)
+            RHINO_UI.apply_dark_style(self)
 
-        def _on_ok(self, sender, e):
+        def _select_obstacles(self):
+            """Select obstacle objects"""
+            # Use no filter to avoid stub errors; we'll accept any and extract geometry later
+            ids = rs.GetObjects("Select obstacle objects", preselect=True, select=True)
+            return ids or []
+
+        def _pick_viewer_point(self):
+            """Pick viewer point with dynamic ray preview"""
+            geos = _build_geometry_list(self.selected_obstacles)
+            get_dot_pt_instance = GetViewerPoint(geos, int(self.resolution_updown.Value), float(self.length_updown.Value))
+            get_dot_pt_instance.Get()
+            return get_dot_pt_instance.Point()
+
+        def _on_select_obstacles(self, sender, e):
+            # Temporarily close dialog for object selection
+            self.Close(False)
+            try:
+                obstacles = self._select_obstacles()
+                if obstacles:
+                    self.selected_obstacles = obstacles
+                    # Reopen dialog with updated obstacle count
+                    self._reopen_dialog()
+                else:
+                    # Reopen dialog without changes
+                    self._reopen_dialog()
+            except Exception:
+                # Reopen dialog on error
+                self._reopen_dialog()
+
+        def _on_select_viewer_point(self, sender, e):
+            if not self.selected_obstacles:
+                rs.MessageBox("Please select at least one obstacle object.")
+                return
+            # Temporarily close dialog for point selection
+            self.Close(False)
+            try:
+                viewer_point = self._pick_viewer_point()
+                if viewer_point:
+                    self.selected_viewer_point = viewer_point
+                    # Auto-start processing after viewer point is selected
+                    self._auto_process()
+                else:
+                    # Reopen dialog without changes
+                    self._reopen_dialog()
+            except Exception:
+                # Reopen dialog on error
+                self._reopen_dialog()
+
+        def _auto_process(self):
+            """Automatically process the ray casting after all inputs are collected"""
+            if not self.selected_obstacles or not self.selected_viewer_point:
+                return
+                
+            # Save current settings
+            current_settings = {
+                "resolution": int(self.resolution_updown.Value),
+                "ray_length": float(self.length_updown.Value)
+            }
+            _save_settings(current_settings)
+                
+            # Close the dialog and start processing
             self.Close(True)
+            
+            # Process the ray casting
+            try:
+                geos = _build_geometry_list(self.selected_obstacles)
+                if not geos:
+                    rs.MessageBox("No valid geometry for ray casting.")
+                    return
+
+                origin = Rhino.Geometry.Point3d(self.selected_viewer_point.X, self.selected_viewer_point.Y, self.selected_viewer_point.Z)
+                good_flags, end_points = _cast_rays(origin, int(self.resolution_updown.Value), float(self.length_updown.Value), geos)
+                added_ids = _create_arc_surfaces_from_groups(origin, good_flags, end_points)
+
+                if sc.doc:
+                    sc.doc.Views.Redraw()
+                print("Created {} arc surfaces from ray groups".format(len(added_ids)))
+                
+            except Exception as e:
+                rs.MessageBox("Error during processing: {}".format(str(e)))
+
+
 
         def _on_cancel(self, sender, e):
             self.Close(False)
+            
+        def _reopen_dialog(self):
+            """Reopen the dialog with current values"""
+            # Create a new dialog instance with current values
+            new_dlg = OptionsDialog()
+            new_dlg.selected_obstacles = self.selected_obstacles
+            if self.selected_obstacles:
+                new_dlg.obstacle_label.Text = "{} obstacles selected".format(len(self.selected_obstacles))
+            else:
+                new_dlg.obstacle_label.Text = "No obstacles selected"
+            new_dlg.resolution_updown.Value = self.resolution_updown.Value
+            new_dlg.length_updown.Value = self.length_updown.Value
+            
+            # Show the new dialog
+            new_dlg.ShowModal(Rhino.UI.RhinoEtoApp.MainWindow)
 
-    dlg = OptionsDialog()
-    rc = dlg.ShowModal(Rhino.UI.RhinoEtoApp.MainWindow)
-    if rc:
-        res = int(dlg.resolution_updown.Value)
-        length = float(dlg.length_updown.Value)
-        _save_settings(res, length)
-        return res, length
-    return None, None
+
 
 
 def _build_geometry_list(obstacle_ids):
@@ -173,55 +249,114 @@ def _cast_rays(origin, sample_count, ray_length, geometry_list):
     return good_flags, end_points
 
 
-def _create_lofts_between_adjacent_good_rays(origin, good_flags, end_points):
+def _create_arc_surfaces_from_groups(origin, good_flags, end_points):
+    """Create surfaces using boundary arc and first/last lines of each group"""
     added = []
     count = len(good_flags)
+    
+    # Find groups of consecutive good rays
+    groups = []
+    current_group = []
+    
     for i in range(count):
-        j = (i + 1) % count
-        if not (good_flags[i] and good_flags[j]):
+        if good_flags[i]:
+            current_group.append(i)
+        else:
+            if len(current_group) >= 2:  # Need at least 2 rays to form a surface
+                groups.append(current_group)
+            current_group = []
+    
+    # Handle the case where good rays wrap around the end
+    if len(current_group) >= 2:
+        if current_group and good_flags[0]:  # Check if first ray is also good
+            # Merge with first group if it exists
+            if groups and good_flags[0]:
+                groups[0] = current_group + groups[0]
+            else:
+                groups.append(current_group)
+        else:
+            groups.append(current_group)
+    
+    # Create surfaces for each group
+    for group in groups:
+        if len(group) < 3:  # Need at least 3 rays to create a proper arc
             continue
-        crv1 = Rhino.Geometry.Line(origin, end_points[i]).ToNurbsCurve()
-        crv2 = Rhino.Geometry.Line(origin, end_points[j]).ToNurbsCurve()
-        breps = Rhino.Geometry.Brep.CreateFromLoft([crv1, crv2], Rhino.Geometry.Point3d.Unset, Rhino.Geometry.Point3d.Unset, Rhino.Geometry.LoftType.Normal, False)
-        if breps:
-            for b in breps:
-                obj_id = sc.doc.Objects.AddBrep(b) if sc.doc else None
-                if obj_id:
-                    added.append(obj_id)
+            
+        # Use first, middle, and last ray of the group for 3-point arc
+        first_idx = group[0]
+        middle_idx = group[len(group) // 2]  # Middle ray of the group
+        last_idx = group[-1]
+        
+        # Create first and last radius lines from origin to end points
+        first_line = Rhino.Geometry.Line(origin, end_points[first_idx]).ToNurbsCurve()
+        last_line = Rhino.Geometry.Line(origin, end_points[last_idx]).ToNurbsCurve()
+        
+        # Create 3-point arc using first, middle, and last points
+        boundary_arc = Rhino.Geometry.Arc(
+            end_points[first_idx],      # Start point
+            end_points[middle_idx],     # Point on arc (middle ray)
+            end_points[last_idx]        # End point
+        ).ToNurbsCurve()
+        
+                # create boundary surface by the first last and arc
+
+        # Create boundary curves list: first radius line, boundary arc, last radius line
+        boundary_curves = [first_line, boundary_arc, last_line]
+        
+        # Join the boundary curves into a single closed curve
+        tolerance = sc.doc.ModelAbsoluteTolerance
+        joined_curves = Rhino.Geometry.Curve.JoinCurves(boundary_curves, tolerance)
+        
+        if joined_curves and len(joined_curves) > 0:
+            # Use the first joined curve to create planar surface
+            closed_boundary = joined_curves[0]
+            
+            # Create a planar surface from the joined boundary curve
+            brep = Rhino.Geometry.Brep.CreatePlanarBreps(closed_boundary, tolerance)
+            if brep:
+                for b in brep:
+                    obj_id = sc.doc.Objects.AddBrep(b) if sc.doc else None
+                    if obj_id:
+                        added.append(obj_id)
+        else:
+            print("Failed to join boundary curves")
+                    
+
+    
     return added
 
+class GetViewerPoint (Rhino.Input.Custom.GetPoint):
 
+    def __init__(self, boundary_shapes, sample_count, ray_length):
+        self.boundary_shapes = boundary_shapes
+        self.sample_count = int(sample_count/10)# use smaller count to make preview very fast
+        self.ray_length = ray_length
+        
+    def OnDynamicDraw(self, e):
+        current_point = e.CurrentPoint
+        good_flags, end_points = _cast_rays(current_point, self.sample_count, self.ray_length, self.boundary_shapes)
+
+        # Draw rays for good (unobstructed) directions
+        for i, is_good in enumerate(good_flags):
+            if is_good:
+                try:
+                    # Use the pre-calculated endpoint from _cast_rays
+                    end_point = end_points[i]
+                    
+                    # Draw the ray line from current point to endpoint
+                    e.Display.DrawLine(current_point, end_point, System.Drawing.Color.White, 10)
+                except Exception as ex:
+                    print("Error drawing ray line: {}".format(str(ex)))
+
+
+        e.Display.DrawDot(current_point, "Viewer")
+   
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def view_block_diagram():
-    obstacle_ids = _select_obstacles()
-    if not obstacle_ids:
-        return
-
-    viewer_point = _pick_viewer_point()
-    if viewer_point is None:
-        return
-
-    # Use global resolution unless overridden by user via ETO form
-    default_length = 1000.0
-    res, length = _get_options_with_eto(RESOLUTION, default_length)
-    if res is None or length is None:
-        res = RESOLUTION
-        length = default_length
-
-    geos = _build_geometry_list(obstacle_ids)
-    if not geos:
-        rs.MessageBox("No valid geometry for ray casting.")
-        return
-
-    origin = Rhino.Geometry.Point3d(viewer_point.X, viewer_point.Y, viewer_point.Z)
-    good_flags, end_points = _cast_rays(origin, res, length, geos)
-    added_ids = _create_lofts_between_adjacent_good_rays(origin, good_flags, end_points)
-
-    if sc.doc:
-        sc.doc.Views.Redraw()
-    # Keep logging simple to avoid API mismatches in linter
-    print("Created {} lofts between adjacent good rays".format(len(added_ids)))
+    # Show the ETO dialog - processing happens automatically when complete
+    dlg = OptionsDialog()
+    dlg.ShowModal(Rhino.UI.RhinoEtoApp.MainWindow)
 
     
 if __name__ == "__main__":
