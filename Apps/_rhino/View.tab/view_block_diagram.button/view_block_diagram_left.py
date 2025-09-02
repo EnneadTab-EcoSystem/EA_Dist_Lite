@@ -1,11 +1,30 @@
 
+# -*- coding: utf-8 -*-
+
 __title__ = "ViewBlockDiagram"
-__doc__ = "This button does ViewBlockDiagram when left click"
+__doc__ = """Generate view block diagrams by casting rays from a viewer point to identify unobstructed view areas.
+
+This tool creates 3D surfaces representing the visible areas from a specified viewer point, 
+taking into account obstacles that block the view rays. Perfect for:
+- Site analysis and view studies
+- Building massing and urban planning
+- Landscape design and sightline analysis
+- Solar access and shadow studies
+
+The process involves:
+1. Configuring ray casting parameters (resolution and ray length)
+2. Selecting obstacle objects that block the view
+3. Picking a viewer point location
+4. Automatic generation of view block surfaces
+
+The tool automatically groups consecutive unobstructed rays and creates 
+bounded surfaces using arcs and radius lines for accurate representation."""
 
 
 from EnneadTab import ERROR_HANDLE, LOG, DATA_FILE
 from EnneadTab.RHINO import RHINO_UI
 import math
+import os
 import rhinoscriptsyntax as rs
 import scriptcontext as sc
 import Rhino
@@ -21,7 +40,7 @@ SETTINGS_SECTION = "ViewBlockDiagram"
 
 # Default settings dictionary
 DEFAULT_SETTINGS = {
-    "resolution": 360,
+    "resolution": 1000,
     "ray_length": 1000.0
 }
 
@@ -47,9 +66,10 @@ def _save_settings(settings_dict):
 class OptionsDialog(Eto.Forms.Dialog[bool]):
         def __init__(self):
             super(OptionsDialog, self).__init__()
-            self.Title = "View Block Diagram Options"
-            self.Padding = Eto.Drawing.Padding(10)
-            self.Resizable = False
+            self.Title = "View Block Diagram"
+            self.Padding = Eto.Drawing.Padding(5)
+            self.Resizable = True
+            self.Width = 600
 
             settings = _get_settings()
             loaded_res = settings["resolution"]
@@ -68,42 +88,78 @@ class OptionsDialog(Eto.Forms.Dialog[bool]):
             self.resolution_updown.MinValue = 3
             self.resolution_updown.MaxValue = 4096
             self.resolution_updown.Value = loaded_res
+            self.resolution_updown.Width = 120
+            self.resolution_updown.Height = 25
 
             self.length_updown = Eto.Forms.NumericUpDown()
             self.length_updown.DecimalPlaces = 1
             self.length_updown.MinValue = 1.0
             self.length_updown.MaxValue = 1e6
             self.length_updown.Value = loaded_len
+            self.length_updown.Width = 120
+            self.length_updown.Height = 25
 
             # Add obstacle selection button and label
-            self.select_obstacles_button = Eto.Forms.Button(Text="Select Obstacles")
+            self.select_obstacles_button = Eto.Forms.Button(Text="Pick Input Obstacles")
             self.select_obstacles_button.Click += self._on_select_obstacles
+            self.select_obstacles_button.Width = 150
 
             # Add viewer point selection button and label
-            self.select_viewer_point_button = Eto.Forms.Button(Text="Select Viewer Point")
+            self.select_viewer_point_button = Eto.Forms.Button(Text="Pick Viewer Point")
             self.select_viewer_point_button.Click += self._on_select_viewer_point
+            self.select_viewer_point_button.Width = 150
 
+            # Create main layout with better spacing
             layout = Eto.Forms.DynamicLayout()
-            layout.Spacing = Eto.Drawing.Size(6, 6)
+            layout.Spacing = Eto.Drawing.Size(10, 10)
             
-            # Add obstacle selection section
-            layout.AddRow(Eto.Forms.Label(Text="Obstacles:"))
+            # Add branding section with logo
+            logo_label = Eto.Forms.ImageView()
+            logo_label.Size = Eto.Drawing.Size(200, 30)
+            self.logo = logo_label  # RHINO_UI expects this attribute
+            layout.AddRow(logo_label)
+            layout.AddSeparateRow()
+            
+            # Add main instruction
+            layout.AddRow(Eto.Forms.Label(Text="Configure settings and pick obstacles and viewer point to generate view block diagram.", Font=Eto.Drawing.Font("Arial", 10)))
+            layout.AddSeparateRow()
+            
+            # Step 1: Configure Settings
+            layout.AddRow(Eto.Forms.Label(Text="Step 1: Configure Settings", Font=Eto.Drawing.Font("Arial", 11, Eto.Drawing.FontStyle.Bold)))
+            layout.AddRow(Eto.Forms.Label(Text="Adjust ray casting parameters:"))
+            
+            # Create a table layout for the settings to ensure proper alignment
+            settings_layout = Eto.Forms.TableLayout()
+            settings_layout.Spacing = Eto.Drawing.Size(15, 8)
+            settings_layout.Rows.Add(Eto.Forms.TableRow(
+                Eto.Forms.Label(Text="Resolution (rays):", Width=150),
+                self.resolution_updown
+            ))
+            settings_layout.Rows.Add(Eto.Forms.TableRow(
+                Eto.Forms.Label(Text="Ray length:", Width=150),
+                self.length_updown
+            ))
+            layout.AddRow(settings_layout)
+            layout.AddSeparateRow()
+            
+            # Step 2: Obstacle Selection
+            layout.AddRow(Eto.Forms.Label(Text="Step 2: Pick Input Obstacles", Font=Eto.Drawing.Font("Arial", 11, Eto.Drawing.FontStyle.Bold)))
+            layout.AddRow(Eto.Forms.Label(Text="Select objects that will block the view rays."))
             layout.AddRow(self.obstacle_label)
             layout.AddRow(self.select_obstacles_button)
             layout.AddSeparateRow()
             
-            # Add viewer point selection section
-            layout.AddRow(Eto.Forms.Label(Text="Viewer Point:"))
+            # Step 3: Viewer Point Selection
+            layout.AddRow(Eto.Forms.Label(Text="Step 3: Pick Viewer Point", Font=Eto.Drawing.Font("Arial", 11, Eto.Drawing.FontStyle.Bold)))
+            layout.AddRow(Eto.Forms.Label(Text="Select the point where the viewer will be located."))
             layout.AddRow(self.viewer_point_label)
             layout.AddRow(self.select_viewer_point_button)
             layout.AddSeparateRow()
-            
-            # Add existing controls
-            layout.AddRow(Eto.Forms.Label(Text="Resolution (rays)"), self.resolution_updown)
-            layout.AddRow(Eto.Forms.Label(Text="Ray length"), self.length_updown)
 
+            # Add cancel button
             cancel_button = Eto.Forms.Button(Text="Cancel")
             cancel_button.Click += self._on_cancel
+            cancel_button.Width = 80
 
             layout.AddSeparateRow(None, cancel_button, None)
             self.Content = layout

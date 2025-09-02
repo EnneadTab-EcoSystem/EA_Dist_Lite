@@ -2206,10 +2206,42 @@ EA_ToggleLayerPointer</script>
         <locale_1033>ViewBlockDiagram</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>This button does ViewBlockDiagram when left click</locale_1033>
+        <locale_1033>Generate view block diagrams by casting rays from a viewer point to identify unobstructed view areas.
+
+This tool creates 3D surfaces representing the visible areas from a specified viewer point, 
+taking into account obstacles that block the view rays. Perfect for:
+- Site analysis and view studies
+- Building massing and urban planning
+- Landscape design and sightline analysis
+- Solar access and shadow studies
+
+The process involves:
+1. Configuring ray casting parameters (resolution and ray length)
+2. Selecting obstacle objects that block the view
+3. Picking a viewer point location
+4. Automatic generation of view block surfaces
+
+The tool automatically groups consecutive unobstructed rays and creates 
+bounded surfaces using arcs and radius lines for accurate representation.</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>This button does ViewBlockDiagram when left click</locale_1033>
+        <locale_1033>Generate view block diagrams by casting rays from a viewer point to identify unobstructed view areas.
+
+This tool creates 3D surfaces representing the visible areas from a specified viewer point, 
+taking into account obstacles that block the view rays. Perfect for:
+- Site analysis and view studies
+- Building massing and urban planning
+- Landscape design and sightline analysis
+- Solar access and shadow studies
+
+The process involves:
+1. Configuring ray casting parameters (resolution and ray length)
+2. Selecting obstacle objects that block the view
+3. Picking a viewer point location
+4. Automatic generation of view block surfaces
+
+The tool automatically groups consecutive unobstructed rays and creates 
+bounded surfaces using arcs and radius lines for accurate representation.</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>ViewBlockDiagram</locale_1033>

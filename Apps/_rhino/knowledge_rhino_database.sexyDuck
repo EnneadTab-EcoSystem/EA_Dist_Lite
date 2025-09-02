@@ -1342,7 +1342,7 @@
         "script": "View.tab\\view_block_diagram.button\\view_block_diagram_left.py",
         "icon": "View.tab\\view_block_diagram.button\\icon.png",
         "alias": "ViewBlockDiagram",
-        "doc": "This button does ViewBlockDiagram when left click",
+        "doc": "Generate view block diagrams by casting rays from a viewer point to identify unobstructed view areas.\n\nThis tool creates 3D surfaces representing the visible areas from a specified viewer point, \ntaking into account obstacles that block the view rays. Perfect for:\n- Site analysis and view studies\n- Building massing and urban planning\n- Landscape design and sightline analysis\n- Solar access and shadow studies\n\nThe process involves:\n1. Configuring ray casting parameters (resolution and ray length)\n2. Selecting obstacle objects that block the view\n3. Picking a viewer point location\n4. Automatic generation of view block surfaces\n\nThe tool automatically groups consecutive unobstructed rays and creates \nbounded surfaces using arcs and radius lines for accurate representation.",
         "tab": "View.tab",
         "tab_icon": "View.tab\\icon.png",
         "is_popular": false
