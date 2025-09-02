@@ -58,8 +58,7 @@ USER_DOWNLOAD_FOLDER = os.path.join(USER_PROFILE_FOLDER, "downloads")
 USER_DESKTOP_FOLDER = os.path.join(USER_PROFILE_FOLDER, "Desktop")
 ONE_DRIVE_DESKTOP_FOLDER = os.path.join(USER_PROFILE_FOLDER, 
                                         "OneDrive - Ennead Architects", "Desktop")
-ONE_DRIVE_DOCUMENTS_FOLDER = os.path.join(USER_PROFILE_FOLDER, 
-                                          "OneDrive - Ennead Architects", "Documents")
+
 if not os.path.exists(ONE_DRIVE_DESKTOP_FOLDER):
     ONE_DRIVE_DESKTOP_FOLDER = USER_DESKTOP_FOLDER
 USER_APPDATA_FOLDER = os.path.join(USER_PROFILE_FOLDER, "AppData")
@@ -309,7 +308,7 @@ depreciated_enneadPLUS_menu = os.path.join(RHINO_FOLDER, "Ennead+.menu")
 depreciated_log = os.path.join(os.path.expanduser("~"), "Desktop", "I just blue myself.log")
 
 # Fix: Use compatible approach for both IronPython 2.7 and Python 3
-_execute_map_compatible(_delete_folder_or_file_after_date, __legacy_one_drive_folders, (2025, 2, 1))
+# _execute_map_compatible(_delete_folder_or_file_after_date, __legacy_one_drive_folders, (2025, 2, 1))
 
 _delete_folder_or_file_after_date(depreciated_enneadPLUS_menu, (2025, 4, 1))
 _delete_folder_or_file_after_date(depreciated_dist_lite_folder, (2025, 5, 1))

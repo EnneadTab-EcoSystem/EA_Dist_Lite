@@ -7,7 +7,7 @@ import os
 from Autodesk.Revit import DB # pyright: ignore 
 from Autodesk.Revit import ApplicationServices # pyright: ignore 
 
-from EnneadTab import FOLDER
+from EnneadTab import FOLDER, ERROR_HANDLE
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_UNIT
 
 
@@ -18,228 +18,252 @@ class MassFamilyCreator:
         self.template_path = template_path
         self.family_name = family_name
         self.family_doc = None
+        self.debug_info = []
+        
+    def add_debug_info(self, message):
+        """Add debug information."""
+        self.debug_info.append(message)
+        ERROR_HANDLE.print_note("DEBUG: {}".format(message))
     
     def create_from_boundaries(self, boundary_segments):
         """Create mass family from boundary segments."""
-        try:
-            # Create family document from template
-            self.family_doc = self.create_family_doc_from_template()
-            if not self.family_doc:
-                return None
-            
-            # Create mass geometry
-            if not self.create_mass_geometry(boundary_segments):
-                return None
-            
-            # Set family name
-            self.family_doc.Title = self.family_name
-            
-            return self.family_doc
-            
-        except Exception as e:
-            print("Error creating mass family: {}".format(str(e)))
+        print("Starting mass family creation for: {}".format(self.family_name))
+        ERROR_HANDLE.print_note("Starting mass family creation for: {}".format(self.family_name))
+        
+        # Validate boundary segments
+        if not boundary_segments:
+            print("No boundary segments provided")
+            ERROR_HANDLE.print_note("No boundary segments provided")
             return None
-    
-    def create_family_doc_from_template(self):
-        """Create a family document from template path."""
-        try:
-            # Check if template is .rfa or .rft
-            if self.template_path.lower().endswith('.rfa'):
-                # For .rfa files, open the family and create a copy
-                app = REVIT_APPLICATION.get_app()
-                family_doc = app.OpenDocumentFile(self.template_path)
-                if family_doc:
-                    # Create a copy by saving to temp location and reopening
-                    temp_path = FOLDER.get_local_dump_folder_file("temp_mass_family.rfa")
-                    options = DB.SaveAsOptions()
-                    options.OverwriteExistingFile = True
-                    family_doc.SaveAs(temp_path, options)
-                    family_doc.Close(False)
-                    
-                    # Open the copy
-                    family_doc = app.OpenDocumentFile(temp_path)
-                    return family_doc
+        
+        print("Boundary segments structure: {} lists".format(len(boundary_segments)))
+        ERROR_HANDLE.print_note("Boundary segments structure: {} lists".format(len(boundary_segments)))
+        for i, segment_list in enumerate(boundary_segments):
+            if segment_list:
+                print("  List {}: {} segments".format(i, len(segment_list)))
+                ERROR_HANDLE.print_note("  List {}: {} segments".format(i, len(segment_list)))
             else:
-                # For .rft files, use NewFamilyDocument
-                family_doc = ApplicationServices.Application.NewFamilyDocument(REVIT_APPLICATION.get_app(), self.template_path)
+                print("  List {}: None or empty".format(i))
+                ERROR_HANDLE.print_note("  List {}: None or empty".format(i))
+        
+        # Create family document from template
+        print("Creating family document from template...")
+        ERROR_HANDLE.print_note("Creating family document from template...")
+        self.family_doc = self._create_family_doc_from_template()
+        if not self.family_doc:
+            print("Failed to create family document from template")
+            ERROR_HANDLE.print_note("Failed to create family document from template")
+            return None
+        
+        print("Successfully created family document: {}".format(self.family_doc.Title))
+        ERROR_HANDLE.print_note("Successfully created family document: {}".format(self.family_doc.Title))
+        
+        # Create mass geometry
+        print("Creating mass geometry...")
+        ERROR_HANDLE.print_note("Creating mass geometry...")
+        geometry_result = self._create_mass_geometry(boundary_segments)
+        if not geometry_result:
+            print("Failed to create mass geometry - _create_mass_geometry returned False")
+            ERROR_HANDLE.print_note("Failed to create mass geometry - _create_mass_geometry returned False")
+            return None
+        
+        print("Successfully created mass geometry")
+        ERROR_HANDLE.print_note("Successfully created mass geometry")
+        
+        # Set family name
+        print("Setting family name...")
+        ERROR_HANDLE.print_note("Setting family name...")
+        self.family_doc.Title = self.family_name
+        
+        print("Successfully created mass family: {}".format(self.family_name))
+        ERROR_HANDLE.print_note("Successfully created mass family: {}".format(self.family_name))
+        return self.family_doc
+    
+    def _create_family_doc_from_template(self):
+        """Create a family document from template path."""
+        print("Creating family document from template: {}".format(self.template_path))
+        ERROR_HANDLE.print_note("Creating family document from template: {}".format(self.template_path))
+        
+        # Always use .rfa files for mass families to ensure proper template type
+        if self.template_path.lower().endswith('.rfa'):
+            print("Template is .rfa file, opening directly...")
+            # For .rfa files, open directly
+            app = REVIT_APPLICATION.get_app()
+            print("Got Revit application, opening template file...")
+            family_doc = app.OpenDocumentFile(self.template_path)
+            if family_doc:
+                print("Successfully opened family document from .rfa template")
+                ERROR_HANDLE.print_note("Created family document from .rfa template")
                 return family_doc
-            
-            return None
-            
-        except Exception as e:
-            print("Error creating family document from template: {}".format(str(e)))
-            return None
+            else:
+                print("Failed to open family document from .rfa template")
+        else:
+            print("Template is not .rfa file, trying to find .rfa version...")
+            # If we have .rft, try to find the corresponding .rfa
+            rfa_path = self.template_path.replace('.rft', '.rfa')
+            if os.path.exists(rfa_path):
+                print("Found .rfa version: {}".format(rfa_path))
+                app = REVIT_APPLICATION.get_app()
+                family_doc = app.OpenDocumentFile(rfa_path)
+                if family_doc:
+                    print("Successfully opened family document from .rfa template (converted from .rft)")
+                    ERROR_HANDLE.print_note("Created family document from .rfa template (converted from .rft)")
+                    return family_doc
+                else:
+                    print("Failed to open family document from .rfa template (converted from .rft)")
+            else:
+                print("No .rfa version found")
+        
+        print("Failed to create family document from template")
+        ERROR_HANDLE.print_note("Failed to create family document from template")
+        return None
     
-    def create_mass_geometry(self, boundary_segments):
+    def _create_mass_geometry(self, boundary_segments):
         """Create mass geometry from boundary segments."""
-        try:
-            if not self.family_doc:
-                print("No family document available for geometry creation")
-                return False
-                
-            # Start transaction for family creation
-            t = DB.Transaction(self.family_doc, "Create Mass from Boundaries")
-            t.Start()
-            
-            try:
-                # Process each boundary segment list
-                for segment_list in boundary_segments:
-                    if not segment_list:
-                        continue
-                    
-                    # Create curve loop from segments
-                    curve_loop = self.create_curve_loop_from_segments(segment_list)
-                    if not curve_loop:
-                        continue
-                    
-                    # Create mass extrusion from curve loop
-                    self.create_mass_extrusion(curve_loop)
-                
-                t.Commit()
-                return True
-                
-            except Exception as e:
-                t.RollBack()
-                print("Error creating mass geometry: {}".format(str(e)))
-                return False
-                
-        except Exception as e:
-            print("Error in mass geometry creation: {}".format(str(e)))
+        print("Creating mass geometry from boundary segments...")
+        if not self.family_doc:
+            print("No family document available for geometry creation")
+            ERROR_HANDLE.print_note("No family document available for geometry creation")
             return False
-    
-    def create_curve_loop_from_segments(self, segment_list):
-        """Create a curve loop from boundary segments."""
-        try:
-            curve_loop = DB.CurveLoop()
             
-            for segment in segment_list:
+        print("Creating mass geometry from {} boundary segment lists".format(len(boundary_segments)))
+        ERROR_HANDLE.print_note("Creating mass geometry from {} boundary segment lists".format(len(boundary_segments)))
+        
+        # Start transaction for family creation
+        print("Starting transaction...")
+        t = DB.Transaction(self.family_doc, "Create Mass Geometry")
+        t.Start()
+        print("Transaction started successfully")
+        
+        # Create extrusion directly from the boundary segments structure
+        # GetBoundarySegments returns IList<IList<BoundarySegment>> which is perfect for NewExtrusion
+        print("Calling _create_extrusion_from_boundary_segments...")
+        ERROR_HANDLE.print_note("Calling _create_extrusion_from_boundary_segments...")
+        extrusion_result = self._create_extrusion_from_boundary_segments(boundary_segments)
+        if not extrusion_result:
+            print("Failed to create extrusion from boundary segments - _create_extrusion_from_boundary_segments returned False")
+            ERROR_HANDLE.print_note("Failed to create extrusion from boundary segments - _create_extrusion_from_boundary_segments returned False")
+            t.RollBack()
+            print("Transaction rolled back due to extrusion failure")
+            return False
+        
+        print("Successfully created extrusion from boundary segments")
+        ERROR_HANDLE.print_note("Successfully created extrusion from boundary segments")
+        
+        t.Commit()
+        print("Transaction committed successfully")
+        ERROR_HANDLE.print_note("Successfully created mass geometry")
+        return True
+    
+    def _create_extrusion_from_boundary_segments(self, boundary_segments):
+        """Create extrusion from boundary segments using NewExtrusionForm for mass families.
+        
+        GetBoundarySegments returns IList<IList<BoundarySegment>> which needs to be converted
+        to ReferenceArray for NewExtrusionForm method.
+        """
+        print("Creating extrusion from {} boundary segment lists using NewExtrusionForm".format(len(boundary_segments)))
+        ERROR_HANDLE.print_note("Creating extrusion from {} boundary segment lists using NewExtrusionForm".format(len(boundary_segments)))
+        
+        # Validate boundary segments
+        if not boundary_segments or len(boundary_segments) == 0:
+            print("No boundary segments provided")
+            ERROR_HANDLE.print_note("No boundary segments provided")
+            return False
+        
+        # Convert IList<IList<BoundarySegment>> to ReferenceArray
+        # NewExtrusionForm expects ReferenceArray profile with one curve loop
+        reference_array = DB.ReferenceArray()
+        
+        for i, segment_list in enumerate(boundary_segments):
+            if not segment_list:
+                ERROR_HANDLE.print_note("  List {}: None or empty".format(i))
+                continue
+                
+            ERROR_HANDLE.print_note("  List {}: {} segments".format(i, len(segment_list)))
+            
+            # Create curves from this segment list
+            curve_list = []
+            for j, segment in enumerate(segment_list):
                 curve = segment.GetCurve()
                 if curve:
-                    curve_loop.Append(curve)
+                    curve_list.append(curve)
+                    ERROR_HANDLE.print_note("    Added curve {} from segment list {}".format(j, i))
+                else:
+                    ERROR_HANDLE.print_note("    Segment {} in list {} has no curve".format(j, i))
             
-            # Check if curve loop is valid
-            if curve_loop.Size() > 0:
-                return curve_loop
-            else:
-                return None
+            if len(curve_list) > 0:
+                ERROR_HANDLE.print_note("  List {}: {} valid curves".format(i, len(curve_list)))
                 
-        except Exception as e:
-            print("Error creating curve loop: {}".format(str(e)))
-            return None
-    
-    def create_mass_extrusion(self, curve_loop):
-        """Create a mass extrusion from curve loop."""
-        try:
-            if not self.family_doc:
-                print("No family document available for mass extrusion")
-                return None
-                
-            # Get the default level for hosting
-            levels = DB.FilteredElementCollector(self.family_doc).OfClass(DB.Level).WhereElementIsNotElementType().ToElements()
-            if not levels:
-                print("No levels found in family document")
-                return None
-            
-            level = levels[0]  # Use first level
-            
-            # Create reference array from curve loop
-            ref_array = DB.ReferenceArray()
-            model_curves = []
-            
-            for curve in curve_loop:
+                # Create a curve loop from the curves and add to reference array
                 try:
-                    # Create model curve from geometry curve
-                    sketch_plane = DB.SketchPlane.Create(self.family_doc, level.Id)
-                    model_curve = self.family_doc.FamilyCreate.NewModelCurve(curve, sketch_plane)
-                    model_curves.append(model_curve)
-                    ref_array.Append(model_curve.GeometryCurve.Reference)
+                    curve_loop = DB.CurveLoop.Create(curve_list)
+                    if curve_loop:
+                        # Create a reference from the curve loop
+                        reference = curve_loop.Reference
+                        if reference:
+                            reference_array.Append(reference)
+                            ERROR_HANDLE.print_note("  Added curve loop {} to reference array".format(i))
+                        else:
+                            ERROR_HANDLE.print_note("  Failed to get reference from curve loop {}".format(i))
+                    else:
+                        ERROR_HANDLE.print_note("  Failed to create curve loop from list {}".format(i))
                 except Exception as e:
-                    print("Warning: Could not create model curve: {}".format(str(e)))
-                    continue
-            
-            # Create form by cap (mass extrusion)
-            if ref_array.Size > 0:
-                try:
-                    # Create a simple extrusion by creating a form
-                    form = self.family_doc.FamilyCreate.NewFormByCap(True, ref_array)
-                    
-                    # Add height parameter for extrusion
-                    self.add_height_parameter_and_extrude(form, level)
-                    
-                    return form
-                except Exception as e:
-                    print("Error creating form by cap: {}".format(str(e)))
-                    # Try alternative method - create solid directly
-                    return self.create_solid_from_curves(model_curves, level)
-            
-            return None
-            
-        except Exception as e:
-            print("Error creating mass extrusion: {}".format(str(e)))
-            return None
-    
-    def add_height_parameter_and_extrude(self, form, level):
-        """Add height parameter and extrude the form."""
-        try:
-            if not self.family_doc:
-                print("No family document available for height parameter")
-                return
-                
-            # Add height parameter if it doesn't exist
-            manager = self.family_doc.FamilyManager
-            height_param = None
-            
-            # Check if height parameter already exists
-            for param in manager.GetParameters():
-                if param.Definition.Name == "Height":
-                    height_param = param
-                    break
-            
-            if not height_param:
-                # Create height parameter
-                height_param = manager.AddParameter("Height", DB.GroupTypeId.Data, 
-                                                  REVIT_UNIT.lookup_unit_spec_id("length"), True)
-                # Set default height (10 feet)
-                height_param.Set(10.0)
-            
-            # Get the height value
-            height_value = height_param.AsDouble()
-            
-            # Create extrusion direction
-            direction = DB.XYZ(0, 0, height_value)
-            
-            # Extrude the form
-            if hasattr(form, 'Extrude'):
-                form.Extrude(direction)
+                    ERROR_HANDLE.print_note("  Error creating curve loop from list {}: {}".format(i, str(e)))
             else:
-                # Alternative: create new form by extrusion
-                ref_array = DB.ReferenceArray()
-                ref_array.Append(form.Reference)
-                self.family_doc.FamilyCreate.NewFormByExtrusion(ref_array, direction)
-                
-        except Exception as e:
-            print("Error adding height parameter and extruding: {}".format(str(e)))
-    
-    def create_solid_from_curves(self, model_curves, level):
-        """Create a solid from model curves as fallback method."""
+                ERROR_HANDLE.print_note("  List {}: no valid curves".format(i))
+        
+        if reference_array.Size == 0:
+            print("No valid references created")
+            ERROR_HANDLE.print_note("No valid references created")
+            return False
+        
+        # Get default height for extrusion direction
+        height = self._get_default_extrusion_height()
+        direction = DB.XYZ(0, 0, height)  # Extrude in Z direction
+        print("Extrusion parameters - Height: {}, Direction: {}".format(height, direction))
+        
+        # Create extrusion using NewExtrusionForm
+        if not self.family_doc:
+            print("No family document available for extrusion")
+            ERROR_HANDLE.print_note("No family document available for extrusion")
+            return False
+            
+        print("Attempting to create extrusion with NewExtrusionForm:")
+        print("  - ReferenceArray size: {}".format(reference_array.Size))
+        print("  - Direction: {}".format(direction))
+        print("  - Height: {}".format(height))
+        ERROR_HANDLE.print_note("Attempting to create extrusion with NewExtrusionForm:")
+        ERROR_HANDLE.print_note("  - ReferenceArray size: {}".format(reference_array.Size))
+        ERROR_HANDLE.print_note("  - Direction: {}".format(direction))
+        ERROR_HANDLE.print_note("  - Height: {}".format(height))
+        
+        factory = self.family_doc.FamilyCreate
+        print("Got FamilyCreate factory")
+        
         try:
-            if not self.family_doc:
-                print("No family document available for solid creation")
-                return None
+            # Use NewExtrusionForm which is designed for mass families
+            print("Calling factory.NewExtrusionForm...")
+            form = factory.NewExtrusionForm(True, reference_array, direction)
+            
+            if form:
+                print("Successfully created mass extrusion form with {} references".format(reference_array.Size))
+                ERROR_HANDLE.print_note("Successfully created mass extrusion form with {} references".format(reference_array.Size))
+                return True
+            else:
+                print("Failed to create mass extrusion form - NewExtrusionForm returned None")
+                ERROR_HANDLE.print_note("Failed to create mass extrusion form - NewExtrusionForm returned None")
+                return False
                 
-            # Create a simple solid by lofting curves
-            if len(model_curves) < 2:
-                return None
-            
-            # Create reference array for loft
-            ref_array = DB.ReferenceArray()
-            for curve in model_curves:
-                ref_array.Append(curve.GeometryCurve.Reference)
-            
-            # Create form by loft
-            form = self.family_doc.FamilyCreate.NewFormByLoft(ref_array, True)
-            return form
-            
         except Exception as e:
-            print("Error creating solid from curves: {}".format(str(e)))
-            return None
+            print("Exception during NewExtrusionForm: {}".format(str(e)))
+            ERROR_HANDLE.print_note("Exception during NewExtrusionForm: {}".format(str(e)))
+            return False
+    
+    def _get_default_extrusion_height(self):
+        """Get default height for mass extrusion."""
+        # Default height of 10 feet in project units (assuming feet)
+        return 10.0
+    
+    def get_debug_summary(self):
+        """Get summary of debug information."""
+        return "\n".join(self.debug_info)

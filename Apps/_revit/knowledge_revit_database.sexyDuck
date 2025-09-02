@@ -2753,6 +2753,15 @@
         "tab": "Tools",
         "tab_icon": null
     },
+    "EnneadTab.tab\\Tools.panel\\area2mass.pushbutton\\area2mass_script.py": {
+        "alias": "Area2Mass",
+        "doc": "Convert area/room boundaries into loadable Revit mass families by using boundary segment curve loops to build mass extrusions in mass family, then load into project using internal coordinates like Block2Family.",
+        "icon": "EnneadTab.tab\\Tools.panel\\area2mass.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\Tools.panel\\area2mass.pushbutton\\area2mass_script.py",
+        "tab": "Tools",
+        "tab_icon": null
+    },
     "EnneadTab.tab\\Tools.panel\\batch_cut.pushbutton\\batch_cut_script.py": {
         "alias": "Batch Cut Elements",
         "doc": "Powerful batch cutting utility for curtain wall systems.\n\nThis tool enables efficient creation of void cuts across multiple curtain panels.\nFeatures:\n- Batch process curtain walls or individual panels\n- Support for multiple selection methods\n- Intelligent void detection and validation\n- Transaction-safe operations with error handling\n\nUsage:\n1. Select curtain walls or panels\n2. Choose void geometry\n3. Apply cuts across all selected elements\n",
@@ -2795,6 +2804,15 @@
         "icon": "EnneadTab.tab\\Tools.panel\\disallow_wall_end_joins.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\Tools.panel\\disallow_wall_end_joins.pushbutton\\disallow_wall_end_joins_script.py",
+        "tab": "Tools",
+        "tab_icon": null
+    },
+    "EnneadTab.tab\\Tools.panel\\explode_axon.pushbutton\\explode_axon_script.py": {
+        "alias": "Explode Axon",
+        "doc": "Create an exploded axon diagram by displacing furniture elements upward by 50 feet in a 3D view.",
+        "icon": "EnneadTab.tab\\Tools.panel\\explode_axon.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\Tools.panel\\explode_axon.pushbutton\\explode_axon_script.py",
         "tab": "Tools",
         "tab_icon": null
     },

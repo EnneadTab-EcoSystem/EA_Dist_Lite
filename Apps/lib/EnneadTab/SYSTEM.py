@@ -319,7 +319,7 @@ def purge_powershell_folder():
 
     
     # Get the documents folder path
-    docs_folder = ENVIRONMENT.ONE_DRIVE_DOCUMENTS_FOLDER
+    docs_folder = ENVIRONMENT.USER_DOCUMENT_FOLDER
     if not os.path.exists(docs_folder):
         return
     
