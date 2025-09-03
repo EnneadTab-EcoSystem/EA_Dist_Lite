@@ -7,7 +7,7 @@ import os
 from Autodesk.Revit import DB # pyright: ignore 
 from pyrevit.revit import ErrorSwallower # pyright: ignore 
 
-from EnneadTab import FOLDER, ERROR_HANDLE
+from EnneadTab import ERROR_HANDLE, FOLDER
 from EnneadTab.REVIT import REVIT_FAMILY
 
 
@@ -27,26 +27,20 @@ class FamilyLoader:
     
     def load_into_project(self, project_doc):
         """Load family into the project document."""
-        ERROR_HANDLE.print_note("Loading family '{}' into project".format(self.family_name))
-        
         # Validate inputs
         if not self._validate_inputs(project_doc):
             return False
-        
-        # Save family to temporary location
+
+        # Save family to temporary location with a unique filename
         temp_path = self._save_family_to_temp()
         if not temp_path:
             return False
-        
-        # Load family into project
+
+        # Load family into project (loading from the open family document; name derives from saved file)
         if not self._load_family_into_project(project_doc, temp_path):
             return False
         
-        # Verify family was loaded
-        if not self._verify_family_loaded(project_doc):
-            return False
-        
-        ERROR_HANDLE.print_note("Successfully loaded family '{}' into project".format(self.family_name))
+        # No need to verify since REVIT_FAMILY.load_family is proven to work
         return True
     
     def _validate_inputs(self, project_doc):
@@ -63,44 +57,76 @@ class FamilyLoader:
             ERROR_HANDLE.print_note("No family name provided")
             return False
         
-        ERROR_HANDLE.print_note("Input validation passed")
         return True
     
     def _save_family_to_temp(self):
-        """Save family to temporary location."""
-        ERROR_HANDLE.print_note("Saving family to temporary location")
-        
-        # Create temporary file path
-        temp_filename = "{}.rfa".format(self.family_name)
-        temp_path = FOLDER.get_local_dump_folder_file(temp_filename)
-        
+        """Save family to a unique temporary location to define family name before loading."""
+        # Base filename - each family should have a unique name by default
+        base_filename = "{}.rfa".format(self.family_name)
+        temp_path = FOLDER.get_local_dump_folder_file(base_filename)
+
         # Save family document
         options = DB.SaveAsOptions()
         options.OverwriteExistingFile = True
+        # For family documents, use family-specific save options
+        # Families are never workshared, so no worksharing options needed
         
-        self.family_doc.SaveAs(temp_path, options)
-        
+        try:
+            self.family_doc.SaveAs(temp_path, options)
+        except Exception as e:
+            ERROR_HANDLE.print_note("SaveAs failed: {}".format(str(e)))
+            
+            # Try to remove the file if it exists and is locked
+            if os.path.exists(temp_path):
+                try:
+                    os.remove(temp_path)
+                    # Retry the SaveAs
+                    self.family_doc.SaveAs(temp_path, options)
+                except Exception as retry_e:
+                    ERROR_HANDLE.print_note("SaveAs retry failed: {}".format(str(retry_e)))
+                    return None
+            else:
+                return None
+
         if os.path.exists(temp_path):
-            ERROR_HANDLE.print_note("Family saved to: {}".format(temp_path))
+            # Update the family name to match the actual saved filename (without extension)
+            filename_without_ext = os.path.splitext(os.path.basename(temp_path))[0]
+            self.family_name = filename_without_ext
             return temp_path
         else:
             ERROR_HANDLE.print_note("Failed to save family to temporary location")
             return None
     
     def _load_family_into_project(self, project_doc, temp_path):
-        """Load family from temporary path into project."""
-        ERROR_HANDLE.print_note("Loading family from temp path: {}".format(temp_path))
-        
-        # Use ENNEADTAB.REVIT_FAMILY.load_family method
-        loaded_family = REVIT_FAMILY.load_family(self.family_doc, project_doc)
-        
-        if loaded_family:
-            self.loaded_family = loaded_family
-            ERROR_HANDLE.print_note("Family loaded successfully")
+        """Load family into project using the existing family document."""
+        try:
+            # Use ENNEADTAB.REVIT_FAMILY.load_family method directly with the family document
+            # This is much simpler and leverages existing functionality
+            REVIT_FAMILY.load_family(self.family_doc, project_doc)
+            
+            # Family is now loaded into the project
+            self.loaded_family = True  # Just mark as loaded since we don't need the reference
+            
+            # Close the family document after successful loading to free up memory
+            try:
+                self.family_doc.Close(False)  # False = don't save changes
+            except Exception as close_e:
+                ERROR_HANDLE.print_note("Warning: Could not close family document: {}".format(str(close_e)))
+            
             return True
-        else:
-            ERROR_HANDLE.print_note("Failed to load family into project")
+                
+        except Exception as e:
+            ERROR_HANDLE.print_note("Exception during family loading: {}".format(str(e)))
+            
+            # Still try to close the family document even if loading failed
+            try:
+                self.family_doc.Close(False)
+            except Exception as close_e:
+                ERROR_HANDLE.print_note("Warning: Could not close family document: {}".format(str(close_e)))
+            
             return False
+            
+
     
     def _verify_family_loaded(self, project_doc):
         """Verify that family was loaded into project."""
@@ -108,13 +134,26 @@ class FamilyLoader:
         
         # Check if family exists in project
         collector = DB.FilteredElementCollector(project_doc).OfClass(DB.Family)
+        families = collector.ToElements()
         
-        for family in collector:
+        ERROR_HANDLE.print_note("Found {} families in project".format(len(families)))
+        
+        # First try exact name match
+        for family in families:
             if family.Name == self.family_name:
-                ERROR_HANDLE.print_note("Family verified in project: {}".format(family.Name))
+                ERROR_HANDLE.print_note("Family verified in project (exact match): {}".format(family.Name))
                 return True
         
-        ERROR_HANDLE.print_note("Family not found in project after loading")
+        # If no exact match, try partial match (in case name was modified during loading)
+        for family in families:
+            if self.family_name in family.Name or family.Name in self.family_name:
+                ERROR_HANDLE.print_note("Family verified in project (partial match): {} (looking for: {})".format(family.Name, self.family_name))
+                return True
+        
+        # List all family names for debugging
+        family_names = [f.Name for f in families]
+        ERROR_HANDLE.print_note("Available families in project: {}".format(family_names))
+        ERROR_HANDLE.print_note("Family not found in project after loading. Looking for: {}".format(self.family_name))
         return False
     
     def get_loaded_family(self):

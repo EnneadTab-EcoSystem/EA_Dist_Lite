@@ -9,9 +9,11 @@ proDUCKtion.validify()
 
 import os
 import math
+import traceback
 import clr # pyright: ignore 
 from pyrevit import forms # pyright: ignore 
 from pyrevit.revit import ErrorSwallower # pyright: ignore 
+from pyrevit import script # pyright: ignore
 
 from EnneadTab import ERROR_HANDLE, FOLDER, DATA_FILE, NOTIFICATION, LOG, ENVIRONMENT, UI, SAMPLE_FILE
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FAMILY, REVIT_UNIT, REVIT_SELECTION, REVIT_FORMS
@@ -54,6 +56,21 @@ class Area2MassConverter:
         self.template_path = None
         self.created_families = []
         
+    def _sanitize_name_component(self, text):
+        """Sanitize a component for use in a Revit family name."""
+        if text is None:
+            return "NA"
+        # Ensure string
+        value = str(text)
+        # Replace invalid chars per Revit naming rules
+        invalid_chars = ['<', '>', ':', '"', '/', '\\', '|', '?', '*']
+        for ch in invalid_chars:
+            value = value.replace(ch, '_')
+        value = value.strip()
+        if not value:
+            return "NA"
+        return value
+
     def run(self):
         """Main execution method with step-by-step process."""
         try:
@@ -69,7 +86,7 @@ class Area2MassConverter:
             if not self._step_03_get_template():
                 return False
                 
-            # Step 4: Process spatial elements
+            # Step 4: Process spatial elements (each family loads in its own transaction)
             if not self._step_04_process_spatial_elements():
                 return False
                 
@@ -85,8 +102,6 @@ class Area2MassConverter:
     @ERROR_HANDLE.try_catch_error()
     def _step_01_validate_environment(self):
         """Step 1: Validate that we're in the right environment."""
-        NOTIFICATION.messenger("Step 1: Validating environment...")
-        
         if not self.doc:
             NOTIFICATION.messenger("No active document found.")
             return False
@@ -95,14 +110,11 @@ class Area2MassConverter:
             NOTIFICATION.messenger("This tool only works in project documents, not family documents.")
             return False
             
-        NOTIFICATION.messenger("Environment validation passed.")
         return True
     
     @ERROR_HANDLE.try_catch_error()
     def _step_02_get_and_filter_selection(self):
         """Step 2: Get selected elements and filter for areas/rooms."""
-        NOTIFICATION.messenger("Step 2: Getting and filtering selection...")
-        
         # Use REVIT_FORMS.dialogue to get user input
         # Ask user what type of spatial elements they want to process
         options = ["Areas", "Rooms"]
@@ -113,11 +125,8 @@ class Area2MassConverter:
         )
         
         if not user_choice or user_choice == "Close" or user_choice == "Cancel":
-            print("User cancelled element type selection")
             NOTIFICATION.messenger("Operation cancelled by user.")
             return False
-        
-        print("User selected: {}".format(user_choice))
         
         # Process based on user choice
         if user_choice == "Areas":
@@ -133,8 +142,6 @@ class Area2MassConverter:
             return False
         
         self.total_count = len(self.areas) + len(self.rooms)
-        print("Found {} areas and {} rooms to convert".format(
-            len(self.areas), len(self.rooms)))
         NOTIFICATION.messenger("Found {} areas and {} rooms to convert.".format(len(self.areas), len(self.rooms)))
         return True
     
@@ -229,8 +236,6 @@ class Area2MassConverter:
     @ERROR_HANDLE.try_catch_error()
     def _step_03_get_template(self):
         """Step 3: Get mass family template."""
-        NOTIFICATION.messenger("Step 3: Getting mass family template...")
-        
         template_finder = TemplateFinder()
         self.template_path = template_finder.get_mass_family_template()
         
@@ -238,57 +243,36 @@ class Area2MassConverter:
             NOTIFICATION.messenger("Failed to get mass family template.")
             return False
         
-        print("Template path: {}".format(self.template_path))
         NOTIFICATION.messenger("Template found: {}".format(os.path.basename(self.template_path)))
         return True
     
     @ERROR_HANDLE.try_catch_error()
     def _step_04_process_spatial_elements(self):
         """Step 4: Process each spatial element to create mass families."""
-        NOTIFICATION.messenger("Step 4: Processing spatial elements...")
-        
         # Process areas
         for area in self.areas:
             if not self._process_single_element(area, "Area"):
-                print("Failed to process area: {}".format(area.Id))
                 continue
         
         # Process rooms
         for room in self.rooms:
             if not self._process_single_element(room, "Room"):
-                print("Failed to process room: {}".format(room.Id))
                 continue
         
         if not self.created_families:
             NOTIFICATION.messenger("No mass families were created successfully.")
             return False
         
-        print("Successfully created {} mass families".format(len(self.created_families)))
         NOTIFICATION.messenger("Successfully created {} mass families.".format(len(self.created_families)))
         return True
     
-    @ERROR_HANDLE.try_catch_error()
     def _process_single_element(self, element, element_type):
         """Process a single spatial element to create a mass family."""
-        print("Processing {}: {}".format(element_type, element.Id))
-        
         # Extract boundary data
-        print("Extracting boundary data for {}: {}".format(element_type, element.Id))
         extractor = BoundaryDataExtractor(element)
         if not extractor.is_valid():
             print("Failed to extract boundary data for {}: {}".format(element_type, element.Id))
             return False
-        
-        # Debug: Show what we got
-        if extractor.segments:
-            print("  Got {} boundary segment lists".format(len(extractor.segments)))
-            for i, segment_list in enumerate(extractor.segments):
-                if segment_list:
-                    print("    List {}: {} segments".format(i, len(segment_list)))
-                else:
-                    print("    List {}: None or empty".format(i))
-        else:
-            print("  No boundary segments extracted")
         
         # Get element info for naming
         info_extractor = ElementInfoExtractor(element, element_type)
@@ -297,49 +281,111 @@ class Area2MassConverter:
         if not element_info or not element_info.get('name'):
             print("Failed to extract element info for {}: {}".format(element_type, element.Id))
             return False
-        
+
+        # Determine extrusion height from next level above current level
+        extrusion_height = 10.0
+        try:
+            current_level_info = element_info.get('level') if element_info else None
+            if current_level_info and 'elevation' in current_level_info:
+                current_elev = current_level_info['elevation']
+                # Collect and sort all levels by elevation
+                levels = DB.FilteredElementCollector(self.doc).OfClass(DB.Level).ToElements()
+                sorted_levels = sorted([lvl for lvl in levels if hasattr(lvl, 'Elevation')], key=lambda l: l.Elevation)
+                # Find first level above current elevation
+                next_level = None
+                for lvl in sorted_levels:
+                    if lvl.Elevation > current_elev:
+                        next_level = lvl
+                        break
+                if next_level is not None:
+                    extrusion_height = next_level.Elevation - current_elev
+                else:
+                    # Keep default extrusion height
+                    pass
+        except Exception as _:
+            # Keep default if anything unexpected
+            pass
+
+        # Build family name per spec
+        level_name = self._sanitize_name_component((element_info.get('level') or {}).get('name') if element_info else None)
+        department = self._sanitize_name_component(element_info.get('department') if element_info else None)
+        element_id_str = str(element.Id.IntegerValue)
+        if element_type == "Area":
+            scheme_name = self._sanitize_name_component(getattr(element.AreaScheme, 'Name', None))
+            family_name_with_id = "AreaMass_{}_{}_{}_{}".format(scheme_name, level_name, department, element_id_str)
+        else:
+            family_name_with_id = "RoomMass_{}_{}_{}".format(level_name, department, element_id_str)
+
         # Create mass family
-        segments_count = len(extractor.segments) if extractor.segments else 0
-        print("Creating mass family for {}: {} with {} boundary segment lists".format(
-            element_type, element.Id, segments_count))
+        mass_creator = MassFamilyCreator(
+            self.template_path,
+            family_name_with_id,
+            extrusion_height,
+            element_type=element_type,
+            department=element_info.get('department') if element_info else None
+        )
         
-        mass_creator = MassFamilyCreator(self.template_path, element_info['name'])
         family_doc = mass_creator.create_from_boundaries(extractor.segments)
         
         if not family_doc:
             print("Failed to create mass family for {}: {}".format(element_type, element.Id))
-            print("Debug info: template_path={}, element_name={}, segments_count={}".format(
-                self.template_path, element_info['name'], segments_count))
             return False
         
-        # Load family into project
-        family_loader = FamilyLoader(family_doc, element_info['name'])
-        if not family_loader.load_into_project(self.doc):
+        # Load family into project in its own transaction (commits immediately)
+        family_loader = FamilyLoader(family_doc, family_name_with_id)
+        load_result = family_loader.load_into_project(self.doc)
+        if not load_result:
             print("Failed to load family for {}: {}".format(element_type, element.Id))
             return False
         
-        # Place instance
-        placer = FamilyInstancePlacer(self.doc, element_info['name'], element)
-        if not placer.place_instance():
-            print("Failed to place instance for {}: {}".format(element_type, element.Id))
-            return False
+        # Get the updated family name (which may have changed during SaveAs)
+        actual_family_name = family_loader.family_name
         
-        # Store created family info
+        # Place instance in a separate transaction (can rollback without affecting loaded family)
+        try:
+            placer = FamilyInstancePlacer(self.doc, actual_family_name, element)
+            placement_result = placer.place_instance()
+            
+            if not placement_result:
+                print("Failed to place instance for {}: {}".format(element_type, element.Id))
+                # Note: Family is already loaded and committed, so we don't return False here
+                # Instead, we mark it as loaded but placement failed
+                self.created_families.append({
+                    'element_id': element.Id,
+                    'element_type': element_type,
+                    'family_name': actual_family_name,
+                    'success': True,
+                    'placement_failed': True
+                })
+                return True  # Return True since family was loaded successfully
+        except Exception as e:
+            print("EXCEPTION during instance placement: {}".format(str(e)))
+            import traceback
+            print("Full traceback:")
+            traceback.print_exc()
+            # Mark as failed but continue
+            self.created_families.append({
+                'element_id': element.Id,
+                'element_type': element_type,
+                'family_name': actual_family_name,
+                'success': True,
+                'placement_failed': True
+            })
+            return True
+        
+        # Store created family info for successful placement
         self.created_families.append({
             'element_id': element.Id,
             'element_type': element_type,
-            'family_name': element_info['name'],
+            'family_name': actual_family_name,
             'success': True
         })
         
-        print("Successfully processed {}: {}".format(element_type, element.Id))
         return True
     
     @ERROR_HANDLE.try_catch_error()
     def _step_05_show_results(self):
         """Step 5: Show final results and cleanup."""
-        NOTIFICATION.messenger("Step 5: Finalizing results...")
-        
         # Show summary
         success_count = len(self.created_families)
         total_count = self.total_count
@@ -350,16 +396,22 @@ class Area2MassConverter:
             message = "Converted {}/{} spatial elements to mass families.".format(success_count, total_count)
         
         NOTIFICATION.messenger(message)
-        print(message)
         
         # Show detailed results
         print("\nDetailed Results:")
         for family_info in self.created_families:
-            print("  {} {} -> Mass Family Instance {}".format(
-                family_info['element_type'],
-                family_info['element_id'],
-                family_info['instance_id']
-            ))
+            if family_info.get('placement_failed'):
+                print("  {} {} -> Mass Family '{}' (LOADED but placement FAILED)".format(
+                    family_info['element_type'],
+                    family_info['element_id'],
+                    family_info['family_name']
+                ))
+            else:
+                print("  {} {} -> Mass Family '{}' (LOADED and placed successfully)".format(
+                    family_info['element_id'],
+                    family_info['element_type'],
+                    family_info['family_name']
+                ))
         
         return True
 
@@ -378,4 +430,6 @@ def area2mass():
 
 ################## main code below #####################
 if __name__ == "__main__":
+    output = script.get_output()
+    output.close_others(True)
     area2mass()
