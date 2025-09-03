@@ -8,7 +8,7 @@ from Autodesk.Revit import DB # pyright: ignore
 from Autodesk.Revit import ApplicationServices # pyright: ignore 
 
 from EnneadTab import ERROR_HANDLE
-from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_GEOMETRY
+from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_GEOMETRY, REVIT_SELECTION, REVIT_MATERIAL
 
 
 class MassFamilyCreator:
@@ -200,29 +200,48 @@ class MassFamilyCreator:
 
         # Ensure subcategory exists
         subcat = None
-        for sc in cat.SubCategories:
-            if sc.Name == subcat_name:
-                subcat = sc
-                break
-        if subcat is None:
-            if self.family_doc and self.family_doc.Settings:
-                subcat = self.family_doc.Settings.Categories.NewSubcategory(cat, subcat_name)
+        try:
+            for sc in cat.SubCategories:
+                if sc.Name == subcat_name:
+                    subcat = sc
+                    break
+            if subcat is None:
+                if self.family_doc and self.family_doc.Settings:
+                    subcat = self.family_doc.Settings.Categories.NewSubcategory(cat, subcat_name)
+                    if not subcat:
+                        ERROR_HANDLE.print_note("Failed to create subcategory: {}".format(subcat_name))
+                        return
+        except Exception as e:
+            ERROR_HANDLE.print_note("Failed to create/get subcategory: {}".format(str(e)))
+            return
 
         # Assign subcategory to the form
-        form.Subcategory = subcat
+        try:
+            form.Subcategory = subcat
+        except Exception as e:
+            ERROR_HANDLE.print_note("Failed to assign subcategory to form: {}".format(str(e)))
 
-        # Create or get material
+        # Create or get material using REVIT_MATERIAL module
         mat_name = subcat_name
-        collector = DB.FilteredElementCollector(self.family_doc).OfClass(DB.Material)
+        # Sanitize material name to ensure it's valid for Revit
+        original_mat_name = mat_name
+        mat_name = REVIT_MATERIAL.sanitize_material_name(mat_name)
+        
         material = None
-        for m in collector:
-            if m.Name == mat_name:
-                material = m
-                break
-        if material is None:
-            material_id = DB.Material.Create(self.family_doc, mat_name)
-            if self.family_doc:
-                material = self.family_doc.GetElement(material_id)
+        try:
+            # First try to get existing material
+            material = REVIT_MATERIAL.get_material_by_name(mat_name, self.family_doc)
+            if not material:
+                # Create new material if it doesn't exist
+                material_id = DB.Material.Create(self.family_doc, mat_name)
+                if self.family_doc:
+                    material = self.family_doc.GetElement(material_id)
+                    if not material:
+                        ERROR_HANDLE.print_note("Failed to get created material: {}".format(mat_name))
+                        return
+        except Exception as e:
+            ERROR_HANDLE.print_note("Failed to create/get material: {}".format(str(e)))
+            return
 
         # Compute color from department (simple hash to color)
         hashcode = abs(hash(dept))
@@ -231,9 +250,28 @@ class MassFamilyCreator:
         b = (hashcode >> 16) & 0xFF
         color = DB.Color(r, g, b)
 
-        # Set material appearance
+        # Set material appearance using REVIT_MATERIAL.update_material_setting
         if material:
-            material.Color = color
-            material.Transparency = 70
-            # Surface pattern color may help for visibility in some templates
-            material.SurfacePatternColor = color
+            try:
+                # Create material settings map following the standard format
+                material_settings = {
+                    mat_name: {
+                        "Color": (r, g, b),
+                        "Transparency": 70,
+                        "SurfaceForegroundPatternIsSolid": True,
+                        "SurfaceForegroundPatternColor": (r, g, b)
+                    }
+                }
+                
+                # Update material properties using the standardized function
+                REVIT_MATERIAL.update_material_setting(self.family_doc, material_settings)
+                
+            except Exception as e:
+                ERROR_HANDLE.print_note("Failed to set material properties: {}".format(str(e)))
+            
+            # Assign material to subcategory if successful
+            try:
+                if subcat and material:
+                    subcat.Material = material
+            except Exception as e:
+                ERROR_HANDLE.print_note("Failed to assign material to subcategory: {}".format(str(e)))

@@ -148,13 +148,11 @@ class Area2MassConverter:
     @ERROR_HANDLE.try_catch_error()
     def _process_areas(self):
         """Process areas with area scheme selection."""
-        print("Processing areas...")
         
         # Get all area schemes in the project
         area_schemes = DB.FilteredElementCollector(self.doc).OfClass(DB.AreaScheme).ToElements()
         
         if not area_schemes:
-            print("No area schemes found in project")
             NOTIFICATION.messenger("No area schemes found in project.")
             return False
         
@@ -171,7 +169,6 @@ class Area2MassConverter:
         )
         
         if not selected_scheme_name or selected_scheme_name == "Close" or selected_scheme_name == "Cancel":
-            print("User cancelled area scheme selection")
             return False
         
         # Find the selected scheme by matching the name
@@ -183,10 +180,7 @@ class Area2MassConverter:
                 break
         
         if not selected_scheme:
-            print("Could not find selected area scheme")
             return False
-        
-        print("Selected area scheme: {}".format(selected_scheme.Name))
         
         # Get all areas from the selected scheme using SpatialElement
         spatial_elements = DB.FilteredElementCollector(self.doc).OfClass(DB.SpatialElement).ToElements()
@@ -198,20 +192,17 @@ class Area2MassConverter:
                 scheme_areas.append(element)
         
         if not scheme_areas:
-            print("No areas found in selected scheme")
             NOTIFICATION.messenger("No areas found in the selected area scheme.")
             return False
         
         # Process all areas automatically
         self.areas = scheme_areas
-        print("Processing all {} areas".format(len(scheme_areas)))
         
         return True
     
     @ERROR_HANDLE.try_catch_error()
     def _process_rooms(self):
         """Process all rooms in the project."""
-        print("Processing rooms...")
         
         # Get all rooms in the project using SpatialElement
         spatial_elements = DB.FilteredElementCollector(self.doc).OfClass(DB.SpatialElement).ToElements()
@@ -223,13 +214,11 @@ class Area2MassConverter:
                 rooms.append(element)
         
         if not rooms:
-            print("No rooms found in project")
             NOTIFICATION.messenger("No rooms found in project.")
             return False
         
         # Process all rooms automatically
         self.rooms = rooms
-        print("Processing all {} rooms".format(len(rooms)))
         
         return True
     
@@ -279,7 +268,6 @@ class Area2MassConverter:
         element_info = info_extractor._extract_info()
         
         if not element_info or not element_info.get('name'):
-            print("Failed to extract element info for {}: {}".format(element_type, element.Id))
             return False
 
         # Determine extrusion height from next level above current level
@@ -328,14 +316,12 @@ class Area2MassConverter:
         family_doc = mass_creator.create_from_boundaries(extractor.segments)
         
         if not family_doc:
-            print("Failed to create mass family for {}: {}".format(element_type, element.Id))
             return False
         
         # Load family into project in its own transaction (commits immediately)
         family_loader = FamilyLoader(family_doc, family_name_with_id)
         load_result = family_loader.load_into_project(self.doc)
         if not load_result:
-            print("Failed to load family for {}: {}".format(element_type, element.Id))
             return False
         
         # Get the updated family name (which may have changed during SaveAs)
@@ -347,7 +333,6 @@ class Area2MassConverter:
             placement_result = placer.place_instance()
             
             if not placement_result:
-                print("Failed to place instance for {}: {}".format(element_type, element.Id))
                 # Note: Family is already loaded and committed, so we don't return False here
                 # Instead, we mark it as loaded but placement failed
                 self.created_families.append({
@@ -359,10 +344,6 @@ class Area2MassConverter:
                 })
                 return True  # Return True since family was loaded successfully
         except Exception as e:
-            print("EXCEPTION during instance placement: {}".format(str(e)))
-            import traceback
-            print("Full traceback:")
-            traceback.print_exc()
             # Mark as failed but continue
             self.created_families.append({
                 'element_id': element.Id,
@@ -397,17 +378,18 @@ class Area2MassConverter:
         
         NOTIFICATION.messenger(message)
         
-        # Show detailed results
-        print("\nDetailed Results:")
+        # Show detailed results in output window instead of console
+        output = script.get_output()
+        output.print_md("## Detailed Results")
         for family_info in self.created_families:
             if family_info.get('placement_failed'):
-                print("  {} {} -> Mass Family '{}' (LOADED but placement FAILED)".format(
+                output.print_md("**{} {}** → Mass Family '{}' (LOADED but placement FAILED)".format(
                     family_info['element_type'],
                     family_info['element_id'],
                     family_info['family_name']
                 ))
             else:
-                print("  {} {} -> Mass Family '{}' (LOADED and placed successfully)".format(
+                output.print_md("**{} {}** → Mass Family '{}' (LOADED and placed successfully)".format(
                     family_info['element_id'],
                     family_info['element_type'],
                     family_info['family_name']
