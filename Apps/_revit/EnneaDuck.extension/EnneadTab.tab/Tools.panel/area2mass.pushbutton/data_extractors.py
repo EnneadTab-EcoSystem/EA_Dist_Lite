@@ -60,10 +60,8 @@ class ElementInfoExtractor:
             if param and param.AsString():
                 department_value = param.AsString().strip()
                 if department_value:
-                    ERROR_HANDLE.print_note("Found department parameter '{}': {}".format(param_name, department_value))
                     return department_value
         
-        ERROR_HANDLE.print_note("No department parameters found")
         return None
     
     def _sanitize_family_name(self, name):
@@ -121,34 +119,18 @@ class BoundaryDataExtractor:
     
     def _extract_boundaries(self):
         """Extract boundary segments."""
-   
-        ERROR_HANDLE.print_note("Extracting boundaries from spatial element: {}".format(self.spatial_element.Id))
-        
         options = DB.SpatialElementBoundaryOptions()
         self.segments = self.spatial_element.GetBoundarySegments(options)
         
-        if self.segments:
-            ERROR_HANDLE.print_note("Got {} boundary segment lists".format(len(self.segments)))
-            for i, segment_list in enumerate(self.segments):
-                if segment_list:
-                    ERROR_HANDLE.print_note("  List {}: {} segments".format(i, len(segment_list)))
-                    # Check first few segments for debugging
-                    for j in range(min(3, len(segment_list))):
-                        segment = segment_list[j]
-                        curve = segment.GetCurve()
-                        if curve:
-                            ERROR_HANDLE.print_note("    Segment {}: has curve".format(j))
-                        else:
-                            ERROR_HANDLE.print_note("    Segment {}: no curve".format(j))
-                else:
-                    ERROR_HANDLE.print_note("  List {}: None or empty".format(i))
-        else:
-            ERROR_HANDLE.print_note("No boundary segments returned")
-        
         self.is_valid_flag = self.segments is not None and len(self.segments) > 0
-        ERROR_HANDLE.print_note("Boundary extraction valid: {}".format(self.is_valid_flag))
         
 
     
     def is_valid(self):
         return self.is_valid_flag
+
+
+if __name__ == "__main__":
+    """Test the data extraction classes when run as main module."""
+    print("DataExtractors module - This module provides element and boundary data extraction functionality.")
+    print("To test this module, run it within a Revit environment with proper document context.")

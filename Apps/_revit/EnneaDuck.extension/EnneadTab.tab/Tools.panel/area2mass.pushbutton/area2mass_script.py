@@ -14,6 +14,7 @@ import clr # pyright: ignore
 from pyrevit import forms # pyright: ignore 
 from pyrevit.revit import ErrorSwallower # pyright: ignore 
 from pyrevit import script # pyright: ignore
+import datetime
 
 from EnneadTab import ERROR_HANDLE, FOLDER, DATA_FILE, NOTIFICATION, LOG, ENVIRONMENT, UI, SAMPLE_FILE
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FAMILY, REVIT_UNIT, REVIT_SELECTION, REVIT_FORMS
@@ -55,6 +56,8 @@ class Area2MassConverter:
         self.total_count = 0
         self.template_path = None
         self.created_families = []
+        self.selected_scheme = None
+        self.element_mode = None  # "Areas" or "Rooms"
         
     def _sanitize_name_component(self, text):
         """Sanitize a component for use in a Revit family name."""
@@ -77,15 +80,25 @@ class Area2MassConverter:
             # Step 1: Validate environment
             if not self._step_01_validate_environment():
                 return False
+
+            # Housekeeping: purge stale AreaMass_/RoomMass_ families older than 7 days
+            self._purge_stale_masses(days=7)
                 
             # Step 2: Get and filter selection
             if not self._step_02_get_and_filter_selection():
+                return False
+            
+            # Step 2b: Select color scheme for material assignment in project
+            if not self._step_02b_select_color_scheme():
                 return False
                 
             # Step 3: Get template
             if not self._step_03_get_template():
                 return False
-                
+
+            # Apply project material colors according to selected color scheme (preparation)
+            self._apply_project_material_colors_from_scheme()
+
             # Step 4: Process spatial elements (each family loads in its own transaction)
             if not self._step_04_process_spatial_elements():
                 return False
@@ -197,6 +210,7 @@ class Area2MassConverter:
         
         # Process all areas automatically
         self.areas = scheme_areas
+        self.element_mode = "Areas"
         
         return True
     
@@ -219,8 +233,109 @@ class Area2MassConverter:
         
         # Process all rooms automatically
         self.rooms = rooms
+        self.element_mode = "Rooms"
         
         return True
+
+    @ERROR_HANDLE.try_catch_error()
+    def _step_02b_select_color_scheme(self):
+        """Prompt user to select a Color Fill Scheme for Areas or Rooms and store it."""
+        # Determine category by mode
+        if self.element_mode == "Areas":
+            target_cat_id = DB.Category.GetCategory(self.doc, DB.BuiltInCategory.OST_Areas).Id
+        elif self.element_mode == "Rooms":
+            target_cat_id = DB.Category.GetCategory(self.doc, DB.BuiltInCategory.OST_Rooms).Id
+        else:
+            return False
+
+        # Collect schemes for the target category
+        schemes = list(DB.FilteredElementCollector(self.doc).OfClass(DB.ColorFillScheme))
+        schemes = [s for s in schemes if hasattr(s, 'CategoryId') and s.CategoryId == target_cat_id]
+        if not schemes:
+            return True  # optional; no scheme selection available
+
+        # Build options from scheme names
+        opts = []
+        name_map = {}
+        for s in schemes:
+            try:
+                nm = s.Name
+            except:
+                nm = str(s.Id.IntegerValue)
+            opts.append(nm)
+            name_map[nm] = s
+
+        choice = REVIT_FORMS.dialogue(
+            title="Area2Mass - Select Color Scheme",
+            main_text="Select a color scheme to drive material colors:",
+            options=opts
+        )
+        if not choice or choice in ("Close", "Cancel"):
+            return True  # treat as optional; proceed without scheme
+
+        self.selected_scheme = name_map.get(choice)
+        return True
+
+    def _apply_project_material_colors_from_scheme(self):
+        """Apply material colors in project by matching scheme entry names to material names.
+        Expects materials to be named 'AreaMass_{Department}' or 'RoomMass_{Department}'."""
+        try:
+            if not self.selected_scheme:
+                return
+            prefix = "AreaMass_" if self.element_mode == "Areas" else "RoomMass_"
+
+            # Attempt to get entries from scheme
+            get_entries = getattr(self.selected_scheme, 'GetEntries', None)
+            if not get_entries:
+                return
+            entries = list(self.selected_scheme.GetEntries())
+            if not entries:
+                return
+
+            # Build material settings dict {material_name: settings}
+            mat_settings = {}
+            for entry in entries:
+                try:
+                    # Try to get the display name for matching (often Department value)
+                    entry_name = None
+                    if hasattr(entry, 'GetName'):
+                        entry_name = entry.GetName()
+                    elif hasattr(entry, 'Name'):
+                        entry_name = entry.Name
+                    if not entry_name:
+                        continue
+
+                    # Get color
+                    col = None
+                    if hasattr(entry, 'Color') and entry.Color:
+                        col = entry.Color
+                    elif hasattr(entry, 'GetColor'):
+                        col = entry.GetColor()
+                    if not col:
+                        continue
+
+                    r, g, b = col.Red, col.Green, col.Blue
+                    mat_name = prefix + str(entry_name)
+                    mat_settings[mat_name] = {
+                        "Color": (r, g, b),
+                        "Transparency": 30,
+                        "SurfaceForegroundPatternIsSolid": True,
+                        "SurfaceForegroundPatternColor": (r, g, b)
+                    }
+                except Exception:
+                    continue
+
+            if not mat_settings:
+                return
+
+            # Apply to project document using REVIT_MATERIAL.update_material_setting
+            from EnneadTab.REVIT import REVIT_MATERIAL
+            try:
+                REVIT_MATERIAL.update_material_setting(self.doc, mat_settings)
+            except Exception:
+                pass
+        except Exception:
+            pass
     
     @ERROR_HANDLE.try_catch_error()
     def _step_03_get_template(self):
@@ -232,27 +347,26 @@ class Area2MassConverter:
             NOTIFICATION.messenger("Failed to get mass family template.")
             return False
         
-        NOTIFICATION.messenger("Template found: {}".format(os.path.basename(self.template_path)))
         return True
     
     @ERROR_HANDLE.try_catch_error()
     def _step_04_process_spatial_elements(self):
         """Step 4: Process each spatial element to create mass families."""
         # Process areas
-        for area in self.areas:
+        for i, area in enumerate(self.areas):
+            NOTIFICATION.messenger("Processing area {} of {}".format(i+1, len(self.areas)))
             if not self._process_single_element(area, "Area"):
                 continue
         
         # Process rooms
-        for room in self.rooms:
+        for i, room in enumerate(self.rooms):
+            NOTIFICATION.messenger("Processing room {} of {}".format(i+1, len(self.rooms)))
             if not self._process_single_element(room, "Room"):
                 continue
         
         if not self.created_families:
             NOTIFICATION.messenger("No mass families were created successfully.")
             return False
-        
-        NOTIFICATION.messenger("Successfully created {} mass families.".format(len(self.created_families)))
         return True
     
     def _process_single_element(self, element, element_type):
@@ -367,35 +481,105 @@ class Area2MassConverter:
     @ERROR_HANDLE.try_catch_error()
     def _step_05_show_results(self):
         """Step 5: Show final results and cleanup."""
-        # Show summary
-        success_count = len(self.created_families)
-        total_count = self.total_count
-        
-        if success_count == total_count:
-            message = "All {} spatial elements successfully converted to mass families!".format(success_count)
-        else:
-            message = "Converted {}/{} spatial elements to mass families.".format(success_count, total_count)
-        
-        NOTIFICATION.messenger(message)
-        
-        # Show detailed results in output window instead of console
-        output = script.get_output()
-        output.print_md("## Detailed Results")
-        for family_info in self.created_families:
-            if family_info.get('placement_failed'):
+        # Only report failures
+        failed = [fi for fi in self.created_families if fi.get('placement_failed')]
+        if failed:
+            output = script.get_output()
+            output.print_md("## Placement Failures")
+            for family_info in failed:
                 output.print_md("**{} {}** → Mass Family '{}' (LOADED but placement FAILED)".format(
                     family_info['element_type'],
                     family_info['element_id'],
                     family_info['family_name']
                 ))
-            else:
-                output.print_md("**{} {}** → Mass Family '{}' (LOADED and placed successfully)".format(
-                    family_info['element_id'],
-                    family_info['element_type'],
-                    family_info['family_name']
-                ))
-        
         return True
+
+
+    def _purge_stale_masses(self, days=7):
+        """Delete instances and unload families with prefix AreaMass_/RoomMass_ older than N days.
+        Timestamp is read from instance 'Mark' parameter if present."""
+        try:
+            cutoff = datetime.datetime.now() - datetime.timedelta(days=days)
+            fam_prefixes = ("AreaMass_", "RoomMass_")
+
+            # Collect instances by family name prefix
+            inst_collector = DB.FilteredElementCollector(self.doc).OfClass(DB.FamilyInstance)
+            to_delete_inst_ids = []
+            touched_family_ids = set()
+            for inst in inst_collector:
+                try:
+                    sym = inst.Symbol
+                    fam = sym.Family if sym else None
+                    if not fam or not fam.Name:
+                        continue
+                    if not (fam.Name.startswith(fam_prefixes[0]) or fam.Name.startswith(fam_prefixes[1])):
+                        continue
+
+                    # Parse timestamp from Mark parameter
+                    ts_ok = False
+                    mark = None
+                    try:
+                        p = inst.LookupParameter("Mark")
+                        mark = p.AsString() if p else None
+                    except Exception:
+                        mark = None
+                    if mark:
+                        try:
+                            ts = datetime.datetime.strptime(mark, "%Y-%m-%d %H:%M:%S")
+                            ts_ok = ts < cutoff
+                        except Exception:
+                            ts_ok = True  # unknown format -> purge to be safe
+                    else:
+                        ts_ok = True  # no timestamp -> consider stale and purge
+
+                    if ts_ok:
+                        to_delete_inst_ids.append(inst.Id)
+                        touched_family_ids.add(fam.Id)
+                except Exception:
+                    continue
+
+            # Delete old instances
+            if to_delete_inst_ids:
+                t = DB.Transaction(self.doc, "Area2Mass - Purge old instances")
+                t.Start()
+                try:
+                    self.doc.Delete(DB.List[DB.ElementId](to_delete_inst_ids))
+                    t.Commit()
+                except Exception:
+                    t.RollBack()
+
+            # Optionally remove families with no remaining instances
+            try:
+                fams_to_remove = []
+                for fam_id in touched_family_ids:
+                    fam = self.doc.GetElement(fam_id)
+                    if not fam:
+                        continue
+                    has_instances = False
+                    for sym_id in fam.GetFamilySymbolIds():
+                        if DB.FilteredElementCollector(self.doc).OfClass(DB.FamilyInstance).WhereElementIsNotElementType().ToElements():
+                            # cheap check: look for any instance using this symbol id
+                            for inst in DB.FilteredElementCollector(self.doc).OfClass(DB.FamilyInstance):
+                                if inst.Symbol and inst.Symbol.Id == sym_id:
+                                    has_instances = True
+                                    break
+                        if has_instances:
+                            break
+                    if not has_instances:
+                        fams_to_remove.append(fam.Id)
+
+                if fams_to_remove:
+                    t2 = DB.Transaction(self.doc, "Area2Mass - Remove unused families")
+                    t2.Start()
+                    try:
+                        self.doc.Delete(DB.List[DB.ElementId](fams_to_remove))
+                        t2.Commit()
+                    except Exception:
+                        t2.RollBack()
+            except Exception:
+                pass
+        except Exception:
+            pass
 
 
 # =============================================================================

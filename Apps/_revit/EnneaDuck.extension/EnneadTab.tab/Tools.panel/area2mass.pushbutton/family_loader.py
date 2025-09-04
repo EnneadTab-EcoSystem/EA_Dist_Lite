@@ -163,3 +163,9 @@ class FamilyLoader:
     def get_debug_summary(self):
         """Get summary of debug information."""
         return "\n".join(self.debug_info)
+
+
+if __name__ == "__main__":
+    """Test the FamilyLoader class when run as main module."""
+    print("FamilyLoader module - This module provides family loading functionality.")
+    print("To test this module, run it within a Revit environment with proper document context.")

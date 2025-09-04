@@ -69,3 +69,9 @@ class TemplateFinder:
                 else:
                     ERROR_HANDLE.print_note("Failed to copy template after {} attempts: {}".format(max_retries, str(e)))
                     return None
+
+
+if __name__ == "__main__":
+    """Test the TemplateFinder class when run as main module."""
+    print("TemplateFinder module - This module provides mass family template management functionality.")
+    print("To test this module, run it within a Revit environment with proper document context.")

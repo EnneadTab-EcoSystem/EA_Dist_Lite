@@ -9,7 +9,8 @@ clr.AddReference('RevitAPI')
 clr.AddReference('RevitServices')
 
 from Autodesk.Revit import DB
-from EnneadTab import ERROR_HANDLE, REVIT_VIEW
+from EnneadTab import ERROR_HANDLE, ENVIRONMENT
+from EnneadTab.REVIT import REVIT_VIEW
 
 
 class Area2MassViewManager:
@@ -26,22 +27,18 @@ class Area2MassViewManager:
             # Try to find existing view first
             self.view = self._find_existing_view()
             if self.view:
-                print("Found existing 3D view: {}".format(self.view_name))
                 return self.view
             
             # Create new 3D view if not found
-            print("Creating new dedicated 3D view: {}".format(self.view_name))
             self.view = self._create_new_3d_view()
             
             if self.view:
-                print("Successfully created dedicated 3D view: {}".format(self.view_name))
                 return self.view
             else:
-                print("Failed to create 3D view")
                 return None
                 
         except Exception as e:
-            print("Error in get_or_create_3d_view: {}".format(str(e)))
+            ERROR_HANDLE.print_note("DEBUG: {}".format(e))
             return None
     
     def _find_existing_view(self):
@@ -57,7 +54,6 @@ class Area2MassViewManager:
             return None
             
         except Exception as e:
-            print("Error finding existing view: {}".format(str(e)))
             return None
     
     def _create_new_3d_view(self):
@@ -89,11 +85,11 @@ class Area2MassViewManager:
                 
             except Exception as e:
                 t.RollBack()
-                print("Error during view creation: {}".format(str(e)))
+                ERROR_HANDLE.print_note("DEBUG: {}".format(e))
                 return None
                 
         except Exception as e:
-            print("Error in _create_new_3d_view: {}".format(str(e)))
+            ERROR_HANDLE.print_note("DEBUG: {}".format(e))
             return None
     
     def _get_default_3d_view_type(self):
@@ -108,7 +104,7 @@ class Area2MassViewManager:
             return None
             
         except Exception as e:
-            print("Error getting 3D view family type: {}".format(str(e)))
+            ERROR_HANDLE.print_note("DEBUG: {}".format(e))
             return None
     
     def _configure_view_for_mass(self, view):
@@ -117,9 +113,8 @@ class Area2MassViewManager:
             # Set view scale for better visualization
             try:
                 view.Scale = 100  # 1:100 scale
-                print("Set view scale to 1:100")
             except:
-                print("Could not set view scale")
+                pass
             
             # Ensure mass category is visible
             self._ensure_mass_category_visible(view)
@@ -134,7 +129,8 @@ class Area2MassViewManager:
             self._set_enneadtab_view_properties(view)
             
         except Exception as e:
-            print("Warning: Could not fully configure view: {}".format(str(e)))
+            ERROR_HANDLE.print_note("DEBUG: {}".format(e))
+            pass
     
     def _ensure_mass_category_visible(self, view):
         """Ensure mass category is visible in the view."""
@@ -144,12 +140,13 @@ class Area2MassViewManager:
             if mass_category:
                 # Set category visibility
                 view.SetCategoryHidden(mass_category.Id, False)
-                print("Ensured mass category is visible in 3D view")
             else:
-                print("Warning: Mass category not found")
+                ERROR_HANDLE.print_note("DEBUG: Mass category not found")
+                pass
                 
         except Exception as e:
-            print("Warning: Could not set mass category visibility: {}".format(str(e)))
+            ERROR_HANDLE.print_note("DEBUG: {}".format(e))
+            pass
     
     def _set_view_orientation(self, view):
         """Set optimal view orientation for mass visualization."""
@@ -161,10 +158,9 @@ class Area2MassViewManager:
             eye_position = view.GetOrientation().EyePosition
             up_direction = view.GetOrientation().UpDirection
             
-            print("View orientation set - Eye: {}, Up: {}".format(eye_position, up_direction))
-            
         except Exception as e:
-            print("Warning: Could not set view orientation: {}".format(str(e)))
+            ERROR_HANDLE.print_note("DEBUG: {}".format(e))
+            pass
     
     def _set_view_properties(self, view):
         """Set additional view properties for better mass visualization."""
@@ -172,19 +168,18 @@ class Area2MassViewManager:
             # Set view detail level to medium for good performance and visibility
             try:
                 view.DetailLevel = DB.ViewDetailLevel.Medium
-                print("Set view detail level to Medium")
             except:
-                print("Could not set detail level")
+                pass
             
             # Set view discipline to architectural for mass visualization
             try:
                 view.get_Parameter(DB.BuiltInParameter.VIEWER_BOUND_OFFSET_FAR).Set(1000)  # Far clip offset
-                print("Set far clip offset for better mass visibility")
             except:
-                print("Could not set far clip offset")
+                pass
                 
         except Exception as e:
-            print("Warning: Could not set additional view properties: {}".format(str(e)))
+            ERROR_HANDLE.print_note("DEBUG: {}".format(e))
+            pass
     
     def _set_enneadtab_view_properties(self, view):
         """Set EnneadTab view grouping and series properties (like explode_axon tool)."""
@@ -195,22 +190,25 @@ class Area2MassViewManager:
             
             try:
                 # Set view group to "EnneadTab" (like other EnneadTab tools)
-                view.LookupParameter("Views_$Group").Set("EnneadTab")
-                print("Set view group to: EnneadTab")
+                view.LookupParameter("Views_$Group").Set(ENVIRONMENT.PLUGIN_NAME)
+                pass
                 
                 # Set view series to "Area2Mass" for easy identification
-                view.LookupParameter("Views_$Series").Set("Area2Mass")
-                print("Set view series to: Area2Mass")
+                view.LookupParameter("Views_$Series").Set("(●´∞`●) Area2Mass")
+                pass
                 
                 t.Commit()
-                print("Successfully set EnneadTab view properties")
+                pass
                 
             except Exception as e:
                 t.RollBack()
-                print("Warning: Could not set EnneadTab view properties: {}".format(str(e)))
+              
+                ERROR_HANDLE.print_note("DEBUG: {}".format(e))
+                pass
                 
         except Exception as e:
-            print("Warning: Error in _set_enneadtab_view_properties: {}".format(str(e)))
+            ERROR_HANDLE.print_note("DEBUG: {}".format(e))
+            pass
     
     def switch_to_view(self):
         """Switch the active view to the Area2Mass 3D view."""
@@ -218,14 +216,11 @@ class Area2MassViewManager:
             if self.view:
                 # Use REVIT_VIEW module to switch to the view
                 REVIT_VIEW.set_active_view_by_name(self.view_name, self.project_doc)
-                print("Switched to Area2Mass 3D view: {}".format(self.view_name))
                 return True
             else:
-                print("No view available to switch to")
                 return False
                 
         except Exception as e:
-            print("Error switching to view: {}".format(str(e)))
             return False
     
     def get_view_info(self):
@@ -256,3 +251,9 @@ class Area2MassViewManager:
         except Exception as e:
             print("Error during view cleanup: {}".format(str(e)))
             return False
+
+
+if __name__ == "__main__":
+    """Test the Area2MassViewManager class when run as main module."""
+    print("Area2MassViewManager module - This module provides 3D view management functionality.")
+    print("To test this module, run it within a Revit environment with proper document context.")

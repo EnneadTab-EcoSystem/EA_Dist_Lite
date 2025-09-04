@@ -4,6 +4,8 @@
 """Family instance placement classes for Area2Mass conversion."""
 
 from Autodesk.Revit import DB # pyright: ignore
+import datetime
+from pyrevit.revit import ErrorSwallower  # pyright: ignore
 from EnneadTab import ERROR_HANDLE
 from EnneadTab.REVIT import REVIT_FAMILY 
 
@@ -28,6 +30,24 @@ class FamilyInstancePlacer:
         # Start transaction for instance placement
         t = DB.Transaction(self.project_doc, "Place Area2Mass Instance")
         t.Start()
+        # Attach a warnings swallower so Revit warning dialogs (e.g., mesh-only mass) are suppressed
+        try:
+            class _SwallowWarnings(DB.IFailuresPreprocessor):
+                def PreprocessFailures(self, failures_accessor):
+                    try:
+                        for failure_message in list(failures_accessor.GetFailureMessages()):
+                            if failure_message.GetSeverity() == DB.FailureSeverity.Warning:
+                                failures_accessor.DeleteWarning(failure_message)
+                        return DB.FailureProcessingResult.Continue
+                    except:
+                        return DB.FailureProcessingResult.Continue
+
+            fho = t.GetFailureHandlingOptions()
+            fho.SetFailuresPreprocessor(_SwallowWarnings())
+            fho.SetClearAfterRollback(True)
+            t.SetFailureHandlingOptions(fho)
+        except Exception:
+            pass
         
         try:
             # Step 1: Get spatial element location
@@ -54,11 +74,15 @@ class FamilyInstancePlacer:
                 t.RollBack()
                 return False
             
-            # Step 5: Check if instance already exists
-            existing_instance = self._check_for_existing_instance(family_symbol)
-            if existing_instance:
-                t.Commit()
-                return True
+            # Step 5: If an instance already exists, delete it before placing new
+            existing_instances = self._collect_existing_instances(family_symbol)
+            if existing_instances:
+                try:
+                    for inst in existing_instances:
+                        self.project_doc.Delete(inst.Id)
+                except Exception as e:
+                    t.RollBack()
+                    return False
             
             # Step 6: Place instance
             try:
@@ -78,22 +102,20 @@ class FamilyInstancePlacer:
             t.RollBack()
             return False
     
-    def _check_for_existing_instance(self, family_symbol):
-        """Check if an instance of this family type already exists in the project."""
+    def _collect_existing_instances(self, family_symbol):
+        """Collect existing instances of the specified family type to delete."""
         try:
-            # Get all instances of this family type
             collector = DB.FilteredElementCollector(self.project_doc).OfClass(DB.FamilyInstance)
-            instances = collector.ToElements()
-            
-            # Check if any instance uses the same family symbol
-            for instance in instances:
-                if instance.Symbol.Id == family_symbol.Id:
-                    return instance
-            
-            return None
-            
-        except Exception as e:
-            return None
+            instances = []
+            for instance in collector:
+                try:
+                    if instance.Symbol and instance.Symbol.Id == family_symbol.Id:
+                        instances.append(instance)
+                except Exception:
+                    pass
+            return instances
+        except Exception:
+            return []
     
     def _get_spatial_element_location(self):
         """Get placement point. Use the actual level location instead of Internal Origin."""
@@ -124,25 +146,43 @@ class FamilyInstancePlacer:
             if level:
                 return level
         
-        # Try to get level from parameters
-        level_param = self.spatial_element.LookupParameter("Level")
-        if level_param and level_param.AsString():
-            level_name = level_param.AsString()
-            
-            # Find level by name
-            collector = DB.FilteredElementCollector(self.project_doc).OfClass(DB.Level)
-            for level in collector:
-                if level.Name == level_name:
-                    return level
-        
-        # Fallback: use first level
-        collector = DB.FilteredElementCollector(self.project_doc).OfClass(DB.Level)
-        levels = collector.ToElements()
-        if levels:
-            fallback_level = levels[0]
-            return fallback_level
+    
         
         return None
+    
+    def _get_spatial_element_area(self):
+        """Get the area of the spatial element in square feet."""
+        try:
+            # Try to get area from Area parameter
+            area_param = self.spatial_element.LookupParameter("Area")
+            if area_param:
+                area_value = area_param.AsDouble()
+                if area_value > 0:
+                    # Convert from Revit internal units (square feet) to square feet
+                    return area_value
+            
+            # Fallback: calculate area from boundary segments
+            boundary_segments = self._get_boundary_segments()
+            if boundary_segments and len(boundary_segments) > 0:
+                # Get the first boundary loop
+                first_loop = boundary_segments[0]
+                if first_loop and len(first_loop) > 0:
+                    # Create a curve loop from boundary segments
+                    curve_loop = DB.CurveLoop()
+                    for segment in first_loop:
+                        if segment.GetCurve():
+                            curve_loop.Append(segment.GetCurve())
+                    
+                    # Calculate area using CurveLoop.GetArea()
+                    if curve_loop.IsValid:
+                        area_value = curve_loop.GetArea()
+                        if area_value > 0:
+                            return area_value
+            
+            return None
+            
+        except Exception as e:
+            return None
     
     def _find_family_symbol(self):
         """Find the family symbol to place using REVIT_FAMILY module."""
@@ -186,22 +226,7 @@ class FamilyInstancePlacer:
         if not family_symbol.IsActive:
             family_symbol.Activate()
         
-        # Set working plane to the level before placing instance
-        try:
-            # Create a reference plane at the level for proper placement
-            # This ensures the instance is oriented correctly relative to the level
-            level_ref = level.GetReference()
-            
-            # Create a reference plane at the level elevation
-            # This helps with proper instance orientation and placement
-            ref_plane = self.project_doc.Create.NewReferencePlane(
-                DB.XYZ(0, 0, level.Elevation),  # Origin point
-                DB.XYZ(1, 0, level.Elevation),  # Direction vector
-                DB.XYZ(0, 1, level.Elevation),  # Up vector
-                self.project_doc.ActiveView)
-            
-        except Exception as e:
-            pass
+        # No working plane manipulation needed; avoid Level.GetReference warnings
         
         try:
             # Use correct document creation context (like move2origin does)
@@ -210,11 +235,13 @@ class FamilyInstancePlacer:
             else:
                 doc_create = self.project_doc.Create
             
-            # Create instance using the proven method
-            instance = doc_create.NewFamilyInstance(
-                location, family_symbol, level, DB.Structure.StructuralType.NonStructural)
+            # Create instance using the proven method, suppressing UI warnings
+            with ErrorSwallower() as swallower:
+                instance = doc_create.NewFamilyInstance(
+                    location, family_symbol, level, DB.Structure.StructuralType.NonStructural)
             
         except Exception as e:
+            print("Failed to place instance: {}".format(str(e)))
             return False
         
         if not instance:
@@ -224,6 +251,25 @@ class FamilyInstancePlacer:
         try:
             instance.Pinned = True
         except Exception as e:
+            pass
+        
+        # Set area as comment
+        try:
+            area_value = self._get_spatial_element_area()
+            if area_value:
+                comment_param = instance.LookupParameter("Comments")
+                if comment_param and not comment_param.IsReadOnly:
+                    comment_param.Set("Area: {:.2f} sq ft".format(area_value))
+        except Exception as e:
+            pass
+
+        # Set last updated timestamp in Mark parameter
+        try:
+            mark_param = instance.LookupParameter("Mark")
+            if mark_param and not mark_param.IsReadOnly:
+                timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                mark_param.Set(timestamp)
+        except Exception:
             pass
         
         return True
@@ -287,3 +333,9 @@ class FamilyInstancePlacer:
             
         except Exception as e:
             return None
+
+
+if __name__ == "__main__":
+    """Test the FamilyInstancePlacer class when run as main module."""
+    print("FamilyInstancePlacer module - This module provides family instance placement functionality.")
+    print("To test this module, run it within a Revit environment with proper document context.")

@@ -1,14 +1,14 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Create an exploded axon diagram by displacing furniture elements upward by 50 feet in a 3D view."
+__doc__ = "Create an exploded axon by displacing elements of a selected category per level grouping in a 3D view."
 __title__ = "Explode Axon"
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 
-from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION, TIME, USER, ENVIRONMENT, DATA_CONVERSION
-from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_SELECTION, REVIT_VIEW
+from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION, DATA_CONVERSION
+from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_VIEW, REVIT_FORMS
 from Autodesk.Revit import DB # pyright: ignore 
 
 UIDOC = REVIT_APPLICATION.get_uidoc()
@@ -19,22 +19,28 @@ AXON_VIEW_NAME = "EXPLODED AXON DIAGRAM"
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def explode_axon(doc):
-    """Create exploded axon diagram by displacing ALL elements based on their level height."""
+    """Create exploded axon diagram by displacing elements of a chosen category based on their level height."""
     
     # Show start notification
     NOTIFICATION.messenger("Starting Level-Based Explode Axon operation...")
     
+    # Prompt for target category to process
+    target_category_ids, target_category_label = pick_target_category_ids(doc)
+
+    # Prompt for per-level displacement step (in feet)
+    step_feet = pick_displacement_step_feet()
+
     # Get or create 3D view
     view = get_or_create_3d_view(doc, AXON_VIEW_NAME)
     
-    # Create level-based displacement for ALL elements
-    success_count = create_level_based_displacement(doc, view)
+    # Create level-based displacement for filtered elements
+    success_count = create_level_based_displacement(doc, view, target_category_ids, step_feet)
     
     # Switch to the view using REVIT_VIEW module
     REVIT_VIEW.set_active_view_by_name(AXON_VIEW_NAME, doc)
     
     # Show completion notification
-    completion_message = "Created level-based exploded axon diagram with {} elements displaced.".format(success_count)
+    completion_message = "Created exploded axon for [{}] with {} elements displaced.".format(target_category_label, success_count)
     NOTIFICATION.messenger(completion_message)
     print(completion_message)
 
@@ -113,8 +119,12 @@ def get_furniture_elements(doc):
         return []
 
 
-def create_level_based_displacement(doc, view):
-    """Create level-based displacement where ALL elements move up based on their level grouping."""
+def create_level_based_displacement(doc, view, target_category_ids=None, step_feet=20.0):
+    """Create level-based displacement where filtered elements move up based on their level grouping.
+
+    target_category_ids: Optional[Set[DB.ElementId]] of categories to include. If None, include all displaceable elements.
+    step_feet: number of feet to move up per level group (default 10ft).
+    """
     success_count = 0
     
     # Get all levels in the project
@@ -141,20 +151,15 @@ def create_level_based_displacement(doc, view):
         
         # Process each level (skip base level)
         for i, level in enumerate(sorted_levels[1:], 1):  # Start from index 1 to skip base level
-            # Get ALL elements on this level using FilteredElementCollector with level filter
-            level_elements = get_all_elements_on_level(doc, level)
+            # Get elements on this level filtered by target categories
+            level_elements = get_all_elements_on_level(doc, level, target_category_ids)
             
             if not level_elements:
                 print("Level {}: No elements found".format(level.Name))
                 continue
                 
-            # Calculate displacement based on level grouping (level index * 10ft)
-            # Level 1 (base): 0ft displacement
-            # Level 2: 10ft displacement
-            # Level 3: 20ft displacement
-            # Level 4: 30ft displacement
-            # etc.
-            displacement_height = i * 10  # Each level group moves up by 10ft more than the previous
+            # Calculate displacement based on level grouping (level index * step)
+            displacement_height = i * float(step_feet)
             displacement_vector = DB.XYZ(0, 0, displacement_height)
             
             print("Level {} (Group {}): Displacing {} elements by {} ft".format(
@@ -258,125 +263,34 @@ def configure_view_for_displacement(doc, view):
 def enable_annotation_categories(doc, view):
     """Enable annotation categories in the view - required for displacement to work."""
     try:
-        # List of annotation categories that need to be visible
-        annotation_categories = [
-            DB.BuiltInCategory.OST_TextNotes,
-            DB.BuiltInCategory.OST_DetailItems,
-            DB.BuiltInCategory.OST_GenericAnnotation,
-            DB.BuiltInCategory.OST_RevisionClouds,
-            DB.BuiltInCategory.OST_RevisionTags,
-            DB.BuiltInCategory.OST_Viewports,
-            DB.BuiltInCategory.OST_Sheets,
-            DB.BuiltInCategory.OST_ReferenceLines,
-            DB.BuiltInCategory.OST_ReferencePlanes,
-            DB.BuiltInCategory.OST_Grids,
-            DB.BuiltInCategory.OST_Levels,
-            DB.BuiltInCategory.OST_Dimensions,
-            DB.BuiltInCategory.OST_SpotDimensions,
-            DB.BuiltInCategory.OST_SpotElevations,
-            DB.BuiltInCategory.OST_SpotCoordinates,
-            DB.BuiltInCategory.OST_IndependentTags,
-            DB.BuiltInCategory.OST_MultiReferenceAnnotations,
-            DB.BuiltInCategory.OST_KeynoteTags,
-            DB.BuiltInCategory.OST_KeynoteText,
-            DB.BuiltInCategory.OST_StructuralFramingTags,
-            DB.BuiltInCategory.OST_StructuralColumnTags,
-            DB.BuiltInCategory.OST_StructuralFoundationTags,
-            DB.BuiltInCategory.OST_StructuralConnectionTags,
-            DB.BuiltInCategory.OST_StructuralRebarTags,
-            DB.BuiltInCategory.OST_StructuralAreaReinforcementTags,
-            DB.BuiltInCategory.OST_StructuralPathReinforcementTags,
-            DB.BuiltInCategory.OST_StructuralFabricAreasTags,
-            DB.BuiltInCategory.OST_StructuralFabricReinforcementTags,
-            DB.BuiltInCategory.OST_StructuralTrussTags,
-            DB.BuiltInCategory.OST_MechanicalEquipmentTags,
-            DB.BuiltInCategory.OST_DuctTags,
-            DB.BuiltInCategory.OST_DuctFittingTags,
-            DB.BuiltInCategory.OST_DuctAccessoryTags,
-            DB.BuiltInCategory.OST_DuctCurvesTags,
-            DB.BuiltInCategory.OST_PipeTags,
-            DB.BuiltInCategory.OST_PipeFittingTags,
-            DB.BuiltInCategory.OST_PipeAccessoryTags,
-            DB.BuiltInCategory.OST_PipeCurvesTags,
-            DB.BuiltInCategory.OST_CableTrayTags,
-            DB.BuiltInCategory.OST_ConduitTags,
-            DB.BuiltInCategory.OST_ElectricalEquipmentTags,
-            DB.BuiltInCategory.OST_ElectricalFixturesTags,
-            DB.BuiltInCategory.OST_LightingFixturesTags,
-            DB.BuiltInCategory.OST_ElectricalDevicesTags,
-            DB.BuiltInCategory.OST_DataDevicesTags,
-            DB.BuiltInCategory.OST_CommunicationDevicesTags,
-            DB.BuiltInCategory.OST_NurseCallDevicesTags,
-            DB.BuiltInCategory.OST_SecurityDevicesTags,
-            DB.BuiltInCategory.OST_FireAlarmDevicesTags,
-            DB.BuiltInCategory.OST_TelephoneDevicesTags,
-            DB.BuiltInCategory.OST_DoorTags,
-            DB.BuiltInCategory.OST_WindowTags,
-            DB.BuiltInCategory.OST_RoomTags,
-            DB.BuiltInCategory.OST_AreaTags,
-            DB.BuiltInCategory.OST_SpaceTags,
-            DB.BuiltInCategory.OST_PlumbingFixturesTags,
-            DB.BuiltInCategory.OST_MechanicalEquipmentTags,
-            DB.BuiltInCategory.OST_SpecialtyEquipmentTags,
-            DB.BuiltInCategory.OST_FurnitureTags,
-            DB.BuiltInCategory.OST_FurnitureSystemsTags,
-            DB.BuiltInCategory.OST_CaseworkTags,
-            DB.BuiltInCategory.OST_PlantingTags,
-            DB.BuiltInCategory.OST_SiteTags,
-            DB.BuiltInCategory.OST_ParkingTags,
-            DB.BuiltInCategory.OST_MassTags,
-            DB.BuiltInCategory.OST_CurtainWallMullionsTags,
-            DB.BuiltInCategory.OST_CurtainPanelsTags,
-            DB.BuiltInCategory.OST_CurtainWallTags,
-            DB.BuiltInCategory.OST_StairsTags,
-            DB.BuiltInCategory.OST_RampsTags,
-            DB.BuiltInCategory.OST_ElevatorTags,
-            DB.BuiltInCategory.OST_EscalatorTags,
-            DB.BuiltInCategory.OST_MovingWalkwayTags,
-            DB.BuiltInCategory.OST_EntourageTags,
-            DB.BuiltInCategory.OST_ModelTextTags,
-            DB.BuiltInCategory.OST_GenericModelTags,
-            DB.BuiltInCategory.OST_StructuralFramingTags,
-            DB.BuiltInCategory.OST_StructuralColumnsTags,
-            DB.BuiltInCategory.OST_StructuralFoundationsTags,
-            DB.BuiltInCategory.OST_StructuralConnectionsTags,
-            DB.BuiltInCategory.OST_StructuralRebarTags,
-            DB.BuiltInCategory.OST_StructuralAreaReinforcementTags,
-            DB.BuiltInCategory.OST_StructuralPathReinforcementTags,
-            DB.BuiltInCategory.OST_StructuralFabricAreasTags,
-            DB.BuiltInCategory.OST_StructuralFabricReinforcementTags,
-            DB.BuiltInCategory.OST_StructuralTrussTags,
-            DB.BuiltInCategory.OST_WallsTags,
-            DB.BuiltInCategory.OST_CurtainWallMullionsTags,
-            DB.BuiltInCategory.OST_CurtainPanelsTags,
-            DB.BuiltInCategory.OST_CurtainWallTags,
-            DB.BuiltInCategory.OST_RoofsTags,
-            DB.BuiltInCategory.OST_CeilingsTags,
-            DB.BuiltInCategory.OST_FloorsTags,
-            DB.BuiltInCategory.OST_StairsTags,
-            DB.BuiltInCategory.OST_RampsTags,
-            DB.BuiltInCategory.OST_ElevatorTags,
-            DB.BuiltInCategory.OST_EscalatorTags,
-            DB.BuiltInCategory.OST_MovingWalkwayTags,
-            DB.BuiltInCategory.OST_EntourageTags,
-            DB.BuiltInCategory.OST_ModelTextTags,
-            DB.BuiltInCategory.OST_GenericModelTags
-        ]
+        # Get all categories in the document
+        categories = doc.Settings.Categories
         
-        # Enable each annotation category
-        for category in annotation_categories:
+        # Filter categories by CategoryType.Annotation
+        annotation_categories = []
+        for category in categories:
             try:
-                # Get the category object
-                cat = DB.Category.GetCategory(doc, category)
-                if cat:
-                    # Make sure the category is visible in the view
-                    if view.GetCategoryHidden(cat.Id):
-                        view.SetCategoryHidden(cat.Id, False)
-            except Exception as e:
-                # Some categories might not exist in all projects, skip them
+                if category.CategoryType == DB.CategoryType.Annotation:
+                    annotation_categories.append(category)
+            except Exception:
+                # Skip categories that don't have a valid CategoryType
                 continue
         
-        print("Annotation categories enabled for displacement")
+        print("Found {} annotation categories to enable".format(len(annotation_categories)))
+        
+        # Enable each annotation category
+        enabled_count = 0
+        for category in annotation_categories:
+            try:
+                # Make sure the category is visible in the view
+                if view.GetCategoryHidden(category.Id):
+                    view.SetCategoryHidden(category.Id, False)
+                    enabled_count += 1
+            except Exception as e:
+                # Some categories might not be controllable in this view, skip them
+                continue
+        
+        print("Enabled {} annotation categories for displacement".format(enabled_count))
         
     except Exception as e:
         print("Warning: Could not enable annotation categories: {}".format(str(e)))
@@ -393,8 +307,8 @@ def get_all_levels(doc):
         return []
 
 
-def get_all_elements_on_level(doc, level):
-    """Get ALL elements on a specific level using FilteredElementCollector with level filter."""
+def get_all_elements_on_level(doc, level, target_category_ids=None):
+    """Get elements on a specific level using ElementLevelFilter and optional category filtering."""
     try:
         # Create a level filter
         level_filter = DB.ElementLevelFilter(level.Id)
@@ -405,12 +319,21 @@ def get_all_elements_on_level(doc, level):
         # Apply level filter and get all elements
         elements = collector.WherePasses(level_filter).WhereElementIsNotElementType()
         
-        # Filter out elements that shouldn't be displaced
+        # Filter out elements that shouldn't be displaced and by category if provided
         displaceable_elements = []
         for element in elements:
             # Skip certain element types that shouldn't be displaced
             if should_skip_element_for_displacement(element):
                 continue
+            # Apply category filter if provided
+            if target_category_ids is not None:
+                try:
+                    if not hasattr(element, 'Category') or element.Category is None:
+                        continue
+                    if element.Category.Id not in target_category_ids:
+                        continue
+                except Exception:
+                    continue
             displaceable_elements.append(element)
         
         print("Level {}: Found {} displaceable elements out of {} total elements".format(
@@ -627,6 +550,93 @@ def remove_existing_displacements(doc, view, element_ids):
                     
     except Exception as e:
         print("Error removing existing displacements: {}".format(str(e)))
+
+
+def pick_target_category_ids(doc):
+    """Ask user which category to process and return a set of category ElementIds and a label."""
+    options = [
+        "Mass",
+        "Furniture",
+        "Generic Models",
+        "Specialty Equipment",
+        "Walls",
+        "Floors",
+        "Doors",
+        "Windows"
+    ]
+
+    choice = REVIT_FORMS.dialogue(
+        title="Explode Axon - Category",
+        main_text="What category do you want to process for displacement?",
+        options=options
+    )
+
+    # Normalize selection
+    if isinstance(choice, (list, tuple)) and len(choice) > 0:
+        choice = choice[0]
+    # Default to Furniture on cancel/close/empty
+    if not choice or choice in ("Close", "Cancel"):
+        choice_label = "Furniture"
+    else:
+        try:
+            choice_label = str(choice)
+        except Exception:
+            choice_label = "Furniture"
+
+    # Map choice to BuiltInCategory list
+    choice_to_bics = {
+        "Mass": [DB.BuiltInCategory.OST_Mass],
+        "Furniture": [DB.BuiltInCategory.OST_Furniture, DB.BuiltInCategory.OST_FurnitureSystems],
+        "Generic Models": [DB.BuiltInCategory.OST_GenericModel],
+        "Specialty Equipment": [DB.BuiltInCategory.OST_SpecialityEquipment],
+        "Walls": [DB.BuiltInCategory.OST_Walls],
+        "Floors": [DB.BuiltInCategory.OST_Floors],
+        "Doors": [DB.BuiltInCategory.OST_Doors],
+        "Windows": [DB.BuiltInCategory.OST_Windows],
+    }
+
+    default_bics = [DB.BuiltInCategory.OST_Furniture, DB.BuiltInCategory.OST_FurnitureSystems]
+    bics = choice_to_bics[choice_label] if choice_label in choice_to_bics else default_bics
+
+    category_ids = set()
+    for bic in bics:
+        try:
+            cat = DB.Category.GetCategory(doc, bic)
+            if cat is not None:
+                category_ids.add(cat.Id)
+        except Exception:
+            continue
+
+    return category_ids, choice_label
+
+
+def pick_displacement_step_feet():
+    """Ask user how much to move up per level group (in feet). Returns a float."""
+    options = [
+        "5",
+        "10",
+        "15",
+        "20",
+        "25",
+        "30"
+    ]
+
+    choice = REVIT_FORMS.dialogue(
+        title="Explode Axon - Step (ft)",
+        main_text="How many feet per level should elements be displaced?",
+        options=options
+    )
+
+    # Normalize and default
+    if isinstance(choice, (list, tuple)) and len(choice) > 0:
+        choice = choice[0]
+    if not choice or choice in ("Close", "Cancel"):
+        return 20.0
+
+    try:
+        return float(str(choice))
+    except Exception:
+        return 20.0
 
 
 ################## main code below #####################

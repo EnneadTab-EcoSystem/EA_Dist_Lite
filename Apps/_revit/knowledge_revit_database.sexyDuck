@@ -2809,7 +2809,7 @@
     },
     "EnneadTab.tab\\Tools.panel\\explode_axon.pushbutton\\explode_axon_script.py": {
         "alias": "Explode Axon",
-        "doc": "Create an exploded axon diagram by displacing furniture elements upward by 50 feet in a 3D view.",
+        "doc": "Create an exploded axon by displacing elements of a selected category per level grouping in a 3D view.",
         "icon": "EnneadTab.tab\\Tools.panel\\explode_axon.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\Tools.panel\\explode_axon.pushbutton\\explode_axon_script.py",

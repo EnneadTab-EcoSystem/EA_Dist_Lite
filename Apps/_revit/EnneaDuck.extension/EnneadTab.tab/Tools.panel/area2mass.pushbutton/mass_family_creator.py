@@ -257,7 +257,7 @@ class MassFamilyCreator:
                 material_settings = {
                     mat_name: {
                         "Color": (r, g, b),
-                        "Transparency": 70,
+                        "Transparency": 30,
                         "SurfaceForegroundPatternIsSolid": True,
                         "SurfaceForegroundPatternColor": (r, g, b)
                     }
@@ -275,3 +275,9 @@ class MassFamilyCreator:
                     subcat.Material = material
             except Exception as e:
                 ERROR_HANDLE.print_note("Failed to assign material to subcategory: {}".format(str(e)))
+
+
+if __name__ == "__main__":
+    """Test the MassFamilyCreator class when run as main module."""
+    print("MassFamilyCreator module - This module provides mass family creation functionality.")
+    print("To test this module, run it within a Revit environment with proper document context.")

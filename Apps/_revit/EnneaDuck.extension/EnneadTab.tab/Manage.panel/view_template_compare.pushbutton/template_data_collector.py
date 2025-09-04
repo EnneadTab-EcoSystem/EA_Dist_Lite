@@ -95,12 +95,24 @@ class TemplateDataCollector:
     
     def _get_sorted_categories(self):
         """
-        Get all categories and subcategories sorted alphabetically using RevitCategory class.
+        Get all categories and subcategories grouped by CategoryType and sorted alphabetically.
+        
+        Uses CategoryType enumeration for logical grouping:
+        - Model categories (walls, floors, etc.)
+        - Annotation categories (text, dimensions, etc.)
+        - Analytical model categories
+        - Internal categories
         
         Returns:
-            list: Sorted list of RevitCategory objects
+            list: Sorted list of RevitCategory objects grouped by CategoryType
         """
-        categories = []
+        categories_by_type = {
+            DB.CategoryType.Model: [],
+            DB.CategoryType.Annotation: [],
+            DB.CategoryType.AnalyticalModel: [],
+            DB.CategoryType.Internal: []
+        }
+        
         category_count = 0
         subcategory_count = 0
         allows_bound_count = 0
@@ -116,7 +128,7 @@ class TemplateDataCollector:
                 ERROR_HANDLE.print_note("ERROR: Categories collection is None!")
                 return []
             
-            ERROR_HANDLE.print_note("Starting category collection - REVIT_CATEGORY available: {}".format(REVIT_CATEGORY is not None))
+            ERROR_HANDLE.print_note("Starting category collection with CategoryType grouping - REVIT_CATEGORY available: {}".format(REVIT_CATEGORY is not None))
             
             # Get all categories with iteration limit
             for category in categories_collection:
@@ -133,49 +145,63 @@ class TemplateDataCollector:
                     # Get category info for error reporting
                     try:
                         category_name = category.Name if category else "Unknown"
+                        category_type = category.CategoryType if hasattr(category, 'CategoryType') else "Unknown"
                     except Exception:
                         category_name = "Unknown"
+                        category_type = "Unknown"
                         
-                    # Add main category using RevitCategory wrapper (no AllowsBoundParameters filter)
+                    # Add main category using RevitCategory wrapper
                     try:
                         if REVIT_CATEGORY:
                             revit_category = REVIT_CATEGORY.RevitCategory(category)
                         else:
                             # Use fallback SimpleRevitCategory
                             revit_category = SimpleRevitCategory(category)
-                            ERROR_HANDLE.print_note("Using fallback SimpleRevitCategory for category: {}".format(category_name))
+                            ERROR_HANDLE.print_note("Using fallback SimpleRevitCategory for category: {} (Type: {})".format(category_name, category_type))
                         
-                        categories.append(revit_category)
+                        # Group by CategoryType
+                        if category_type in categories_by_type:
+                            categories_by_type[category_type].append(revit_category)
+                        else:
+                            # Fallback to Model category for unknown types
+                            categories_by_type[DB.CategoryType.Model].append(revit_category)
+                            ERROR_HANDLE.print_note("Unknown category type '{}' for category '{}', grouping under Model".format(category_type, category_name))
+                        
                         allows_bound_count += 1
                     except Exception as revit_cat_error:
                         self._add_to_error_group(self.all_error_groups, revit_cat_error, category_name, "CategoryCreation_")
                         continue
                         
-                        # Add subcategories with limit
-                        if hasattr(category, 'SubCategories'):
-                            for subcategory in category.SubCategories:
-                                subcategory_count += 1
-                                if subcategory_count > self.max_subcategories:
-                                    ERROR_HANDLE.print_note("Subcategory iteration limit reached ({}), stopping.".format(self.max_subcategories))
-                                    break
-                                
-                                try:
-                                    if subcategory:
-                                        if REVIT_CATEGORY:
-                                            revit_subcategory = REVIT_CATEGORY.RevitCategory(subcategory)
-                                        else:
-                                            # Use fallback SimpleRevitCategory
-                                            revit_subcategory = SimpleRevitCategory(subcategory)
-                                        categories.append(revit_subcategory)
-                                except Exception as e:
-                                    # Get subcategory name for error reporting
-                                    try:
-                                        sub_name = subcategory.Name if subcategory else "Unknown"
-                                    except:
-                                        sub_name = "Unknown"
+                    # Add subcategories with limit
+                    if hasattr(category, 'SubCategories'):
+                        for subcategory in category.SubCategories:
+                            subcategory_count += 1
+                            if subcategory_count > self.max_subcategories:
+                                ERROR_HANDLE.print_note("Subcategory iteration limit reached ({}), stopping.".format(self.max_subcategories))
+                                break
+                            
+                            try:
+                                if subcategory:
+                                    if REVIT_CATEGORY:
+                                        revit_subcategory = REVIT_CATEGORY.RevitCategory(subcategory)
+                                    else:
+                                        # Use fallback SimpleRevitCategory
+                                        revit_subcategory = SimpleRevitCategory(subcategory)
                                     
-                                    self._add_to_error_group(self.all_error_groups, e, sub_name, "SubCat_")
-                                    continue
+                                    # Subcategories inherit the parent's CategoryType
+                                    if category_type in categories_by_type:
+                                        categories_by_type[category_type].append(revit_subcategory)
+                                    else:
+                                        categories_by_type[DB.CategoryType.Model].append(revit_subcategory)
+                            except Exception as e:
+                                # Get subcategory name for error reporting
+                                try:
+                                    sub_name = subcategory.Name if subcategory else "Unknown"
+                                except:
+                                    sub_name = "Unknown"
+                                
+                                self._add_to_error_group(self.all_error_groups, e, sub_name, "SubCat_")
+                                continue
                         
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error processing category: {}".format(str(e)))
@@ -185,31 +211,53 @@ class TemplateDataCollector:
             ERROR_HANDLE.print_note("Error getting categories: {}".format(str(e)))
             return []
         
+        # Combine all categories by type, maintaining type grouping
+        all_categories = []
+        type_names = {
+            DB.CategoryType.Model: "Model",
+            DB.CategoryType.Annotation: "Annotation", 
+            DB.CategoryType.AnalyticalModel: "Analytical Model",
+            DB.CategoryType.Internal: "Internal"
+        }
+        
+        for category_type, categories_list in categories_by_type.items():
+            if categories_list:
+                type_name = type_names.get(category_type, "Unknown")
+                ERROR_HANDLE.print_note("Found {} {} categories".format(len(categories_list), type_name))
+                
+                # Sort categories within each type alphabetically
+                try:
+                    sorted_by_type = sorted(categories_list, key=lambda x: x.pretty_name)
+                    all_categories.extend(sorted_by_type)
+                except Exception as e:
+                    ERROR_HANDLE.print_note("Error sorting {} categories: {}".format(type_name, str(e)))
+                    all_categories.extend(categories_list)
+        
         # Log stats if there are issues
-        if len(categories) == 0:
+        if len(all_categories) == 0:
             ERROR_HANDLE.print_note("Category collection stats:")
             ERROR_HANDLE.print_note("- Total categories processed: {}".format(category_count))
             ERROR_HANDLE.print_note("- Categories successfully added: {}".format(allows_bound_count))
             ERROR_HANDLE.print_note("- Subcategories added: {}".format(subcategory_count))
         
         # Always log final collection stats for debugging
-        ERROR_HANDLE.print_note("Category collection completed:")
+        ERROR_HANDLE.print_note("Category collection completed with CategoryType grouping:")
         ERROR_HANDLE.print_note("- Total categories processed: {}".format(category_count))
         ERROR_HANDLE.print_note("- Main categories added: {}".format(allows_bound_count))
         ERROR_HANDLE.print_note("- Subcategories added: {}".format(subcategory_count))
-        ERROR_HANDLE.print_note("- Total categories in final list: {}".format(len(categories)))
+        ERROR_HANDLE.print_note("- Total categories in final list: {}".format(len(all_categories)))
+        
+        # Log breakdown by type
+        for category_type, categories_list in categories_by_type.items():
+            if categories_list:
+                type_name = type_names.get(category_type, "Unknown")
+                ERROR_HANDLE.print_note("- {} categories: {}".format(type_name, len(categories_list)))
         
         # Log final result
-        if len(categories) == 0:
+        if len(all_categories) == 0:
             ERROR_HANDLE.print_note("WARNING: No categories were collected!")
         
-        # Sort by pretty name
-        try:
-            sorted_categories = sorted(categories, key=lambda x: x.pretty_name)
-            return sorted_categories
-        except Exception as e:
-            ERROR_HANDLE.print_note("Error sorting categories: {}".format(str(e)))
-            return categories
+        return all_categories
     
     def get_category_overrides(self, template):
         """

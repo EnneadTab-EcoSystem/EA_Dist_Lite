@@ -1188,7 +1188,7 @@ class HTMLReportGenerator:
 
     def _generate_category_overrides_section(self, differences):
         """
-        Generate the category overrides comparison section.
+        Generate the category overrides comparison section with CategoryType grouping.
         
         Args:
             differences: Dictionary of category override differences
@@ -1206,29 +1206,50 @@ class HTMLReportGenerator:
             
             parts.append("                    </tr>")
             
-            # Render rows directly from differences (engine already filtered to only-different)
+            # Render rows grouped by CategoryType
             if differences:
-                for category, values in differences.items():
-                    parts.append("                    <tr><td class='template-col'>{}</td>".format(category))
-                    # Build a lookup of all template values for diff summary
-                    for template_name in self.template_names:
-                        value = values.get(template_name, None)
-                        if value == "UNCONTROLLED":
-                            parts.append("<td style='background-color: #FF8C00; color: white; font-weight: bold;'>UNCONTROLLED</td>")
-                        elif value:
-                            # Show the actual override summary for this template
-                            summary = self._create_override_summary(value)
-                            if summary:
-                                # Process the summary to make section headers bold
-                                processed_summary = self._process_summary_for_bold_headers(summary)
-                                parts.append("<td class='different' style='white-space: pre-line;'>{}</td>".format(processed_summary))
-                            else:
-                                parts.append("<td class='same'>No Override</td>")
-                        else:
-                            # No local override
-                            parts.append("<td class='same'></td>")
-                    
-                    parts.append("</tr>")
+                # Group categories by their CategoryType
+                grouped_categories = self._group_categories_by_type(differences)
+                
+                # Define CategoryType display order and names
+                category_type_order = [
+                    ('Model', 'Model Categories'),
+                    ('Annotation', 'Annotation Categories'), 
+                    ('Analytical Model', 'Analytical Model Categories'),
+                    ('Internal', 'Internal Categories')
+                ]
+                
+                for type_name, type_display_name in category_type_order:
+                    if type_name in grouped_categories and grouped_categories[type_name]:
+                        # Add section header for this CategoryType
+                        parts.append("                    <tr>")
+                        parts.append("                        <td colspan=\"{}\" style=\"background-color: #f8f9fa; font-weight: bold; color: #495057; padding: 8px; border-top: 2px solid #dee2e6;\">".format(len(self.template_names) + 1))
+                        parts.append("                            📁 {}".format(type_display_name))
+                        parts.append("                        </td>")
+                        parts.append("                    </tr>")
+                        
+                        # Add categories for this type
+                        for category, values in grouped_categories[type_name]:
+                            parts.append("                    <tr><td class='template-col' style='padding-left: 20px;'>{}</td>".format(category))
+                            # Build a lookup of all template values for diff summary
+                            for template_name in self.template_names:
+                                value = values.get(template_name, None)
+                                if value == "UNCONTROLLED":
+                                    parts.append("<td style='background-color: #FF8C00; color: white; font-weight: bold;'>UNCONTROLLED</td>")
+                                elif value:
+                                    # Show the actual override summary for this template
+                                    summary = self._create_override_summary(value)
+                                    if summary:
+                                        # Process the summary to make section headers bold
+                                        processed_summary = self._process_summary_for_bold_headers(summary)
+                                        parts.append("<td class='different' style='white-space: pre-line;'>{}</td>".format(processed_summary))
+                                    else:
+                                        parts.append("<td class='same'>No Override</td>")
+                                else:
+                                    # No local override
+                                    parts.append("<td class='same'></td>")
+                            
+                            parts.append("</tr>")
             else:
                 # No categories with differences were found by the engine
                 parts.append("                    <tr>")
@@ -1250,6 +1271,66 @@ class HTMLReportGenerator:
             parts.append("                </div>")
             parts.extend(self._close_section())
             return "\n".join(parts)
+    
+    def _group_categories_by_type(self, differences):
+        """
+        Group categories by their CategoryType based on category name patterns.
+        
+        Args:
+            differences: Dictionary of category override differences
+            
+        Returns:
+            dict: Categories grouped by CategoryType
+        """
+        grouped = {
+            'Model': [],
+            'Annotation': [],
+            'Analytical Model': [],
+            'Internal': []
+        }
+        
+        # Category name patterns to identify CategoryType
+        # Based on common Revit category naming conventions
+        model_patterns = [
+            'walls', 'floors', 'ceilings', 'roofs', 'stairs', 'ramps', 'doors', 'windows',
+            'furniture', 'casework', 'plumbing', 'mechanical', 'electrical', 'structural',
+            'mass', 'generic model', 'specialty equipment', 'parking', 'site', 'planting',
+            'curtain wall', 'elevator', 'escalator', 'moving walkway', 'entourage'
+        ]
+        
+        annotation_patterns = [
+            'text', 'dimension', 'tag', 'detail', 'annotation', 'revision', 'grid', 'level',
+            'reference', 'spot', 'keynote', 'independent', 'multi-reference', 'viewport',
+            'sheet', 'displacement'  # Include displacement elements and paths
+        ]
+        
+        analytical_patterns = [
+            'analytical', 'load', 'boundary', 'connection', 'link'
+        ]
+        
+        internal_patterns = [
+            'internal', 'system', 'family', 'type'
+        ]
+        
+        for category, values in differences.items():
+            category_lower = category.lower()
+            
+            # Determine CategoryType based on patterns
+            if any(pattern in category_lower for pattern in annotation_patterns):
+                grouped['Annotation'].append((category, values))
+            elif any(pattern in category_lower for pattern in analytical_patterns):
+                grouped['Analytical Model'].append((category, values))
+            elif any(pattern in category_lower for pattern in internal_patterns):
+                grouped['Internal'].append((category, values))
+            else:
+                # Default to Model category for unrecognized patterns
+                grouped['Model'].append((category, values))
+        
+        # Sort categories within each type alphabetically
+        for category_type in grouped:
+            grouped[category_type].sort(key=lambda x: x[0].lower())
+        
+        return grouped
     
     def _create_override_summary(self, override_data):
         """
@@ -1478,7 +1559,7 @@ class HTMLReportGenerator:
     
     def _generate_category_visibility_section(self, differences):
         """
-        Generate the category visibility comparison section.
+        Generate the category visibility comparison section with CategoryType grouping.
         
         Args:
             differences: Dictionary of category visibility differences
@@ -1486,7 +1567,75 @@ class HTMLReportGenerator:
         Returns:
             str: HTML for category visibility section
         """
-        return self._generate_simple_comparison_section('category_visibility', 'Category Visibility', differences, "Category/SubCategory")
+        try:
+            parts = []
+            parts.extend(self._open_section('category_visibility', 'Category Visibility'))
+            parts.extend(self._open_table_with_header('Category/SubCategory'))
+            
+            for template_name in self.template_names:
+                parts.append("                        <th>{}</th>".format(template_name))
+            
+            parts.append("                    </tr>")
+            
+            # Render rows grouped by CategoryType
+            if differences:
+                # Group categories by their CategoryType
+                grouped_categories = self._group_categories_by_type(differences)
+                
+                # Define CategoryType display order and names
+                category_type_order = [
+                    ('Model', 'Model Categories'),
+                    ('Annotation', 'Annotation Categories'), 
+                    ('Analytical Model', 'Analytical Model Categories'),
+                    ('Internal', 'Internal Categories')
+                ]
+                
+                for type_name, type_display_name in category_type_order:
+                    if type_name in grouped_categories and grouped_categories[type_name]:
+                        # Add section header for this CategoryType
+                        parts.append("                    <tr>")
+                        parts.append("                        <td colspan=\"{}\" style=\"background-color: #f8f9fa; font-weight: bold; color: #495057; padding: 8px; border-top: 2px solid #dee2e6;\">".format(len(self.template_names) + 1))
+                        parts.append("                            📁 {}".format(type_display_name))
+                        parts.append("                        </td>")
+                        parts.append("                    </tr>")
+                        
+                        # Add categories for this type
+                        for category, values in grouped_categories[type_name]:
+                            parts.append("                    <tr><td class='template-col' style='padding-left: 20px;'>{}</td>".format(category))
+                            # Build a lookup of all template values for diff summary
+                            for template_name in self.template_names:
+                                value = values.get(template_name, None)
+                                if value == "UNCONTROLLED":
+                                    parts.append("<td style='background-color: #FF8C00; color: white; font-weight: bold;'>UNCONTROLLED</td>")
+                                elif value == "Hidden":
+                                    parts.append("<td style='background-color: #dc3545; color: white; font-weight: bold;'>Hidden</td>")
+                                elif value in ["Visible", "On"]:
+                                    parts.append("<td style='background-color: #28a745; color: white; font-weight: bold;'>Visible</td>")
+                                else:
+                                    parts.append("<td class='same'>{}</td>".format(str(value) if value else ""))
+                            
+                            parts.append("</tr>")
+            else:
+                # No categories with differences were found by the engine
+                parts.append("                    <tr>")
+                parts.append("                        <td colspan=\"{}\" style=\"text-align: center; color: #999999; font-style: italic; padding: 20px;\">".format(len(self.template_names) + 1))
+                parts.append("                            All templates have identical category visibility settings. No differences found.")
+                parts.append("                        </td>")
+                parts.append("                    </tr>")
+            
+            parts.extend(self._close_table())
+            parts.extend(self._close_section())
+            return "\n".join(parts)
+            
+        except Exception as e:
+            # Return error section if generation fails
+            parts = []
+            parts.extend(self._open_section('category_visibility', 'Category Visibility'))
+            parts.append("                <div class=\"error\">")
+            parts.append("                    <p>Error generating category visibility section: {}</p>".format(str(e)))
+            parts.append("                </div>")
+            parts.extend(self._close_section())
+            return "\n".join(parts)
     
     def _generate_workset_visibility_section(self, differences):
         """
