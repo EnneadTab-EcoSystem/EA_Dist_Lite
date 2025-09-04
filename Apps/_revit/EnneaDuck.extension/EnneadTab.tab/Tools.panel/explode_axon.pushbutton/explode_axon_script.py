@@ -7,9 +7,10 @@ __title__ = "Explode Axon"
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 
-from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION, DATA_CONVERSION
-from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_VIEW, REVIT_FORMS
-from Autodesk.Revit import DB # pyright: ignore 
+from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION, DATA_CONVERSION, ENVIRONMENT
+from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_VIEW
+from Autodesk.Revit import DB # pyright: ignore
+from pyrevit import forms # pyright: ignore 
 
 UIDOC = REVIT_APPLICATION.get_uidoc()
 DOC = REVIT_APPLICATION.get_doc()
@@ -63,60 +64,37 @@ def get_or_create_3d_view(doc, view_name):
         if view_family_type:
             view = DB.View3D.CreateIsometric(doc, view_family_type.Id)
             view.Name = view_name
+            
+            # Set Views_$Group to ENVIRONMENT.PLUGIN_NAME
+            try:
+                group_param = view.LookupParameter("Views_$Group")
+                if group_param and not group_param.IsReadOnly:
+                    group_param.Set(ENVIRONMENT.PLUGIN_NAME)
+                    print("Set Views_$Group to: {}".format(ENVIRONMENT.PLUGIN_NAME))
+            except Exception as e:
+                print("Warning: Could not set Views_$Group: {}".format(str(e)))
+            
+            # Set Views_$Series to "ExplodeAxon"
+            try:
+                series_param = view.LookupParameter("Views_$Series")
+                if series_param and not series_param.IsReadOnly:
+                    series_param.Set("ExplodeAxon")
+                    print("Set Views_$Series to: ExplodeAxon")
+            except Exception as e:
+                print("Warning: Could not set Views_$Series: {}".format(str(e)))
+            
             print("Created new 3D view: {}".format(view_name))
             t.Commit()
             return view
         
-        # Fallback: get first available 3D view
-        collector = DB.FilteredElementCollector(doc)
-        views = collector.OfClass(DB.View3D).WhereElementIsNotElementType()
-        
-        for view in views:
-            if not view.IsTemplate:
-                view.Name = view_name
-                print("Renamed existing 3D view to: {}".format(view_name))
-                t.Commit()
-                return view
-        
         t.RollBack()
-        raise Exception("Could not create or find a suitable 3D view")
+        raise Exception("Could not create a new 3D view. Please ensure you have appropriate permissions and view templates available.")
         
     except Exception as e:
         t.RollBack()
         raise Exception("Failed to create or modify 3D view: {}".format(str(e)))
 
 
-def get_furniture_elements(doc):
-    """Get all furniture elements in the model with comprehensive error handling."""
-    try:
-        print("Starting furniture element collection...")
-        
-        # Get furniture elements
-        collector = DB.FilteredElementCollector(doc)
-        furniture_elements = collector.OfCategory(DB.BuiltInCategory.OST_Furniture).WhereElementIsNotElementType()
-        furniture_list = list(furniture_elements)
-        print("Found {} furniture elements".format(len(furniture_list)))
-        
-        # Get furniture systems
-        collector = DB.FilteredElementCollector(doc)
-        furniture_systems = collector.OfCategory(DB.BuiltInCategory.OST_FurnitureSystems).WhereElementIsNotElementType()
-        furniture_systems_list = list(furniture_systems)
-        print("Found {} furniture systems".format(len(furniture_systems_list)))
-        
-   
-        # Combine all furniture-like elements
-        all_furniture = furniture_list + furniture_systems_list 
-        
-        print("Total furniture-like elements found: {}".format(len(all_furniture)))
-        
-        
-        
-        return all_furniture
-        
-    except Exception as e:
-        print("Error collecting furniture elements: {}".format(str(e)))
-        ERROR_HANDLE.print_note("Error collecting furniture elements: {}".format(str(e)))
-        return []
 
 
 def create_level_based_displacement(doc, view, target_category_ids=None, step_feet=20.0):
@@ -166,7 +144,7 @@ def create_level_based_displacement(doc, view, target_category_ids=None, step_fe
                 level.Name, i, len(level_elements), displacement_height))
             
             # Create displacement for elements in this level
-            level_success = create_displacement_for_elements(doc, view, level_elements, displacement_vector)
+            level_success = create_view_displacement(doc, view, level_elements, displacement_vector)
             success_count += level_success
         
         # Configure view settings to ensure displacement is visible
@@ -553,38 +531,9 @@ def remove_existing_displacements(doc, view, element_ids):
 
 
 def pick_target_category_ids(doc):
-    """Ask user which category to process and return a set of category ElementIds and a label."""
-    options = [
-        "Mass",
-        "Furniture",
-        "Generic Models",
-        "Specialty Equipment",
-        "Walls",
-        "Floors",
-        "Doors",
-        "Windows"
-    ]
-
-    choice = REVIT_FORMS.dialogue(
-        title="Explode Axon - Category",
-        main_text="What category do you want to process for displacement?",
-        options=options
-    )
-
-    # Normalize selection
-    if isinstance(choice, (list, tuple)) and len(choice) > 0:
-        choice = choice[0]
-    # Default to Furniture on cancel/close/empty
-    if not choice or choice in ("Close", "Cancel"):
-        choice_label = "Furniture"
-    else:
-        try:
-            choice_label = str(choice)
-        except Exception:
-            choice_label = "Furniture"
-
-    # Map choice to BuiltInCategory list
-    choice_to_bics = {
+    """Ask user which categories to process and return a set of category ElementIds and a label."""
+    # Combined options and BuiltInCategory mapping
+    category_options = {
         "Mass": [DB.BuiltInCategory.OST_Mass],
         "Furniture": [DB.BuiltInCategory.OST_Furniture, DB.BuiltInCategory.OST_FurnitureSystems],
         "Generic Models": [DB.BuiltInCategory.OST_GenericModel],
@@ -595,11 +544,26 @@ def pick_target_category_ids(doc):
         "Windows": [DB.BuiltInCategory.OST_Windows],
     }
 
-    default_bics = [DB.BuiltInCategory.OST_Furniture, DB.BuiltInCategory.OST_FurnitureSystems]
-    bics = choice_to_bics[choice_label] if choice_label in choice_to_bics else default_bics
+    # Use pyrevit SelectFromList with multiselect
+    selected_categories = forms.SelectFromList.show(
+        list(category_options.keys()),
+        title="Explode Axon - Categories",
+        multiselect=True,
+        button_name="Select Categories to Process"
+    )
+
+    # Default to Furniture if no selection or cancelled
+    if not selected_categories:
+        selected_categories = ["Furniture"]
+
+    # Collect all BuiltInCategories for selected options
+    all_bics = []
+    for choice in selected_categories:
+        if choice in category_options:
+            all_bics.extend(category_options[choice])
 
     category_ids = set()
-    for bic in bics:
+    for bic in all_bics:
         try:
             cat = DB.Category.GetCategory(doc, bic)
             if cat is not None:
@@ -607,45 +571,38 @@ def pick_target_category_ids(doc):
         except Exception:
             continue
 
+    # Create a descriptive label for the selection
+    if len(selected_categories) == 1:
+        choice_label = selected_categories[0]
+    else:
+        choice_label = "Multiple Categories ({})".format(", ".join(selected_categories))
+
     return category_ids, choice_label
 
 
 def pick_displacement_step_feet():
-    """Ask user how much to move up per level group (in feet). Returns a float."""
-    options = [
-        "5",
-        "10",
-        "15",
-        "20",
-        "25",
-        "30"
-    ]
-
-    choice = REVIT_FORMS.dialogue(
-        title="Explode Axon - Step (ft)",
-        main_text="How many feet per level should elements be displaced?",
-        options=options
-    )
-
-    # Normalize and default
-    if isinstance(choice, (list, tuple)) and len(choice) > 0:
-        choice = choice[0]
-    if not choice or choice in ("Close", "Cancel"):
-        return 20.0
-
+    """Ask user how much to move up per level group (in feet) using a slider. Returns a float."""
     try:
-        return float(str(choice))
-    except Exception:
-        return 20.0
+        # Use pyrevit slider with wider range
+        step_value = forms.ask_for_one_number(
+            default=20.0,
+            min=1.0,
+            max=100.0,
+            prompt="How many feet per level should elements be displaced?",
+            title="Explode Axon - Displacement Step"
+        )
+        
+        if step_value is None:
+            return 20.0  # Default value if cancelled
+            
+        return float(step_value)
+        
+    except Exception as e:
+        print("Error getting displacement step: {}".format(str(e)))
+        return 20.0  # Default fallback
 
 
 ################## main code below #####################
 if __name__ == "__main__":
     explode_axon(DOC)
-
-
-
-
-
-
 

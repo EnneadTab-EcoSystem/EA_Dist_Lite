@@ -311,7 +311,7 @@
                             Margin="0,0,0,0"
                             Padding="8,4,8,4"
                             Background="Orange"
-                            ToolTip="Export Exterior and Interior Keynotes as two separate Excel files that you can link abck to Revit using Ideate sticky."
+                            ToolTip="Export Exterior and Interior Keynotes as two separate Excel files that you can link back to Revit using Ideate sticky."
                             Click="export_keynotes_enneadtab">
                         <TextBlock TextAlignment="Center">
                             Export Exterior<LineBreak/>Interior Keynotes<LineBreak/>As Excel
@@ -364,6 +364,14 @@
                             ToolTip="Update keynote data from an Excel file."
                             Click="update_keynote_from_excel">
                         <TextBlock TextAlignment="Center">Update Keynote<LineBreak/>From Excel</TextBlock>
+                    </Button>
+                    <Button BorderThickness="1"
+                            Margin="0,0,0,0"
+                            Padding="8,4,8,4"
+                            Background="Orange"
+                            ToolTip="Remove empty categories and branches with user selection. Uses SelectFromList to choose which items to delete."
+                            Click="remove_empty_categories_and_branches">
+                        <TextBlock TextAlignment="Center">Remove Empty<LineBreak/>Category<LineBreak/>and Branch</TextBlock>
                     </Button>
                 </StackPanel>
             </GroupBox>

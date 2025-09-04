@@ -340,7 +340,7 @@ class EditRecordWindow(forms.WPFWindow):
             self.active_text = template
 
     def translate(self, sender, args):
-        # use Enneadatb transaltor
+        # use EnneadTab translator
         self.recordText.Text = AU.translate_keynote(self.active_text)
 
     def apply_changes(self, sender, args):
@@ -410,6 +410,12 @@ class KeynoteManagerWindow(forms.WPFWindow):
     @ERROR_HANDLE.try_catch_error()
     def batch_translate_keynote(self, sender, args):
         AU.batch_translate_keynote(keynote_data_conn = self._conn)
+        self.refresh(sender, args)
+
+    @ERROR_HANDLE.try_catch_error()
+    def remove_empty_categories_and_branches(self, sender, args):
+        """Remove categories and branches that have zero children from the database."""
+        AU.remove_empty_categories_and_branches(keynote_data_conn=self._conn)
         self.refresh(sender, args)
 
     ################## end of EnneadTab group ########################
