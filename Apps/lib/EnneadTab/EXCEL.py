@@ -7,6 +7,7 @@ This module provides comprehensive tools for Excel file operations including:
 - Formula validation and visualization
 - Column/row manipulation and searching
 - Color and formatting management
+- Cell tooltips for enhanced user experience
 - Support for both local and online Excel files
 
 The module handles both .xls and .xlsx formats, with special handling for
@@ -17,6 +18,7 @@ Key Features:
 - Cell formatting and styling
 - Data extraction and manipulation
 - Formula checking and highlighting
+- Hover tooltips for cells with additional information
 - Support for both local and remote Excel files
 """
 
@@ -247,8 +249,10 @@ class ExcelDataCollection:
 class ExcelDataItem:
     """Container for Excel cell data and formatting.
     
-    Stores cell content, position, and formatting properties including colors and borders.
+    Stores cell content, position, and formatting properties including colors, borders, and tooltips.
     Reference for border styles: https://xlsxwriter.readthedocs.io/format.html#set_border
+    
+    Tooltip functionality shows helpful information when hovering over cells in Excel.
 
     """
     def __init__(
@@ -271,28 +275,30 @@ class ExcelDataItem:
         side_border_style=None,
         merge_with=None,
         text_wrap=False,
+        tooltip=None,
     ):
-        """_summary_
+        """Initialize ExcelDataItem with cell data and formatting options.
 
         Args:
-            item (_type_): _description_
-            row (_type_): _description_
-            column (_type_): _description_
+            item: The cell content (text, number, etc.)
+            row (int): Row number (0-based)
+            column (int|str): Column number (0-based) or Excel column letter (A, B, C, etc.)
             is_bold (bool, optional): If True, the text will be bold. Defaults to False.
             is_read_only (bool, optional): If True, the cell will be read only. Defaults to False.
-            cell_color (_type_, optional): _description_. Defaults to None.
-            text_color (_type_, optional): _description_. Defaults to None.
-            text_alignment (TextAlignment, optional): _description_. Defaults to TextAlignment.Left.
-            font_size (_type_, optional): _description_. Defaults to None.
-            font_name (_type_, optional): _description_. Defaults to None.
-            col_width (_type_, optional): _description_. Defaults to None.
-            border_style (_type_, optional): _description_. Defaults to None.
-            border_color (_type_, optional): _description_. Defaults to None.
-            top_border_style (_type_, optional): _description_. Defaults to None.
-            bottom_border_style (_type_, optional): _description_. Defaults to None.
-            side_border_style (_type_, optional): _description_. Defaults to None.
-            merge_with (_type_, optional): _description_. Defaults to None.
-            text_wrap (bool, optional): _description_. Defaults to False.
+            cell_color (tuple, optional): RGB tuple for cell background color. Defaults to None.
+            text_color (tuple, optional): RGB tuple for text color. Defaults to None.
+            text_alignment (TextAlignment, optional): Text alignment. Defaults to TextAlignment.Left.
+            font_size (int, optional): Font size in points. Defaults to None.
+            font_name (str, optional): Font family name. Defaults to None.
+            col_width (float, optional): Column width. Defaults to None.
+            border_style (int, optional): Border style. Defaults to None.
+            border_color (tuple, optional): RGB tuple for border color. Defaults to None.
+            top_border_style (int, optional): Top border style. Defaults to None.
+            bottom_border_style (int, optional): Bottom border style. Defaults to None.
+            side_border_style (int, optional): Side border style. Defaults to None.
+            merge_with (list, optional): List of (row, col) tuples to merge with. Defaults to None.
+            text_wrap (bool, optional): If True, text will wrap in cell. Defaults to False.
+            tooltip (str, optional): Tooltip text to show when hovering over the cell. Defaults to None.
         """
         if isinstance(column, str):
             column = letter_to_index(column, start_from_zero=True)
@@ -320,6 +326,7 @@ class ExcelDataItem:
         self.side_border_style = side_border_style
         self.merge_with = merge_with
         self.text_wrap = text_wrap
+        self.tooltip = tooltip
     def __str__(self):
         info = "ExcelDataItem: {} @ ({}, {})".format(self.item, self.row, self.column)
         if self.cell_color:
@@ -364,7 +371,8 @@ class ExcelDataItem:
             'bottom_border_style': None,
             'side_border_style': None,
             'merge_with': None,
-            'text_wrap': False
+            'text_wrap': False,
+            'tooltip': None
         }
         
         # Update with provided values

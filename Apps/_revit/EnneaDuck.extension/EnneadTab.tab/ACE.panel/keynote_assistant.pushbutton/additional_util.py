@@ -210,7 +210,8 @@ def create_keynote_data_row(leaf, row, extend_db_item=None, highlight_missing=Fa
     cell_color = (255, 200, 200) if highlight_missing else None
     
     # Keynote ID and Description
-    items.append(create_excel_cell(leaf.key, row, "KEYNOTE ID", cell_color=cell_color))
+    items.append(create_excel_cell(leaf.key, row, "KEYNOTE ID", cell_color=cell_color, 
+                                  tooltip="If you want to change keynote, just write the new keynote ID on column A, please do not change original keynote"))
     items.append(create_excel_cell(leaf.text, row, "KEYNOTE DESCRIPTION", 
                                   text_wrap=True, cell_color=cell_color))
     
@@ -644,6 +645,10 @@ def update_keynote_from_excel(keynote_data_conn):
         main_text="Update Keynote from Excel.", 
         sub_text="This is a dangerous game. I am going to use the 'Update' worksheet in the Excel file "
                 "to update the keynote data. Adding one if missing, and updating the existing ones with new description."
+                "\nIn the 'Update' worksheet, you will need the following columns:"
+                "\n- KEYNOTE ID: The ID of the keynote to update."
+                "\n- KEYNOTE DESCRIPTION: The description of the keynote to update."
+                "\n- PARENT FOR NEW KEYNOTE: The parent of the new keynote."
                 "\nYou will have a chance to pick a parent for the new keynotes, if you did not assign one in the Excel file.", 
         options=options, 
         icon="warning"
@@ -681,13 +686,13 @@ def update_keynote_from_excel(keynote_data_conn):
     all_keys = [x.key for x in all_keynotes]
     with kdb.BulkAction(keynote_data_conn):
         for k, v in data.items():
-            v = v.get("KEYNOTE DESCRIPTION")
+            keynote_description = v.get("KEYNOTE DESCRIPTION")
            
             if k in all_keys:
                 current_keynote_text = [x for x in all_keynotes if x.key == k][0].text
-                if current_keynote_text != v:
-                    kdb.update_keynote_text(keynote_data_conn, k, v)
-                    print("Update [{}]: {}".format(k, v))
+                if current_keynote_text != keynote_description:
+                    kdb.update_keynote_text(keynote_data_conn, k, keynote_description)
+                    print("Update [{}]: {}".format(k, keynote_description))
             else:
                 assigned_parent = v.get("PARENT FOR NEW KEYNOTE")
                 if assigned_parent is not None and assigned_parent not in all_keys:
@@ -698,10 +703,10 @@ def update_keynote_from_excel(keynote_data_conn):
                     assigned_parent = None
                     
                 if assigned_parent:
-                    kdb.add_keynote(keynote_data_conn, k, v, assigned_parent)
+                    kdb.add_keynote(keynote_data_conn, k, keynote_description, assigned_parent)
                 else:
-                    kdb.add_keynote(keynote_data_conn, k, v, new_parent_for_new_keynote)
-                print("Add [{}]: {}".format(k, v))
+                    kdb.add_keynote(keynote_data_conn, k, keynote_description, new_parent_for_new_keynote)
+                print("Add [{}]: {}".format(k, keynote_description))
     
 
 def open_extended_db_excel(keynote_data_conn):
@@ -847,7 +852,8 @@ def generate_default_extended_db_excel(keynote_data_conn, keynote_excel_extend_d
                     is_read_only=True,
                     top_border_style = EXCEL.BorderStyle.Thin,
                     bottom_border_style=EXCEL.BorderStyle.Thin,
-                    side_border_style=EXCEL.BorderStyle.Thin
+                    side_border_style=EXCEL.BorderStyle.Thin,
+                    tooltip="If you want to change keynote, just write the new keynote ID on column A, please do not change original keynote"
                 ))
                 
                 data_collection.append(create_excel_cell(
@@ -922,8 +928,8 @@ def regenerate_extended_db_excel(keynote_data_conn):
 
 
     # Generate test file path with timestamp
-    test_excel_path = FOLDER.get_local_dump_folder_file("regenerated_extended_db_PLEASE_CHECK_AND_REPLACE_ORGINAL.xlsx")
-    print("Generating test file: {}".format(test_excel_path))
+    regenerated_excel_path = FOLDER.get_local_dump_folder_file("regenerated_extended_db_PLEASE_CHECK_AND_REPLACE_ORGINAL.xlsx")
+    print("Generating test file: {}".format(regenerated_excel_path))
 
     # Read existing extended DB data
     print("Reading existing extended DB data...")
@@ -1008,7 +1014,7 @@ def regenerate_extended_db_excel(keynote_data_conn):
     print("Merged data keys: {}".format(list(merged_data.keys())))
     print("Sample merged data: {}".format(dict(list(merged_data.items())[:2])))  # Show first 2 items
     try:
-        generate_default_extended_db_excel(keynote_data_conn, test_excel_path, additional_data=merged_data)
+        generate_default_extended_db_excel(keynote_data_conn, regenerated_excel_path, additional_data=merged_data)
         print("Successfully generated test extended DB excel!")
         
         # Show summary
@@ -1017,12 +1023,12 @@ def regenerate_extended_db_excel(keynote_data_conn):
         print("Existing extended DB entries preserved: {}".format(len(current_keynote_keys & set(existing_data.keys()))))
         print("New keynotes added: {}".format(len(current_keynote_keys - set(existing_data.keys()))))
         print("Orphaned entries removed: {}".format(len(orphaned_keys)))
-        print("Test file generated at: {}".format(test_excel_path))
+        print("New DB excel re-generated at: {}".format(regenerated_excel_path))
         print("Original file unchanged: {}".format(keynote_excel_extend_db))
         
         # Open the test file
-        os.startfile(test_excel_path)
-        NOTIFICATION.messenger("Test extended DB excel generated at: {}.\nPlease check and replace original file.".format(test_excel_path))
+        os.startfile(regenerated_excel_path)
+        NOTIFICATION.messenger("Test extended DB excel generated at: {}.\nPlease check and replace original file.".format(regenerated_excel_path))
         
     except Exception as e:
         print("Error generating test extended DB excel: {}".format(e))
