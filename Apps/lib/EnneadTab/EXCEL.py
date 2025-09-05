@@ -298,7 +298,8 @@ class ExcelDataItem:
             side_border_style (int, optional): Side border style. Defaults to None.
             merge_with (list, optional): List of (row, col) tuples to merge with. Defaults to None.
             text_wrap (bool, optional): If True, text will wrap in cell. Defaults to False.
-            tooltip (str, optional): Tooltip text to show when hovering over the cell. Defaults to None.
+            tooltip (str|dict, optional): Tooltip text or dict with 'title' and 'content' keys to show when hovering over the cell. 
+                If dict, format: {'title': 'Tooltip Title', 'content': 'Tooltip message'}. Defaults to None.
         """
         if isinstance(column, str):
             column = letter_to_index(column, start_from_zero=True)
@@ -332,6 +333,46 @@ class ExcelDataItem:
         if self.cell_color:
             info += " ({})".format(self.cell_color)
         return info
+
+    def __repr__(self):
+        """Detailed representation showing all attributes for debugging."""
+        attrs = []
+        attrs.append("item='{}'".format(self.item))
+        attrs.append("row={}".format(self.row))
+        attrs.append("column={}".format(self.column))
+        attrs.append("is_bold={}".format(self.is_bold))
+        attrs.append("is_read_only={}".format(self.is_read_only))
+        
+        if self.cell_color:
+            attrs.append("cell_color={}".format(self.cell_color))
+        if self.text_color:
+            attrs.append("text_color={}".format(self.text_color))
+        if self.text_alignment != TextAlignment.Left:
+            attrs.append("text_alignment={}".format(self.text_alignment))
+        if self.font_size:
+            attrs.append("font_size={}".format(self.font_size))
+        if self.font_name:
+            attrs.append("font_name='{}'".format(self.font_name))
+        if self.col_width:
+            attrs.append("col_width={}".format(self.col_width))
+        if self.border_style:
+            attrs.append("border_style={}".format(self.border_style))
+        if self.border_color:
+            attrs.append("border_color={}".format(self.border_color))
+        if self.top_border_style:
+            attrs.append("top_border_style={}".format(self.top_border_style))
+        if self.bottom_border_style:
+            attrs.append("bottom_border_style={}".format(self.bottom_border_style))
+        if self.side_border_style:
+            attrs.append("side_border_style={}".format(self.side_border_style))
+        if self.merge_with:
+            attrs.append("merge_with={}".format(self.merge_with))
+        if self.text_wrap:
+            attrs.append("text_wrap={}".format(self.text_wrap))
+        if self.tooltip:
+            attrs.append("tooltip={}".format(self.tooltip))
+        
+        return "ExcelDataItem({})".format(", ".join(attrs))
 
     def as_dict(self):
         """Convert ExcelDataItem to dictionary, excluding internal attributes.
@@ -533,7 +574,7 @@ def _read_data_from_excel_locally(filepath, worksheet, return_dict, headless):
         DATA_FILE.set_data(job_data, "excel_handler_input")
         EXE.try_open_app("ExcelHandler")
         
-        max_wait = 100000
+        max_wait = 1000
         wait = 0
         while wait<max_wait:
             job_data = DATA_FILE.get_data("excel_handler_input")
@@ -541,6 +582,7 @@ def _read_data_from_excel_locally(filepath, worksheet, return_dict, headless):
                 break
             time.sleep(0.1)
             wait += 1
+            print ("{}/{}/{}".format(wait, max_wait, job_data.get("status")))
         raw_data = DATA_FILE.get_data("excel_handler_output")
         # Convert string keys back to tuple keys
         converted_data = {}

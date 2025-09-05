@@ -1,5 +1,4 @@
 import os
-import datetime
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
@@ -7,7 +6,7 @@ proDUCKtion.validify()
 # for i, path in enumerate(sys.path):
 #     print("{}: {}".format(i+1, path))
 
-from EnneadTab import EXCEL, NOTIFICATION, AI, TEXT, OUTPUT, FOLDER
+from EnneadTab import EXCEL, NOTIFICATION, AI, TEXT, OUTPUT, FOLDER, ERROR_HANDLE
 # from EnneadTab import LOG
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_PROJ_DATA, REVIT_FORMS
 from Autodesk.Revit import DB # pyright: ignore 
@@ -21,6 +20,84 @@ from natsort import natsorted # pyright: ignore
 
 from pyrevit import forms, script
 
+# Setting key constants for better maintainability
+EXTENDED_DB_EXCEL_PATH_KEY = "extended_db_excel_path"
+EXCEL_PATH_EXTERIOR_KEY = "excel_path_EXTERIOR"
+EXCEL_PATH_INTERIOR_KEY = "excel_path_INTERIOR"
+
+# Worksheet name constants for Excel operations
+EXTENDED_DB_WORKSHEET_NAME = "Keynote Extended DB"
+
+
+# Key column name constants for Excel parsing
+KEYNOTE_ID_COLUMN_NAME = "KEYNOTE ID"
+
+
+
+# Project data helper functions
+def get_project_data(doc=None):
+    """
+    Get project data with proper null checking for IronPython 2.7 compatibility.
+    
+    Args:
+        doc: Revit document (optional, will get current doc if not provided)
+        
+    Returns:
+        dict: Project data dictionary, empty dict if None
+    """
+    if doc is None:
+        doc = REVIT_APPLICATION.get_doc()
+    
+    project_data = REVIT_PROJ_DATA.get_revit_project_data(doc)
+    if project_data is None:
+        project_data = {}
+    return project_data
+
+def update_project_data(doc, project_data):
+    """
+    Update project data in the database.
+    
+    Args:
+        doc: Revit document
+        project_data: Project data dictionary to save
+    """
+    REVIT_PROJ_DATA.set_revit_project_data(doc, project_data)
+
+def get_keynote_setting(doc, setting_key, default_value=None):
+    """
+    Get a specific keynote setting from project data.
+    
+    Args:
+        doc: Revit document
+        setting_key: The setting key to retrieve
+        default_value: Default value if setting not found
+        
+    Returns:
+        The setting value or default_value
+    """
+    project_data = get_project_data(doc)
+    return project_data.get("keynote_assistant", {}).get("setting", {}).get(setting_key, default_value)
+
+def set_keynote_setting(doc, setting_key, value):
+    """
+    Set a specific keynote setting in project data.
+    
+    Args:
+        doc: Revit document
+        setting_key: The setting key to set
+        value: The value to set
+    """
+    project_data = get_project_data(doc)
+    
+    # Ensure the nested structure exists
+    if "keynote_assistant" not in project_data:
+        project_data["keynote_assistant"] = {}
+    if "setting" not in project_data["keynote_assistant"]:
+        project_data["keynote_assistant"]["setting"] = {}
+    
+    project_data["keynote_assistant"]["setting"][setting_key] = value
+    update_project_data(doc, project_data)
+
 # Smart Excel column configuration system
 class ExcelColumnConfig:
     """Smart configuration for Excel columns with automatic letter assignment."""
@@ -28,6 +105,7 @@ class ExcelColumnConfig:
     def __init__(self):
         # Define columns in order with their properties
         self.columns = [
+            {"header": "MARKER", "width": 4, "description": "Marker column"},
             {"header": "KEYNOTE ID", "width": 10, "description": "Unique identifier for keynote"},
             {"header": "KEYNOTE DESCRIPTION", "width": 50, "description": "Detailed description of the keynote"},
             {"header": "SOURCE", "width": 40, "description": "Source of the product/material"},
@@ -42,7 +120,6 @@ class ExcelColumnConfig:
             {"header": "FUNCTION AND LOCATION", "width": 70, "description": "Function and location details"},
         ]
         
-        # Auto-generate column letters starting from B
         self._assign_letters()
         
         # Special merged columns
@@ -51,9 +128,9 @@ class ExcelColumnConfig:
         }
     
     def _assign_letters(self):
-        """Automatically assign column letters starting from B."""
+        """Automatically assign column letters starting from A."""
         for i, col in enumerate(self.columns):
-            col["letter"] = chr(66 + i)  # 66 is ASCII for 'B'
+            col["letter"] = chr(65 + i)  # 65 is ASCII for 'A'
     
     def get_column_letter(self, header):
         """Get column letter for a given header."""
@@ -73,10 +150,14 @@ class ExcelColumnConfig:
         """Get all column headers in order."""
         return [col["header"] for col in self.columns]
     
-    def get_extended_db_headers(self, ignore_keynote_id_and_description=False):
+    def get_extended_db_headers(self, ignore_keynote_id_and_description=False, ignore_marker=False):
         """Get headers for extended database columns (excluding keynote ID and description)."""
         if ignore_keynote_id_and_description:
-            return [col["header"] for col in self.columns[2:]]  # Skip first two columns
+            # Simple list of core columns to exclude
+            core_headers = ["KEYNOTE ID", "KEYNOTE DESCRIPTION"]
+            if ignore_marker:
+                core_headers.append("MARKER")
+            return [col["header"] for col in self.columns if col["header"] not in core_headers]
         else:
             return [col["header"] for col in self.columns]
 
@@ -90,42 +171,6 @@ class ExcelColumnConfig:
             return start_letter, end_letter
         return None, None
     
-    def create_header_data_items(self, row, cell_color=(200, 200, 200), is_merged_row=False):
-        """Create ExcelDataItem objects for all headers."""
-        items = []
-        for col in self.columns:
-            if is_merged_row and col["header"] in ["SOURCE", "PRODUCT"]:
-                continue  # Skip individual columns for merged BASE OF DESIGN
-            
-            items.append(EXCEL.ExcelDataItem(
-                col["header"], 
-                row, 
-                col["letter"],
-                cell_color=cell_color,
-                col_width=col["width"],
-                merge_with=[(row+1, col["letter"])] if not is_merged_row else None,
-                top_border_style=1,
-                side_border_style=1,
-                bottom_border_style=1,
-                is_bold=True
-            ))
-        
-        # Add merged BASE OF DESIGN header
-        if is_merged_row:
-            start_letter, end_letter = self.get_merge_range("BASE OF DESIGN")
-            items.append(EXCEL.ExcelDataItem(
-                "BASE OF DESIGN",
-                row,
-                start_letter,
-                cell_color=cell_color,
-                merge_with=[(row, end_letter)],
-                top_border_style=1,
-                side_border_style=1,
-                bottom_border_style=1,
-                is_bold=True
-            ))
-        
-        return items
 
 # Global instance
 COLUMN_CONFIG = ExcelColumnConfig()
@@ -140,98 +185,164 @@ def get_column_width(header):
     return COLUMN_CONFIG.get_column_width(header)
 
 # Smart helper functions for Excel data creation
-def create_excel_cell(text, row, header, **kwargs):
-    """Create a standardized Excel cell with consistent formatting."""
-    # Extract valid ExcelDataItem parameters
-    valid_params = {}
-    for key, value in kwargs.items():
-        if key in ['cell_color', 'col_width', 'merge_with', 'text_alignment', 
-                   'text_wrap', 'top_border_style', 'side_border_style', 
-                   'bottom_border_style', 'is_bold', 'is_read_only']:
-            valid_params[key] = value
-    
 
+def create_revit_schedule_export_headers(row, cell_color=(200, 200, 200)):
+    """Create headers for Excel files that will be linked to Revit schedules (Exterior/Interior).
     
-    return EXCEL.ExcelDataItem(
-        text, 
-        row, 
-        get_column_letter(header),
-        **valid_params
-    )
-
-def create_header_row(row, cell_color=(200, 200, 200)):
-    """Create a complete header row with all columns."""
+    Requirements:
+    - No borders (clean format for Revit linking)
+    - Simple formatting for schedule compatibility
+    - Merged BASE OF DESIGN header for better organization
+    - 3-row header structure: main headers, sub-headers, data starts at row+2
+    - Optimized for Revit schedule import/export workflow
+    """
     items = []
     
-    # Main headers (KEYNOTE ID, KEYNOTE DESCRIPTION)
+
     for header in ["KEYNOTE ID", "KEYNOTE DESCRIPTION"]:
-        items.append(create_excel_cell(
-            header, row, header,
+        items.append(EXCEL.ExcelDataItem(
+            header, 
+            row, 
+            get_column_letter(header),
             cell_color=cell_color,
             col_width=get_column_width(header),
-            merge_with=[(row+1, get_column_letter(header))],
-            is_bold=True
+            merge_with=[(row+1, get_column_letter(header))], 
+            is_bold=True,
+            bottom_border_style=EXCEL.BorderStyle.Thin,
+            side_border_style=EXCEL.BorderStyle.Thin,
+            top_border_style=EXCEL.BorderStyle.Thin
         ))
+
+    start_letter, end_letter = COLUMN_CONFIG.get_merge_range("BASE OF DESIGN")
+    items.append(EXCEL.ExcelDataItem(
+        "BASE OF DESIGN", 
+        row, 
+        start_letter,
+        cell_color=cell_color,
+        merge_with=[(row, end_letter)],  
+        is_bold=True,
+        bottom_border_style=EXCEL.BorderStyle.Thin,
+        side_border_style=EXCEL.BorderStyle.Thin,
+        top_border_style=EXCEL.BorderStyle.Thin
+    ))
     
-    # SOURCE and PRODUCT headers (for merged BASE OF DESIGN)
+    # Row 2: SOURCE and PRODUCT headers (under BASE OF DESIGN merge)
     for header in ["SOURCE", "PRODUCT"]:
-        items.append(create_excel_cell(
-            header, row+1, header,
+        items.append(EXCEL.ExcelDataItem(
+            header, 
+            row+1, 
+            get_column_letter(header),
             cell_color=cell_color,
             col_width=get_column_width(header),
             text_alignment=EXCEL.TextAlignment.Center,
-            is_bold=True
+            is_bold=True,
+            bottom_border_style=EXCEL.BorderStyle.Thin,
+            side_border_style=EXCEL.BorderStyle.Thin,
+            top_border_style=EXCEL.BorderStyle.Thin
         ))
     
-    # BASE OF DESIGN merged header
-    start_letter, end_letter = COLUMN_CONFIG.get_merge_range("BASE OF DESIGN")
-    items.append(create_excel_cell(
-        "BASE OF DESIGN", row, start_letter,
-        cell_color=cell_color,
-        merge_with=[(row, end_letter)],
-        is_bold=True
-    ))
+    # Row 1: Remaining headers after base of design merge
+    headers_to_skip = {"KEYNOTE ID", "KEYNOTE DESCRIPTION", "SOURCE", "PRODUCT"}
+    for header in COLUMN_CONFIG.get_extended_db_headers(ignore_keynote_id_and_description=True, ignore_marker=True):
+        if header not in headers_to_skip:
+            items.append(EXCEL.ExcelDataItem(
+                header, 
+                row, 
+                get_column_letter(header),
+                cell_color=cell_color,
+                col_width=get_column_width(header),
+                merge_with=[(row+1, get_column_letter(header))], 
+                is_bold=True,
+                bottom_border_style=EXCEL.BorderStyle.Thin,
+                side_border_style=EXCEL.BorderStyle.Thin,
+                top_border_style=EXCEL.BorderStyle.Thin
+            ))
     
-    # Remaining headers
-    for header in COLUMN_CONFIG.get_extended_db_headers()[2:]:  # Skip SOURCE and PRODUCT
-        items.append(create_excel_cell(
-            header, row, header,
-            cell_color=cell_color,
-            col_width=get_column_width(header),
-            merge_with=[(row+1, get_column_letter(header))],
-            is_bold=True
+    return items
+
+def create_extended_database_headers(row, cell_color=(200, 200, 200)):
+    """Create single-row headers for the extended database Excel file that users will edit directly.
+    
+    Requirements:
+    - Single row of headers (no merging or complex layout)
+    - Full borders for clear data entry boundaries
+    - Professional formatting for user editing
+    - Read-only headers to prevent accidental modification
+    - Simple, clean layout for easy data entry
+    """
+    items = []
+    
+    # Create simple single-row headers for all columns
+    for col in COLUMN_CONFIG.columns:
+        items.append(EXCEL.ExcelDataItem(
+            col["header"], 
+            row, 
+            col["letter"],
+            cell_color=cell_color if col["header"] != "MARKER" else None,
+            col_width=col["width"],
+            text_alignment=EXCEL.TextAlignment.Center,
+            top_border_style=EXCEL.BorderStyle.Thin if col["header"] != "MARKER" else None,
+            side_border_style=EXCEL.BorderStyle.Thin if col["header"] != "MARKER" else None,
+            bottom_border_style=EXCEL.BorderStyle.Thin if col["header"] != "MARKER" else None,
+            is_bold=True if col["header"] != "MARKER" else False
         ))
     
     return items
 
 def exporter_row_writer(leaf, row, extend_db_item=None, highlight_missing=False):
-    """Create a complete data row for a keynote item in exported Excel files."""
+    """Create a complete data row for a keynote item in Revit schedule export Excel files."""
     items = []
     cell_color = (255, 200, 200) if highlight_missing else None
     
     # Keynote ID and Description
-    items.append(create_excel_cell(leaf.key, row, "KEYNOTE ID", cell_color=cell_color, 
-                                  tooltip="DO NOT MODIFY THOSE CONTENT HERE, PLEASE!"))
-    items.append(create_excel_cell(leaf.text, row, "KEYNOTE DESCRIPTION", 
-                                  text_wrap=True, cell_color=cell_color,
-                                  tooltip="DO NOT MODIFY THOSE CONTENT HERE, PLEASE!"))
+    items.append(EXCEL.ExcelDataItem(
+        leaf.key, 
+        row, 
+        get_column_letter("KEYNOTE ID"), 
+        cell_color=cell_color, 
+        tooltip={"title": "Wait a second!", "content": "DO NOT MODIFY THOSE CONTENT HERE, PLEASE!"},
+        bottom_border_style=EXCEL.BorderStyle.Thin,
+        side_border_style=EXCEL.BorderStyle.Thin,
+        top_border_style=EXCEL.BorderStyle.Thin
+    ))
+    items.append(EXCEL.ExcelDataItem(
+        leaf.text, 
+        row, 
+        get_column_letter("KEYNOTE DESCRIPTION"), 
+        text_wrap=True, 
+        cell_color=cell_color,
+        tooltip={"title": "Wait a second!", "content": "DO NOT MODIFY THOSE CONTENT HERE, PLEASE!"},
+        bottom_border_style=EXCEL.BorderStyle.Thin,
+        side_border_style=EXCEL.BorderStyle.Thin,
+        top_border_style=EXCEL.BorderStyle.Thin
+    ))
     
     if extend_db_item:
         # Add extended DB data
-        for header in COLUMN_CONFIG.get_extended_db_headers(ignore_keynote_id_and_description=True):
-            items.append(create_excel_cell(
-                extend_db_item.get(header, ""), row, header,
+        for header in COLUMN_CONFIG.get_extended_db_headers(ignore_keynote_id_and_description=True, ignore_marker=True):
+            items.append(EXCEL.ExcelDataItem(
+                extend_db_item.get(header, ""), 
+                row, 
+                get_column_letter(header),
                 text_wrap=True,
-                tooltip="DO NOT MODIFY THOSE CONTENT HERE, PLEASE!"
+                tooltip={"title": "Wait a second!", "content": "DO NOT MODIFY THOSE CONTENT HERE, PLEASE!"},
+                bottom_border_style=EXCEL.BorderStyle.Thin,
+                side_border_style=EXCEL.BorderStyle.Thin,
+                top_border_style=EXCEL.BorderStyle.Thin
             ))
     else:
         # Highlight missing data with merged error message
         start_letter = get_column_letter("SOURCE")
         end_letter = get_column_letter("FUNCTION AND LOCATION")  # Include all extended DB columns
-        items.append(create_excel_cell(
-            "Cannot find this item in extended DB", row, start_letter,
+        items.append(EXCEL.ExcelDataItem(
+            "Cannot find this item in extended DB", 
+            row, 
+            start_letter,
             cell_color=(211, 211, 211),
-            merge_with=[(row, end_letter)]
+            merge_with=[(row, end_letter)],
+            bottom_border_style=EXCEL.BorderStyle.Thin,
+            side_border_style=EXCEL.BorderStyle.Thin,
+            top_border_style=EXCEL.BorderStyle.Thin
         ))
     
     return items
@@ -486,6 +597,7 @@ def get_leaf_keynotes(keynote_data_conn):
                 OUT.append(leaf)
     return OUT
 
+@ERROR_HANDLE.try_catch_error(is_silent=False)
 def export_keynote_as_exterior_and_interior(keynote_data_conn):
     """
     Export keynotes from 'Exterior' and 'Interior' categories to separate Excel files.
@@ -499,130 +611,248 @@ def export_keynote_as_exterior_and_interior(keynote_data_conn):
     Returns:
         Path to generated Excel file
     """
-    doc = REVIT_APPLICATION.get_doc()
-    t = DB.Transaction(doc, "edit extended db excel")
-    t.Start()
-    REVIT_PROJ_DATA.setup_project_data(doc)
-    t.Commit()
-    project_data = REVIT_PROJ_DATA.get_revit_project_data(doc)
-    extend_db_path = project_data.get("keynote_assistant", {}).get("setting", {}).get("extended_db_excel_path")
-    if extend_db_path and os.path.exists(extend_db_path):
-        db_data = EXCEL.read_data_from_excel(
-            extend_db_path, 
-            worksheet="Keynote Extended DB", 
-            return_dict=True
-        )
-
-        db_data = EXCEL.parse_excel_data(
-            db_data, 
-            "KEYNOTE ID", 
-            ignore_keywords=["[Branch]", "[Category]"]
-        )
-       
-    else:
-        db_data = {}
-
-    # Get the full keynote tree
-    categorys = [x for x in kdb.get_categories(keynote_data_conn) 
-                if x.key.upper() in ["EXTERIOR", "INTERIOR"]]
-
-    all_keynotes = kdb.get_keynotes(keynote_data_conn)
-    for cate in categorys:
-        data_collection = []
-        pointer_row = 0
+    ERROR_HANDLE.print_note("Starting export_keynote_as_exterior_and_interior")
+    
+    try:
+        doc = REVIT_APPLICATION.get_doc()
+        ERROR_HANDLE.print_note("Got Revit document")
         
-        # Create header rows using smart helper
-        data_collection.extend(create_header_row(pointer_row))
+        # Setup project data with transaction
+        t = DB.Transaction(doc, "edit extended db excel")
+        t.Start()
+        try:
+            REVIT_PROJ_DATA.setup_project_data(doc)
+            t.Commit()
+            ERROR_HANDLE.print_note("Project data setup completed")
+        except Exception as e:
+            t.RollBack()
+            ERROR_HANDLE.print_note("Error in project data setup: {}".format(str(e)))
+            raise
         
-        pointer_row += 2
-        print("\n== CATEGORY: {} ==".format(cate.key))
-        top_branch = [x for x in all_keynotes if x.parent_key == cate.key]
-        print("\tTop branchs in {}".format(cate.key))
+        # Get extended database path and data
+        ERROR_HANDLE.print_note("Getting extended DB path from settings...")
+        extend_db_path = get_keynote_setting(doc, EXTENDED_DB_EXCEL_PATH_KEY)
+        ERROR_HANDLE.print_note("Extended DB path: {}".format(extend_db_path))
         
-        for i, branch in enumerate(top_branch):
-            pointer_row += 2  # skip 2 for adding empty line
-            bran_name = branch.text
-            if len(bran_name) == 0:
-                bran_name = "UnOrganized, please write something to the branch keynote description."
-            data_collection.append(create_excel_cell(bran_name, pointer_row, "KEYNOTE ID", is_bold=True))
-            print("\t\t{}: [{}] {}".format(i+1, branch.key, branch.text))
+        if extend_db_path and os.path.exists(extend_db_path):
+            try:
+                ERROR_HANDLE.print_note("Reading extended DB data from: {}".format(extend_db_path))
+                ERROR_HANDLE.print_note("Note: If file has corrupted merged cells, Excel will repair automatically")
+                
+                # Check file size to give user context
+                file_size = os.path.getsize(extend_db_path)
+                ERROR_HANDLE.print_note("File size: {} bytes".format(file_size))
+                
+                db_data = EXCEL.read_data_from_excel(
+                    extend_db_path, 
+                    worksheet=EXTENDED_DB_WORKSHEET_NAME, 
+                    return_dict=True
+                )
+                ERROR_HANDLE.print_note("Raw DB data read successfully, parsing...")
+
+                db_data = EXCEL.parse_excel_data(
+                    db_data, 
+                    KEYNOTE_ID_COLUMN_NAME, 
+                    ignore_keywords=["[Branch]", "[Category]"]
+                )
+                ERROR_HANDLE.print_note("DB data parsed successfully, {} items".format(len(db_data)))
+                
+            except Exception as e:
+                ERROR_HANDLE.print_note("Error reading extended DB: {}".format(str(e)))
+                ERROR_HANDLE.print_note("Error type: {}".format(type(e).__name__))
+                ERROR_HANDLE.print_note("Error details: {}".format(str(e)))
+                
+                # Check if it's a timeout or corruption issue
+                error_msg = str(e).lower()
+                if "timeout" in error_msg or "hang" in error_msg:
+                    NOTIFICATION.messenger("Excel file reading timed out. This may be due to corrupted merged cells. Please check the Excel file and try again.")
+                elif "corrupt" in error_msg or "repair" in error_msg:
+                    NOTIFICATION.messenger("Excel file has corruption issues. Excel may have repaired the file automatically. Please try again.")
+                else:
+                    NOTIFICATION.messenger("Error reading extended database: {}".format(str(e)))
+                
+                ERROR_HANDLE.print_note("Continuing with empty database data...")
+                db_data = {}
+        else:
+            ERROR_HANDLE.print_note("No extended DB path or file not found, using empty data")
+            if extend_db_path:
+                ERROR_HANDLE.print_note("Path exists but file not found: {}".format(extend_db_path))
+            else:
+                ERROR_HANDLE.print_note("No path configured in settings")
+            db_data = {}
+
+        # Get the full keynote tree
+        ERROR_HANDLE.print_note("Getting categories and keynotes from database")
+        try:
+            ERROR_HANDLE.print_note("Calling kdb.get_categories...")
+            all_categories = kdb.get_categories(keynote_data_conn)
+            ERROR_HANDLE.print_note("Got {} total categories from database".format(len(all_categories)))
             
-            leafs = [x for x in all_keynotes if x.parent_key == branch.key]
-            for j, leaf in enumerate(leafs):
-                pointer_row += 1
+            categorys = [x for x in all_categories 
+                        if x.key.upper() in ["EXTERIOR", "INTERIOR"]]
+            ERROR_HANDLE.print_note("Found {} matching categories: {}".format(len(categorys), [c.key for c in categorys]))
+            
+            ERROR_HANDLE.print_note("Calling kdb.get_keynotes...")
+            all_keynotes = kdb.get_keynotes(keynote_data_conn)
+            ERROR_HANDLE.print_note("Found {} total keynotes".format(len(all_keynotes)))
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error getting keynote data: {}".format(str(e)))
+            ERROR_HANDLE.print_note("Error type: {}".format(type(e).__name__))
+            ERROR_HANDLE.print_note("Error details: {}".format(str(e)))
+            NOTIFICATION.messenger("Error accessing keynote database: {}".format(str(e)))
+            raise
+        
+        # Process each category
+        for cate in categorys:
+            ERROR_HANDLE.print_note("Processing category: {}".format(cate.key))
+            data_collection = []
+            pointer_row = 0
+            
+            try:
+                # Create header rows using smart helper (3-row header structure)
+                data_collection.extend(create_revit_schedule_export_headers(pointer_row))
+                pointer_row += 3  # 3-row header: main headers, sub-headers, data starts at row+3
+                ERROR_HANDLE.print_note("Headers created for category: {}".format(cate.key))
                 
-                # Create keynote data row using smart helper
-                extend_db_item = db_data.get(leaf.key)
-                highlight_missing = extend_db_item is None
-                data_collection.extend(exporter_row_writer(leaf, pointer_row, extend_db_item, highlight_missing))
+                print("\n== CATEGORY: {} ==".format(cate.key))
+                top_branch = [x for x in all_keynotes if x.parent_key == cate.key]
+                print("\tTop branchs in {}".format(cate.key))
+                ERROR_HANDLE.print_note("Found {} branches in category {}".format(len(top_branch), cate.key))
+                
+                # Process each branch
+                for i, branch in enumerate(top_branch):
+                    ERROR_HANDLE.print_note("Processing branch {}/{}: {}".format(i+1, len(top_branch), branch.key))
+                    pointer_row += 2  # skip 2 for adding empty line
+                    bran_name = branch.text
+                    if len(bran_name) == 0:
+                        bran_name = "UnOrganized, please write something to the branch keynote description."
+                    data_collection.append(EXCEL.ExcelDataItem(
+                        bran_name, 
+                        pointer_row, 
+                        get_column_letter("KEYNOTE ID"), 
+                        is_bold=True
+                    ))
+                    print("\t\t{}: [{}] {}".format(i+1, branch.key, branch.text))
                     
-                print("\t\t\t{}-{}: [{}] {}".format(i+1, j+1, leaf.key, leaf.text))
+                    leafs = [x for x in all_keynotes if x.parent_key == branch.key]
+                    ERROR_HANDLE.print_note("Found {} leafs in branch {}".format(len(leafs), branch.key))
+                    
+                    # Process each leaf
+                    for j, leaf in enumerate(leafs):
+                        ERROR_HANDLE.print_note("Processing leaf {}/{}: {}".format(j+1, len(leafs), leaf.key))
+                        pointer_row += 1
+                        
+                        # Create keynote data row using smart helper
+                        extend_db_item = db_data.get(leaf.key) if db_data else None
+                        highlight_missing = extend_db_item is None
+                        data_collection.extend(exporter_row_writer(
+                            leaf, 
+                            pointer_row, 
+                            extend_db_item, 
+                            highlight_missing
+                        ))
+                            
+                        print("\t\t\t{}-{}: [{}] {}".format(i+1, j+1, leaf.key, leaf.text))
                 
+                # Handle Excel file path selection
+                def _pick_excel_out_path():
+                    try:
+                        ERROR_HANDLE.print_note("Opening file picker for category: {}".format(cate.key))
+                        excel_out_path = forms.pick_excel_file(
+                            title="Pick Extended Keynote Database Excel File for [{}]".format(cate.key),
+                            save=True
+                        )
+                        set_keynote_setting(doc, "excel_path_{}".format(cate.key), excel_out_path)
+                        ERROR_HANDLE.print_note("File path selected: {}".format(excel_out_path))
+                        return excel_out_path
+                    except Exception as e:
+                        ERROR_HANDLE.print_note("Error in file picker: {}".format(str(e)))
+                        NOTIFICATION.messenger("Error selecting file path: {}".format(str(e)))
+                        raise
 
-        def _pick_excel_out_path():
-            excel_out_path = forms.pick_excel_file(
-                title="Pick Extended Keynote Database Excel File for [{}]".format(cate.key),
-                save=True
-            )
-            if "keynote_assistant" not in project_data:
-                project_data["keynote_assistant"] = {}
-            if "setting" not in project_data["keynote_assistant"]:
-                project_data["keynote_assistant"]["setting"] = {}
+                excel_out_path = get_keynote_setting(doc, "excel_path_{}".format(cate.key))
+                if not excel_out_path:
+                    note = "Excel output path for [{}] is not defined, please pick one".format(cate.key)
+                    NOTIFICATION.messenger(note)
+                    print(note)
+                    excel_out_path = _pick_excel_out_path()
+                elif not os.path.exists(excel_out_path):
+                    print("Excel output path for [{}] is not found, please pick one again."
+                          "\nOriginal path: {} is no longer valid".format(cate.key, excel_out_path))
+                    excel_out_path = _pick_excel_out_path()
+
+                # Save Excel file
+                ERROR_HANDLE.print_note("Saving Excel file for category {} with {} items".format(cate.key, len(data_collection)))
+                try:
+                    EXCEL.save_data_to_excel(data_collection, excel_out_path, worksheet=cate.key, freeze_row=2)
+                    ERROR_HANDLE.print_note("Excel file saved successfully: {}".format(excel_out_path))
+                except Exception as e:
+                    ERROR_HANDLE.print_note("Error saving Excel file: {}".format(str(e)))
+                    NOTIFICATION.messenger("Error saving Excel file: {}".format(str(e)))
+                    raise
+                    
+            except Exception as e:
+                ERROR_HANDLE.print_note("Error processing category {}: {}".format(cate.key, str(e)))
+                NOTIFICATION.messenger("Error processing category {}: {}".format(cate.key, str(e)))
+                raise
+
+        # Data validation and reporting
+        if not db_data:
+            ERROR_HANDLE.print_note("No extended DB data available for validation")
+            return
+
+        ERROR_HANDLE.print_note("Starting data validation between keynote file and extended DB")
+        bug_collection = []
         
-            project_data["keynote_assistant"]["setting"]["excel_path_{}".format(cate.key)] = excel_out_path
-            REVIT_PROJ_DATA.set_revit_project_data(doc, project_data)
-            return excel_out_path
+        try:
+            # Get keynotes once to avoid multiple database calls
+            leaf_keynotes = get_leaf_keynotes(keynote_data_conn)
+            ERROR_HANDLE.print_note("Got {} leaf keynotes for validation".format(len(leaf_keynotes)))
+            
+            diff = set(db_data.keys()) - set([x.key for x in leaf_keynotes])
+            if diff:
+                ERROR_HANDLE.print_note("Found {} keys in extended DB not in keynote file".format(len(diff)))
+                bug_collection.append("Warning: some keys in extended DB are not in keynote file:")
+                for i, x in enumerate(diff):
+                    bug_collection.append("-{}: [{}]{}".format(i+1, x, db_data[x].KEYNOTE_DESCRIPTION))
 
-        
-        excel_out_path = project_data.get("keynote_assistant", {}).get("setting", {}).get("excel_path_{}".format(cate.key))
-        if not excel_out_path:
-            note = "Excel output path for [{}] is not defined, please pick one".format(cate.key)
-            NOTIFICATION.messenger(note)
-            print(note)
-            excel_out_path = _pick_excel_out_path()
-        elif not os.path.exists(excel_out_path):
-            print("Excel output path for [{}] is not found, please pick one again."
-                  "\nOriginal path: {} is no longer valid".format(cate.key, excel_out_path))
-            excel_out_path = _pick_excel_out_path()
+            keynote_keys = {keynote.key: keynote for keynote in leaf_keynotes}
+            
+            reverse_diff = set(keynote_keys.keys()) - set(db_data.keys())
+            if reverse_diff:
+                ERROR_HANDLE.print_note("Found {} keys in keynote file not in extended DB".format(len(reverse_diff)))
+                bug_collection.append("Warning: some keys in keynote file are not in extended DB:")
+                for i, key in enumerate(reverse_diff):
+                    bug_collection.append("-{}: [{}]{}".format(i+1, key, keynote_keys[key].text))
 
-        EXCEL.save_data_to_excel(data_collection, excel_out_path, worksheet=cate.key, freeze_row=2)
+            if diff or reverse_diff:
+                print("\n\n")
+                bug_collection.append("This is usually due to one of the following reasons:")
+                bug_collection.append("1. You have renamed the key in keynote file but did not update the same item in the DB excel file: "
+                                     "Please update the same item in the DB excel file")
+                bug_collection.append("2. You have added a new keynote in keynote file, but not in extended DB: "
+                                     "Please add the same item in the DB excel file")
+                bug_collection.append("3. You have added a new keynote in extended DB, but not in keynote file: "
+                                     "Please add the same item in the keynote file")
 
-    if not db_data:
-        return
-
-    bug_collection = []
-    
-    # Get keynotes once to avoid multiple database calls
-    leaf_keynotes = get_leaf_keynotes(keynote_data_conn)
-    diff = set(db_data.keys()) - set([x.key for x in leaf_keynotes])
-    if diff:
-        bug_collection.append("Warning: some keys in extended DB are not in keynote file:")
-        for i, x in enumerate(diff):
-            bug_collection.append("-{}: [{}]{}".format(i+1, x, db_data[x].KEYNOTE_DESCRIPTION))
-
-    keynote_keys = {keynote.key: keynote for keynote in leaf_keynotes}
-    
-    reverse_diff = set(keynote_keys.keys()) - set(db_data.keys())
-    if reverse_diff:
-        bug_collection.append("Warning: some keys in keynote file are not in extended DB:")
-        for i, key in enumerate(reverse_diff):
-            bug_collection.append("-{}: [{}]{}".format(i+1, key, keynote_keys[key].text))
-
-    if diff or reverse_diff:
-        print("\n\n")
-        bug_collection.append("This is usually due to one of the following reasons:")
-        bug_collection.append("1. You have renamed the key in keynote file but did not update the same item in the DB excel file: "
-                             "Please update the same item in the DB excel file")
-        bug_collection.append("2. You have added a new keynote in keynote file, but not in extended DB: "
-                             "Please add the same item in the DB excel file")
-        bug_collection.append("3. You have added a new keynote in extended DB, but not in keynote file: "
-                             "Please add the same item in the keynote file")
-
-    if bug_collection:
-        output = script.get_output()
-        output.print_md("## =====Please check the following=====")
-        for x in bug_collection:
-            output.print_md(x)
+            if bug_collection:
+                ERROR_HANDLE.print_note("Displaying validation warnings to user")
+                output = script.get_output()
+                output.print_md("## =====Please check the following=====")
+                for x in bug_collection:
+                    output.print_md(x)
+            else:
+                ERROR_HANDLE.print_note("Data validation completed - no issues found")
+                
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error during data validation: {}".format(str(e)))
+            NOTIFICATION.messenger("Error during data validation: {}".format(str(e)))
+            # Don't raise here as the main export was successful
+            
+    except Exception as e:
+        ERROR_HANDLE.print_note("Critical error in export function: {}".format(str(e)))
+        NOTIFICATION.messenger("Critical error during export: {}".format(str(e)))
+        raise
 
 
 def update_keynote_from_excel(keynote_data_conn):
@@ -729,21 +959,14 @@ def open_extended_db_excel(keynote_data_conn):
     t.Start()
     REVIT_PROJ_DATA.setup_project_data(doc)
     t.Commit()
-    project_data = REVIT_PROJ_DATA.get_revit_project_data(doc)
-    keynote_excel_extend_db = project_data.get("keynote_assistant", {}).get("setting", {}).get("extended_db_excel_path")
+    keynote_excel_extend_db = get_keynote_setting(doc, EXTENDED_DB_EXCEL_PATH_KEY)
     if not keynote_excel_extend_db:
         
         keynote_excel_extend_db = forms.pick_excel_file(
             title="Pick Extended Keynote Database Excel File",
             save=True
         )
-        if "keynote_assistant" not in project_data:
-            project_data["keynote_assistant"] = {}
-        if "setting" not in project_data["keynote_assistant"]:
-            project_data["keynote_assistant"]["setting"] = {}
-      
-        project_data["keynote_assistant"]["setting"]["extended_db_excel_path"] = keynote_excel_extend_db
-        REVIT_PROJ_DATA.set_revit_project_data(doc, project_data)
+        set_keynote_setting(doc, EXTENDED_DB_EXCEL_PATH_KEY, keynote_excel_extend_db)
 
     if os.path.exists(keynote_excel_extend_db):
         os.startfile(keynote_excel_extend_db)
@@ -762,7 +985,7 @@ def generate_default_extended_db_excel(keynote_data_conn, keynote_excel_extend_d
     pointer_row = 0
     
     # Create header rows with consistent formatting using smart helper
-    header_items = COLUMN_CONFIG.create_header_data_items(pointer_row, color_dark_grey)
+    header_items = create_extended_database_headers(pointer_row, color_dark_grey)
     for item in header_items:
         item.is_read_only = True
         data_collection.append(item)
@@ -775,28 +998,30 @@ def generate_default_extended_db_excel(keynote_data_conn, keynote_excel_extend_d
         print("\n== CATEGORY: {} ==".format(cate.key))
         
         # Add category header
-        data_collection.append(create_excel_cell(
+        data_collection.append(EXCEL.ExcelDataItem(
             "[Category]: " + str(cate.key), 
-            pointer_row, "KEYNOTE ID",
+            pointer_row, 
+            get_column_letter("KEYNOTE ID"),
             cell_color=color_yellow, 
             is_bold=True, 
             is_read_only=True
         ))
 
-        data_collection.append(create_excel_cell(
+        data_collection.append(EXCEL.ExcelDataItem(
             "", 
-            pointer_row, "KEYNOTE DESCRIPTION",
+            pointer_row, 
+            get_column_letter("KEYNOTE DESCRIPTION"),
             cell_color=color_yellow, 
             is_bold=True, 
             is_read_only=True
         ))
         
         # Fill category row with consistent formatting
-        for header in COLUMN_CONFIG.get_extended_db_headers(ignore_keynote_id_and_description=True):
-            data_collection.append(create_excel_cell(
+        for header in COLUMN_CONFIG.get_extended_db_headers(ignore_keynote_id_and_description=True, ignore_marker=True):
+            data_collection.append(EXCEL.ExcelDataItem(
                 "", 
                 pointer_row, 
-                header,
+                get_column_letter(header),
                 cell_color=color_yellow, 
                 is_bold=True, 
                 is_read_only=True
@@ -812,27 +1037,29 @@ def generate_default_extended_db_excel(keynote_data_conn, keynote_excel_extend_d
                 bran_name = "UnOrganized, please write something in the keynote description so the group has header."
             
             # Add branch header
-            data_collection.append(create_excel_cell(
+            data_collection.append(EXCEL.ExcelDataItem(
                 "[Branch]: " + str(bran_name), 
-                pointer_row, "KEYNOTE ID",
+                pointer_row, 
+                get_column_letter("KEYNOTE ID"),
                 cell_color=color_green, 
                 is_bold=True, 
                 is_read_only=True
             ))
 
-            data_collection.append(create_excel_cell(
+            data_collection.append(EXCEL.ExcelDataItem(
                 "", 
-                pointer_row, "KEYNOTE DESCRIPTION",
+                pointer_row, 
+                get_column_letter("KEYNOTE DESCRIPTION"),
                 cell_color=color_green, 
                 is_bold=True, 
                 is_read_only=True
             ))
             # Fill branch row with consistent formatting
-            for header in COLUMN_CONFIG.get_extended_db_headers(ignore_keynote_id_and_description=True):
-                data_collection.append(create_excel_cell(
+            for header in COLUMN_CONFIG.get_extended_db_headers(ignore_keynote_id_and_description=True, ignore_marker=True):
+                data_collection.append(EXCEL.ExcelDataItem(
                     "", 
                     pointer_row, 
-                    header,
+                    get_column_letter(header),
                     cell_color=color_green, 
                     is_bold=True, 
                     is_read_only=True
@@ -846,27 +1073,36 @@ def generate_default_extended_db_excel(keynote_data_conn, keynote_excel_extend_d
                 print("\t\t\t{}-{}: [{}] {}".format(i+1, j+1, leaf.key, leaf.text))
 
                 # Add keynote ID and description cells (white background for actual data)
-                data_collection.append(create_excel_cell(
+                data_collection.append(EXCEL.ExcelDataItem(
                     str(leaf.key), 
-                    pointer_row, "KEYNOTE ID",
+                    pointer_row, 
+                    get_column_letter("KEYNOTE ID"),
                     cell_color=color_light_grey, 
                     is_bold=True, 
                     is_read_only=True,
-                    top_border_style = EXCEL.BorderStyle.Thin,
+                    top_border_style=EXCEL.BorderStyle.Thin,
                     bottom_border_style=EXCEL.BorderStyle.Thin,
                     side_border_style=EXCEL.BorderStyle.Thin,
-                    tooltip="If you want to change keynote, just write the new keynote ID on column A, we will think of some solution to update the keynote later, call sen zhang, please do not change original keynote."
+                    tooltip={
+                        "title": "Hold your beer!", 
+                        "content": "If you want to change keynote Id, just write the new keynote ID on column A(MODIFIER). Please do not change original keynote otherwise I cannot track what you have changed."
+                    }
                 ))
                 
-                data_collection.append(create_excel_cell(
+                data_collection.append(EXCEL.ExcelDataItem(
                     str(leaf.text), 
-                    pointer_row, "KEYNOTE DESCRIPTION",
+                    pointer_row, 
+                    get_column_letter("KEYNOTE DESCRIPTION"),
                     cell_color=color_light_grey, 
                     is_bold=True, 
                     is_read_only=True,
-                    top_border_style = EXCEL.BorderStyle.Thin,
+                    top_border_style=EXCEL.BorderStyle.Thin,
                     bottom_border_style=EXCEL.BorderStyle.Thin,
-                    side_border_style=EXCEL.BorderStyle.Thin
+                    side_border_style=EXCEL.BorderStyle.Thin,
+                    tooltip={
+                        "title": "Hmmmm..", 
+                        "content": "If you modify the description here, just know that you need to push that change to the keynote file as well afterward."
+                    }
                 ))
 
                 # Add additional data for this specific keynote
@@ -881,10 +1117,10 @@ def generate_default_extended_db_excel(keynote_data_conn, keynote_excel_extend_d
                             value = ""
                         if value and str(value).strip():  # Only add if there's actual content
                             added_fields.append(header)
-                            data_collection.append(create_excel_cell(
+                            data_collection.append(EXCEL.ExcelDataItem(
                                 str(value), 
                                 pointer_row, 
-                                header
+                                get_column_letter(header)
                             ))
                     if added_fields:
                         print("  Added data for {}: {}".format(keynote_key, ", ".join(added_fields)))
@@ -892,12 +1128,11 @@ def generate_default_extended_db_excel(keynote_data_conn, keynote_excel_extend_d
     EXCEL.save_data_to_excel(
         data_collection, 
         keynote_excel_extend_db, 
-        worksheet="Keynote Extended DB", 
+        worksheet=EXTENDED_DB_WORKSHEET_NAME, 
         freeze_row=1, 
-        freeze_column=get_column_letter("KEYNOTE DESCRIPTION")
-    )
+        freeze_column=get_column_letter("SOURCE"),
+        open_after=True)
 
-    os.startfile(keynote_excel_extend_db)
 
 
 def regenerate_extended_db_excel(keynote_data_conn):
@@ -919,8 +1154,7 @@ def regenerate_extended_db_excel(keynote_data_conn):
         None
     """
     doc = REVIT_APPLICATION.get_doc()
-    project_data = REVIT_PROJ_DATA.get_revit_project_data(doc)
-    keynote_excel_extend_db = project_data.get("keynote_assistant", {}).get("setting", {}).get("extended_db_excel_path")
+    keynote_excel_extend_db = get_keynote_setting(doc, EXTENDED_DB_EXCEL_PATH_KEY)
     
     if not keynote_excel_extend_db:
         note = "Extended DB excel path is not defined, please define one first by using [Open Extended Database Excel] button."
@@ -937,7 +1171,7 @@ def regenerate_extended_db_excel(keynote_data_conn):
     print("Reading existing extended DB data...")
     try:
         existing_data = EXCEL.parse_excel_data(
-            EXCEL.read_data_from_excel(keynote_excel_extend_db, worksheet="Keynote Extended DB", return_dict=True), 
+            EXCEL.read_data_from_excel(keynote_excel_extend_db, worksheet=EXTENDED_DB_WORKSHEET_NAME, return_dict=True), 
             "KEYNOTE ID",
             ignore_keywords=["[Branch]", "[Category]", "UnOrganized", "please write something"]
         )
@@ -1027,9 +1261,6 @@ def regenerate_extended_db_excel(keynote_data_conn):
         print("Orphaned entries removed: {}".format(len(orphaned_keys)))
         print("New DB excel re-generated at: {}".format(regenerated_excel_path))
         print("Original file unchanged: {}".format(keynote_excel_extend_db))
-        
-        # Open the test file
-        os.startfile(regenerated_excel_path)
         NOTIFICATION.messenger("Test extended DB excel generated at: {}.\nPlease check and replace original file.".format(regenerated_excel_path))
         
     except Exception as e:
@@ -1185,6 +1416,138 @@ def remove_empty_categories_and_branches(keynote_data_conn):
         print("Error in remove_empty_categories_and_branches: {}".format(e))
         NOTIFICATION.messenger("Error removing empty categories and branches: {}".format(e))
         raise e
+
+
+
+def change_extended_db_file_location(keynote_data_conn):
+    """
+    Change the saved location for extended DB file or Exterior/Interior Excel files.
+    
+    This function allows users to change the file paths for:
+    1. Extended DB Excel file (main database file)
+    2. Exterior Excel file (exported exterior keynotes)
+    3. Interior Excel file (exported interior keynotes)
+    
+    Args:
+        keynote_data_conn: Database connection to the keynote data
+        
+    Returns:
+        None
+    """
+    doc = REVIT_APPLICATION.get_doc()
+    t = DB.Transaction(doc, "change extended db file location")
+    t.Start()
+    REVIT_PROJ_DATA.setup_project_data(doc)
+    t.Commit()
+    
+    # Get current settings
+    extended_db_path = get_keynote_setting(doc, EXTENDED_DB_EXCEL_PATH_KEY)
+    exterior_path = get_keynote_setting(doc, EXCEL_PATH_EXTERIOR_KEY)
+    interior_path = get_keynote_setting(doc, EXCEL_PATH_INTERIOR_KEY)
+    
+    # Create options for what to change
+    options = []
+    if extended_db_path:
+        options.append(["Extended DB Excel File", "Change location of the main extended database Excel file"])
+    else:
+        options.append(["Extended DB Excel File", "Set location of the main extended database Excel file (currently not set)"])
+    
+    if exterior_path:
+        options.append(["Exterior Excel File", "Change location of the exported exterior keynotes Excel file"])
+    else:
+        options.append(["Exterior Excel File", "Set location of the exported exterior keynotes Excel file (currently not set)"])
+    
+    if interior_path:
+        options.append(["Interior Excel File", "Change location of the exported interior keynotes Excel file"])
+    else:
+        options.append(["Interior Excel File", "Set location of the exported interior keynotes Excel file (currently not set)"])
+    
+    options.append("Cancel")
+    
+    # Show dialog to select what to change
+    selected_option = REVIT_FORMS.dialogue(
+        main_text="Change Extended DB File Location",
+        sub_text="What would you like to change the location for?",
+        options=options,
+        icon="information"
+    )
+    
+    if not selected_option or selected_option == "Cancel":
+        print("Operation cancelled by user.")
+        return
+    
+    # Determine which file type was selected
+    if "Extended DB Excel File" in selected_option:
+        current_path = extended_db_path
+        setting_key = EXTENDED_DB_EXCEL_PATH_KEY
+        file_description = "Extended Database Excel File"
+    elif "Exterior Excel File" in selected_option:
+        current_path = exterior_path
+        setting_key = EXCEL_PATH_EXTERIOR_KEY
+        file_description = "Exterior Keynotes Excel File"
+    elif "Interior Excel File" in selected_option:
+        current_path = interior_path
+        setting_key = EXCEL_PATH_INTERIOR_KEY
+        file_description = "Interior Keynotes Excel File"
+    else:
+        print("Invalid selection.")
+        return
+    
+    # Show current path if it exists
+    if current_path:
+        print("Current {} location: {}".format(file_description, current_path))
+        if os.path.exists(current_path):
+            print("Current file exists and is accessible.")
+        else:
+            print("Warning: Current file does not exist at the specified location.")
+    else:
+        print("No current location set for {}.".format(file_description))
+    
+    # Prompt for new file location
+    new_path = forms.pick_excel_file(
+        title="Select New Location for {}".format(file_description),
+        save=True
+    )
+    
+    if not new_path:
+        print("No new location selected. Operation cancelled.")
+        return
+    
+    # Validate new path
+    if new_path == current_path:
+        print("New location is the same as current location. No changes made.")
+        NOTIFICATION.messenger("New location is the same as current location. No changes made.")
+        return
+    
+    # Check if file already exists at new location
+    if os.path.exists(new_path):
+        overwrite_options = [
+            ["Yes, Overwrite", "Overwrite the existing file at the new location"],
+            "Cancel"
+        ]
+        overwrite_choice = REVIT_FORMS.dialogue(
+            main_text="File Already Exists",
+            sub_text="A file already exists at the new location: {}\n\nDo you want to overwrite it?".format(new_path),
+            options=overwrite_options,
+            icon="warning"
+        )
+        
+        if not overwrite_choice or overwrite_choice == "Cancel":
+            print("Operation cancelled - file already exists at new location.")
+            return
+    
+    # Update project data with new path
+    try:
+        set_keynote_setting(doc, setting_key, new_path)
+        
+        print("Successfully updated {} location to: {}".format(file_description, new_path))
+        NOTIFICATION.messenger("Successfully updated {} location to:\n{}".format(file_description, new_path))
+        
+    except Exception as e:
+        print("Error updating file location: {}".format(e))
+        NOTIFICATION.messenger("Error updating file location: {}".format(e))
+        return
+
 
 
 if __name__ == "__main__":

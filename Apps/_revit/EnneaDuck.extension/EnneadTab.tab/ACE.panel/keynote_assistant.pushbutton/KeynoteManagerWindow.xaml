@@ -296,84 +296,113 @@
             </StackPanel>
             
             <GroupBox Header="Brand New Feature" DockPanel.Dock="Bottom" Margin="0,10,0,0" Padding="5">
-                <StackPanel>
-                    <Button BorderThickness="1"
-                            Margin="0,0,0,0"
-                            Padding="8,4,8,4"
-                            Background="Orange"
-                            ToolTip="Show some help for how to use this features."
-                            Click="show_help">
-                        <TextBlock TextAlignment="Center">
-                            Help Me!
-                        </TextBlock>
-                    </Button>
-                    <Button BorderThickness="1"
-                            Margin="0,0,0,0"
-                            Padding="8,4,8,4"
-                            Background="Orange"
-                            ToolTip="Export Exterior and Interior Keynotes as two separate Excel files that you can link back to Revit using Ideate sticky."
-                            Click="export_keynotes_enneadtab">
-                        <TextBlock TextAlignment="Center">
-                            Export Exterior<LineBreak/>Interior Keynotes<LineBreak/>As Excel
-                        </TextBlock>
-                    </Button>
-                    <Button BorderThickness="1"
-                            Margin="0,0,0,0"
-                            Padding="8,4,8,4"
-                            Background="Orange"
-                            ToolTip="Remove leading and trailing quotes from keynote text if you import old keynote files."
-                            Click="cleanup_quote_text">
-                        <TextBlock TextAlignment="Center">Cleanup Quote<LineBreak/>Around Description</TextBlock>
-                    </Button>
-                    <Button BorderThickness="1"
-                            Margin="0,0,0,0"
-                            Padding="8,4,8,4"
-                            Background="Orange"
-                            ToolTip="Batch attach keynotes to selected elements in Revit."
-                            Click="batch_attach_keynotes">
-                        <TextBlock TextAlignment="Center">Batch Reattach<LineBreak/>Keynotes Parent</TextBlock>
-                    </Button>
-                    <Button BorderThickness="1"
-                            Margin="0,0,0,0"
-                            Padding="8,4,8,4"
-                            Background="Orange"
-                            ToolTip="Open the extended database Excel file."
-                            Click="open_extended_db_excel">
-                        <TextBlock TextAlignment="Center">Open Extended<LineBreak/>Database Excel</TextBlock>
-                    </Button>
-                    <Button BorderThickness="1"
-                            Margin="0,0,0,0"
-                            Padding="8,4,8,4"
-                            Background="Orange"
-                            ToolTip="Regenerate the extended database Excel file."
-                            Click="regenerate_extended_db_excel">
-                        <TextBlock TextAlignment="Center">Regenerate Extended<LineBreak/>Database Excel</TextBlock>
-                    </Button>
-                    <Button BorderThickness="1"
-                            Margin="0,0,0,0"
-                            Padding="8,4,8,4"
-                            Background="Orange"
-                            ToolTip="Batch translate keynote text."
-                            Click="batch_translate_keynote">
-                        <TextBlock TextAlignment="Center">Batch Translate<LineBreak/>Keynote Text</TextBlock>
-                    </Button>
-                    <Button BorderThickness="1"
-                            Margin="0,0,0,0"
-                            Padding="8,4,8,4"
-                            Background="Orange"
-                            ToolTip="Update keynote data from an Excel file."
-                            Click="update_keynote_from_excel">
-                        <TextBlock TextAlignment="Center">Update Keynote<LineBreak/>From Excel</TextBlock>
-                    </Button>
-                    <Button BorderThickness="1"
-                            Margin="0,0,0,0"
-                            Padding="8,4,8,4"
-                            Background="Orange"
-                            ToolTip="Remove empty categories and branches with user selection. Uses SelectFromList to choose which items to delete."
-                            Click="remove_empty_categories_and_branches">
-                        <TextBlock TextAlignment="Center">Remove Empty<LineBreak/>Category<LineBreak/>and Branch</TextBlock>
-                    </Button>
-                </StackPanel>
+                <TabControl>
+                    <TabItem>
+                        <TabItem.Header>
+                            <TextBlock Text="Part 1"/>
+                        </TabItem.Header>
+                        <StackPanel>
+                            <Button BorderThickness="1"
+                                    Margin="0,0,0,0"
+                                    Padding="8,4,8,4"
+                                    Background="Orange"
+                                    ToolTip="Show some help for how to use this features."
+                                    Click="show_help">
+                                <TextBlock TextAlignment="Center">
+                                    Help Me!
+                                </TextBlock>
+                            </Button>
+                            <Button BorderThickness="1"
+                                    Margin="0,0,0,0"
+                                    Padding="8,4,8,4"
+                                    Background="Orange"
+                                    ToolTip="Open the extended database Excel file."
+                                    Click="open_extended_db_excel">
+                                <TextBlock TextAlignment="Center">Open Extended<LineBreak/>Database Excel</TextBlock>
+                            </Button>
+                            <Button BorderThickness="1"
+                                    Margin="0,0,0,0"
+                                    Padding="8,4,8,4"
+                                    Background="Orange"
+                                    ToolTip="Export Exterior and Interior Keynotes as two separate Excel files that you can link back to Revit using Ideate sticky."
+                                    Click="export_keynotes_enneadtab">
+                                <TextBlock TextAlignment="Center">
+                                    Export Exterior<LineBreak/>Interior Keynotes<LineBreak/>As Excel
+                                </TextBlock>
+                            </Button>
+                            <Button BorderThickness="1"
+                                    Margin="0,0,0,0"
+                                    Padding="8,4,8,4"
+                                    Background="Orange"
+                                    ToolTip="Regenerate the extended database Excel file."
+                                    Click="regenerate_extended_db_excel">
+                                <TextBlock TextAlignment="Center">Regenerate<LineBreak/>Extended DB</TextBlock>
+                            </Button>
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem>
+                        <TabItem.Header>
+                            <TextBlock Text="Part 2"/>
+                        </TabItem.Header>
+                        <StackPanel>
+                            <Button BorderThickness="1"
+                                    Margin="0,0,0,0"
+                                    Padding="8,4,8,4"
+                                    Background="Orange"
+                                    ToolTip="Change the saved location for extended DB file or Exterior/Interior Excel files."
+                                    Click="change_extended_db_file_location">
+                                <TextBlock TextAlignment="Center">Change Extended<LineBreak/>DB File<LineBreak/>Location</TextBlock>
+                            </Button>
+                            <Button BorderThickness="1"
+                                    Margin="0,0,0,0"
+                                    Padding="8,4,8,4"
+                                    Background="Orange"
+                                    ToolTip="Update keynote data from an Excel file."
+                                    Click="update_keynote_from_excel">
+                                <TextBlock TextAlignment="Center">Update Keynote<LineBreak/>From Excel</TextBlock>
+                            </Button>
+                            <Button BorderThickness="1"
+                                    Margin="0,0,0,0"
+                                    Padding="8,4,8,4"
+                                    Background="Orange"
+                                    ToolTip="Batch attach keynotes to selected elements in Revit."
+                                    Click="batch_attach_keynotes">
+                                <TextBlock TextAlignment="Center">Batch Reattach<LineBreak/>Keynotes Parent</TextBlock>
+                            </Button>
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem>
+                        <TabItem.Header>
+                            <TextBlock Text="Part 3"/>
+                        </TabItem.Header>
+                        <StackPanel>
+                            <Button BorderThickness="1"
+                                    Margin="0,0,0,0"
+                                    Padding="8,4,8,4"
+                                    Background="Orange"
+                                    ToolTip="Remove leading and trailing quotes from keynote text if you import old keynote files."
+                                    Click="cleanup_quote_text">
+                                <TextBlock TextAlignment="Center">Cleanup Quote<LineBreak/>Around Description</TextBlock>
+                            </Button>
+                            <Button BorderThickness="1"
+                                    Margin="0,0,0,0"
+                                    Padding="8,4,8,4"
+                                    Background="Orange"
+                                    ToolTip="Batch translate keynote text."
+                                    Click="batch_translate_keynote">
+                                <TextBlock TextAlignment="Center">Batch Translate<LineBreak/>Keynote Text</TextBlock>
+                            </Button>
+                            <Button BorderThickness="1"
+                                    Margin="0,0,0,0"
+                                    Padding="8,4,8,4"
+                                    Background="Orange"
+                                    ToolTip="Remove empty categories and branches with user selection. Uses SelectFromList to choose which items to delete."
+                                    Click="remove_empty_categories_and_branches">
+                                <TextBlock TextAlignment="Center">Remove Empty<LineBreak/>Category<LineBreak/>and Branch</TextBlock>
+                            </Button>
+                        </StackPanel>
+                    </TabItem>
+                </TabControl>
             </GroupBox>
             
             <StackPanel DockPanel.Dock="Top">

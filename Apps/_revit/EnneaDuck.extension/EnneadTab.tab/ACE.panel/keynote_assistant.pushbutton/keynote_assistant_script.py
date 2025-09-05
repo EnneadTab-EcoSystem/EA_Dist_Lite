@@ -418,6 +418,11 @@ class KeynoteManagerWindow(forms.WPFWindow):
         AU.remove_empty_categories_and_branches(keynote_data_conn=self._conn)
         self.refresh(sender, args)
 
+    @ERROR_HANDLE.try_catch_error()
+    def change_extended_db_file_location(self, sender, args):
+        """Change the saved location for extended DB file or Exterior/Interior Excel files."""
+        AU.change_extended_db_file_location(keynote_data_conn=self._conn)
+
     ################## end of EnneadTab group ########################
 
     
