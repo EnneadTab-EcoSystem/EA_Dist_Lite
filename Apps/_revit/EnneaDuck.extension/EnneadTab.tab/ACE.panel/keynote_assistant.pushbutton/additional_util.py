@@ -204,23 +204,25 @@ def create_header_row(row, cell_color=(200, 200, 200)):
     
     return items
 
-def create_keynote_data_row(leaf, row, extend_db_item=None, highlight_missing=False):
-    """Create a complete data row for a keynote item."""
+def exporter_row_writer(leaf, row, extend_db_item=None, highlight_missing=False):
+    """Create a complete data row for a keynote item in exported Excel files."""
     items = []
     cell_color = (255, 200, 200) if highlight_missing else None
     
     # Keynote ID and Description
     items.append(create_excel_cell(leaf.key, row, "KEYNOTE ID", cell_color=cell_color, 
-                                  tooltip="If you want to change keynote, just write the new keynote ID on column A, please do not change original keynote"))
+                                  tooltip="DO NOT MODIFY THOSE CONTENT HERE, PLEASE!"))
     items.append(create_excel_cell(leaf.text, row, "KEYNOTE DESCRIPTION", 
-                                  text_wrap=True, cell_color=cell_color))
+                                  text_wrap=True, cell_color=cell_color,
+                                  tooltip="DO NOT MODIFY THOSE CONTENT HERE, PLEASE!"))
     
     if extend_db_item:
         # Add extended DB data
-        for header in COLUMN_CONFIG.get_extended_db_headers():
+        for header in COLUMN_CONFIG.get_extended_db_headers(ignore_keynote_id_and_description=True):
             items.append(create_excel_cell(
                 extend_db_item.get(header, ""), row, header,
-                text_wrap=True
+                text_wrap=True,
+                tooltip="DO NOT MODIFY THOSE CONTENT HERE, PLEASE!"
             ))
     else:
         # Highlight missing data with merged error message
@@ -552,7 +554,7 @@ def export_keynote_as_exterior_and_interior(keynote_data_conn):
                 # Create keynote data row using smart helper
                 extend_db_item = db_data.get(leaf.key)
                 highlight_missing = extend_db_item is None
-                data_collection.extend(create_keynote_data_row(leaf, pointer_row, extend_db_item, highlight_missing))
+                data_collection.extend(exporter_row_writer(leaf, pointer_row, extend_db_item, highlight_missing))
                     
                 print("\t\t\t{}-{}: [{}] {}".format(i+1, j+1, leaf.key, leaf.text))
                 
@@ -853,7 +855,7 @@ def generate_default_extended_db_excel(keynote_data_conn, keynote_excel_extend_d
                     top_border_style = EXCEL.BorderStyle.Thin,
                     bottom_border_style=EXCEL.BorderStyle.Thin,
                     side_border_style=EXCEL.BorderStyle.Thin,
-                    tooltip="If you want to change keynote, just write the new keynote ID on column A, please do not change original keynote"
+                    tooltip="If you want to change keynote, just write the new keynote ID on column A, we will think of some solution to update the keynote later, call sen zhang, please do not change original keynote."
                 ))
                 
                 data_collection.append(create_excel_cell(
