@@ -1,0 +1,40 @@
+{
+  "categories": {
+    "CATE1": "Test1",
+    "CATE2": "",
+    "CATE3": "no one use"
+  },
+  "keynotes": {
+    "AL1": {
+      "text": "Metalwww",
+      "parent": "CATE1",
+      "metadata": {
+        "product": "KFC",
+        "color": "green"
+      }
+    },
+    "AL2": {
+      "text": "Metal2",
+      "parent": "CATE1",
+      "metadata": {
+        "color": "green"
+      }
+    },
+    "GF1": {
+      "text": "Glass",
+      "parent": "CATE2",
+      "metadata": {
+        "color": "green"
+      }
+    }
+  },
+  "hierarchy": {
+    "CATE1": [
+      "AL1",
+      "AL2"
+    ],
+    "CATE2": [
+      "GF1"
+    ]
+  }
+}
