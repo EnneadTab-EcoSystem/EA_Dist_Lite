@@ -416,6 +416,16 @@ def show_help():
     output.write("   - Revit keynote file is organized in a tree structure by Autodesk, for each keynote item, it will look like this:")
     output.write("   - KEY | DESCRIPTION | PARENT KEY")
     output.write("   - So when you want to organize under a 'folder', you are really just assigning many keynote items to the same parent.")
+
+
+    output.insert_divider()
+    output.write("What is Timeout messgae meaning?", OUTPUT.Style.Subtitle)
+    output.write(os.path.join(os.path.dirname(__file__), "unlock timeout warning.png"))
+    output.write("   - When you see this warning, it means someone else is editing the keynote file. We use a lock file to prevent multiple users from editing the same file at the same time.")
+    output.write(os.path.join(os.path.dirname(__file__), "lock file.png"))
+    output.write("   - Next to your keynote file, you will see a lock file. If you delete the lock file, you can bypass the lock and peek inside to see who is editing the file. Just be mindful to communicate with the other user to avoid overriding their changes.")
+
+
     
     output.insert_divider()
     pyrevit_help = "https://pyrevitlabs.notion.site/Manage-Keynotes-6f083d6f66fe43d68dc5d5407c8e19da"

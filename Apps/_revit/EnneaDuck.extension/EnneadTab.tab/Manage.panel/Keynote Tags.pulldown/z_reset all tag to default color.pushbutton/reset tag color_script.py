@@ -22,11 +22,11 @@ def main():
     processed_element_count = 0
     with revit.Transaction("reset keynote tag"):
         for tag in key_note_tags:
-            if REVIT_SELECTION.is_changable(tag):
+            if not REVIT_SELECTION.is_changable(tag):
                 print ("---tag being owned, skip reset")
                 continue
             view = revit.doc.GetElement(tag.OwnerViewId)
-            if REVIT_SELECTION.is_changable(view):
+            if not REVIT_SELECTION.is_changable(view):
                 print ("---view [{}] being owned, skip reset".format(view.Name))
                 continue
             OG_setting = DB.OverrideGraphicSettings()
