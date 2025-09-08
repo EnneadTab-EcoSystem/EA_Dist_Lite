@@ -283,12 +283,16 @@
                             <RowDefinition/>
                             <RowDefinition/>
                             <RowDefinition/>
+                            <RowDefinition/>
+                            <RowDefinition/>
                         </Grid.RowDefinitions>
                         <CheckBox x:Name="checkbox_play_sound" Grid.Column="0" Grid.Row="0" Content="Play sound when tool is finished." Background="#FFBBBBBB" Click ="checkbox_additional_setting_changed" Foreground="#FFDAE8FD" IsChecked="True"></CheckBox>
                         <CheckBox x:Name="checkbox_sync_and_close" Grid.Column="0" Grid.Row="1" Content="Sync and Close all open docs." Background="#FFBBBBBB" BorderBrush="#FF0A89FF" Click ="checkbox_additional_setting_changed" Foreground="#FFDAE8FD"></CheckBox>
                         <CheckBox x:Name="checkbox_combine_pdf" Grid.Column="1" Grid.Row="0" Content="Create additional combined PDF." Background="#FFBBBBBB" Click ="checkbox_additional_setting_changed" Foreground="#FFDAE8FD"></CheckBox>
                         <CheckBox x:Name ="checkbox_send_email" Grid.Column="0" Grid.Row="2" Content="Send Email" Click ="checkbox_additional_setting_changed" Background="#FFBBBBBB" IsChecked="False" BorderBrush="#FFE846F1" Foreground="#FFDAE8FD" Cursor="Hand"></CheckBox>
-                        <Grid Grid.Column="1" Grid.Row="1" Grid.RowSpan="2" Margin="15,0,0,0">
+                        <CheckBox x:Name="checkbox_delayed_start" Grid.Column="1" Grid.Row="1" Content="Delayed Start" Click ="checkbox_additional_setting_changed" Background="#FFBBBBBB" BorderBrush="#FFFF6B35" Foreground="#FFDAE8FD" Cursor="Hand"></CheckBox>
+                        <TextBlock x:Name="delayed_start_time_display" Grid.Column="1" Grid.Row="2" Text="" Foreground="#FFDAE8FD" FontSize="9" TextWrapping="Wrap" Margin="5,0,0,0"></TextBlock>
+                        <Grid Grid.Column="1" Grid.Row="3" Grid.RowSpan="2" Margin="15,0,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="85"/>
                                 <ColumnDefinition Width="1"/>

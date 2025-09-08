@@ -255,6 +255,9 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
         out_data["copy_folder_path"] = self.textbox_folder.Text
         out_data["is_copy_folder"] = self.checkbox_copy_folder.IsChecked
         out_data["is_send_email"] = self.checkbox_send_email.IsChecked
+        out_data["is_delayed_start"] = self.checkbox_delayed_start.IsChecked
+        if hasattr(self, 'scheduled_start_time'):
+            out_data["scheduled_start_time"] = self.scheduled_start_time.isoformat()
 
 
         out_data["issue_name"] = self.issue_name
@@ -313,6 +316,7 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
             self.is_color_by_sheet = self.radio_button_color_by_sheet.IsChecked
             self.copy_folder_path = self.textbox_folder.Text
             self.is_copy_folder = self.checkbox_copy_folder.IsChecked
+            self.is_delayed_start = self.checkbox_delayed_start.IsChecked
 
             self.initiate_para_list_source()
             self.initiate_dwg_setting_list_source()
@@ -359,6 +363,39 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
         self.radio_button_color_BW_globally.IsChecked =not( self.is_color_by_sheet)
         self.textbox_folder.Text = self.copy_folder_path
         self.checkbox_copy_folder.IsChecked = self.is_copy_folder
+        
+        try:
+            self.is_delayed_start
+        except:
+            self.is_delayed_start = False
+        self.checkbox_delayed_start.IsChecked = self.is_delayed_start
+        
+        # Load scheduled start time if it exists
+        try:
+            if hasattr(self, 'scheduled_start_time') and self.scheduled_start_time:
+                from datetime import datetime
+                scheduled_time = datetime.fromisoformat(self.scheduled_start_time)
+                now = datetime.now()
+                
+                # Calculate wait time
+                wait_seconds = (scheduled_time - now).total_seconds()
+                wait_minutes = int(wait_seconds // 60)
+                wait_hours = int(wait_minutes // 60)
+                remaining_minutes = wait_minutes % 60
+                
+                # Display the scheduled time
+                if wait_hours > 0:
+                    wait_display = "{}h {}m".format(wait_hours, remaining_minutes)
+                else:
+                    wait_display = "{}m".format(remaining_minutes)
+                
+                self.delayed_start_time_display.Text = "Scheduled: {}:{} (in {})".format(
+                    str(scheduled_time.hour).zfill(2),
+                    str(scheduled_time.minute).zfill(2),
+                    wait_display
+                )
+        except:
+            pass
 
         try:
             self.email_data = EmailData(receiver_list = self.email_data_receivers,
@@ -669,6 +706,12 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
 
         # ---- pre action ----
         self.save_setting()
+        
+        # Handle delayed start if enabled
+        if self.is_delayed_start and hasattr(self, 'scheduled_start_time'):
+            ERROR_HANDLE.print_note("Delayed start is enabled, waiting until scheduled time...")
+            self._execute_delayed_start(self.scheduled_start_time)
+        
         self.monitor_group.Visibility, self.data_grid_preview.Visibility = self.data_grid_preview.Visibility,self.monitor_group.Visibility
 
 
@@ -978,10 +1021,214 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
         self.is_combine_pdf = self.checkbox_combine_pdf.IsChecked
         self.is_sync_and_close = self.checkbox_sync_and_close.IsChecked
         self.is_send_email = self.checkbox_send_email.IsChecked
+        self.is_delayed_start = self.checkbox_delayed_start.IsChecked
+
+        # Handle delayed start checkbox change
+        if sender == self.checkbox_delayed_start:
+            if self.is_delayed_start:
+                self.handle_delayed_start_time_selection()
+            else:
+                # Clear the display when unchecked
+                self.delayed_start_time_display.Text = ""
+                if hasattr(self, 'scheduled_start_time'):
+                    delattr(self, 'scheduled_start_time')
 
         self.update_UI_enable_status()
         self.check_all_setting_ready()
 
+    @ERROR_HANDLE.try_catch_error()
+    def handle_delayed_start_time_selection(self):
+        """Handle time selection when delayed start checkbox is checked."""
+        from datetime import datetime, timedelta
+        
+        # Try to use Windows Forms DateTimePicker for better UX
+        try:
+            import clr
+            clr.AddReference('System.Windows.Forms')
+            clr.AddReference('System.Drawing')
+            from System.Windows.Forms import Form, DateTimePicker, Button, DialogResult, Label, DateTimePickerFormat
+            from System.Drawing import Size, Point
+            
+            class TimePickerDialog(Form):
+                def __init__(self):
+                    self.Text = 'Select Start Time'
+                    self.Size = Size(300, 150)
+                    self.StartPosition = 1  # CenterScreen
+                    self.FormBorderStyle = 1  # FixedDialog
+                    self.MaximizeBox = False
+                    self.MinimizeBox = False
+                    
+                    # Time picker
+                    self.time_picker = DateTimePicker()
+                    self.time_picker.Format = DateTimePickerFormat.Time
+                    self.time_picker.ShowUpDown = True
+                    self.time_picker.Location = Point(20, 30)
+                    self.time_picker.Size = Size(200, 20)
+                    self.Controls.Add(self.time_picker)
+                    
+                    # Label
+                    label = Label()
+                    label.Text = "Select time to start export:"
+                    label.Location = Point(20, 10)
+                    label.Size = Size(250, 20)
+                    self.Controls.Add(label)
+                    
+                    # OK Button
+                    self.ok_button = Button()
+                    self.ok_button.Text = 'OK'
+                    self.ok_button.DialogResult = DialogResult.OK
+                    self.ok_button.Location = Point(50, 70)
+                    self.ok_button.Size = Size(75, 25)
+                    self.Controls.Add(self.ok_button)
+                    
+                    # Cancel Button
+                    self.cancel_button = Button()
+                    self.cancel_button.Text = 'Cancel'
+                    self.cancel_button.DialogResult = DialogResult.Cancel
+                    self.cancel_button.Location = Point(150, 70)
+                    self.cancel_button.Size = Size(75, 25)
+                    self.Controls.Add(self.cancel_button)
+                    
+                    self.AcceptButton = self.ok_button
+                    self.CancelButton = self.cancel_button
+            
+            # Show the time picker dialog
+            dialog = TimePickerDialog()
+            result = dialog.ShowDialog()
+            
+            if result == DialogResult.OK:
+                selected_time = dialog.time_picker.Value
+                target_time = datetime(selected_time.Year, selected_time.Month, selected_time.Day, 
+                                     selected_time.Hour, selected_time.Minute, 0)
+                
+                # If the time has already passed today, set it for tomorrow
+                now = datetime.now()
+                if target_time <= now:
+                    target_time += timedelta(days=1)
+                
+                # Store the scheduled time
+                self.scheduled_start_time = target_time
+                
+                # Calculate wait time
+                wait_seconds = (target_time - now).total_seconds()
+                wait_minutes = int(wait_seconds // 60)
+                wait_hours = int(wait_minutes // 60)
+                remaining_minutes = wait_minutes % 60
+                
+                # Display the scheduled time
+                if wait_hours > 0:
+                    wait_display = "{}h {}m".format(wait_hours, remaining_minutes)
+                else:
+                    wait_display = "{}m".format(remaining_minutes)
+                
+                self.delayed_start_time_display.Text = "Scheduled: {}:{} (in {})".format(
+                    str(target_time.hour).zfill(2),
+                    str(target_time.minute).zfill(2),
+                    wait_display
+                )
+                
+                NOTIFICATION.messenger("Export scheduled for {}:{} (in {})".format(
+                    str(target_time.hour).zfill(2),
+                    str(target_time.minute).zfill(2),
+                    wait_display
+                ))
+            else:
+                # User cancelled, uncheck the checkbox
+                self.checkbox_delayed_start.IsChecked = False
+                self.is_delayed_start = False
+                self.delayed_start_time_display.Text = ""
+                
+        except Exception as e:
+            ERROR_HANDLE.print_note("Windows Forms DateTimePicker failed, falling back to text input: {}".format(str(e)))
+            # Fallback to text input method
+            self._handle_delayed_start_text_input_fallback()
+
+    def _handle_delayed_start_text_input_fallback(self):
+        """Fallback method using text input for time selection."""
+        from datetime import datetime, timedelta
+        
+        ERROR_HANDLE.print_note("Starting text input fallback method...")
+        
+        while True:
+            # Get time input from user
+            try:
+                ERROR_HANDLE.print_note("Calling forms.ask_for_string...")
+                time_input = forms.ask_for_string(
+                    default='{}:{}'.format(
+                        str(datetime.now().hour).zfill(2),
+                        str(datetime.now().minute + 5).zfill(2)
+                    ),
+                    prompt='Enter start time in HH:MM format (24-hour):\nExample: 14:30 for 2:30 PM'
+                )
+                ERROR_HANDLE.print_note("ask_for_string returned: {}".format(time_input))
+            except Exception as e:
+                ERROR_HANDLE.print_note("Error in ask_for_string: {}".format(str(e)))
+                import traceback
+                ERROR_HANDLE.print_note("Full traceback: {}".format(traceback.format_exc()))
+                # Try without default parameter
+                time_input = forms.ask_for_string(
+                    prompt='Enter start time in HH:MM format (24-hour):\nExample: 14:30 for 2:30 PM'
+                )
+            
+            if not time_input:
+                # User cancelled, uncheck the checkbox
+                self.checkbox_delayed_start.IsChecked = False
+                self.is_delayed_start = False
+                self.delayed_start_time_display.Text = ""
+                return
+            
+            try:
+                # Parse the input time
+                hour, minute = map(int, time_input.split(':'))
+                
+                # Validate time format
+                if not (0 <= hour <= 23 and 0 <= minute <= 59):
+                    forms.alert('Invalid time format. Please enter time in HH:MM format (24-hour).\nHour: 0-23, Minute: 0-59')
+                    continue
+                
+                # Create target datetime for today
+                now = datetime.now()
+                target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+                
+                # If the time has already passed today, set it for tomorrow
+                if target_time <= now:
+                    target_time += timedelta(days=1)
+                
+                # Store the scheduled time
+                self.scheduled_start_time = target_time
+                
+                # Calculate wait time
+                wait_seconds = (target_time - now).total_seconds()
+                wait_minutes = int(wait_seconds // 60)
+                wait_hours = int(wait_minutes // 60)
+                remaining_minutes = wait_minutes % 60
+                
+                # Display the scheduled time
+                if wait_hours > 0:
+                    wait_display = "{}h {}m".format(wait_hours, remaining_minutes)
+                else:
+                    wait_display = "{}m".format(remaining_minutes)
+                
+                self.delayed_start_time_display.Text = "Scheduled: {}:{} (in {})".format(
+                    str(target_time.hour).zfill(2),
+                    str(target_time.minute).zfill(2),
+                    wait_display
+                )
+                
+                NOTIFICATION.messenger("Export scheduled for {}:{} (in {})".format(
+                    str(target_time.hour).zfill(2),
+                    str(target_time.minute).zfill(2),
+                    wait_display
+                ))
+                break
+                    
+            except ValueError:
+                forms.alert('Invalid time format. Please enter time in HH:MM format.\nExample: 14:30 for 2:30 PM')
+                continue
+            except Exception as e:
+                ERROR_HANDLE.print_note("Error in delayed start: {}".format(str(e)))
+                forms.alert('Error setting delayed start. Please try again.')
+                continue
 
     def update_UI_enable_status(self):
         disabled_color = self.sample_color_disabled.Foreground
@@ -1344,6 +1591,37 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
     def update_loading_message(self, preview_obj):
         self.textblock_export_status.Text = "{}\nEstimated time = {}".format( preview_obj.format_name, preview_obj.time_estimate_format)
         self.textblock_load_screen.Text = JOKE.random_loading_message()
+
+    
+    def _execute_delayed_start(self, target_time):
+        """Execute the delayed start with the given target time."""
+        from datetime import datetime
+        
+        # Show waiting message
+        self.button_main.Content = "Waiting for scheduled time..."
+        self.button_main.IsEnabled = False
+        
+        # Wait until the scheduled time
+        while datetime.now() < target_time:
+            remaining = target_time - datetime.now()
+            remaining_minutes = int(remaining.total_seconds() // 60)
+            remaining_seconds = int(remaining.total_seconds() % 60)
+            
+            self.button_main.Content = "Waiting... {}m {}s remaining".format(
+                remaining_minutes, remaining_seconds
+            )
+            NOTIFICATION.messenger("Waiting... {}m {}s remaining".format(
+                remaining_minutes, remaining_seconds
+            ))
+            time.sleep(1)
+        
+        # Time reached, sync document first
+        NOTIFICATION.messenger("Scheduled time reached. Syncing document before starting export...")
+        REVIT_SYNC.sync_doc(DOC)
+        
+        # Reset button
+        self.button_main.Content = "Starting export..."
+        self.button_main.IsEnabled = True
 
 
     def update_time_estimate(self):
