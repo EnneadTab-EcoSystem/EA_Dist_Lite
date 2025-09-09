@@ -241,6 +241,91 @@ def get_alternative_traceback():
         print(result)
     return result
 
+
+def save_recent_traceback_to_log(error_info, func_name="unknown", additional_context=""):
+    """Save recent traceback information to RECENT_TRACEBACK.LOG file.
+    
+    This function creates a persistent log file that can be monitored locally
+    to track errors that occur in Rhino, Revit, or other environments.
+    
+    Args:
+        error_info (str): The error traceback information to log
+        func_name (str): Name of the function where the error occurred
+        additional_context (str): Any additional context information
+    """
+    try:
+        # Get the log file path
+        if FOLDER is not None:
+            log_file_path = FOLDER.get_local_dump_folder_file("RECENT_TRACEBACK.LOG")
+        else:
+            # Fallback if FOLDER is not available
+            import os
+            user_docs = os.path.expanduser("~/Documents")
+            if not os.path.exists(user_docs):
+                user_docs = os.path.join(os.environ.get("USERPROFILE", ""), "Documents")
+            
+            enneadtab_folder = os.path.join(user_docs, "EnneadTab Ecosystem", "Dump")
+            if not os.path.exists(enneadtab_folder):
+                try:
+                    os.makedirs(enneadtab_folder)
+                except:
+                    pass
+            
+            log_file_path = os.path.join(enneadtab_folder, "RECENT_TRACEBACK.LOG")
+        
+        # Get current timestamp
+        if TIME is not None:
+            timestamp = TIME.get_formatted_current_time()
+        else:
+            import time
+            timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Get user name
+        if USER is not None:
+            user_name = USER.USER_NAME
+        else:
+            import os
+            user_name = os.environ.get("USERNAME", "unknown")
+        
+        # Get plugin name
+        plugin_name = get_plugin_name()
+        
+        # Format the log entry
+        log_entry = []
+        log_entry.append("=" * 80)
+        log_entry.append("TIMESTAMP: {}".format(timestamp))
+        log_entry.append("USER: {}".format(user_name))
+        log_entry.append("PLUGIN: {}".format(plugin_name))
+        log_entry.append("FUNCTION: {}".format(func_name))
+        if additional_context:
+            log_entry.append("CONTEXT: {}".format(additional_context))
+        log_entry.append("-" * 80)
+        log_entry.append(error_info)
+        log_entry.append("=" * 80)
+        log_entry.append("")  # Empty line for readability
+        
+        # Write to log file (append mode)
+        import io
+        with io.open(log_file_path, "a", encoding="utf-8") as f:
+            f.write("\n".join(log_entry))
+        
+        # Keep log file size manageable (max 1000 lines, ~50KB)
+        try:
+            with io.open(log_file_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+            
+            if len(lines) > 1000:
+                # Keep only the last 800 lines to prevent file from growing too large
+                with io.open(log_file_path, "w", encoding="utf-8") as f:
+                    f.writelines(lines[-800:])
+        except Exception:
+            # If we can't manage the file size, just continue
+            pass
+            
+    except Exception as e:
+        # Don't let logging errors break the main error handling
+        print_note("Failed to save traceback to RECENT_TRACEBACK.LOG: {}".format(str(e)))
+
 def try_catch_error(is_silent=False, is_pass = False):
     """Decorator for catching exceptions and sending automated error log emails.
 
@@ -307,6 +392,16 @@ def try_catch_error(is_silent=False, is_pass = False):
                     except Exception as new_e:
                         error = error_msg
                         print(new_e)
+                
+                # Save traceback to RECENT_TRACEBACK.LOG for local monitoring
+                try:
+                    save_recent_traceback_to_log(
+                        error_info=error_time + error,
+                        func_name=func.__name__,
+                        additional_context="Silent: {} | Pass: {}".format(is_silent, is_pass)
+                    )
+                except Exception as log_error:
+                    print_note("Failed to save to RECENT_TRACEBACK.LOG: {}".format(str(log_error)))
 
                 # Safely get plugin name with fallback
                 plugin_name = get_plugin_name()

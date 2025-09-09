@@ -17,6 +17,13 @@ Components:
     - FIRM: EA (EnneadArchitects) or EC (EwingCole)
     - AdditionalInfo: Optional - Shape/Brand/Note
     - HOSTING: Optional - WH(Wall)/CH(Ceiling)/FH(Floor)/FC(Face)
+
+Features:
+    - Fix Category Prefix Only: Automatically updates family name prefixes to match current categories
+      * Handles wrong prefixes (e.g., WALL_Door_EA -> DOOR_Door_EA)
+      * Handles missing prefixes (e.g., Door_EA -> DOOR_Door_EA)
+    - Fix by Excel: Export/import workflow for manual editing
+    - Analyze hosting behaviors and category mappings
 """
 __title__ = "Batch Format\nFamily Name"
 
@@ -162,7 +169,7 @@ class HostingMethodMapper(BaseMapper):
         hosting_groups = {}
         
         for family in families:
-            if not family.FamilyCategory:
+            if not family.FamilyCategory or family.FamilyCategory.CategoryType != DB.CategoryType.Model:
                 continue
                 
             hosting_param = family.Parameter[DB.BuiltInParameter.FAMILY_HOSTING_BEHAVIOR]
@@ -330,7 +337,7 @@ class CategoryMapper(BaseMapper):
         doc = REVIT_APPLICATION.get_doc()
         all_families = DB.FilteredElementCollector(doc).OfClass(DB.Family).ToElements()
         for family in all_families:
-            if not family.FamilyCategory:
+            if not family.FamilyCategory or family.FamilyCategory.CategoryType != DB.CategoryType.Model:
                 continue
             category_name = family.FamilyCategory.Name
             if "Tag" in category_name and category_name not in cls.mapping:
@@ -373,7 +380,7 @@ class CategoryMapper(BaseMapper):
         
         all_families = DB.FilteredElementCollector(REVIT_APPLICATION.get_doc()).OfClass(DB.Family).ToElements()
         for family in all_families:
-            if not family.FamilyCategory:
+            if not family.FamilyCategory or family.FamilyCategory.CategoryType != DB.CategoryType.Model:
                 continue
                 
             category_name = family.FamilyCategory.Name
@@ -448,8 +455,9 @@ def check_family_name_format(family, show_log=False):
     return True
 
 def get_existing_family_names(doc):
-    """Gets all existing family names in the document"""
-    return set(f.Name for f in DB.FilteredElementCollector(doc).OfClass(DB.Family).ToElements())
+    """Gets all existing family names in the document (Model categories only)"""
+    return set(f.Name for f in DB.FilteredElementCollector(doc).OfClass(DB.Family).ToElements() 
+               if f.FamilyCategory and f.FamilyCategory.CategoryType == DB.CategoryType.Model)
 
 class FamilyOption(forms.TemplateListItem):
     @property
@@ -467,6 +475,7 @@ def batch_rename_families():
         "Analyze hosting behaviors",
         "Analyze category map",
         "Show Naming Rules",
+        "Fix Category Prefix Only",
         "Fix by Excel"
     ]
     
@@ -482,7 +491,8 @@ def batch_rename_families():
         options[0]: HostingMethodMapper.analyze_hosting_behaviors,
         options[1]: CategoryMapper.analyze_category_map,
         options[2]: show_naming_rules,
-        options[3]: fix_by_excel
+        options[3]: fix_category_prefix_only,
+        options[4]: fix_by_excel
     }
     
     actions[selection]()
@@ -500,8 +510,161 @@ def get_problematic_families(doc):
         f for f in DB.FilteredElementCollector(doc)
         .OfClass(DB.Family)
         .ToElements() 
-        if not check_family_name_format(f, show_log=False)
+        if f.FamilyCategory and f.FamilyCategory.CategoryType == DB.CategoryType.Model and not check_family_name_format(f, show_log=False)
     ]
+
+def get_families_with_wrong_prefix(doc):
+    """Get list of families with incorrect or missing category prefix.
+    
+    Args:
+        doc: Current Revit document
+        
+    Returns:
+        list: Families where name prefix doesn't match current category or has no prefix
+    """
+    families_with_wrong_prefix = []
+    
+    for family in DB.FilteredElementCollector(doc).OfClass(DB.Family).ToElements():
+        if not family.FamilyCategory:
+            continue
+            
+        # Only process Model category families (exclude annotation categories)
+        if family.FamilyCategory.CategoryType != DB.CategoryType.Model:
+            continue
+            
+        family_name = family.Name
+        family_category = family.FamilyCategory.Name
+        
+        # Get correct abbreviation for current category
+        correct_abbreviation = CategoryMapper.get_abbreviation(family_category)
+        if not correct_abbreviation:
+            continue  # Skip unsupported categories
+            
+        # Check if family name has underscore (indicates it might have a prefix)
+        if "_" in family_name:
+            # Get current prefix from family name
+            current_prefix = family_name.split("_")[0]
+            
+            # Check if prefix is wrong
+            if current_prefix != correct_abbreviation:
+                families_with_wrong_prefix.append(family)
+        else:
+            # No underscore means no prefix at all - needs to be added
+            families_with_wrong_prefix.append(family)
+    
+    return families_with_wrong_prefix
+
+def fix_category_prefix_only():
+    """Automatically fix family name prefixes to match their current categories."""
+    doc = REVIT_APPLICATION.get_doc()
+    
+    # Get families with wrong prefixes
+    families_to_fix = get_families_with_wrong_prefix(doc)
+    
+    if not families_to_fix:
+        NOTIFICATION.messenger(main_text="No families found with incorrect or missing category prefixes!")
+        return
+    
+    # Show preview of changes
+    output = OUTPUT.get_output()
+    output.write("Families with Incorrect/Missing Category Prefixes ({} found):".format(len(families_to_fix)), OUTPUT.Style.Title)
+    
+    changes_preview = []
+    for family in families_to_fix:
+        current_name = family.Name
+        family_category = family.FamilyCategory.Name
+        correct_abbreviation = CategoryMapper.get_abbreviation(family_category)
+        
+        # Build new name with correct prefix
+        if "_" in current_name:
+            # Has prefix - replace it
+            name_parts = current_name.split("_")
+            name_parts[0] = correct_abbreviation
+            new_name = "_".join(name_parts)
+        else:
+            # No prefix - add it at the beginning
+            new_name = "{}_{}".format(correct_abbreviation, current_name)
+        
+        changes_preview.append("{} -> {}".format(current_name, new_name))
+    
+    output.write(changes_preview)
+    output.plot()
+    
+    # Ask for confirmation
+    confirmation_options = [
+        "Yes, fix all {} families automatically".format(len(families_to_fix)),
+        "No, cancel the operation"
+    ]
+    
+    confirmation = forms.SelectFromList.show(
+        confirmation_options,
+        title="Fix Category Prefixes - Confirmation",
+        button_name="Proceed"
+    )
+    
+    if not confirmation or confirmation == confirmation_options[1]:
+        return
+    
+    # Perform the fixes
+    t = DB.Transaction(doc, "Fix Category Prefixes")
+    t.Start()
+    
+    success_count = 0
+    error_count = 0
+    log = []
+    
+    for family in families_to_fix:
+        try:
+            current_name = family.Name
+            family_category = family.FamilyCategory.Name
+            correct_abbreviation = CategoryMapper.get_abbreviation(family_category)
+            
+            # Build new name with correct prefix
+            if "_" in current_name:
+                # Has prefix - replace it
+                name_parts = current_name.split("_")
+                name_parts[0] = correct_abbreviation
+                new_name = "_".join(name_parts)
+            else:
+                # No prefix - add it at the beginning
+                new_name = "{}_{}".format(correct_abbreviation, current_name)
+            
+            # Check if new name is unique
+            if not is_family_name_unique(new_name):
+                # Add conflict marker
+                new_name = "{}*ConflictingName".format(new_name)
+            
+            # Rename the family
+            family.Name = new_name
+            doc.Regenerate()  # Refresh the document family pool
+            
+            log.append("{} -> {}".format(current_name, new_name))
+            success_count += 1
+            
+        except Exception as e:
+            log.append("Failed to rename {}: {}".format(family.Name, str(e)))
+            error_count += 1
+    
+    t.Commit()
+    
+    # Show results
+    output = OUTPUT.get_output()
+    output.write("Category Prefix Fix Results:", OUTPUT.Style.Title)
+    output.write("Successfully renamed: {} families".format(success_count), OUTPUT.Style.Subtitle)
+    if error_count > 0:
+        output.write("Errors: {} families".format(error_count), OUTPUT.Style.Subtitle)
+    
+    if log:
+        output.write("Changes made:", OUTPUT.Style.Subtitle)
+        output.write(log)
+    
+    output.plot()
+    
+    # Show notification
+    if success_count > 0:
+        NOTIFICATION.messenger(main_text="Successfully fixed {} family prefixes!".format(success_count))
+    if error_count > 0:
+        NOTIFICATION.messenger(main_text="{} families had errors during renaming.".format(error_count))
 
 def fix_by_excel():
     """Fix family names by reading from Excel file."""
