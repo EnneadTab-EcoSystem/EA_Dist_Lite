@@ -1441,8 +1441,11 @@ class TemplateDataCollector:
                                 # Get view name and type
                                 view_name = view.Name if hasattr(view, 'Name') else "Unknown View"
                                 view_type = view.ViewType.ToString() if hasattr(view, 'ViewType') else "Unknown Type"
-                                sheet_number = view.LookupParameter("Sheet Number").AsString() 
-                                sheet_name = view.LookupParameter("Sheet Name").AsString() 
+                                # Safely get sheet parameters with null checks
+                                sheet_number_param = view.LookupParameter("Sheet Number")
+                                sheet_name_param = view.LookupParameter("Sheet Name")
+                                sheet_number = sheet_number_param.AsString() if sheet_number_param else ""
+                                sheet_name = sheet_name_param.AsString() if sheet_name_param else "" 
                                 
                                 usage_data['views'].append({
                                     'name': view_name,
@@ -1462,8 +1465,8 @@ class TemplateDataCollector:
                                 ))
                 except Exception as e:
                     ERROR_HANDLE.print_note("Error checking view template usage for view: {}".format(str(e)))
-                    print (traceback.format_exc())
-                    raise e
+                    # Add to error group instead of re-raising to prevent process failure
+                    self._add_to_error_group(self.all_error_groups, e, "view_template_usage", "View: {}".format(view_count))
                     continue
             
             # Sort views by name
@@ -1640,8 +1643,8 @@ class TemplateDataCollector:
                 # Additional View properties from API documentation
                 'view_properties': self._get_view_properties(template),
                 
-                # Template usage information
-                'template_usage': self.get_template_usage_data(template)
+                # Template usage information (with error handling)
+                'template_usage': self._safe_get_template_usage_data(template)
             }
             
             return template_data
@@ -1649,6 +1652,29 @@ class TemplateDataCollector:
         except Exception as e:
             ERROR_HANDLE.print_note("Error collecting all template data: {}".format(str(e)))
             return None
+    
+    def _safe_get_template_usage_data(self, template):
+        """
+        Safely get template usage data with comprehensive error handling.
+        
+        Args:
+            template: The view template
+            
+        Returns:
+            dict: Usage data or empty dict if error occurs
+        """
+        try:
+            return self.get_template_usage_data(template)
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error collecting template usage data: {}".format(str(e)))
+            # Add to error group for tracking
+            self._add_to_error_group(self.all_error_groups, e, "template_usage_collection", "Template: {}".format(template.Name if hasattr(template, 'Name') else 'Unknown'))
+            # Return empty usage data instead of failing
+            return {
+                'views': [],
+                'total_count': 0,
+                'error': str(e)
+            }
     
 
 
@@ -1721,12 +1747,27 @@ class TemplateDataCollector:
             
         try:
             import os
+            import re
             from datetime import datetime
+            
+            # Sanitize template name for use in filename
+            def sanitize_filename(name):
+                """Remove or replace characters that are invalid in Windows filenames."""
+                # Replace invalid characters with underscores
+                invalid_chars = r'[<>:"/\\|?*]'
+                sanitized = re.sub(invalid_chars, '_', name)
+                # Remove quotes and other problematic characters
+                sanitized = sanitized.replace('"', '').replace("'", '').replace('(', '').replace(')', '')
+                # Limit length to avoid path length issues
+                if len(sanitized) > 50:
+                    sanitized = sanitized[:50]
+                return sanitized.strip('_')
             
             # Create filename with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             if template_name:
-                filename = "template_errors_{}_{}.sexyDuck".format(template_name, timestamp)
+                sanitized_name = sanitize_filename(template_name)
+                filename = "template_errors_{}_{}.sexyDuck".format(sanitized_name, timestamp)
             else:
                 filename = "template_errors_{}.sexyDuck".format(timestamp)
             

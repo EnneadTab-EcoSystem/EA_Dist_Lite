@@ -38,8 +38,11 @@ FORM_KEY = 'SCATTER_BLOCK_ON_SRF_modeless_form'
 
 # make modal dialog
 class ScatterBlockDialog(Eto.Forms.Form):
+    """Modeless dialog for scattering block instances on selected surfaces."""
+
     # Initializer
     def __init__(self):
+        """Initialize dialog UI components and default state."""
         # Eto initials
         self.Title = "Scatter Blocks on Srf"
         self.Resizable = True
@@ -48,6 +51,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
         
         #self.Bounds = Eto.Drawing.Rectangle()
         self.Width = 600
+
         self.selected_srf = None
         self.selected_srfs = None
         self.user_blocks = None
@@ -110,12 +114,14 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
 
     def CreateLogoImage(self):
+        """Create and return the logo image view widget."""
         self.logo = Eto.Forms.ImageView()
 
         return self.logo
 
     # create message bar function
     def CreateMessageBar(self):
+        """Create and return the message label shown at the top of the dialog."""
         self.msg = Eto.Forms.Label()
         self.msg.Text = "Pick surface(s) and sample blocks, then scatter blocks over surface with placement rules."
         return self.msg
@@ -123,6 +129,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
 
     def CreateExpander(self):
+        """Create a collapsible help section placeholder."""
         self.expander = Eto.Forms.Expander ()
         self.expander.Header = "Quick Help"
         self.expander.Expanded = False
@@ -134,6 +141,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
 
     def CreatePicker(self):
+        """Create controls for selecting base surfaces to scatter on."""
         layout = Eto.Forms.DynamicLayout()
         layout.Padding = Eto.Drawing.Padding(5)
         layout.Spacing = Eto.Drawing.Size(5, 5)
@@ -159,8 +167,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
         return layout
 
     def Create_block_info_inputs(self):
-
-
+        """Create controls for scatter mode and block selection/spacing inputs."""
         layout = Eto.Forms.DynamicLayout()
         layout.Padding = Eto.Drawing.Padding(5)
         layout.Spacing = Eto.Drawing.Size(5, 5)
@@ -220,9 +227,9 @@ class ScatterBlockDialog(Eto.Forms.Form):
         inner_stack_layout = Eto.Forms.DynamicLayout()
         inner_stack_layout.Padding = Eto.Drawing.Padding(5)
         inner_stack_layout.Spacing = Eto.Drawing.Size(5, 5)
-        self.label_C = Eto.Forms.Label(Text = 'Desired Total Number')
-        self.tbox_total_count = Eto.Forms.TextBox()
-        inner_stack_layout.AddRow(self.label_C, self.tbox_total_count)
+        self.label_C = Eto.Forms.Label(Text = 'Desired Number Per Unit Area')
+        self.tbox_density_per_area = Eto.Forms.TextBox()
+        inner_stack_layout.AddRow(self.label_C, self.tbox_density_per_area)
 
         self.label_A = Eto.Forms.Label(Text = 'Distance To Border')
         self.tbox_dist_to_border = Eto.Forms.TextBox()
@@ -231,6 +238,10 @@ class ScatterBlockDialog(Eto.Forms.Form):
         self.label_B = Eto.Forms.Label(Text = 'Minimal Distance Among Blocks\n(use -1 to ignore social distance)')
         self.tbox_minimal_internal_dist = Eto.Forms.TextBox()
         inner_stack_layout.AddRow(self.label_B, self.tbox_minimal_internal_dist)
+
+        self.label_S = Eto.Forms.Label(Text = 'Global Scale Factor (additional multiplier)')
+        self.tbox_global_scale = Eto.Forms.TextBox()
+        inner_stack_layout.AddRow(self.label_S, self.tbox_global_scale)
 
         self.debug_label = Eto.Forms.Label(Text = 'Info:')
         inner_stack_layout.AddRow(None, self.debug_label)
@@ -275,10 +286,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
 
     def CreateButtons(self):
-        """
-        Creates buttons for either print the selection result
-        or exiting the dialog
-        """
+        """Create and return the dialog action buttons."""
         user_buttons = []
 
 
@@ -307,6 +315,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
 
     def btn_rotate_clicked(self, sender, e):
+        """Rotate previewed blocks by 90 degrees around Z for each click."""
         if not hasattr(self, "block_collection") or not self.block_collection: 
             NOTIFICATION.messenger(main_text = "No block defined.")
             return
@@ -335,6 +344,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
     # event handler handling clicking on the 'run' button
     def UI_changed(self, sender, e):
+        """Handle UI option changes and refresh the preview layout."""
         self.pick_guide_crv_bn.Enabled = self.scatter_mode_list.SelectedValue == self.scatter_mode_list.DataStore[1]
         self.rotate_bn.Enabled = self.scatter_mode_list.SelectedValue != self.scatter_mode_list.DataStore[0]
         
@@ -347,9 +357,11 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
     # event handler handling clicking on the 'run' button
     def btn_preview_Clicked(self, sender, e):
+        """Generate a preview of scattered blocks without committing to the model."""
         self.generate_blocks_layout(is_preview = True)
 
     def btn_process_Clicked(self, sender, e):
+        """Bake the previewed blocks into the model and clear preview state."""
         self.generate_blocks_layout(is_preview = False)
         self.clear_out()
         NOTIFICATION.messenger(main_text = "Blocks added")
@@ -358,10 +370,12 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
     # event handler handling clicking on the 'cancel' button
     def btn_Cancel_Clicked(self, sender, e):
+        """Close the dialog without making further changes."""
         self.Close()
 
 
     def btn_Pick_Srf_Clicked(self, sender, e):
+        """Prompt user to select base surfaces for scattering and update preview."""
         select_objs = rs.GetObjects(message = "Pick Base Surfaces.", filter = rs.filter.surface, select = True)
         
         if select_objs:
@@ -381,6 +395,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
 
     def btn_pick_guide_crv_clicked(self, sender, e):
+        """Prompt user to select a guide curve used for oriented placement."""
         select_obj = rs.GetObject(message = "Pick guide curve.", filter = rs.filter.curve, select = True)
         if select_obj:
             note = "  Guide curve captured!"
@@ -396,6 +411,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
 
     def btn_pick_block_clicked(self, sender, e):
+        """Collect user-selected block instances and optional ratios for sampling."""
         select_objs = rs.GetObjects(message = "Pick a block you want to use in this sample layout.", filter = 4096, select = True)
         if select_objs:
             block_names = list(set([rs.BlockInstanceName(x) for x in select_objs]))
@@ -423,7 +439,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
 
     def btn_clear_blocks_clicked(self, sender, e):
-
+        """Clear any previously selected blocks and refresh preview."""
         self.user_block_label.Text = "User Block not defined! Please pick at least one block to scatter."
         self.user_blocks = None
 
@@ -433,17 +449,21 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
     @property
     def is_avoid_border(self):
+        """Return True when the 'avoid border' placement mode is active."""
         return self.mode_list.SelectedValue == self.mode_list.DataStore[1]
 
     @property
     def is_along_border(self):
+        """Return True when the 'along border' placement mode is active."""
         return self.mode_list.SelectedValue == self.mode_list.DataStore[0]
 
     @property
     def is_ignore_border(self):
+        """Return True when the 'ignore border' placement mode is active."""
         return self.mode_list.SelectedValue == self.mode_list.DataStore[-1]
 
     def delete_preview_blocks(self):
+        """Delete any preview block instances from the document."""
         obj_name = "{}_BLOCK_SCATTER_PREVIEW".format(ENVIRONMENT.PLUGIN_ABBR)
         old_blocks = rs.ObjectsByName(obj_name)
         rs.DeleteObjects(old_blocks)
@@ -451,13 +471,19 @@ class ScatterBlockDialog(Eto.Forms.Form):
         
     @ERROR_HANDLE.try_catch_error()
     def generate_blocks_layout(self, is_preview):
-        
-   
+        """Generate scattered blocks on selected surfaces according to UI options.
+
+        Parameters
+        ----------
+        is_preview : bool
+            When True, create temporary preview objects; otherwise, bake blocks.
+        """
         try:
 
             self.dist_to_border = float(self.tbox_dist_to_border.Text)
             self.minimal_internal_dist = float(self.tbox_minimal_internal_dist.Text)
-            self.total_count = int(self.tbox_total_count.Text)
+            self.density_per_area = float(self.tbox_density_per_area.Text)
+            self.global_scale = float(self.tbox_global_scale.Text)
         except Exception as e:
             print (str(e))
             NOTIFICATION.messenger(main_text = "data not valid")
@@ -466,8 +492,8 @@ class ScatterBlockDialog(Eto.Forms.Form):
             return
 
 
-        if self.total_count == 0:
-            NOTIFICATION.messenger(main_text =  "Cannot have total count of 0 for scatter")
+        if self.density_per_area <= 0:
+            NOTIFICATION.messenger(main_text =  "Density must be greater than 0")
             SOUND.play_sound("sound_effect_error.wav")
             
             self.delete_preview_blocks()
@@ -481,6 +507,54 @@ class ScatterBlockDialog(Eto.Forms.Form):
             self.delete_preview_blocks()
             return
         
+        # Filter out any surfaces that were deleted or became invalid
+        valid_srfs = [s for s in self.selected_srfs if rs.IsObject(s) and rs.IsSurface(s)]
+        if len(valid_srfs) == 0:
+            NOTIFICATION.messenger(main_text = "All selected surfaces are invalid or deleted")
+            SOUND.play_sound("sound_effect_error.wav")
+            self.delete_preview_blocks()
+            return
+        if len(valid_srfs) != len(self.selected_srfs):
+            self.srf_label.Text = "Some selected surfaces were removed; proceeding with remaining."
+
+        # Pre-check for extremely high block counts per surface based on density
+        try:
+            THRESHOLD = 1000
+            def surface_area_safe(srf):
+                result = rs.SurfaceArea(srf)
+                try:
+                    return float(result[0]) if hasattr(result, '__getitem__') else float(result)
+                except Exception:
+                    try:
+                        return float(result)
+                    except Exception:
+                        return 0.0
+
+            def max_count_for_density(density):
+                max_count_local = 0
+                for srf in valid_srfs:
+                    area_val = surface_area_safe(srf)
+                    count_val = max(1, int(round(area_val * density)))
+                    if count_val > max_count_local:
+                        max_count_local = count_val
+                return max_count_local
+
+            max_count = max_count_for_density(self.density_per_area)
+            if max_count > THRESHOLD:
+                while True:
+                    user_choice = rs.MessageBox("At least one of the surfaces will have {} blocks using density {}. Do you want to continue?".format(max_count, self.density_per_area), 4, "High Block Count")
+                    # 6 = Yes, 7 = No
+                    if user_choice == 6:
+                        break
+                    # Auto-reduce density to 1/10 until under threshold
+                    self.density_per_area = self.density_per_area / 10.0
+                    self.tbox_density_per_area.Text = str(self.density_per_area)
+                    max_count = max_count_for_density(self.density_per_area)
+                    if max_count <= THRESHOLD:
+                        break
+        except Exception:
+            pass
+
 
         if self.scatter_mode_list.SelectedValue == self.scatter_mode_list.DataStore[1]:
             if not self.guide_crv or not rs.IsObject(self.guide_crv):
@@ -515,7 +589,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
         
 
         self.total_collection = []
-        for srf in self.selected_srfs:
+        for srf in valid_srfs:
             self.selected_srf = srf
             self.generate_blocks_layout_action(is_preview)
             self.total_collection.append(self.block_collection) 
@@ -525,12 +599,13 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
 
     def generate_blocks_layout_action(self, is_preview):
-
-
+        """Perform scatter generation for a single surface and build block set."""
+        if not (rs.IsObject(self.selected_srf) and rs.IsSurface(self.selected_srf)):
+            return
         # generate base pts
         domainU = rs.SurfaceDomain(self.selected_srf, 0)
         domainV = rs.SurfaceDomain(self.selected_srf, 1)
-        self.borders = rs.DuplicateSurfaceBorder(self.selected_srf)
+        self.borders = rs.DuplicateSurfaceBorder(self.selected_srf) or []
         # print domainU
         # print domainV
         domainU_diff = domainU[1] - domainU[0]
@@ -543,7 +618,15 @@ class ScatterBlockDialog(Eto.Forms.Form):
         self.pt_collection = []
         success_time_mark = time.time()
         count = 0
-        while count < self.total_count:
+        # compute per-surface target count based on density and area
+        area_result = rs.SurfaceArea(self.selected_srf)
+        try:
+            surface_area = area_result[0] if hasattr(area_result, '__getitem__') else float(area_result)
+        except Exception:
+            surface_area = float(area_result) if area_result is not None else 0.0
+        target_count = max(1, int(round(surface_area * self.density_per_area)))
+
+        while count < target_count:
             time_span = time.time() - success_time_mark
             # if count%20 == 0:
             #     sc.doc.Views.Redraw()
@@ -589,7 +672,8 @@ class ScatterBlockDialog(Eto.Forms.Form):
             SOUND.play_sound("sound_effect_popup_msg2.wav")
         else:
             SOUND.play_sound("sound_effect_popup_msg1.wav")
-        rs.DeleteObjects(self.borders)
+        if self.borders:
+            rs.DeleteObjects(self.borders)
 
 
 
@@ -600,14 +684,17 @@ class ScatterBlockDialog(Eto.Forms.Form):
         self.block_collection = []
         for pt in self.pt_collection:
             picked_block_name = random.choice(sample_list)
-            scale = (1,1,random.uniform(0.9,1.1))
+            random_z_scale = random.uniform(0.9,1.1)
+            scale = (self.global_scale, self.global_scale, random_z_scale * self.global_scale)
             if self.scatter_mode_list.SelectedValue == self.scatter_mode_list.DataStore[0] :
                 rotation = random.random() * 360
             elif self.scatter_mode_list.SelectedValue == self.scatter_mode_list.DataStore[1] :
                 rotation = self.get_rotation_from_guide_crv(pt)
                 #print rotation
             else:
-                borders = rs.DuplicateSurfaceBorder(self.selected_srf)
+                borders = rs.DuplicateSurfaceBorder(self.selected_srf) or []
+                if not borders:
+                    continue
                 self.srf_edge_crv  = borders[0]
                 rotation = self.get_rotation_from_guide_crv(pt, use_edge = True)
                 self.srf_edge_crv  = None
@@ -630,7 +717,20 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
 
     def get_rotation_from_guide_crv(self, pt, use_edge = False):
+        """Compute block rotation angle based on guide curve tangent at closest point.
 
+        Parameters
+        ----------
+        pt : Rhino.Geometry.Point3d
+            Insertion point on the surface.
+        use_edge : bool, optional
+            If True, use the duplicated surface edge as guide; else use user guide.
+
+        Returns
+        -------
+        float
+            Rotation angle in degrees.
+        """
         if use_edge:
             rule_crv = self.srf_edge_crv
         else:
@@ -644,6 +744,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
 
     def is_pt_close_to_existing_pts(self, pt):
+        """Return True if point is closer than minimal spacing to existing points."""
         if self.minimal_internal_dist < 0:
             return False
         if len(self.pt_collection) == 0:
@@ -662,8 +763,8 @@ class ScatterBlockDialog(Eto.Forms.Form):
         return dist < self.minimal_internal_dist
 
     def is_pt_close_to_border(self, pt):
-
-        for border in self.borders:
+        """Return True if point is closer than threshold to any surface border."""
+        for border in (self.borders or []):
             para = rs.CurveClosestPoint(border, pt)
             closest_pt = rs.EvaluateCurve(border, para)
             dist = rs.Distance(pt, closest_pt)
@@ -676,16 +777,24 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
 
     def OnFormClosed(self, sender, e):
+        """Handle form closed event and ensure resources are released."""
         self.Close()
 
 
 
     def InitiateFiller(self):
-
-        self.filler_list = ["tbox_dist_to_border","tbox_minimal_internal_dist", "tbox_total_count"]
+        """Load persisted text-box values from sticky storage into the UI."""
+        self.filler_list = ["tbox_dist_to_border","tbox_minimal_internal_dist", "tbox_density_per_area", "tbox_global_scale"]
         for x in self.filler_list:
             sticky_key = FORM_KEY + x
-            default = 0
+            # default stickies per field
+            if x == "tbox_global_scale":
+                default = 1
+            elif x == "tbox_density_per_area":
+                # density per area unit default
+                default = 0.01
+            else:
+                default = 0
             value = DATA_FILE.get_sticky(sticky_key, default_value_if_no_sticky = default)
 
             #setattr(self, x , str(value))
@@ -694,6 +803,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
 
     def Close(self):
+        """Persist UI state to sticky storage and clean up preview objects."""
         # Remove the events added in the initializer
         #self.RemoveEvents()
         # Dispose of the form and remove it from the sticky dictionary
@@ -715,6 +825,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
         self.clear_out()
 
     def clear_out(self):
+        """Clear preview objects and reset selection state and labels."""
         obj_name = "{}_BLOCK_SCATTER_PREVIEW".format(ENVIRONMENT.PLUGIN_ABBR)
         old_crvs = rs.ObjectsByName(obj_name)
         rs.DeleteObjects(old_crvs)
@@ -728,6 +839,7 @@ class ScatterBlockDialog(Eto.Forms.Form):
 
 
 def random_blocks_on_srfs():
+    """Open the scatter blocks dialog as a modeless UI in Rhino."""
     rs.EnableRedraw(False)
     if sc.sticky.has_key(FORM_KEY):
         return
@@ -739,7 +851,7 @@ def random_blocks_on_srfs():
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def make_unique_block_name(block_name):
-    
+    """Return a unique block name by appending suffixes if collision occurs."""
     while True:
         if block_name not in rs.BlockNames():
             break

@@ -553,7 +553,7 @@ def _try_urllib3_implementation(error, func_name, user_name):
         }
         
         # Encode form data
-        encoded_data = urllib3.util.url.urlencode(form_data)
+        encoded_data = urllib3.util.urlencode(form_data)
         
         # Send request
         response = http.request('POST', g_form_url, body=encoded_data, headers=headers, timeout=30.0)

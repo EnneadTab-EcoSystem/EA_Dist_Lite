@@ -408,9 +408,32 @@ def display_results(differences, filepath, time_start, template_names=None):
     # Open HTML report
     try:
         import os
-        os.startfile(filepath)
+        import subprocess
+        import webbrowser
+        
+        # Try multiple methods to open the HTML file
+        try:
+            # Method 1: os.startfile (Windows)
+            os.startfile(filepath)
+            ERROR_HANDLE.print_note("HTML report opened using os.startfile")
+        except Exception as e1:
+            ERROR_HANDLE.print_note("os.startfile failed: {}".format(str(e1)))
+            try:
+                # Method 2: webbrowser (cross-platform)
+                webbrowser.open('file://' + filepath.replace('\\', '/'))
+                ERROR_HANDLE.print_note("HTML report opened using webbrowser")
+            except Exception as e2:
+                ERROR_HANDLE.print_note("webbrowser failed: {}".format(str(e2)))
+                try:
+                    # Method 3: subprocess (Windows)
+                    subprocess.Popen(['cmd', '/c', 'start', '', filepath], shell=True)
+                    ERROR_HANDLE.print_note("HTML report opened using subprocess")
+                except Exception as e3:
+                    ERROR_HANDLE.print_note("All methods failed. Last error: {}".format(str(e3)))
+                    ERROR_HANDLE.print_note("Please manually open the HTML report at: {}".format(filepath))
     except Exception as e:
         ERROR_HANDLE.print_note("Failed to open HTML report: {}".format(str(e)))
+        ERROR_HANDLE.print_note("Please manually open the HTML report at: {}".format(filepath))
     
     # Show completion notification
     NOTIFICATION.messenger("View template comparison completed in {}. Report opened.".format(TIME.get_readable_time(time_diff)))

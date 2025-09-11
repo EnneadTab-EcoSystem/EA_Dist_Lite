@@ -1918,10 +1918,19 @@
     },
     "EnneadTab.tab\\ACE.panel\\Family.pulldown\\batch_fix_family_name.pushbutton\\batch_fix_family_name_script.py": {
         "alias": "Batch Format Family Name",
-        "doc": "Batch rename family names to follow Healthcare standard naming convention.\n\nFormat: \n    CATEGORY_MainDescription_FIRM[_AdditionalInfo][_HOSTING]\n\nExamples:\n    LITE_PendantLamp_EA_Vitra_CH\n    DOOR_Telescopic_EC_TwoPanel_WH\n    FURN_Chair_EA_Tack\n    \nComponents:\n    - CATEGORY: Category abbreviation or CSI Division No. (e.g., LITE, DOOR, FURN)\n    - MainDescription: CamelCase, no underscores or spaces (e.g., PendantLamp, Telescopic)\n    - FIRM: EA (EnneadArchitects) or EC (EwingCole)\n    - AdditionalInfo: Optional - Shape/Brand/Note\n    - HOSTING: Optional - WH(Wall)/CH(Ceiling)/FH(Floor)/FC(Face)\n",
+        "doc": "Batch rename family names to follow Healthcare standard naming convention.\n\nFormat: \n    CATEGORY_MainDescription_FIRM[_AdditionalInfo][_HOSTING]\n\nExamples:\n    LITE_PendantLamp_EA_Vitra_CH\n    DOOR_Telescopic_EC_TwoPanel_WH\n    FURN_Chair_EA_Tack\n    \nComponents:\n    - CATEGORY: Category abbreviation or CSI Division No. (e.g., LITE, DOOR, FURN)\n    - MainDescription: CamelCase, no underscores or spaces (e.g., PendantLamp, Telescopic)\n    - FIRM: EA (EnneadArchitects) or EC (EwingCole)\n    - AdditionalInfo: Optional - Shape/Brand/Note\n    - HOSTING: Optional - WH(Wall)/CH(Ceiling)/FH(Floor)/FC(Face)\n\nFeatures:\n    - Fix Category Prefix Only: Automatically updates family name prefixes to match current categories\n      * Handles wrong prefixes (e.g., WALL_Door_EA -> DOOR_Door_EA)\n      * Handles missing prefixes (e.g., Door_EA -> DOOR_Door_EA)\n    - Fix by Excel: Export/import workflow for manual editing\n    - Analyze hosting behaviors and category mappings\n",
         "icon": "EnneadTab.tab\\ACE.panel\\Family.pulldown\\batch_fix_family_name.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\ACE.panel\\Family.pulldown\\batch_fix_family_name.pushbutton\\batch_fix_family_name_script.py",
+        "tab": "ACE",
+        "tab_icon": null
+    },
+    "EnneadTab.tab\\ACE.panel\\Family.pulldown\\change_family_category.pushbutton\\change_family_category_script.py": {
+        "alias": "Change Family Category",
+        "doc": "Batch change family categories with user-friendly interface and comprehensive reporting.",
+        "icon": "EnneadTab.tab\\ACE.panel\\Family.pulldown\\change_family_category.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\ACE.panel\\Family.pulldown\\change_family_category.pushbutton\\change_family_category_script.py",
         "tab": "ACE",
         "tab_icon": null
     },
