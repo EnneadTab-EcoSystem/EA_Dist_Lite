@@ -317,6 +317,15 @@
         "tab_icon": "Block.tab\\icon.png",
         "is_popular": false
     },
+    "Block.tab\\simplify_blocks.button\\simplify_blocks_left.py": {
+        "script": "Block.tab\\simplify_blocks.button\\simplify_blocks_left.py",
+        "icon": null,
+        "alias": "SimplifyBlocks",
+        "doc": "This button does SimplifyBlocks when left click",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": false
+    },
     "Block.tab\\toggle_block_color_display.button\\toggle_block_color_display_left.py": {
         "script": "Block.tab\\toggle_block_color_display.button\\toggle_block_color_display_left.py",
         "icon": "Block.tab\\toggle_block_color_display.button\\icon.png",

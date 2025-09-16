@@ -55,8 +55,8 @@
       <script>! _-RunPythonScript (
 import os
 import sys
-common_folders = ["github","dev-repo","duck-repo","design-repo"]
-lib_folders = [os.path.join(os.environ['USERPROFILE'],x, "EnneadTab-OS","Apps","lib","EnneadTab") for x in common_folders]
+common_folders = [&quot;github&quot;,&quot;dev-repo&quot;,&quot;duck-repo&quot;,&quot;design-repo&quot;]
+lib_folders = [os.path.join(os.environ['USERPROFILE'],x, &quot;EnneadTab-OS&quot;,&quot;Apps&quot;,&quot;lib&quot;,&quot;EnneadTab&quot;) for x in common_folders]
 lib_folders.append( os.path.join(os.environ['USERPROFILE'], 'Documents','EnneadTab Ecosystem','EA_Dist','Apps','lib','EnneadTab'))
 lib_folders.append( os.path.join(os.environ['USERPROFILE'], 'Documents','EnneadTab-Ecosystem','EA_Dist','Apps','lib','EnneadTab'))
 for lib_folder in lib_folders:
@@ -91,8 +91,8 @@ MODULE_HELPER.run_Rhino_button('Enneaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
       <script>! _-RunPythonScript (
 import os
 import sys
-common_folders = ["github","dev-repo","duck-repo","design-repo"]
-lib_folders = [os.path.join(os.environ['USERPROFILE'],x, "EnneadTab-OS","Apps","lib","EnneadTab") for x in common_folders]
+common_folders = [&quot;github&quot;,&quot;dev-repo&quot;,&quot;duck-repo&quot;,&quot;design-repo&quot;]
+lib_folders = [os.path.join(os.environ['USERPROFILE'],x, &quot;EnneadTab-OS&quot;,&quot;Apps&quot;,&quot;lib&quot;,&quot;EnneadTab&quot;) for x in common_folders]
 lib_folders.append( os.path.join(os.environ['USERPROFILE'], 'Documents','EnneadTab Ecosystem','EA_Dist','Apps','lib','EnneadTab'))
 lib_folders.append( os.path.join(os.environ['USERPROFILE'], 'Documents','EnneadTab-Ecosystem','EA_Dist','Apps','lib','EnneadTab'))
 for lib_folder in lib_folders:
