@@ -16,7 +16,7 @@ import time
 import random
 import json
 import traceback
-import NOTIFICATION, DATA_FILE,USER,  EXE, FOLDER, ENVIRONMENT, ERROR_HANDLE, POWERSHELL
+import NOTIFICATION, DATA_FILE,USER,  EXE, FOLDER, ENVIRONMENT, ERROR_HANDLE
 import threading
 
 
@@ -390,72 +390,12 @@ def purge_powershell_folder():
     return folders_to_delete
 
 
-def spec_report():
-    return
-    """Run the PC fleet summary report."""
+
+def about_me():
     try:
-        import sys
-        sys.path.append(ENVIRONMENT.SCRIPT_FOLDER)
-        import display_pc_spec # type: ignore
-        display_pc_spec.main()
+        EXE.try_open_app("AboutMe_ComputerInfo_Silent", safe_open=True)
     except Exception as e:
-        ERROR_HANDLE.print_note("Error running PC fleet summary report: {}".format(e))
-        ERROR_HANDLE.print_note(traceback.format_exc())
-        pass
-
-
-def check_spec():
-    return
-
-    file = os.path.join(ENVIRONMENT.SHARED_DUMP_FOLDER,"_internal reports",  "machine_data.json")
-    if not os.path.exists(file):
-        return
-    copy = FOLDER.copy_file_to_local_dump_folder(file, "machine_data.json")
-    data = DATA_FILE.get_data("machine_data")
-    if data is None:
-        return
-    if ENVIRONMENT.get_computer_name() in data:
-        chance = 0.0001
-    else:
-        chance = 0.4
-
-    if random.random() < chance:
-        EXE.try_open_app("ComputerSpec", safe_open=True)
-    pass
-
-
-def scan_CDrive():
-    return
-    POWERSHELL.run_powershell_script("CDriveFileScanner.ps1")
-    return True
-
-def get_installed_software():
-    return
-    POWERSHELL.run_powershell_script("Get-InstalledSoftware.ps1")
-    return True
-
-
-def move_installed_software_output_to_Xdrive():
-    return
-    source_folder = "J:\\Ennead Applied Computing\\DUMP\\installed_software"
-    dest_folder = "X:\\_AppliedComputing\\Software List"
-    if not os.path.exists(dest_folder) or not os.path.isdir(dest_folder):
-        return False
-    
-    if not os.path.exists(source_folder) or not os.path.isdir(source_folder):
-        return False
-    
-    for file in os.listdir(source_folder):
-        if file.endswith(".csv"):
-            try:
-                shutil.copy(os.path.join(source_folder, file), os.path.join(dest_folder, file))
-                os.remove(os.path.join(source_folder, file))
-            except Exception as e:
-                ERROR_HANDLE.print_note("Error moving installed software output to Xdrive: {}".format(e))
-                ERROR_HANDLE.print_note(traceback.format_exc())
-                pass
-    return True
-
+        ERROR_HANDLE.print_note("Error opening AboutMe_ComputerInfo_Silent: {}".format(e))
 
 
 
@@ -494,11 +434,8 @@ def run_system_checks():
         (0.3, "Rhino8RuiUpdater"),
         (0.5, check_system_uptime),
         (0.3, purge_powershell_folder),
-        (0.2, check_spec),
-        (0.1, spec_report),
-        (0.8, get_installed_software),
-        (0.1, move_installed_software_output_to_Xdrive),
-        (0.2, scan_CDrive)
+        (0.5, about_me)
+
     ]
     
     # Run checks based on probability
