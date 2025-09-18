@@ -138,6 +138,14 @@ APPS = [
         "description": "MonitorBlueScreen at startup",
         "task_type": TaskType.STARTUP,
         "active": False
+    },
+    {
+        "app_name": "AboutMe_ComputerInfo_Silent",
+        "file_name": "AboutMe_ComputerInfo_Silent.exe",
+        "shortcut_name": "AboutMe_ComputerInfo_Silent",
+        "description": "AboutMe_ComputerInfo_Silent",
+        "task_type": TaskType.STARTUP,
+        "active": True
     }
 ]
 
