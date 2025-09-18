@@ -501,7 +501,7 @@
         "script": "File.tab\\rebase_file.button\\rebase_file_left.py",
         "icon": "File.tab\\rebase_file.button\\icon.png",
         "alias": "RebaseFile",
-        "doc": "Rebase file geometry and views to new origin point.\n\nKey Features:\n- Interactive base point selection\n- Automatic object transformation\n- View camera adjustment\n- Named view preservation\n- Comprehensive coordinate system update",
+        "doc": "Rebase file geometry and views to new origin point with X-axis orientation.\n\nKey Features:\n- Interactive base point and X-axis reference point selection\n- Automatic object transformation with coordinate system reorientation\n- View camera adjustment\n- Named view preservation\n- Comprehensive coordinate system update\n- ETO form interface with clear instructions\n\nInstructions:\n- Every object, including those in locked and hidden layers, will be processed\n- All views will be processed\n- To avoid certain objects being rebased, put \"REBASE_IGNORE\" in the object's name\n- To avoid certain cameras being rebased, put \"REBASE_IGNORE\" in the camera name",
         "tab": "File.tab",
         "tab_icon": "File.tab\\icon.png",
         "is_popular": true

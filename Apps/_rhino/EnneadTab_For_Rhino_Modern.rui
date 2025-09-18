@@ -4184,24 +4184,38 @@ EA_ExternalTrimmer</script>
         <locale_1033>RebaseFile</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>Rebase file geometry and views to new origin point.
+        <locale_1033>Rebase file geometry and views to new origin point with X-axis orientation.
 
 Key Features:
-- Interactive base point selection
-- Automatic object transformation
+- Interactive base point and X-axis reference point selection
+- Automatic object transformation with coordinate system reorientation
 - View camera adjustment
 - Named view preservation
-- Comprehensive coordinate system update</locale_1033>
+- Comprehensive coordinate system update
+- ETO form interface with clear instructions
+
+Instructions:
+- Every object, including those in locked and hidden layers, will be processed
+- All views will be processed
+- To avoid certain objects being rebased, put &quot;REBASE_IGNORE&quot; in the object's name
+- To avoid certain cameras being rebased, put &quot;REBASE_IGNORE&quot; in the camera name</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>Rebase file geometry and views to new origin point.
+        <locale_1033>Rebase file geometry and views to new origin point with X-axis orientation.
 
 Key Features:
-- Interactive base point selection
-- Automatic object transformation
+- Interactive base point and X-axis reference point selection
+- Automatic object transformation with coordinate system reorientation
 - View camera adjustment
 - Named view preservation
-- Comprehensive coordinate system update</locale_1033>
+- Comprehensive coordinate system update
+- ETO form interface with clear instructions
+
+Instructions:
+- Every object, including those in locked and hidden layers, will be processed
+- All views will be processed
+- To avoid certain objects being rebased, put &quot;REBASE_IGNORE&quot; in the object's name
+- To avoid certain cameras being rebased, put &quot;REBASE_IGNORE&quot; in the camera name</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>RebaseFile</locale_1033>
