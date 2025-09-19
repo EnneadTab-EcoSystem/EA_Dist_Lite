@@ -137,8 +137,10 @@ import SECRET, DATA_FILE, NOTIFICATION, FOLDER
 
 try:
     import requests # pyright: ignore
+    REQUESTS_AVAILABLE = True
 except ImportError:
     NOTIFICATION.messenger("requests module not found, please install it.")
+    REQUESTS_AVAILABLE = False
 
 # Setup logging
 logging.basicConfig(
@@ -615,6 +617,10 @@ def get_reusable_access_token():
     Returns:
         str: Access token or None if failed
     """
+    if not REQUESTS_AVAILABLE:
+        logging.error("requests module not available, cannot get access token")
+        return None
+        
     global _CACHED_TOKEN
     
     # Check if we have a valid cached token
@@ -731,6 +737,11 @@ def get_acc_projects_data(use_record = True):
             DATA_FILE.set_data(cache_data, save_file, is_local=False)
             return cached_data
     
+    # Check if requests is available
+    if not REQUESTS_AVAILABLE:
+        logging.error("requests module not available, cannot fetch ACC projects data")
+        return None
+        
     # Fetch fresh data from API
     data = get_all_acc_projects_data_action()
     if data:
@@ -1231,6 +1242,11 @@ def get_ACC_summary_data(show_progress = False):
             }
         }
     """
+    # Check if requests is available
+    if not REQUESTS_AVAILABLE:
+        logging.error("requests module not available, cannot fetch ACC summary data")
+        return None
+        
     all_projects_data = get_acc_projects_data()
     if not all_projects_data:
         return None

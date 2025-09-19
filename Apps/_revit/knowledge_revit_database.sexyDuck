@@ -953,6 +953,15 @@
         "tab": "Proj. 2419",
         "tab_icon": null
     },
+    "EnneadTab Tailor.tab\\Proj. 2501.panel\\SAIF.pulldown\\assign_panel_type.pushbutton\\assign_panel_type_script.py": {
+        "alias": "Assign Panel Type",
+        "doc": "Assign panel type based on side frame width mapping.",
+        "icon": "EnneadTab Tailor.tab\\Proj. 2501.panel\\SAIF.pulldown\\assign_panel_type.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab Tailor.tab\\Proj. 2501.panel\\SAIF.pulldown\\assign_panel_type.pushbutton\\assign_panel_type_script.py",
+        "tab": "Proj. 2501",
+        "tab_icon": null
+    },
     "EnneadTab Tailor.tab\\Proj. 2501.panel\\SAIF.pulldown\\panel_location_map.pushbutton\\panel_location_map_script.py": {
         "alias": "Panel Location Map",
         "doc": "Maps curtain wall panels to their grid positions (U and V indices) and saves the mapping data for use in other tools. This tool analyzes all curtain wall panels in the document and creates a location map that can be used for panel selection and analysis.",
@@ -969,6 +978,15 @@
         "is_popular": false,
         "script": "EnneadTab Tailor.tab\\Proj. 2512.panel\\MetroTech.pulldown\\room_bounding_to_area_b_line.pushbutton\\room_bounding_to_area_b_line_script.py",
         "tab": "Proj. 2512",
+        "tab_icon": null
+    },
+    "EnneadTab Tailor.tab\\Proj. 2526.panel\\St Paul.pulldown\\check_arc_center.pushbutton\\check_arc_center_script.py": {
+        "alias": "Check Arc Center",
+        "doc": "Analyze all arc walls in the project, group their centers by XY coordinates, and generate select links for inspection.",
+        "icon": "EnneadTab Tailor.tab\\Proj. 2526.panel\\St Paul.pulldown\\check_arc_center.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab Tailor.tab\\Proj. 2526.panel\\St Paul.pulldown\\check_arc_center.pushbutton\\check_arc_center_script.py",
+        "tab": "Proj. 2526",
         "tab_icon": null
     },
     "EnneadTab Tailor.tab\\Proj. Princeton.panel\\Proj. Princetong.pulldown\\fire_door_checker.pushbutton\\fire_door_checker_script.py": {
