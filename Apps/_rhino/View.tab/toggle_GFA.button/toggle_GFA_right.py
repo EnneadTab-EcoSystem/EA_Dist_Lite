@@ -17,20 +17,27 @@ Usage:
 
 
 
+import os
 import Rhino # pyright: ignore
 import rhinoscriptsyntax as rs # pyright: ignore
 import scriptcontext as sc # pyright: ignore
 import Eto # pyright: ignore
 from EnneadTab import ERROR_HANDLE, LOG, EXCEL, NOTIFICATION
 from EnneadTab.RHINO import RHINO_PROJ_DATA, RHINO_UI
+import gfa_excel_import
+reload(gfa_excel_import)
 
 FORM_KEY = 'gfa_target_form'
 
 @ERROR_HANDLE.try_catch_error()
 def bake_action(data):
     filename = "EnneadTab GFA Schedule"
-    if sc.doc.Name is not None:
-        filename = "{}_EnneadTab GFA Schedule".format(sc.doc.Name.replace(".3dm", ""))
+    try:
+        if sc.doc and hasattr(sc.doc, 'Name') and sc.doc.Name:
+            doc_name = str(sc.doc.Name)
+            filename = "{}_EnneadTab GFA Schedule".format(doc_name.replace(".3dm", ""))
+    except:
+        pass
 
 
     filepath = rs.SaveFileName(title = "Where to save the Excel?", filter = "Excel Files (*.xlsx)|*.xlsx||", filename = filename)
@@ -45,7 +52,7 @@ class GFATargetDialog(Eto.Forms.Dialog[bool]):
         self.Padding = Eto.Drawing.Padding(5)
         self.Resizable = True
         self.Width = 600
-        self.Height = 420
+        self.Height = 480
         
         # Store the dictionary
         self.gfa_dict = gfa_dict.copy()
@@ -85,27 +92,42 @@ class GFATargetDialog(Eto.Forms.Dialog[bool]):
         # Update grid data
         self.update_grid_data()
         
-        # Create buttons with minimum width
+        # Create buttons with consistent sizing
         add_button = Eto.Forms.Button(Text="Add Keyword")
-        add_button.Width = 110
+        add_button.Width = 120
         add_button.Click += self.OnAddButtonClick
         
         delete_button = Eto.Forms.Button(Text="Delete Selected")
         delete_button.Width = 120
         delete_button.Click += self.OnDeleteButtonClick
         
+        import_button = Eto.Forms.Button(Text="Import from Excel")
+        import_button.Width = 140
+        import_button.Click += self.OnImportButtonClick
+        
+        sample_button = Eto.Forms.Button(Text="Show Sample Excel")
+        sample_button.Width = 140
+        sample_button.Click += self.OnSampleButtonClick
+        
         ok_button = Eto.Forms.Button(Text="OK")
-        ok_button.Width = 60
+        ok_button.Width = 80
         ok_button.Click += self.OnOkButtonClick
         
         cancel_button = Eto.Forms.Button(Text="Cancel")
-        cancel_button.Width = 70
+        cancel_button.Width = 80
         cancel_button.Click += self.OnCancelButtonClick
         
-        # Use TableLayout for buttons for even spacing
+        # Use TableLayout for buttons with better organization
         button_layout = Eto.Forms.TableLayout()
         button_layout.Spacing = Eto.Drawing.Size(5, 5)
-        button_layout.Rows.Add(Eto.Forms.TableRow(add_button, delete_button, ok_button, cancel_button))
+        button_layout.Padding = Eto.Drawing.Padding(5)
+        
+        # First row: Action buttons
+        button_layout.Rows.Add(Eto.Forms.TableRow(None, add_button, delete_button))
+        # Second row: Import buttons  
+        button_layout.Rows.Add(Eto.Forms.TableRow(None, import_button, sample_button))
+        # Third row: OK/Cancel buttons
+        button_layout.Rows.Add(Eto.Forms.TableRow(None, ok_button, cancel_button))
         
         # Add controls to layout
         layout.AddRow(self.grid)
@@ -190,6 +212,88 @@ class GFATargetDialog(Eto.Forms.Dialog[bool]):
     def OnCancelButtonClick(self, sender, e):
         """Discard changes and close"""
         self.Close(False)
+    
+    def OnImportButtonClick(self, sender, e):
+        """Import GFA targets from Excel file"""
+        print("=== GFA Excel Import Button Clicked ===")
+        
+        try:
+            # Use the dedicated Excel import utility
+            result = gfa_excel_import.import_gfa_from_excel()
+            
+            if result:
+                print("Excel import completed successfully!")
+                # Refresh the grid to show updated data
+                self.update_grid_data()
+                NOTIFICATION.messenger(main_text="GFA targets imported from Excel successfully!")
+            else:
+                print("Excel import failed")
+                NOTIFICATION.messenger(main_text="Failed to import GFA targets from Excel")
+                
+        except Exception as ex:
+            print("Error during Excel import: {}".format(str(ex)))
+            NOTIFICATION.messenger(main_text="Error importing from Excel: {}".format(str(ex)))
+    
+    def OnSampleButtonClick(self, sender, e):
+        """Show sample Excel file"""
+        print("=== Show Sample Excel Button Clicked ===")
+        
+        try:
+            # Get the directory where this script is located
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            sample_file = os.path.join(script_dir, "GFA_Sample_Targets.xlsx")
+            
+            print("Looking for sample Excel file: {}".format(sample_file))
+            
+            if os.path.exists(sample_file):
+                print("Sample Excel file found!")
+                print("Opening sample Excel file...")
+                
+                # Actually open the Excel file
+                self.open_sample_excel(sample_file)
+                
+                NOTIFICATION.messenger(main_text="Sample Excel file opened successfully!")
+            else:
+                print("Sample Excel file not found.")
+                NOTIFICATION.messenger(main_text="Sample Excel file not found. Please place GFA_Sample_Targets.xlsx in the script directory.")
+                
+        except Exception as ex:
+            print("Error showing sample Excel: {}".format(str(ex)))
+            NOTIFICATION.messenger(main_text="Error showing sample Excel: {}".format(str(ex)))
+    
+    def open_sample_excel(self, filepath):
+        """Open the sample Excel file"""
+        print("=== Opening Sample Excel File ===")
+        print("File path: {}".format(filepath))
+        
+        try:
+            # Open the Excel file using the system default application
+            import subprocess
+            import platform
+            
+            if platform.system() == "Windows":
+                os.startfile(filepath)
+            elif platform.system() == "Darwin":  # macOS
+                subprocess.call(["open", filepath])
+            else:  # Linux
+                subprocess.call(["xdg-open", filepath])
+            
+            print("Sample Excel file opened successfully!")
+            print("You can use this as a template for your own GFA targets.")
+            
+        except Exception as ex:
+            print("Error opening Excel file: {}".format(str(ex)))
+            print("Trying alternative method...")
+            
+            # Fallback: try to open with Excel directly
+            try:
+                import subprocess
+                subprocess.Popen(['excel', filepath], shell=True)
+                print("Sample Excel file opened with Excel application!")
+            except:
+                print("Could not open Excel file automatically.")
+                print("Please manually open: {}".format(filepath))
+    
 
 @ERROR_HANDLE.try_catch_error()
 def set_target_dict():
