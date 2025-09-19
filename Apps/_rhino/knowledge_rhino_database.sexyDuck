@@ -357,10 +357,10 @@
         "script": "Create.tab\\quick_massing.button\\quick_massing_left.py",
         "icon": "Create.tab\\quick_massing.button\\icon.png",
         "alias": "QuickMassing",
-        "doc": "Create parametric massing models with customizable floor heights and basement options.\n\nFeatures:\n- Adjustable first floor height\n- Configurable typical floor height\n- Customizable number of typical floors\n- Optional basement level with adjustable height\n- Real-time input validation\n- Persistent settings storage\n\nUsage:\n1. Left-click to activate the QuickMassing tool\n2. Configure floor heights and counts in the dialog\n3. Create massing model based on your specifications\n\nNote: All settings are saved between sessions for convenience.",
+        "doc": "Create parametric massing models with advanced level editor interface.\n\nFeatures:\n- Interactive level editor table with reorder, add, remove functionality\n- Dedicated surface picker with surface filter\n- Real-time elevation calculations\n- Persistent settings storage\n- Visual level management interface\n\nUsage:\n1. Left-click to activate the QuickMassing tool\n2. Use the level editor to configure building levels\n3. Pick surfaces for massing creation\n4. Generate massing model based on your specifications\n\nNote: All settings are saved between sessions for convenience.",
         "tab": "Create.tab",
         "tab_icon": "Create.tab\\icon.png",
-        "is_popular": false
+        "is_popular": true
     },
     "Create.tab\\slab_edge.button\\slab_edge_left.py": {
         "script": "Create.tab\\slab_edge.button\\slab_edge_left.py",
@@ -528,7 +528,7 @@
         "script": "Fun.tab\\ennead_city.button\\ennead_city_left.py",
         "icon": "Fun.tab\\ennead_city.button\\icon.png",
         "alias": "EnneadCity",
-        "doc": "Work on your plot",
+        "doc": "Work on your plot - GUI Interface",
         "tab": "Fun.tab",
         "tab_icon": "Fun.tab\\icon.png",
         "is_popular": false
@@ -537,7 +537,7 @@
         "script": "Fun.tab\\ennead_city.button\\ennead_city_right.py",
         "icon": "Fun.tab\\ennead_city.button\\icon.png",
         "alias": "EnneadCity",
-        "doc": "Load all city plots to a session.",
+        "doc": "EnneadCity GUI Interface",
         "tab": "Fun.tab",
         "tab_icon": "Fun.tab\\icon.png",
         "is_popular": false

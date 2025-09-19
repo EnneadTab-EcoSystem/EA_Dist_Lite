@@ -2319,38 +2319,38 @@ EA_ViewToggle</script>
         <locale_1033>QuickMassing</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>Create parametric massing models with customizable floor heights and basement options.
+        <locale_1033>Create parametric massing models with advanced level editor interface.
 
 Features:
-- Adjustable first floor height
-- Configurable typical floor height
-- Customizable number of typical floors
-- Optional basement level with adjustable height
-- Real-time input validation
+- Interactive level editor table with reorder, add, remove functionality
+- Dedicated surface picker with surface filter
+- Real-time elevation calculations
 - Persistent settings storage
+- Visual level management interface
 
 Usage:
 1. Left-click to activate the QuickMassing tool
-2. Configure floor heights and counts in the dialog
-3. Create massing model based on your specifications
+2. Use the level editor to configure building levels
+3. Pick surfaces for massing creation
+4. Generate massing model based on your specifications
 
 Note: All settings are saved between sessions for convenience.</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>Create parametric massing models with customizable floor heights and basement options.
+        <locale_1033>Create parametric massing models with advanced level editor interface.
 
 Features:
-- Adjustable first floor height
-- Configurable typical floor height
-- Customizable number of typical floors
-- Optional basement level with adjustable height
-- Real-time input validation
+- Interactive level editor table with reorder, add, remove functionality
+- Dedicated surface picker with surface filter
+- Real-time elevation calculations
 - Persistent settings storage
+- Visual level management interface
 
 Usage:
 1. Left-click to activate the QuickMassing tool
-2. Configure floor heights and counts in the dialog
-3. Create massing model based on your specifications
+2. Use the level editor to configure building levels
+3. Pick surfaces for massing creation
+4. Generate massing model based on your specifications
 
 Note: All settings are saved between sessions for convenience.</locale_1033>
       </help_text>
@@ -4798,10 +4798,10 @@ DVD</script>
         <locale_1033>EnneadCity</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>Work on your plot</locale_1033>
+        <locale_1033>Work on your plot - GUI Interface</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>Work on your plot</locale_1033>
+        <locale_1033>Work on your plot - GUI Interface</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>EnneadCity</locale_1033>
@@ -4817,10 +4817,10 @@ EA_EnneadCity</script>
         <locale_1033>EnneadCity</locale_1033>
       </text>
       <tooltip>
-        <locale_1033>Load all city plots to a session.</locale_1033>
+        <locale_1033>EnneadCity GUI Interface</locale_1033>
       </tooltip>
       <help_text>
-        <locale_1033>Load all city plots to a session.</locale_1033>
+        <locale_1033>EnneadCity GUI Interface</locale_1033>
       </help_text>
       <button_text>
         <locale_1033>EnneadCity</locale_1033>
