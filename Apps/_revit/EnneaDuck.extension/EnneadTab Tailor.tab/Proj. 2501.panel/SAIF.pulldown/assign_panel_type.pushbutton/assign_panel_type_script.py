@@ -16,12 +16,10 @@ DOC = REVIT_APPLICATION.get_doc()
 
 # Static mappings for side_frame_w to PanelType based on family type
 TOWER_MAIN_MAPPING = {
-    50: "A",
-    200: "B", 
-    450: "C",
-    600: "D",
-    650: "E",
-    850: "F"
+    100: "A",
+    400: "B",
+    600: "C",
+    800: "D"
 }
 
 PODIUM_MAIN_MAPPING = {
