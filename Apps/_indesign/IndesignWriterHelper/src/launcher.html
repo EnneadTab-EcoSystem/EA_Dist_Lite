@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EnneadTab InDesign Writer Helper - Launcher</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 10px;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            margin: 5px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(45deg, #6c757d, #495057);
+        }
+        
+        .btn-success {
+            background: linear-gradient(45deg, #28a745, #20c997);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(45deg, #dc3545, #c82333);
+        }
+        
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        
+        .step h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .status-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+        
+        .status-item.success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .status-item.error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        
+        .status-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🦆 EnneadTab InDesign Writer Helper</h1>
+            <p>Launcher & Troubleshooting Guide</p>
+        </div>
+        
+        <div class="card">
+            <h2>🚀 Quick Start</h2>
+            <p>If you're having issues with the InDesign Writer Helper, follow these steps to get it working:</p>
+            
+            <div class="step">
+                <h3>1. Check Python Installation</h3>
+                <p>Make sure Python is installed on your system:</p>
+                <div class="code-block">python --version</div>
+                <p>If Python is not found, download and install it from <a href="https://python.org" target="_blank">python.org</a> or the Microsoft Store.</p>
+            </div>
+            
+            <div class="step">
+                <h3>2. Install Required Dependencies</h3>
+                <p>Install the required Python packages:</p>
+                <div class="code-block">pip install flask pywin32 requests jinja2 werkzeug</div>
+            </div>
+            
+            <div class="step">
+                <h3>3. Verify InDesign Installation</h3>
+                <p>Make sure Adobe InDesign is installed on your system. The application needs InDesign to be installed to function properly.</p>
+            </div>
+            
+            <div class="step">
+                <h3>4. Run as Administrator (if needed)</h3>
+                <p>If you encounter permission issues, try running the batch file as administrator.</p>
+            </div>
+            
+            <div class="step">
+                <h3>5. Check Firewall Settings</h3>
+                <p>Make sure your firewall allows the application to access the network (port 8081).</p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🔧 Manual Installation</h2>
+            <p>If the automatic installation fails, you can manually install the dependencies:</p>
+            
+            <div class="code-block">
+# Open Command Prompt as Administrator and run:
+python -m pip install --upgrade pip
+python -m pip install flask
+python -m pip install pywin32
+python -m pip install requests
+python -m pip install jinja2
+python -m pip install werkzeug
+            </div>
+            
+            <div class="warning">
+                <strong>⚠️ Note:</strong> If you get permission errors, try running the commands with administrator privileges.
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>📋 System Requirements</h2>
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="status-icon">🐍</div>
+                    <h3>Python 3.7+</h3>
+                    <p>Required for running the application</p>
+                </div>
+                <div class="status-item">
+                    <div class="status-icon">🖥️</div>
+                    <h3>Windows 10/11</h3>
+                    <p>Operating system requirement</p>
+                </div>
+                <div class="status-item">
+                    <div class="status-icon">📄</div>
+                    <h3>Adobe InDesign</h3>
+                    <p>Target application for integration</p>
+                </div>
+                <div class="status-item">
+                    <div class="status-icon">🌐</div>
+                    <h3>Internet Access</h3>
+                    <p>For downloading dependencies</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>🚨 Common Issues & Solutions</h2>
+            
+            <div class="error">
+                <h3>❌ "Python not found"</h3>
+                <p><strong>Solution:</strong> Install Python from <a href="https://python.org" target="_blank">python.org</a> and make sure to check "Add Python to PATH" during installation.</p>
+            </div>
+            
+            <div class="error">
+                <h3>❌ "pywin32 module not found"</h3>
+                <p><strong>Solution:</strong> Run <code>pip install pywin32</code> in Command Prompt. If it fails, try running as administrator.</p>
+            </div>
+            
+            <div class="error">
+                <h3>❌ "InDesign not found"</h3>
+                <p><strong>Solution:</strong> Make sure Adobe InDesign is installed on your system. The application looks for InDesign in standard installation locations.</p>
+            </div>
+            
+            <div class="error">
+                <h3>❌ "Port 8081 already in use"</h3>
+                <p><strong>Solution:</strong> Close other applications that might be using port 8081, or restart your computer.</p>
+            </div>
+            
+            <div class="error">
+                <h3>❌ "Permission denied"</h3>
+                <p><strong>Solution:</strong> Run the batch file as administrator by right-clicking and selecting "Run as administrator".</p>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2>📞 Support</h2>
+            <p>If you're still experiencing issues after following these steps, please:</p>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li>Check the error messages in the command prompt window</li>
+                <li>Make sure all system requirements are met</li>
+                <li>Try running the application as administrator</li>
+                <li>Check your antivirus software settings</li>
+                <li>Ensure your Windows is up to date</li>
+            </ul>
+            
+            <div class="success">
+                <strong>💡 Tip:</strong> The application creates detailed logs. If you need help, save the command prompt output and share it with support.
+            </div>
+        </div>
+        
+        <div class="card" style="text-align: center;">
+            <h2>🎯 Ready to Try Again?</h2>
+            <p>After following the troubleshooting steps above, try running the application again:</p>
+            <a href="file:///__IndesignWriterHelper__.bat" class="btn btn-success">🚀 Launch InDesign Writer Helper</a>
+            <br><br>
+            <a href="javascript:window.close()" class="btn btn-secondary">❌ Close This Window</a>
+        </div>
+    </div>
+    
+    <script>
+        // Add some interactivity
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add click handlers for code blocks
+            const codeBlocks = document.querySelectorAll('.code-block');
+            codeBlocks.forEach(block => {
+                block.addEventListener('click', function() {
+                    const text = this.textContent;
+                    navigator.clipboard.writeText(text).then(() => {
+                        // Show a brief "copied" message
+                        const originalText = this.textContent;
+                        this.textContent = 'Copied to clipboard!';
+                        setTimeout(() => {
+                            this.textContent = originalText;
+                        }, 1000);
+                    });
+                });
+                
+                // Add cursor pointer
+                block.style.cursor = 'pointer';
+                block.title = 'Click to copy';
+            });
+        });
+    </script>
+</body>
+</html>
