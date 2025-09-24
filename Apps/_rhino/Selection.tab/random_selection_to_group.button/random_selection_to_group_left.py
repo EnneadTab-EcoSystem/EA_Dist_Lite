@@ -27,16 +27,30 @@ def random_selection_to_group_left():
     if len(ids) == 1: 
         NOTIFICATION.messenger("Only one object selected, action cancelled.")
         return
-    bbox_center_pt = RHINO_OBJ_DATA.get_center(ids)
-    X, Y, Z = RHINO_OBJ_DATA.get_boundingbox_edge_length(ids)
-    rough_size = (X + Y + Z)/3
+    # Compute bounding box for the entire selection (supporting list of ids)
+    corners = rs.BoundingBox(ids)
+    if not corners or len(corners) < 7:
+        NOTIFICATION.messenger("Could not compute bounding box for selection.")
+        return
+    bbox_center_pt = (corners[0] + corners[6]) / 2
+    X = rs.Distance(corners[0], corners[1])
+    Y = rs.Distance(corners[1], corners[2])
+    Z = rs.Distance(corners[0], corners[5])
+    rough_size = (X + Y + Z) / 3.0
     
     res = rs.StringBox(message = "Seperate selection to how many groups?", default_value = "4", title = "EnneadTab")
 
     if res is None:
         return
 
-    group_num = int(res)
+    try:
+        group_num = int(res)
+    except Exception:
+        NOTIFICATION.messenger("Invalid number, action cancelled.")
+        return
+    if group_num < 2:
+        NOTIFICATION.messenger("Need at least 2 groups, action cancelled.")
+        return
 
     percent = int(100 / group_num )
 
