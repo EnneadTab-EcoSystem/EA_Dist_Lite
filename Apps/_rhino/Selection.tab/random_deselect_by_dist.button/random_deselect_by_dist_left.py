@@ -1,3 +1,4 @@
+ # -*- coding: utf-8 -*-
 __title__ = "RandomDeselectByDist"
 __doc__ = """Randomly deselects blocks based on their distance from a curve.
 
@@ -52,7 +53,7 @@ class RandomDeselectByDistDialog(Forms.Dialog[bool]):
     def InitializeComponent(self):
         """Initialize the form components."""
         self.Title = "Random De-Select by Distance"
-        self.Size = Drawing.Size(420, 420)
+        self.Size = Drawing.Size(420, 450)
         self.Resizable = False
         self.Padding = Drawing.Padding(10)
         
@@ -72,6 +73,7 @@ class RandomDeselectByDistDialog(Forms.Dialog[bool]):
         self.pick_blocks_btn.Text = "Pick Blocks"
         self.pick_blocks_btn.Click += self.OnPickBlocks
         self.blocks_info_label = Forms.Label()
+        # Use long placeholder text to reserve width so form size is stable
         self.blocks_info_label.Text = "No blocks selected"
         
         # Pick curve button  
@@ -79,6 +81,7 @@ class RandomDeselectByDistDialog(Forms.Dialog[bool]):
         self.pick_crv_btn.Text = "Pick Curve"
         self.pick_crv_btn.Click += self.OnPickCurve
         self.crv_info_label = Forms.Label()
+        # Use long placeholder text to reserve width so form size is stable
         self.crv_info_label.Text = "No curve selected"
         
         # Distance range button
@@ -110,13 +113,16 @@ class RandomDeselectByDistDialog(Forms.Dialog[bool]):
         close_btn.Text = "Close"
         close_btn.Click += self.OnClose
         
-        # Assemble layout
+        # Assemble layout (single-column stacked layout)
         layout.AddSeparateRow(None, self.CreateLogoImage())
         layout.AddRow(title_label)
         layout.AddRow(None)  # spacer
         
-        layout.AddRow(self.pick_blocks_btn, self.blocks_info_label)
-        layout.AddRow(self.pick_crv_btn, self.crv_info_label)
+        # Stack: button then its info label
+        layout.AddRow(self.pick_blocks_btn)
+        layout.AddRow(self.blocks_info_label)
+        layout.AddRow(self.pick_crv_btn)
+        layout.AddRow(self.crv_info_label)
         layout.AddRow(None)  # spacer
         
         layout.AddRow(self.calc_range_btn)
@@ -127,7 +133,8 @@ class RandomDeselectByDistDialog(Forms.Dialog[bool]):
         layout.AddRow(clamp1_layout)
         layout.AddRow(None)  # spacer
         
-        layout.AddRow(self.select_btn, close_btn)
+        layout.AddRow(self.select_btn)
+        layout.AddRow(close_btn)
         
         self.Content = layout
         self.LoadSettings()
