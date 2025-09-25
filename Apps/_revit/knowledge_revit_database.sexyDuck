@@ -2564,6 +2564,15 @@
         "tab": "Manage",
         "tab_icon": null
     },
+    "EnneadTab.tab\\Manage.panel\\revision.stack\\temporary_revision.pushbutton\\temporary_revision_script.py": {
+        "alias": "Temporary Revision",
+        "doc": "Temporarily hide selected revisions (titleblock impact) and restore later.",
+        "icon": "EnneadTab.tab\\Manage.panel\\revision.stack\\temporary_revision.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\Manage.panel\\revision.stack\\temporary_revision.pushbutton\\temporary_revision_script.py",
+        "tab": "Manage",
+        "tab_icon": null
+    },
     "EnneadTab.tab\\Manage.panel\\track_detail_group.pushbutton\\track_detail_group_script.py": {
         "alias": "Track Detail Group",
         "doc": "Detail group detective that helps you track down where groups are used throughout your project. This bidirectional search tool allows you to find all instances of a specific detail group across views, or identify all detail groups used within selected views. Perfect for understanding dependencies before making changes to detail groups or when cleaning up unused content.",
