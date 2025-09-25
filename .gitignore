@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# credential files
+credential.json
+
 # InDesign lock files
 *.idlk
 

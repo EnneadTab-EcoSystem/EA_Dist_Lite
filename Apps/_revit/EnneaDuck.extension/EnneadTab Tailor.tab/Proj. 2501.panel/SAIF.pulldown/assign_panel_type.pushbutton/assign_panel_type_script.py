@@ -10,24 +10,28 @@ proDUCKtion.validify()
 from EnneadTab import ERROR_HANDLE, LOG
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_VIEW
 from Autodesk.Revit import DB # pyright: ignore 
+from pyrevit import script
 
 UIDOC = REVIT_APPLICATION.get_uidoc()
 DOC = REVIT_APPLICATION.get_doc()
+output = script.get_output()
 
 # Static mappings for side_frame_w to PanelType based on family type
+# Note: 100 is not a valid mapping - removed to prevent invalid assignments
+# Tower panels use TA/TB/TC naming convention
 TOWER_MAIN_MAPPING = {
-    100: "A",
-    400: "B",
-    600: "C",
-    800: "D"
+    400: "TA",
+    600: "TB",
+    800: "TC"
 }
 
+# Podium panels use PA/PB/PC/PD/PE naming convention
 PODIUM_MAIN_MAPPING = {
-    700: "A",
-    800: "B",
-    900: "C",
-    1000: "D",
-    1100: "E"
+    700: "PA",
+    800: "PB",
+    900: "PC",
+    1000: "PD",
+    1100: "PE"
 }
 
 
@@ -160,6 +164,7 @@ def assign_panel_type(doc):
     bad_mappings_by_family = {}  # {side_frame_w: family_name}
     used_tower_mappings = set()
     used_podium_mappings = set()
+    problematic_panels = []  # Track panels with problematic side_frame_w values
     
     for element in target_panels:
         # Get side_frame_w parameter as string
@@ -184,6 +189,13 @@ def assign_panel_type(doc):
                 if panel_type == "BAD":
                     bad_values.add(side_frame_width)
                     bad_mappings_by_family[side_frame_width] = family_name
+                    # Track problematic panels for debugging
+                    problematic_panels.append({
+                        'element': element,
+                        'side_frame_w': side_frame_width,
+                        'family_name': family_name,
+                        'panel_type': panel_type
+                    })
                 else:
                     mapped_values.add(side_frame_width)
                     # Track which mappings are actually used
@@ -227,6 +239,24 @@ def assign_panel_type(doc):
             print("  Podium Main: {}".format(sorted(podium_bad)))
         if other_bad:
             print("  Other families: {}".format(sorted(other_bad)))
+    
+    # Display problematic panels with clickable links
+    if problematic_panels:
+        print("\n" + "="*60)
+        print("PROBLEMATIC PANELS WITH INVALID MAPPINGS:")
+        print("="*60)
+        for i, panel_info in enumerate(problematic_panels, 1):
+            element = panel_info['element']
+            side_frame_w = panel_info['side_frame_w']
+            family_name = panel_info['family_name']
+            
+            # Create clickable link to the panel
+            panel_link = output.linkify(element.Id, title="Panel {}".format(i))
+            print("{} - side_frame_w: {}, family: {}, panel: {}".format(
+                i, side_frame_w, family_name, panel_link))
+        
+        print("\nTotal problematic panels: {}".format(len(problematic_panels)))
+        print("Click on the panel links above to navigate to them in Revit")
     
     # All unique values found
     if unique_side_frame_values:
