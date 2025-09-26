@@ -258,7 +258,11 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
         out_data["is_send_email"] = self.checkbox_send_email.IsChecked
         out_data["is_delayed_start"] = self.checkbox_delayed_start.IsChecked
         if hasattr(self, 'scheduled_start_time'):
-            out_data["scheduled_start_time"] = self.scheduled_start_time.isoformat()
+            # Handle both datetime objects and string values
+            if hasattr(self.scheduled_start_time, 'isoformat'):
+                out_data["scheduled_start_time"] = self.scheduled_start_time.isoformat()
+            else:
+                out_data["scheduled_start_time"] = self.scheduled_start_time
 
 
         out_data["issue_name"] = self.issue_name
@@ -375,7 +379,29 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
         try:
             if hasattr(self, 'scheduled_start_time') and self.scheduled_start_time:
                 from datetime import datetime
-                scheduled_time = datetime.fromisoformat(self.scheduled_start_time)
+                # IronPython 2.7 compatible datetime parsing
+                try:
+                    # Try to parse ISO format string manually
+                    import re
+                    # Convert to string if it's already a datetime object
+                    time_str = str(self.scheduled_start_time)
+                    # Match format like "2023-12-25T14:30:00" or "2023-12-25T14:30:00.123456"
+                    match = re.match(r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?', time_str)
+                    if match:
+                        year, month, day, hour, minute, second, microsecond = match.groups()
+                        if microsecond:
+                            # Pad microsecond to 6 digits
+                            microsecond = microsecond.ljust(6, '0')[:6]
+                            microsecond = int(microsecond)
+                        else:
+                            microsecond = 0
+                        scheduled_time = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), microsecond)
+                    else:
+                        # Fallback: try to parse as simple date
+                        scheduled_time = datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+                except:
+                    # If all parsing fails, use current time
+                    scheduled_time = datetime.now()
                 now = datetime.now()
                 
                 # Calculate wait time
@@ -1505,23 +1531,57 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
         """Execute the delayed start with the given target time."""
         from datetime import datetime
         
-        # Show waiting message
-        self.button_main.Content = "Waiting for scheduled time..."
-        self.button_main.IsEnabled = False
+        # Convert target_time to datetime if it's a string
+        if isinstance(target_time, str):
+            # IronPython 2.7 compatible datetime parsing
+            try:
+                # Try to parse ISO format string manually
+                import re
+                # Match format like "2023-12-25T14:30:00" or "2023-12-25T14:30:00.123456"
+                match = re.match(r'(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?', target_time)
+                if match:
+                    year, month, day, hour, minute, second, microsecond = match.groups()
+                    if microsecond:
+                        # Pad microsecond to 6 digits
+                        microsecond = microsecond.ljust(6, '0')[:6]
+                        microsecond = int(microsecond)
+                    else:
+                        microsecond = 0
+                    target_time = datetime(int(year), int(month), int(day), int(hour), int(minute), int(second), microsecond)
+                else:
+                    # Fallback: try to parse as simple date
+                    target_time = datetime.strptime(target_time, '%Y-%m-%d %H:%M:%S')
+            except:
+                # If all parsing fails, use current time
+                target_time = datetime.now()
         
-        # Wait until the scheduled time
-        while datetime.now() < target_time:
-            remaining = target_time - datetime.now()
-            remaining_minutes = int(remaining.total_seconds() // 60)
-            remaining_seconds = int(remaining.total_seconds() % 60)
+        # Check if scheduled time has already passed
+        now = datetime.now()
+        if target_time <= now:
+            # Scheduled time has passed, start immediately
+            NOTIFICATION.messenger("Scheduled time has already passed. Starting export immediately...")
+            self.button_main.Content = "Starting export (scheduled time passed)..."
+            self.button_main.IsEnabled = False
+            # Small delay to show the message
+            time.sleep(2)
+        else:
+            # Show waiting message
+            self.button_main.Content = "Waiting for scheduled time..."
+            self.button_main.IsEnabled = False
             
-            self.button_main.Content = "Waiting... {}m {}s remaining".format(
-                remaining_minutes, remaining_seconds
-            )
-            NOTIFICATION.messenger("Waiting... {}m {}s remaining".format(
-                remaining_minutes, remaining_seconds
-            ))
-            time.sleep(1)
+            # Wait until the scheduled time
+            while datetime.now() < target_time:
+                remaining = target_time - datetime.now()
+                remaining_minutes = int(remaining.total_seconds() // 60)
+                remaining_seconds = int(remaining.total_seconds() % 60)
+                
+                self.button_main.Content = "Waiting... {}m {}s remaining".format(
+                    remaining_minutes, remaining_seconds
+                )
+                NOTIFICATION.messenger("Waiting... {}m {}s remaining".format(
+                    remaining_minutes, remaining_seconds
+                ))
+                time.sleep(1)
         
         # Time reached, sync document first
         NOTIFICATION.messenger("Scheduled time reached. Syncing document before starting export...")
