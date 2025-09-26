@@ -89,13 +89,19 @@ try:
     from reportlab.lib.units import inch
     from reportlab.lib import colors
     from reportlab.platypus.flowables import KeepTogether
-except:
-    pass
+    REPORTLAB_AVAILABLE = True
+except ImportError as e:
+    print(f"⚠️  ReportLab not available: {e}")
+    # Provide fallback values for missing imports
+    inch = 72  # Default to 72 points per inch
+    REPORTLAB_AVAILABLE = False
 
 
 
 
 def documentation2pdf(app, doc_data_list, pdf_path, tailor_count=0):
+    if not REPORTLAB_AVAILABLE:
+        raise ImportError("ReportLab is required for PDF generation. Please install it with: pip install reportlab")
     PDFGenerator(app, pdf_path).generate(doc_data_list, tailor_count)
     
 class PDFGenerator:
