@@ -2726,6 +2726,15 @@
         "tab": "Resource",
         "tab_icon": null
     },
+    "EnneadTab.tab\\Resource.panel\\revit_remote_server.pushbutton\\revit_remote_server_script.py": {
+        "alias": "Revit Remote Server",
+        "doc": "Standalone Remote Server Script (no EnneadTab/proDUCKtion dependency).",
+        "icon": "EnneadTab.tab\\Resource.panel\\revit_remote_server.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\Resource.panel\\revit_remote_server.pushbutton\\revit_remote_server_script.py",
+        "tab": "Resource",
+        "tab_icon": null
+    },
     "EnneadTab.tab\\Resource.panel\\tell_me_version.pushbutton\\tell_me_version_script.py": {
         "alias": "Tell Me Version",
         "doc": "Version information utility that displays the current build details for all EnneadTab components. This diagnostic tool provides complete version numbers, build dates, and update status for your installation - essential for troubleshooting, submitting bug reports, or verifying you have the latest features. Perfect for confirming compatibility when working with team members or when communicating with EnneadTab support.",
