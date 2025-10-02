@@ -8,8 +8,9 @@ __title__ = "Revit Remote Server"
 from Autodesk.Revit import DB # pyright: ignore 
 import os
 import json
-from datetime import datetime
+import time
 import traceback
+from datetime import datetime
 
 
 
@@ -65,8 +66,8 @@ def _ensure_debug_dir():
     if not os.path.exists(dbg_dir):
         try:
             os.makedirs(dbg_dir)
-        except Exception:
-            pass
+        except Exception as e:
+            _append_debug("Failed to create debug directory: {}".format(e))
     return dbg_dir
 
 def _append_debug(message):
@@ -74,8 +75,8 @@ def _append_debug(message):
         dbg_dir = _ensure_debug_dir()
         with open(_join(dbg_dir, "debug.txt"), 'a') as f:
             f.write("[{}] {}\n".format(datetime.now().isoformat(), message))
-    except Exception:
-        pass
+    except Exception as e:
+        print("Failed to write debug message: {}".format(e))
 
 def _write_failure_payload(title, exc, job=None):
     try:
@@ -97,8 +98,8 @@ def _write_failure_payload(title, exc, job=None):
             "traceback": tb
         }
         _save_json(_join(dbg_dir, name), payload)
-    except Exception:
-        pass
+    except Exception as e:
+        print("Failed to write failure payload: {}".format(e))
 
 def _format_output_filename(job_payload):
     # {yyyy-mm}_hub_project_model.SexyDuck
@@ -117,7 +118,7 @@ def _update_job_status(job, new_status, extra_fields=None):
 
 def _get_app():
     # Optimized: Use only the successful pyrevit.HOST_APP.app path
-    from pyrevit import HOST_APP as _HOST_APP
+    from pyrevit import HOST_APP as _HOST_APP # pyright: ignore
     if hasattr(_HOST_APP, 'app') and _HOST_APP.app is not None:
         return _HOST_APP.app
     raise Exception("pyRevit HOST_APP.app not available")
@@ -163,24 +164,87 @@ def get_doc(job_payload):
 
 def run_metric(doc, job_payload):
     """
-    Placeholder metric function interface.
+    Dedicated metric function interface.
     - doc: active Revit document
     - job_payload: dict-like payload read from current_job (parsed JSON)
 
-    Returns a dict-like result that will be stored under result_data on success.
-    Replace the internal logic with real metrics in the future.
+    Returns health metrics data only.
     """
-    # Placeholder: return a simple result shape; real implementation should
-    # compute values (e.g., total wall count) from the active document.
     if doc is None:
         raise Exception("No active document available")
+    
     try:
-        collector = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_Walls).WhereElementIsNotElementType()
-        walls = list(collector)
-        return {"placeholder": False, "wall_count": len(walls)}
+        from health_metric import HealthMetric
+        health_metric = HealthMetric(doc)
+        result = health_metric.check()
+        
+        return result
     except Exception as ex:
         _append_debug("run_metric failed: {}".format(ex))
         raise
+
+def _format_time(seconds):
+    """Format time in readable format"""
+    if seconds < 60:
+        return "{} seconds".format(int(seconds))
+    elif seconds < 3600:
+        minutes = int(seconds // 60)
+        secs = int(seconds % 60)
+        return "{} minutes {} seconds".format(minutes, secs)
+    else:
+        hours = int(seconds // 3600)
+        minutes = int((seconds % 3600) // 60)
+        return "{} hours {} minutes".format(hours, minutes)
+
+def _handle_job_failure(job, logs, exception, traceback_str):
+    """Handle job failure with comprehensive error reporting"""
+    logs.append("Exception: " + str(exception))
+    
+    # Ensure job is a dict for safe access
+    if not isinstance(job, dict):
+        job = {
+            "job_id": "unknown_job",
+            "hub_name": "unknown_hub", 
+            "project_name": "unknown_project",
+            "model_name": "unknown_model",
+            "revit_version": "Unknown",
+            "timestamp": datetime.now().isoformat(),
+            "status": "failed"
+        }
+    
+    # Update job status with failure info
+    try:
+        _update_job_status(job, "failed", {"logs": "\n".join(logs), "error_msg": traceback_str})
+    except Exception as e:
+        print("Failed to update job status: {}".format(e))
+    
+    # Write failure output file to TASK_OUTPUT/DEBUG for capture
+    try:
+        dbg_dir = _ensure_debug_dir()
+        fallback_name = "{}_{}_{}_ERROR.SexyDuck".format(
+            datetime.now().strftime("%Y-%m"),
+            job.get("hub_name", "hub"),
+            job.get("model_name", "model")
+        )
+        out_path = _join(dbg_dir, fallback_name)
+        output_payload = {
+            "job_metadata": {
+                "job_id": job.get("job_id"),
+                "hub_name": job.get("hub_name"),
+                "project_name": job.get("project_name"),
+                "model_name": job.get("model_name"),
+                "revit_version": job.get("revit_version"),
+                "timestamp": datetime.now().isoformat()
+            },
+            "status": "failed",
+            "logs": "\n".join(logs),
+            "error_msg": traceback_str
+        }
+        _save_json(out_path, output_payload)
+    except Exception as ex:
+        _append_debug("Write failure payload failed: {}".format(ex))
+    
+    print("Job failed. See logs in job file or TASK_OUTPUT.")
 
 
 
@@ -214,16 +278,21 @@ def revit_remote_server():
         _update_job_status(job, "running")
         logs.append("Job set to running")
 
-        # 3) get document and execute metric
+        # 3) get document and execute metric with timing
         doc, must_close = get_doc(job)
+        begin_time = time.time()
+        
         try:
             result = run_metric(doc, job)
         finally:
             try:
                 if must_close and doc is not None:
                     doc.Close(False)
-            except:
-                pass
+            except Exception as e:
+                _append_debug("Failed to close document: {}".format(e))
+        
+        # Calculate execution time
+        execution_time = time.time() - begin_time
 
         # 4) write output file
         out_dir = _ensure_output_dir()
@@ -236,7 +305,9 @@ def revit_remote_server():
                 "project_name": job.get("project_name"),
                 "model_name": job.get("model_name"),
                 "revit_version": job.get("revit_version"),
-                "timestamp": datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat(),
+                "execution_time_seconds": round(execution_time, 2),
+                "execution_time_readable": _format_time(execution_time)
             },
             "result_data": result,
             "status": "completed"
@@ -248,50 +319,8 @@ def revit_remote_server():
         _update_job_status(job, "completed", {"result_data": result})
         logs.append("Job completed")
     except Exception as e:
-        import traceback
         tb = traceback.format_exc()
-        logs.append("Exception: " + str(e))
-        # Try to write failure to job file if available; else create a minimal one
-        try:
-            if not isinstance(job, dict):
-                job = {
-                    "job_id": "unknown_job",
-                    "hub_name": "unknown_hub",
-                    "project_name": "unknown_project",
-                    "model_name": "unknown_model",
-                    "revit_version": "Unknown",
-                    "timestamp": datetime.now().isoformat(),
-                    "status": "failed"
-                }
-            _update_job_status(job, "failed", {"logs": "\n".join(logs), "error_msg": tb})
-        except Exception:
-            pass
-        # Also emit a failure output file to TASK_OUTPUT/DEBUG for capture
-        try:
-            dbg_dir = _ensure_debug_dir()
-            fallback_name = "{}_{}_{}_ERROR.SexyDuck".format(
-                datetime.now().strftime("%Y-%m"),
-                (job.get("hub_name") if isinstance(job, dict) else "hub"),
-                (job.get("model_name") if isinstance(job, dict) else "model")
-            )
-            out_path = _join(dbg_dir, fallback_name)
-            output_payload = {
-                "job_metadata": {
-                    "job_id": job.get("job_id") if isinstance(job, dict) else None,
-                    "hub_name": job.get("hub_name") if isinstance(job, dict) else None,
-                    "project_name": job.get("project_name") if isinstance(job, dict) else None,
-                    "model_name": job.get("model_name") if isinstance(job, dict) else None,
-                    "revit_version": job.get("revit_version") if isinstance(job, dict) else None,
-                    "timestamp": datetime.now().isoformat()
-                },
-                "status": "failed",
-                "logs": "\n".join(logs),
-                "error_msg": tb
-            }
-            _save_json(out_path, output_payload)
-        except Exception as ex:
-            _append_debug("Write failure payload failed: {}".format(ex))
-        print("Job failed. See logs in job file or TASK_OUTPUT.")
+        _handle_job_failure(job, logs, e, tb)
 
 
 
