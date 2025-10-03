@@ -30,11 +30,11 @@ AND we should never silent any except, so the rasie exception can be bubble up t
 #   behind a function interface so future metrics can be plugged in with minimal changes.
 #   Suggested interface: run_metric(doc, job_payload) -> result_data (dict-like)
 
-CURRENT_JOB_FILENAME = "current_job.SexyDuck"
+CURRENT_JOB_FILENAME = "current_job.sexyDuck"
 TASK_OUTPUT_DIRNAME = "task_output"
 DEBUG_DIRNAME = "_debug"
 PUBLIC_DB_FOLDER = "L:\\4b_Design Technology\\05_EnneadTab-DB\\Shared Data Dump\\RevitSlaveDatabase"
-
+LOCAL_DB_FOLDER = "C:\\Users\\{}\\Documents\\EnneadTab Ecosystem\\Dump\\RevitSlaveData".format(os.environ["USERNAME"])
 def _join(*parts):
     return os.path.join(*parts)
 
@@ -55,13 +55,19 @@ def _save_json(path, data):
     with open(path, 'w') as f:
         json.dump(data, f, indent=4)
 
-def _ensure_output_dir():
+def _ensure_public_output_dir():
     out_dir = _join(PUBLIC_DB_FOLDER, TASK_OUTPUT_DIRNAME)
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
     return out_dir
 
-def _ensure_debug_dir():
+def _ensure_local_output_dir():
+    out_dir = _join(LOCAL_DB_FOLDER, TASK_OUTPUT_DIRNAME)
+    if not os.path.exists(out_dir):
+        os.makedirs(out_dir)
+    return out_dir
+
+def _ensure_public_debug_dir():
     dbg_dir = _join(PUBLIC_DB_FOLDER, DEBUG_DIRNAME)
     if not os.path.exists(dbg_dir):
         try:
@@ -72,7 +78,7 @@ def _ensure_debug_dir():
 
 def _append_debug(message):
     try:
-        dbg_dir = _ensure_debug_dir()
+        dbg_dir = _ensure_public_debug_dir()
         with open(_join(dbg_dir, "debug.txt"), 'a') as f:
             f.write("[{}] {}\n".format(datetime.now().isoformat(), message))
     except Exception as e:
@@ -80,8 +86,8 @@ def _append_debug(message):
 
 def _write_failure_payload(title, exc, job=None):
     try:
-        dbg_dir = _ensure_debug_dir()
-        name = "{}_ERROR_{}.SexyDuck".format(datetime.now().strftime("%Y-%m"), title)
+        dbg_dir = _ensure_public_debug_dir()
+        name = "{}_ERROR_{}.sexyDuck".format(datetime.now().strftime("%Y-%m"), title)
         tb = traceback.format_exc()
         payload = {
             "job_metadata": {
@@ -102,12 +108,12 @@ def _write_failure_payload(title, exc, job=None):
         print("Failed to write failure payload: {}".format(e))
 
 def _format_output_filename(job_payload):
-    # {yyyy-mm}_hub_project_model.SexyDuck
+    # {yyyy-mm}_hub_project_model.sexyDuck
     ts = datetime.now().strftime("%Y-%m")
     hub = (job_payload.get("hub_name") or "hub")
     proj = (job_payload.get("project_name") or "project")
     model = (job_payload.get("model_name") or "model")
-    return "{}_{}_{}_{}.SexyDuck".format(ts, hub, proj, model)
+    return "{}_{}_{}_{}.sexyDuck".format(ts, hub, proj, model)
 
 def _update_job_status(job, new_status, extra_fields=None):
     job["status"] = new_status
@@ -220,8 +226,8 @@ def _handle_job_failure(job, logs, exception, traceback_str):
     
     # Write failure output file to TASK_OUTPUT/DEBUG for capture
     try:
-        dbg_dir = _ensure_debug_dir()
-        fallback_name = "{}_{}_{}_ERROR.SexyDuck".format(
+        dbg_dir = _ensure_public_debug_dir()
+        fallback_name = "{}_{}_{}_ERROR.sexyDuck".format(
             datetime.now().strftime("%Y-%m"),
             job.get("hub_name", "hub"),
             job.get("model_name", "model")
@@ -255,7 +261,7 @@ def revit_remote_server():
     try:
         # Heartbeat: prove script started and can write to TASK_OUTPUT
         try:
-            hb_dir = _ensure_debug_dir()
+            hb_dir = _ensure_public_debug_dir()
             hb_path = _join(hb_dir, "_heartbeat.txt")
             with open(hb_path, 'a') as _hb:
                 _hb.write(datetime.now().isoformat() + " started" + "\n")
@@ -264,7 +270,7 @@ def revit_remote_server():
 
         job_path = _job_path()
         if not os.path.exists(job_path):
-            raise Exception("current_job.SexyDuck not found")
+            raise Exception("current_job.sexyDuck not found")
 
         job = _load_json(job_path)
         if not isinstance(job, dict):
@@ -295,9 +301,9 @@ def revit_remote_server():
         execution_time = time.time() - begin_time
 
         # 4) write output file
-        out_dir = _ensure_output_dir()
         out_name = _format_output_filename(job)
-        out_path = _join(out_dir, out_name)
+        out_path_public = _join(_ensure_public_output_dir(), out_name)
+        out_path_local = _join(_ensure_local_output_dir(), out_name)
         output_payload = {
             "job_metadata": {
                 "job_id": job.get("job_id"),
@@ -312,8 +318,10 @@ def revit_remote_server():
             "result_data": result,
             "status": "completed"
         }
-        _save_json(out_path, output_payload)
-        logs.append("Output saved: " + out_path)
+        _save_json(out_path_public, output_payload)
+        _save_json(out_path_local, output_payload)
+        logs.append("Output saved: " + out_path_public)
+        logs.append("Output saved: " + out_path_local)
 
         # 5) mark completed (success)
         _update_job_status(job, "completed", {"result_data": result})

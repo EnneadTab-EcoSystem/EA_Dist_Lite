@@ -173,4 +173,4 @@ cython_debug/
 # Prevent duplicate docs folders
 Website/docs/
 
-Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Resource.panel/revit_remote_server.pushbutton/current_job.SexyDuck
+Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Resource.panel/revit_remote_server.pushbutton/current_job.sexyDuck
