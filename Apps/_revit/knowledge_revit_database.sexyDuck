@@ -2141,6 +2141,15 @@
         "tab": "ACE",
         "tab_icon": null
     },
+    "EnneadTab.tab\\ACE.panel\\open_keynote_exporter.pushbutton\\open_keynote_exporter_script.py": {
+        "alias": "Open Keynote Exporter",
+        "doc": "Us the Keynote Exporter app to interact with the KeynoteExcel with legacy format.",
+        "icon": "EnneadTab.tab\\ACE.panel\\open_keynote_exporter.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\ACE.panel\\open_keynote_exporter.pushbutton\\open_keynote_exporter_script.py",
+        "tab": "ACE",
+        "tab_icon": null
+    },
     "EnneadTab.tab\\ACE.panel\\property_line_from_excel.pushbutton\\property_line_from_excel_script.py": {
         "alias": "Property Line From Excel",
         "doc": "Generate detail line from the Excel survey pt data. Best used for property line geneation.",

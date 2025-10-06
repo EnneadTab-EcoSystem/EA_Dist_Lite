@@ -6,7 +6,7 @@ proDUCKtion.validify()
 # for i, path in enumerate(sys.path):
 #     print("{}: {}".format(i+1, path))
 
-from EnneadTab import EXCEL, NOTIFICATION, AI, TEXT, OUTPUT, FOLDER, ERROR_HANDLE
+from EnneadTab import EXCEL, NOTIFICATION, AI, TEXT, OUTPUT, FOLDER, ERROR_HANDLE, EXE
 # from EnneadTab import LOG
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_PROJ_DATA, REVIT_FORMS
 from Autodesk.Revit import DB # pyright: ignore 
@@ -32,6 +32,10 @@ EXTENDED_DB_WORKSHEET_NAME = "Keynote Extended DB"
 # Key column name constants for Excel parsing
 KEYNOTE_ID_COLUMN_NAME = "KEYNOTE ID"
 
+
+def open_new_keynote_exporter():
+
+    EXE.try_open_app("KeynoteExporter")
 
 
 # Project data helper functions

@@ -377,6 +377,10 @@ class KeynoteManagerWindow(forms.WPFWindow):
 
 
     @ERROR_HANDLE.try_catch_error()
+    def open_new_keynote_exporter(self, sender, args):
+        AU.open_new_keynote_exporter()
+
+    @ERROR_HANDLE.try_catch_error()
     def regenerate_extended_db_excel(self, sender, args):
         AU.regenerate_extended_db_excel(keynote_data_conn = self._conn)
 
