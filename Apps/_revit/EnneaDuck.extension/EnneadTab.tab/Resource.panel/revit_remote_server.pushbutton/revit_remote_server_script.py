@@ -31,17 +31,20 @@ AND we should never silent any except, so the rasie exception can be bubble up t
 #   Suggested interface: run_metric(doc, job_payload) -> result_data (dict-like)
 
 CURRENT_JOB_FILENAME = "current_job.sexyDuck"
-TASK_OUTPUT_DIRNAME = "task_output"
-DEBUG_DIRNAME = "_debug"
-PUBLIC_DB_FOLDER = "L:\\4b_Design Technology\\05_EnneadTab-DB\\Shared Data Dump\\RevitSlaveDatabase"
-LOCAL_DB_FOLDER = "C:\\Users\\{}\\Documents\\EnneadTab Ecosystem\\Dump\\RevitSlaveData".format(os.environ["USERNAME"])
+
+# Global variable to store paths from job file
+# ALL output operations (task_output, debug, logs) use these paths from the job file
+_RUNTIME_PATHS = None
+
 def _join(*parts):
     return os.path.join(*parts)
 
 def _script_dir():
+    """Get script directory - ONLY used to locate current_job.sexyDuck"""
     return os.path.dirname(os.path.abspath(__file__))
 
 def _job_path():
+    """Get path to current_job.sexyDuck (always next to this script)"""
     return _join(_script_dir(), CURRENT_JOB_FILENAME)
 
 def _load_json(path):
@@ -55,30 +58,41 @@ def _save_json(path, data):
     with open(path, 'w') as f:
         json.dump(data, f, indent=4)
 
-def _ensure_public_output_dir():
-    out_dir = _join(PUBLIC_DB_FOLDER, TASK_OUTPUT_DIRNAME)
+def _ensure_output_dir():
+    """
+    Get task output directory from job file paths.
+    ALL output files (.sexyDuck results) are written here.
+    Path is controlled entirely by current_job.sexyDuck.
+    """
+    if not _RUNTIME_PATHS or not _RUNTIME_PATHS.get('task_output_dir'):
+        raise Exception("task_output_dir not found in job paths - job file must include 'paths' section")
+    
+    out_dir = _RUNTIME_PATHS['task_output_dir']
     if not os.path.exists(out_dir):
         os.makedirs(out_dir)
     return out_dir
 
-def _ensure_local_output_dir():
-    out_dir = _join(LOCAL_DB_FOLDER, TASK_OUTPUT_DIRNAME)
-    if not os.path.exists(out_dir):
-        os.makedirs(out_dir)
-    return out_dir
-
-def _ensure_public_debug_dir():
-    dbg_dir = _join(PUBLIC_DB_FOLDER, DEBUG_DIRNAME)
+def _ensure_debug_dir():
+    """
+    Get debug directory from job file paths.
+    ALL debug files (errors, logs, heartbeat) are written here.
+    Path is controlled entirely by current_job.sexyDuck.
+    """
+    if not _RUNTIME_PATHS or not _RUNTIME_PATHS.get('debug_dir'):
+        raise Exception("debug_dir not found in job paths - job file must include 'paths' section")
+    
+    dbg_dir = _RUNTIME_PATHS['debug_dir']
     if not os.path.exists(dbg_dir):
         try:
             os.makedirs(dbg_dir)
         except Exception as e:
-            _append_debug("Failed to create debug directory: {}".format(e))
+            # Can't call _append_debug here as it would cause recursion
+            print("Failed to create debug directory: {}".format(e))
     return dbg_dir
 
 def _append_debug(message):
     try:
-        dbg_dir = _ensure_public_debug_dir()
+        dbg_dir = _ensure_debug_dir()
         with open(_join(dbg_dir, "debug.txt"), 'a') as f:
             f.write("[{}] {}\n".format(datetime.now().isoformat(), message))
     except Exception as e:
@@ -86,7 +100,7 @@ def _append_debug(message):
 
 def _write_failure_payload(title, exc, job=None):
     try:
-        dbg_dir = _ensure_public_debug_dir()
+        dbg_dir = _ensure_debug_dir()
         name = "{}_ERROR_{}.sexyDuck".format(datetime.now().strftime("%Y-%m"), title)
         tb = traceback.format_exc()
         payload = {
@@ -224,9 +238,9 @@ def _handle_job_failure(job, logs, exception, traceback_str):
     except Exception as e:
         print("Failed to update job status: {}".format(e))
     
-    # Write failure output file to TASK_OUTPUT/DEBUG for capture
+    # Write failure output file to DEBUG for capture
     try:
-        dbg_dir = _ensure_public_debug_dir()
+        dbg_dir = _ensure_debug_dir()
         fallback_name = "{}_{}_{}_ERROR.sexyDuck".format(
             datetime.now().strftime("%Y-%m"),
             job.get("hub_name", "hub"),
@@ -250,24 +264,16 @@ def _handle_job_failure(job, logs, exception, traceback_str):
     except Exception as ex:
         _append_debug("Write failure payload failed: {}".format(ex))
     
-    print("Job failed. See logs in job file or TASK_OUTPUT.")
+    print("Job failed. See logs in job file or debug directory.")
 
 
 
 
 def revit_remote_server():
+    global _RUNTIME_PATHS
     logs = []
     job = None
     try:
-        # Heartbeat: prove script started and can write to TASK_OUTPUT
-        try:
-            hb_dir = _ensure_public_debug_dir()
-            hb_path = _join(hb_dir, "_heartbeat.txt")
-            with open(hb_path, 'a') as _hb:
-                _hb.write(datetime.now().isoformat() + " started" + "\n")
-        except Exception as ex:
-            _append_debug("Heartbeat write failed: {}".format(ex))
-
         job_path = _job_path()
         if not os.path.exists(job_path):
             raise Exception("current_job.sexyDuck not found")
@@ -275,6 +281,26 @@ def revit_remote_server():
         job = _load_json(job_path)
         if not isinstance(job, dict):
             raise Exception("Invalid job payload structure")
+        
+        # Extract paths from job file (required)
+        if 'paths' not in job or not isinstance(job['paths'], dict):
+            raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+        
+        _RUNTIME_PATHS = job['paths']
+        logs.append("=== PATH CONFIGURATION ===")
+        logs.append("  Database folder: {}".format(_RUNTIME_PATHS.get('database_folder', 'None')))
+        logs.append("  Task output dir: {}".format(_RUNTIME_PATHS.get('task_output_dir', 'None')))
+        logs.append("  Debug dir: {}".format(_RUNTIME_PATHS.get('debug_dir', 'None')))
+        logs.append("  Log dir: {}".format(_RUNTIME_PATHS.get('log_dir', 'None')))
+        
+        # Heartbeat: prove script started and can write to debug directory
+        try:
+            hb_dir = _ensure_debug_dir()
+            hb_path = _join(hb_dir, "_heartbeat.txt")
+            with open(hb_path, 'a') as _hb:
+                _hb.write(datetime.now().isoformat() + " started" + "\n")
+        except Exception as ex:
+            _append_debug("Heartbeat write failed: {}".format(ex))
 
         # 1) pending (taken)
         _update_job_status(job, "pending")
@@ -302,8 +328,7 @@ def revit_remote_server():
 
         # 4) write output file
         out_name = _format_output_filename(job)
-        out_path_public = _join(_ensure_public_output_dir(), out_name)
-        out_path_local = _join(_ensure_local_output_dir(), out_name)
+        out_path = _join(_ensure_output_dir(), out_name)
         output_payload = {
             "job_metadata": {
                 "job_id": job.get("job_id"),
@@ -318,10 +343,8 @@ def revit_remote_server():
             "result_data": result,
             "status": "completed"
         }
-        _save_json(out_path_public, output_payload)
-        _save_json(out_path_local, output_payload)
-        logs.append("Output saved: " + out_path_public)
-        logs.append("Output saved: " + out_path_local)
+        _save_json(out_path, output_payload)
+        logs.append("Output saved: " + out_path)
 
         # 5) mark completed (success)
         _update_job_status(job, "completed", {"result_data": result})
