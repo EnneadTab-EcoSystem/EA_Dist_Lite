@@ -22,8 +22,8 @@ if not exist "RevitSlave.exe" (
     echo [ERROR] RevitSlave.exe not found in current directory
     echo Expected location: %SCRIPT_DIR%RevitSlave.exe
     echo.
-    echo Press any key to close this window...
-    pause > nul
+    echo Window will auto-close in 5 hours or press any key to close now...
+    timeout /t 18000 > nul
     exit /b 1
 )
 
@@ -57,7 +57,7 @@ if %EXIT_CODE% neq 0 (
 )
 
 echo.
-echo Press any key to close this window...
-pause > nul
+echo Window will auto-close in 5 hours or press any key to close now...
+timeout /t 18000 > nul
 exit /b %EXIT_CODE%
 
