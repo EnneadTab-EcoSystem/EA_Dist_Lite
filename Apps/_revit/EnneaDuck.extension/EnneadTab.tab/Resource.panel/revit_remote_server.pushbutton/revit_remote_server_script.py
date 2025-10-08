@@ -394,7 +394,7 @@ def run_metric(doc, job_payload, paths=None):
             result = health_metric.check()
             _append_debug("Real HealthMetric completed successfully", paths)
             print("STATUS: Real health metrics completed successfully")
-            return result
+            return result, None
                 
         except Exception as check_ex:
             raise Exception("HealthMetric.check() failed: {}".format(str(check_ex)))
@@ -412,23 +412,8 @@ def run_metric(doc, job_payload, paths=None):
         print("Error: {}".format(error_msg[:200]))  # Truncate long errors
         
         # Return mock data so job can complete successfully
-        return {
-            "mock_mode": True,
-            "fallback_reason": "Real HealthMetric failed",
-            "error_summary": error_msg[:500],  # Include error for debugging
-            "debug_info": {
-                "model_path": job_payload.get('model_path', 'Unknown'),
-                "model_name": job_payload.get('model_name', 'Unknown'),
-                "revit_version": job_payload.get('revit_version', 'Unknown'),
-                "job_id": job_payload.get('job_id', 'Unknown'),
-                "error_occurred": True
-            },
-            "placeholder_metrics": {
-                "wall_count": 42,
-                "total_elements": 1000,
-                "note": "Mock values - real metrics failed"
-            }
-        }
+        return {}, error_msg[:500] # Include error for debugging
+        
 
 def _format_time(seconds):
     """Format time in readable format"""
@@ -442,6 +427,40 @@ def _format_time(seconds):
         hours = int(seconds // 3600)
         minutes = int((seconds % 3600) // 60)
         return "{} hours {} minutes".format(hours, minutes)
+
+def _format_file_size(bytes_size):
+    """Format file size in readable format (KB, MB, GB)"""
+    if bytes_size < 1024:
+        return "{} bytes".format(bytes_size)
+    elif bytes_size < 1024 * 1024:
+        kb = bytes_size / 1024.0
+        return "{:.2f} KB".format(kb)
+    elif bytes_size < 1024 * 1024 * 1024:
+        mb = bytes_size / (1024.0 * 1024.0)
+        return "{:.2f} MB".format(mb)
+    else:
+        gb = bytes_size / (1024.0 * 1024.0 * 1024.0)
+        return "{:.2f} GB".format(gb)
+
+def _get_file_size_info(file_path):
+    """Get file size information as both bytes and readable format"""
+    try:
+        if not file_path or not os.path.exists(file_path):
+            return {
+                "size_bytes": 0,
+                "size_readable": "File not found"
+            }
+        
+        size_bytes = os.path.getsize(file_path)
+        return {
+            "size_bytes": size_bytes,
+            "size_readable": _format_file_size(size_bytes)
+        }
+    except Exception as e:
+        return {
+            "size_bytes": 0,
+            "size_readable": "Error getting size: {}".format(str(e))
+        }
 
 def _handle_job_failure(job, logs, exception, traceback_str, paths=None):
     """
@@ -594,8 +613,13 @@ def revit_remote_server():
         
         try:
             _write_heartbeat("Running health metrics...", paths)
-            result = run_metric(doc, job, paths)
-            _write_heartbeat("Health metrics completed", paths)
+            result, error_msg = run_metric(doc, job, paths)
+            if result is None:
+                _write_heartbeat("Health metrics completed with error", paths)
+                _append_debug("Health metrics completed with error: {}".format(error_msg), paths)
+                print("STATUS: Health metrics completed with error: {}".format(error_msg))
+            else:
+                _write_heartbeat("Health metrics completed", paths)
         finally:
             try:
                 if must_close and doc is not None:
@@ -608,6 +632,10 @@ def revit_remote_server():
         # Calculate execution time
         execution_time = time.time() - begin_time
 
+        # Get file size information
+        model_path = job.get('model_path', '')
+        file_size_info = _get_file_size_info(model_path)
+
         # 4) write output file
         _write_heartbeat("Writing output file...", paths)
         out_name = _format_output_filename(job)
@@ -618,13 +646,15 @@ def revit_remote_server():
                 "hub_name": job.get("hub_name"),
                 "project_name": job.get("project_name"),
                 "model_name": job.get("model_name"),
+                "model_file_size_bytes": file_size_info["size_bytes"],
+                "model_file_size_readable": file_size_info["size_readable"],
                 "revit_version": job.get("revit_version"),
                 "timestamp": datetime.now().isoformat(),
                 "execution_time_seconds": round(execution_time, 2),
                 "execution_time_readable": _format_time(execution_time)
             },
             "result_data": result,
-            "status": "completed"
+            "status": "completed" + (" with error" if error_msg else "")
         }
         _save_json(out_path, output_payload)
         logs.append("Output saved: " + out_path)

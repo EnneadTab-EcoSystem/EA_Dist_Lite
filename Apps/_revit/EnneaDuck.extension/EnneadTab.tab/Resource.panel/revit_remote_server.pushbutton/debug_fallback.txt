@@ -19,3 +19,10 @@ Exception: current_job.sexyDuck not found
 Exception: current_job.sexyDuck not found
 
 [2025-10-07T23:40:11.125000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T01:57:53.199000] EXCEPTION: current_job.sexyDuck not found after 10 seconds
+[2025-10-08T01:57:53.210000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 531, in revit_remote_server
+    raise Exception("current_job.sexyDuck not found after {} seconds".format(max_wait_time))
+Exception: current_job.sexyDuck not found after 10 seconds
+
+[2025-10-08T01:57:53.224000] === JOB STATUS TRANSITION: running -> failed ===

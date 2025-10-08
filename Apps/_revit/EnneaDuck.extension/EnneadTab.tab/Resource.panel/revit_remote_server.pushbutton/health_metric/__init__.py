@@ -1,4 +1,3 @@
-import os
 import traceback
 from Autodesk.Revit import DB # pyright: ignore
 from datetime import datetime
@@ -41,7 +40,9 @@ class HealthMetric:
             self._check_reference_planes()
             print("STATUS: Reference planes completed, checking materials...")
             self._check_materials()
-            print("STATUS: Materials completed, checking warnings...")
+            print("STATUS: Materials completed, checking line counts...")
+            self._check_line_count()
+            print("STATUS: Line counts completed, checking warnings...")
             self._check_warnings()
             print("STATUS: All health metric checks completed successfully!")
             
@@ -103,29 +104,26 @@ class HealthMetric:
             return []
 
     def _get_worksets_info(self):
-        """Get comprehensive worksets information"""
+        """Get comprehensive worksets information - limited to user worksets only"""
         try:
             # Use FilteredWorksetCollector instead of GetWorksetIds - based on codebase patterns
             all_worksets = DB.FilteredWorksetCollector(self.doc).ToWorksets()
+            
+            # Filter to user worksets only
+            user_worksets = [ws for ws in all_worksets if ws.Kind == DB.WorksetKind.UserWorkset]
+            
             worksets_data = {
-                "total_worksets": 0,
-                "user_worksets": 0,
-                "system_worksets": 0,
+                "total_worksets": len(user_worksets),
+                "user_worksets": len(user_worksets),
                 "workset_names": [],
                 "workset_details": [],
                 "workset_ownership": {},
                 "workset_element_counts": {}
             }
             
-            for workset in all_worksets:
-                worksets_data["total_worksets"] += 1
+            # Only process user worksets
+            for workset in user_worksets:
                 worksets_data["workset_names"].append(workset.Name)
-                
-                # Categorize worksets
-                if workset.Kind == DB.WorksetKind.UserWorkset:
-                    worksets_data["user_worksets"] += 1
-                else:
-                    worksets_data["system_worksets"] += 1
                 
                 # Get workset details
                 workset_detail = {
@@ -251,14 +249,29 @@ class HealthMetric:
             copied_views = [v for v in views if v.IsTemplate == False and hasattr(v, 'ViewTemplateId')]
             views_data["copied_views"] = len(copied_views)
             
-            # View types
-            view_types = {}
+            # View count by view type - comprehensive breakdown
+            view_count_by_type = {}
+            view_count_by_type_non_template = {}
+            view_count_by_type_template = {}
+            
             for view in views:
                 view_type = view.ViewType.ToString()
-                if view_type not in view_types:
-                    view_types[view_type] = 0
-                view_types[view_type] += 1
-            views_data["view_types"] = view_types
+                
+                # Overall count
+                current_count = view_count_by_type.get(view_type, 0)
+                view_count_by_type[view_type] = current_count + 1
+                
+                # Separate templates from non-templates
+                if view.IsTemplate:
+                    current_template_count = view_count_by_type_template.get(view_type, 0)
+                    view_count_by_type_template[view_type] = current_template_count + 1
+                else:
+                    current_non_template_count = view_count_by_type_non_template.get(view_type, 0)
+                    view_count_by_type_non_template[view_type] = current_non_template_count + 1
+            
+            views_data["view_count_by_type"] = view_count_by_type
+            views_data["view_count_by_type_non_template"] = view_count_by_type_non_template
+            views_data["view_count_by_type_template"] = view_count_by_type_template
             
             self.report["views_sheets"] = views_data
             
@@ -382,6 +395,11 @@ class HealthMetric:
             detail_components = [dc for dc in detail_components if dc.Category and "Detail Component" in dc.Category.Name]
             families_data["detail_components"] = len(detail_components)
             
+            # Find unused families
+            unused_families_info = self._find_unused_families(families)
+            families_data["unused_families_count"] = unused_families_info["count"]
+            families_data["unused_families_names"] = unused_families_info["names"]
+            
             # Advanced family analysis - based on QAQC_runner.py pattern
             families_data["in_place_families_creators"] = self._analyze_family_creators(in_place_families)
             families_data["non_parametric_families_creators"] = self._analyze_family_creators(non_parametric_families)
@@ -408,6 +426,46 @@ class HealthMetric:
             
         except Exception as e:
             return {"error": str(e)}
+
+    def _find_unused_families(self, families):
+        """Find families that have no instances placed in the project"""
+        try:
+            # Get all family instances in the project
+            all_family_instances = DB.FilteredElementCollector(self.doc).OfClass(DB.FamilyInstance).ToElements()
+            
+            # Create a set of family IDs that are actually used
+            used_family_ids = set()
+            for instance in all_family_instances:
+                try:
+                    # Get the symbol (type) of this instance
+                    symbol = instance.Symbol
+                    if symbol:
+                        # Get the family from the symbol
+                        family = symbol.Family
+                        if family:
+                            used_family_ids.add(family.Id.IntegerValue)
+                except:
+                    continue
+            
+            # Find unused families
+            unused_families = []
+            for family in families:
+                if family.Id.IntegerValue not in used_family_ids:
+                    # Skip in-place families as they're special cases
+                    if not family.IsInPlace:
+                        unused_families.append(family.Name)
+            
+            return {
+                "count": len(unused_families),
+                "names": sorted(unused_families)
+            }
+            
+        except Exception as e:
+            return {
+                "count": 0,
+                "names": [],
+                "error": str(e)
+            }
 
     def _check_graphical_elements(self):
         """Check graphical 2D elements metrics"""
@@ -547,6 +605,52 @@ class HealthMetric:
             self.report["materials"] = len(materials)
         except Exception as e:
             self.report["materials_error"] = str(e)
+
+    def _check_line_count(self):
+        """Check detail and model line usage with per-view breakdown"""
+        try:
+            line_data = {}
+            
+            # Collect all curve elements
+            curve_elements = DB.FilteredElementCollector(self.doc).OfClass(DB.CurveElement).ToElements()
+            
+            # Separate detail lines and model lines
+            detail_lines = []
+            model_lines = []
+            
+            for ce in curve_elements:
+                curve_type = ce.CurveElementType.ToString()
+                if curve_type == "DetailCurve":
+                    detail_lines.append(ce)
+                elif curve_type == "ModelCurve":
+                    model_lines.append(ce)
+            
+            # Total counts
+            line_data["detail_lines_total"] = len(detail_lines)
+            line_data["model_lines_total"] = len(model_lines)
+            
+            # Detail lines per view
+            detail_lines_per_view = {}
+            for detail_line in detail_lines:
+                try:
+                    # Get the view that owns this detail line
+                    owner_view_id = detail_line.OwnerViewId
+                    if owner_view_id and owner_view_id != DB.ElementId.InvalidElementId:
+                        view = self.doc.GetElement(owner_view_id)
+                        if view:
+                            view_name = view.Name
+                            current_count = detail_lines_per_view.get(view_name, 0)
+                            detail_lines_per_view[view_name] = current_count + 1
+                except Exception as e:
+                    # Skip if we can't get the view
+                    continue
+            
+            line_data["detail_lines_per_view"] = detail_lines_per_view
+            
+            self.report["line_count"] = line_data
+            
+        except Exception as e:
+            self.report["line_count_error"] = str(e)
 
     def _check_warnings(self):
         """Check warnings metrics with advanced analysis"""
