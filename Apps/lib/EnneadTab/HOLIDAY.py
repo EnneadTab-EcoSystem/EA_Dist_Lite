@@ -49,27 +49,27 @@ class HolidayDateChecker:
         """Get Chinese New Year celebration period for given year."""
         # Dates from Chinese calendar (approximate, can be adjusted)
         dates = {
-            2024: (datetime.date(2024, 2, 10), datetime.date(2024, 2, 24)),  # Year of Dragon
-            2025: (datetime.date(2025, 1, 29), datetime.date(2025, 2, 8)),   # Year of Snake
-            2026: (datetime.date(2026, 2, 17), datetime.date(2026, 3, 3)),   # Year of Horse
-            2027: (datetime.date(2027, 2, 6), datetime.date(2027, 2, 20)),   # Year of Goat
-            2028: (datetime.date(2028, 1, 26), datetime.date(2028, 2, 9)),   # Year of Monkey
-            2029: (datetime.date(2029, 2, 13), datetime.date(2029, 2, 27)),  # Year of Rooster
-            2030: (datetime.date(2030, 2, 3), datetime.date(2030, 2, 17)),   # Year of Dog
-            2031: (datetime.date(2031, 1, 23), datetime.date(2031, 2, 6)),   # Year of Pig
-            2032: (datetime.date(2032, 2, 11), datetime.date(2032, 2, 25)),  # Year of Rat
-            2033: (datetime.date(2033, 1, 31), datetime.date(2033, 2, 14)),  # Year of Ox
-            2034: (datetime.date(2034, 2, 19), datetime.date(2034, 3, 5)),   # Year of Tiger
-            2035: (datetime.date(2035, 2, 8), datetime.date(2035, 2, 22)),   # Year of Rabbit
-            2036: (datetime.date(2036, 1, 28), datetime.date(2036, 2, 11)),  # Year of Dragon
-            2037: (datetime.date(2037, 2, 15), datetime.date(2037, 3, 1)),   # Year of Snake
-            2038: (datetime.date(2038, 2, 4), datetime.date(2038, 2, 18)),   # Year of Horse
-            2039: (datetime.date(2039, 1, 24), datetime.date(2039, 2, 7)),   # Year of Goat
-            2040: (datetime.date(2040, 2, 12), datetime.date(2040, 2, 26)),  # Year of Monkey
-            2041: (datetime.date(2041, 2, 1), datetime.date(2041, 2, 15)),   # Year of Rooster
-            2042: (datetime.date(2042, 1, 22), datetime.date(2042, 2, 5)),   # Year of Dog
-            2043: (datetime.date(2043, 2, 10), datetime.date(2043, 2, 24)),  # Year of Pig
-            2044: (datetime.date(2044, 1, 30), datetime.date(2044, 2, 13)),  # Year of Rat
+            2024: (datetime.date(2024, 2, 10), datetime.date(2024, 2, 11)),  # Year of Dragon
+            2025: (datetime.date(2025, 1, 29), datetime.date(2025, 1, 30)),   # Year of Snake
+            2026: (datetime.date(2026, 2, 17), datetime.date(2026, 2, 18)),   # Year of Horse
+            2027: (datetime.date(2027, 2, 6), datetime.date(2027, 2, 7)),   # Year of Goat
+            2028: (datetime.date(2028, 1, 26), datetime.date(2028, 1, 27)),   # Year of Monkey
+            2029: (datetime.date(2029, 2, 13), datetime.date(2029, 2, 14)),  # Year of Rooster
+            2030: (datetime.date(2030, 2, 3), datetime.date(2030, 2, 4)),   # Year of Dog
+            2031: (datetime.date(2031, 1, 23), datetime.date(2031, 1, 24)),   # Year of Pig
+            2032: (datetime.date(2032, 2, 11), datetime.date(2032, 2, 12)),  # Year of Rat
+            2033: (datetime.date(2033, 1, 31), datetime.date(2033, 2, 1)),  # Year of Ox
+            2034: (datetime.date(2034, 2, 19), datetime.date(2034, 2, 20)),   # Year of Tiger
+            2035: (datetime.date(2035, 2, 8), datetime.date(2035, 2, 9)),   # Year of Rabbit
+            2036: (datetime.date(2036, 1, 28), datetime.date(2036, 1, 29)),  # Year of Dragon
+            2037: (datetime.date(2037, 2, 15), datetime.date(2037, 2, 16)),   # Year of Snake
+            2038: (datetime.date(2038, 2, 4), datetime.date(2038, 2, 5)),   # Year of Horse
+            2039: (datetime.date(2039, 1, 24), datetime.date(2039, 1, 25)),   # Year of Goat
+            2040: (datetime.date(2040, 2, 12), datetime.date(2040, 2, 13)),  # Year of Monkey
+            2041: (datetime.date(2041, 2, 1), datetime.date(2041, 2, 2)),   # Year of Rooster
+            2042: (datetime.date(2042, 1, 22), datetime.date(2042, 1, 23)),   # Year of Dog
+            2043: (datetime.date(2043, 2, 10), datetime.date(2043, 2, 11)),  # Year of Pig
+            2044: (datetime.date(2044, 1, 30), datetime.date(2044, 1, 31)),  # Year of Rat
             # Add more years as needed
         }
         return dates.get(year, (None, None))
@@ -78,27 +78,27 @@ class HolidayDateChecker:
     def get_mid_autumn_dates(year):
         """Get Mid-Autumn Festival dates for given year."""
         dates = {
-            2024: (datetime.date(2024, 9, 17), datetime.date(2024, 9, 30)),
-            2025: (datetime.date(2025, 10, 6), datetime.date(2025, 10, 19)),
-            2026: (datetime.date(2026, 9, 25), datetime.date(2026, 10, 8)),
-            2027: (datetime.date(2027, 9, 15), datetime.date(2027, 9, 28)),
-            2028: (datetime.date(2028, 10, 3), datetime.date(2028, 10, 16)),
-            2029: (datetime.date(2029, 9, 22), datetime.date(2029, 10, 5)),
-            2030: (datetime.date(2030, 9, 12), datetime.date(2030, 9, 25)),
-            2031: (datetime.date(2031, 10, 1), datetime.date(2031, 10, 14)),
-            2032: (datetime.date(2032, 9, 19), datetime.date(2032, 10, 2)),
-            2033: (datetime.date(2033, 9, 8), datetime.date(2033, 9, 21)),
-            2034: (datetime.date(2034, 9, 28), datetime.date(2034, 10, 11)),
-            2035: (datetime.date(2035, 9, 17), datetime.date(2035, 9, 30)),
-            2036: (datetime.date(2036, 10, 5), datetime.date(2036, 10, 18)),
-            2037: (datetime.date(2037, 9, 24), datetime.date(2037, 10, 7)),
-            2038: (datetime.date(2038, 9, 13), datetime.date(2038, 9, 26)),
-            2039: (datetime.date(2039, 10, 2), datetime.date(2039, 10, 15)),
-            2040: (datetime.date(2040, 9, 20), datetime.date(2040, 10, 3)),
-            2041: (datetime.date(2041, 9, 10), datetime.date(2041, 9, 23)),
-            2042: (datetime.date(2042, 9, 29), datetime.date(2042, 10, 12)),
-            2043: (datetime.date(2043, 9, 18), datetime.date(2043, 10, 1)),
-            2044: (datetime.date(2044, 10, 7), datetime.date(2044, 10, 20)),
+            2024: (datetime.date(2024, 9, 17), datetime.date(2024, 9, 18)),
+            2025: (datetime.date(2025, 10, 6), datetime.date(2025, 10, 7)),
+            2026: (datetime.date(2026, 9, 25), datetime.date(2026, 9, 26)),
+            2027: (datetime.date(2027, 9, 15), datetime.date(2027, 9, 16)),
+            2028: (datetime.date(2028, 10, 3), datetime.date(2028, 10, 4)),
+            2029: (datetime.date(2029, 9, 22), datetime.date(2029, 9, 23)),
+            2030: (datetime.date(2030, 9, 12), datetime.date(2030, 9, 13)),
+            2031: (datetime.date(2031, 10, 1), datetime.date(2031, 10, 2)),
+            2032: (datetime.date(2032, 9, 19), datetime.date(2032, 9, 20)),
+            2033: (datetime.date(2033, 9, 8), datetime.date(2033, 9, 9)),
+            2034: (datetime.date(2034, 9, 28), datetime.date(2034, 9, 29)),
+            2035: (datetime.date(2035, 9, 17), datetime.date(2035, 9, 18)),
+            2036: (datetime.date(2036, 10, 5), datetime.date(2036, 10, 6)),
+            2037: (datetime.date(2037, 9, 24), datetime.date(2037, 9, 25)),
+            2038: (datetime.date(2038, 9, 13), datetime.date(2038, 9, 14)),
+            2039: (datetime.date(2039, 10, 2), datetime.date(2039, 10, 3)),
+            2040: (datetime.date(2040, 9, 20), datetime.date(2040, 9, 21)),
+            2041: (datetime.date(2041, 9, 10), datetime.date(2041, 9, 11)),
+            2042: (datetime.date(2042, 9, 29), datetime.date(2042, 9, 30)),
+            2043: (datetime.date(2043, 9, 18), datetime.date(2043, 9, 19)),
+            2044: (datetime.date(2044, 10, 7), datetime.date(2044, 10, 8)),
             # Add more years as needed
         }
         return dates.get(year, (None, None))
@@ -107,15 +107,15 @@ class HolidayDateChecker:
     def get_xmas_dates(year):
         """Get Christmas celebration period."""
         return (
-            datetime.date(year, 12, 20),
-            datetime.date(year, 12, 31)
+            datetime.date(year, 12, 24),
+            datetime.date(year, 12, 25)
         )
 
     @staticmethod
     def get_pi_day_dates(year):
         """Get Pi Day celebration period."""
         return (
-            datetime.date(year, 3, 13),
+            datetime.date(year, 3, 14),
             datetime.date(year, 3, 15)
         )
 
@@ -139,7 +139,7 @@ class HolidayDateChecker:
     def get_halloween_dates(year):
         """Get Halloween celebration period."""
         return (
-            datetime.date(year, 10, 25),
+            datetime.date(year, 10, 30),
             datetime.date(year, 10, 31)
         )
 
@@ -354,7 +354,7 @@ def greeting_mid_moon():
     
     output.plot()
     
-    SOUND.play_sound(os.path.join(ENVIRONMENT.AUDIO_FOLDER, "holiday_chinese_new_year.wav"))
+    # SOUND.play_sound(os.path.join(ENVIRONMENT.AUDIO_FOLDER, "holiday_chinese_new_year.wav"))
 
     # Occasional export to HTML
     if random.random() > 0.2:

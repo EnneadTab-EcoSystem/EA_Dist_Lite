@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 [2025-10-07T23:24:49.272000] EXCEPTION: current_job.sexyDuck not found
 [2025-10-07T23:24:49.282000] TRACEBACK: Traceback (most recent call last):
   File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 521, in revit_remote_server
@@ -26,3 +27,194 @@ Exception: current_job.sexyDuck not found
 Exception: current_job.sexyDuck not found after 10 seconds
 
 [2025-10-08T01:57:53.224000] === JOB STATUS TRANSITION: running -> failed ===
+=======
+[2025-10-08T01:36:33.043000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T01:36:33.047000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 458, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T01:36:33.052000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T01:36:49.446000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T01:36:49.450000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 458, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T01:36:49.455000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T01:37:06.317000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T01:37:06.322000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 458, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T01:37:06.326000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T01:37:22.937000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T01:37:22.941000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 458, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T01:37:22.945000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T01:37:40.004000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T01:37:40.008000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 458, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T01:37:40.013000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T01:37:56.985000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T01:37:56.991000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 458, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T01:37:56.997000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T01:38:13.901000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T01:38:13.905000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 458, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T01:38:13.909000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T01:38:30.801000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T01:38:30.805000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 458, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T01:38:30.809000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T01:38:47.181000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T01:38:47.184000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 458, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T01:38:47.188000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T01:39:03.841000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T01:39:03.845000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 458, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T01:39:03.850000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T01:39:20.373000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T01:39:20.377000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 458, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T01:39:20.382000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T01:39:37.245000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T01:39:37.249000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 458, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T01:39:37.254000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T01:39:53.998000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T01:39:54.002000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 458, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T01:39:54.007000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T01:40:10.860000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T01:40:10.863000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 458, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T01:40:10.868000] === JOB STATUS TRANSITION: running -> failed ===
+>>>>>>> 7bdab61d (Refactor startup process to enhance instance management)
+[2025-10-08T10:37:17.772000] EXCEPTION: Invalid job payload structure
+[2025-10-08T10:37:17.776000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 554, in revit_remote_server
+    raise Exception("Invalid job payload structure")
+Exception: Invalid job payload structure
+
+[2025-10-08T10:37:17.781000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T10:37:18.227000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T10:37:18.232000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 558, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T10:37:18.236000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T10:37:46.133000] EXCEPTION: Invalid job payload structure
+[2025-10-08T10:37:46.138000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 554, in revit_remote_server
+    raise Exception("Invalid job payload structure")
+Exception: Invalid job payload structure
+
+[2025-10-08T10:37:46.146000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T10:37:48.984000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T10:37:48.988000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 558, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T10:37:48.993000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T10:37:49.417000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T10:37:49.422000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 558, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T10:37:49.428000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T10:47:25.203000] EXCEPTION: Invalid job payload structure
+[2025-10-08T10:47:25.209000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 554, in revit_remote_server
+    raise Exception("Invalid job payload structure")
+Exception: Invalid job payload structure
+
+[2025-10-08T10:47:25.216000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T10:48:07.499000] EXCEPTION: Invalid job payload structure
+[2025-10-08T10:48:07.500000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 554, in revit_remote_server
+    raise Exception("Invalid job payload structure")
+Exception: Invalid job payload structure
+
+[2025-10-08T10:48:07.500000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T10:48:08.399000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T10:48:08.415000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 558, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T10:48:08.417000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T10:48:08.566000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T10:48:08.566000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 558, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T10:48:08.583000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T10:50:59.370000] EXCEPTION: Invalid job payload structure
+[2025-10-08T10:50:59.374000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 554, in revit_remote_server
+    raise Exception("Invalid job payload structure")
+Exception: Invalid job payload structure
+
+[2025-10-08T10:50:59.379000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T10:51:25.208000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T10:51:25.212000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 558, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T10:51:25.219000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T10:51:26.831000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T10:51:26.831000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 558, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T10:51:26.846000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T10:51:27.011000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T10:51:27.011000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 558, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T10:51:27.028000] === JOB STATUS TRANSITION: running -> failed ===
