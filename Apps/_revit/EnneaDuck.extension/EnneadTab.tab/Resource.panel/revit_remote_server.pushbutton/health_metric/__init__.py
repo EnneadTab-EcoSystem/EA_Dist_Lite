@@ -1,51 +1,56 @@
 import os
-import sys
+import traceback
 from Autodesk.Revit import DB # pyright: ignore
 from datetime import datetime
 
-
-def add_kingduck_lib_to_path():
-    # Add the KingDuck.lib directory to sys.path to find proDUCKtion
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    # Go up to Apps/_revit/KingDuck.lib: health_metric -> revit_remote_server.pushbutton -> Resource.panel -> EnneadTab.tab -> EnneaDuck.extension -> _revit -> Apps -> _revit -> KingDuck.lib
-    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(current_dir)))))))
-    kingduck_lib_dir = os.path.join(base_dir, "Apps", "_revit", "KingDuck.lib")
-    sys.path.insert(0, kingduck_lib_dir)
-
-add_kingduck_lib_to_path()
-import proDUCKtion  # pyright: ignore
-proDUCKtion.validify()
-
-from EnneadTab import ERROR_HANDLE, LOG
-# No need for complex data holders - just return structured data
+# STANDALONE VERSION - No EnneadTab or proDUCKtion dependencies
+# This makes the HealthMetric completely independent and faster to import
 
 class HealthMetric:
-    @LOG.log(__file__, __name__)
-    @ERROR_HANDLE.try_catch_error()
     def __init__(self, doc):
         self.doc = doc
         self.report = {}
-        self.report["is_EnneadTab_Available"] = True
+        self.report["is_EnneadTab_Available"] = False  # Standalone version
         self.report["timestamp"] = datetime.now().isoformat()
         self.report["document_title"] = doc.Title
 
     def check(self):
-        """Run comprehensive health metric collection"""
-        self._check_project_info()
-        self._check_linked_files()
-        self._check_critical_elements()
-        self._check_rooms()
-        self._check_sheets_views()
-        self._check_templates_filters()
-        self._check_cad_files()
-        self._check_families()
-        self._check_graphical_elements()
-        self._check_groups()
-        self._check_reference_planes()
-        self._check_materials()
-        self._check_warnings()
-        
-        return self.report
+        """Run comprehensive health metric collection with progress logging"""
+        try:
+            print("STATUS: Starting project info collection...")
+            self._check_project_info()
+            print("STATUS: Project info completed, checking linked files...")
+            self._check_linked_files()
+            print("STATUS: Linked files completed, checking critical elements...")
+            self._check_critical_elements()
+            print("STATUS: Critical elements completed, checking rooms...")
+            self._check_rooms()
+            print("STATUS: Rooms completed, checking sheets/views...")
+            self._check_sheets_views()
+            print("STATUS: Sheets/views completed, checking templates/filters...")
+            self._check_templates_filters()
+            print("STATUS: Templates/filters completed, checking CAD files...")
+            self._check_cad_files()
+            print("STATUS: CAD files completed, checking families...")
+            self._check_families()
+            print("STATUS: Families completed, checking graphical elements...")
+            self._check_graphical_elements()
+            print("STATUS: Graphical elements completed, checking groups...")
+            self._check_groups()
+            print("STATUS: Groups completed, checking reference planes...")
+            self._check_reference_planes()
+            print("STATUS: Reference planes completed, checking materials...")
+            self._check_materials()
+            print("STATUS: Materials completed, checking warnings...")
+            self._check_warnings()
+            print("STATUS: All health metric checks completed successfully!")
+            
+            return self.report
+        except Exception as e:
+            print("STATUS: HealthMetric failed at: {}".format(str(e)))
+            # Add error to report and return partial results
+            self.report["health_metric_error"] = str(traceback.format_exc())
+            return self.report
 
     def _check_project_info(self):
         """Collect basic project information"""
@@ -625,10 +630,4 @@ class HealthMetric:
 
     def _check_enneadtab_availability(self):
         """Check if EnneadTab is available in the current session"""
-        try:
-            # Try to import EnneadTab modules to check availability
-            import sys
-            enneadtab_paths = [p for p in sys.path if 'EnneadTab' in p or 'EnneaDuck' in p]
-            return len(enneadtab_paths) > 0
-        except:
-            return False
+        return False  # Standalone version doesn't use EnneadTab

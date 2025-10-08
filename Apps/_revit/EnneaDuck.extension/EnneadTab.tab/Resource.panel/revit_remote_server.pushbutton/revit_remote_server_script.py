@@ -253,6 +253,36 @@ def _get_app():
         return _HOST_APP.app
     raise Exception("pyRevit HOST_APP.app not available")
 
+def _validate_file_before_open(model_path, paths=None):
+    """
+    Validate file exists and is accessible before attempting to open with Revit.
+    Returns detailed error message if validation fails, None if valid.
+    """
+    try:
+        # Check if file exists
+        if not os.path.exists(model_path):
+            return "File does not exist: {}".format(model_path)
+        
+        # Check if file is accessible (not locked)
+        try:
+            with open(model_path, 'rb') as f:
+                f.read(1)  # Try to read one byte
+        except PermissionError:
+            return "File is locked or permission denied: {}".format(model_path)
+        except Exception as e:
+            return "File access error: {} - {}".format(model_path, str(e))
+        
+        # Check file size (very small files might be corrupted)
+        file_size = os.path.getsize(model_path)
+        if file_size < 1024:  # Less than 1KB
+            return "File too small ({} bytes), likely corrupted: {}".format(file_size, model_path)
+        
+        _append_debug("File validation passed: {} ({} bytes)".format(model_path, file_size), paths)
+        return None  # Validation passed
+        
+    except Exception as e:
+        return "File validation error: {} - {}".format(model_path, str(e))
+
 def get_doc(job_payload, paths=None):
     """
     Obtain a Revit Document by opening the model_path specified in the job payload.
@@ -269,32 +299,52 @@ def get_doc(job_payload, paths=None):
         model_path = job_payload.get('model_path') if isinstance(job_payload, dict) else None
         if not model_path:
             raise Exception("Missing model_path in job payload")
+        
+        # Validate file before attempting to open
+        validation_error = _validate_file_before_open(model_path, paths)
+        if validation_error:
+            raise Exception("File validation failed: {}".format(validation_error))
+        
         app = _get_app()
+        _append_debug("Attempting to open file: {}".format(model_path), paths)
+        
         # Best-effort version/worksharing probe; do not block open on mismatch here
         try:
             bfi = DB.BasicFileInfo.Extract(model_path)
+            _append_debug("BasicFileInfo extracted successfully", paths)
         except Exception as ex:
-            _append_debug("BasicFileInfo.Extract failed: {}".format(ex), paths)
+            _append_debug("BasicFileInfo.Extract failed (continuing anyway): {}".format(ex), paths)
             bfi = None
+        
         mpath = DB.ModelPathUtils.ConvertUserVisiblePathToModelPath(model_path)
         opts = DB.OpenOptions()
+        
         # If the file is workshared, prefer to detach to avoid central locks
         try:
             if bfi is not None and bfi.IsWorkshared:
                 opts.DetachFromCentralOption = DB.DetachFromCentralOption.DetachAndPreserveWorksets
+                _append_debug("File is workshared, using detach option", paths)
         except Exception as ex:
             _append_debug("Setting DetachFromCentralOption failed: {}".format(ex), paths)
+        
         # Open with minimal load: close all worksets for reliability
         wsconfig = DB.WorksetConfiguration(DB.WorksetConfigurationOption.CloseAllWorksets)
         opts.SetOpenWorksetsConfiguration(wsconfig)
+        
+        _append_debug("Opening document with Revit API...", paths)
         opened_doc = app.OpenDocumentFile(mpath, opts)
+        
         if opened_doc is None:
-            raise Exception("OpenDocumentFile returned None")
+            raise Exception("OpenDocumentFile returned None - file may be corrupted or incompatible")
+        
+        _append_debug("Document opened successfully", paths)
         return opened_doc, True
+        
     except Exception as e:
-        _append_debug("get_doc failed: {}".format(e), paths)
-        _write_failure_payload("get_doc", e, job_payload, paths)
-        raise
+        error_msg = "get_doc failed for '{}': {}".format(model_path if 'model_path' in locals() else 'unknown', str(e))
+        _append_debug(error_msg, paths)
+        _write_failure_payload("get_doc", Exception(error_msg), job_payload, paths)
+        raise Exception(error_msg)
 
 def run_metric(doc, job_payload, paths=None):
     """
@@ -316,17 +366,38 @@ def run_metric(doc, job_payload, paths=None):
         if doc is None:
             raise Exception("No active document available - will use mock data")
         
-        # Try importing and running real HealthMetric
-        from health_metric import HealthMetric
+        # Try importing HealthMetric with detailed error handling
+        _append_debug("Attempting to import HealthMetric...", paths)
+        try:
+            from health_metric import HealthMetric
+            _append_debug("HealthMetric import successful", paths)
+        except ImportError as import_ex:
+            raise Exception("Failed to import HealthMetric: {}".format(str(import_ex)))
+        except Exception as import_ex:
+            raise Exception("Unexpected error importing HealthMetric: {}".format(str(import_ex)))
+        
         _append_debug("Attempting to run real HealthMetric.check()...", paths)
         print("STATUS: Running real health metrics...")
         
-        health_metric = HealthMetric(doc)
-        result = health_metric.check()
+        try:
+            health_metric = HealthMetric(doc)
+            _append_debug("HealthMetric instance created successfully", paths)
+        except Exception as init_ex:
+            raise Exception("Failed to create HealthMetric instance: {}".format(str(init_ex)))
         
-        _append_debug("Real HealthMetric completed successfully", paths)
-        print("STATUS: Real health metrics completed successfully")
-        return result
+        try:
+            # HealthMetric.check() can hang on large complex models, so we'll let it run
+            # but provide detailed logging to help identify where it might be hanging
+            _append_debug("Starting HealthMetric.check() - this may take time on large models...", paths)
+            print("STATUS: Running comprehensive health metrics (may take 1-2 minutes for large models)...")
+            
+            result = health_metric.check()
+            _append_debug("Real HealthMetric completed successfully", paths)
+            print("STATUS: Real health metrics completed successfully")
+            return result
+                
+        except Exception as check_ex:
+            raise Exception("HealthMetric.check() failed: {}".format(str(check_ex)))
         
     except Exception as ex:
         # AUTOMATIC FALLBACK: Any failure triggers mock data
@@ -446,8 +517,18 @@ def revit_remote_server():
     
     try:
         job_path = _job_path()
+        
+        # Wait for job file to be available (fix race condition)
+        max_wait_time = 10  # seconds
+        wait_interval = 0.5  # seconds
+        waited_time = 0
+        
+        while not os.path.exists(job_path) and waited_time < max_wait_time:
+            time.sleep(wait_interval)
+            waited_time += wait_interval
+        
         if not os.path.exists(job_path):
-            raise Exception("current_job.sexyDuck not found")
+            raise Exception("current_job.sexyDuck not found after {} seconds".format(max_wait_time))
 
         job = _load_json(job_path)
         if not isinstance(job, dict):
