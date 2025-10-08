@@ -162,7 +162,7 @@ def _write_failure_payload(title, exc, job=None, paths=None):
         job: Job dictionary (optional)
         paths: Paths dictionary from job file (optional)
     """
-    timestamp = datetime.now().strftime("%Y-%m")
+    timestamp = _get_monday_date_prefix()
     name = "{}_ERROR_{}.sexyDuck".format(timestamp, title)
     tb = traceback.format_exc()
     
@@ -231,9 +231,16 @@ def _write_failure_payload(title, exc, job=None, paths=None):
     except Exception:
         pass  # Give up silently
 
+def _get_monday_date_prefix():
+    """Get Monday of current week as yyyy-mm-dd string (Monday = start of week)"""
+    today = datetime.now()
+    days_since_monday = today.weekday()  # Monday = 0, Sunday = 6
+    monday_of_week = today - timedelta(days=days_since_monday)
+    return monday_of_week.strftime("%Y-%m-%d")
+
 def _format_output_filename(job_payload):
-    # {yyyy-mm}_hub_project_model.sexyDuck
-    ts = datetime.now().strftime("%Y-%m")
+    # {yyyy-mm-dd}_hub_project_model.sexyDuck (Monday = start of week)
+    ts = _get_monday_date_prefix()
     hub = (job_payload.get("hub_name") or "hub")
     proj = (job_payload.get("project_name") or "project")
     model = (job_payload.get("model_name") or "model")
@@ -501,7 +508,7 @@ def _handle_job_failure(job, logs, exception, traceback_str, paths=None):
         try:
             dbg_dir = _ensure_debug_dir(paths)
             fallback_name = "{}_{}_{}_ERROR.sexyDuck".format(
-                datetime.now().strftime("%Y-%m"),
+                _get_monday_date_prefix(),
                 job.get("hub_name", "hub"),
                 job.get("model_name", "model")
             )

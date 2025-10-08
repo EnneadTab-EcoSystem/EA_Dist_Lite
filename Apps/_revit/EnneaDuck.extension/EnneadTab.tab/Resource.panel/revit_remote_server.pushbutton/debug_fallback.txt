@@ -218,3 +218,52 @@ Exception: Job file must include 'paths' section with task_output_dir and debug_
 Exception: Job file must include 'paths' section with task_output_dir and debug_dir
 
 [2025-10-08T10:51:27.028000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T11:26:26.651000] EXCEPTION: Invalid job payload structure
+[2025-10-08T11:26:26.657000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 554, in revit_remote_server
+    raise Exception("Invalid job payload structure")
+Exception: Invalid job payload structure
+
+[2025-10-08T11:26:26.666000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T11:26:27.161000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T11:26:27.167000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 558, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T11:26:27.175000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T11:26:29.711000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T11:26:29.717000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 558, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T11:26:29.723000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T11:55:28.826000] EXCEPTION: Invalid job payload structure
+[2025-10-08T11:55:28.832000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 558, in revit_remote_server
+    raise Exception("Invalid job payload structure")
+Exception: Invalid job payload structure
+
+[2025-10-08T11:55:28.841000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T12:16:01.942000] EXCEPTION: Invalid job payload structure
+[2025-10-08T12:16:01.946000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 558, in revit_remote_server
+    raise Exception("Invalid job payload structure")
+Exception: Invalid job payload structure
+
+[2025-10-08T12:16:01.951000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T12:16:03.100000] EXCEPTION: Job file must include 'paths' section with task_output_dir and debug_dir
+[2025-10-08T12:16:03.105000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 562, in revit_remote_server
+    raise Exception("Job file must include 'paths' section with task_output_dir and debug_dir")
+Exception: Job file must include 'paths' section with task_output_dir and debug_dir
+
+[2025-10-08T12:16:03.111000] === JOB STATUS TRANSITION: running -> failed ===
+[2025-10-08T12:21:14.115000] EXCEPTION: current_job.sexyDuck not found after 10 seconds
+[2025-10-08T12:21:14.119000] TRACEBACK: Traceback (most recent call last):
+  File "C:\Users\szhang\github\EnneadTab-OS\Apps\_revit\EnneaDuck.extension\EnneadTab.tab\Resource.panel\revit_remote_server.pushbutton\revit_remote_server_script.py", line 554, in revit_remote_server
+    raise Exception("current_job.sexyDuck not found after {} seconds".format(max_wait_time))
+Exception: current_job.sexyDuck not found after 10 seconds
+
+[2025-10-08T12:21:14.119000] === JOB STATUS TRANSITION: running -> failed ===
