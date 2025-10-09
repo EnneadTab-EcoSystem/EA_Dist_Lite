@@ -18,100 +18,47 @@ from EnneadTab import NOTIFICATION
 
 from Autodesk.Revit import DB # pyright: ignore 
 from Autodesk.Revit import UI # pyright: ignore
-import clr
 uidoc = REVIT_APPLICATION.get_uidoc()
 doc = REVIT_APPLICATION.get_doc()
 
-def project_crv(crv):
-
-    pt0 = crv.GetEndPoint(0)
-    z = pt0.Z
-
-    #print "original crv z = " + str(z)
-    dist = abs(z)
-    vec = DB.XYZ(0,0,-z)
-    transform = DB.Transform.CreateTranslation (vec)
-    return crv.CreateTransformed  (transform)
-
-
-
-
-def get_intersect_pt_from_crvs(crv1, crv2):
-    crv1 = project_crv(crv1)
-    crv2 = project_crv(crv2)
-
-
-    #print "after crv1 z = " + str(crv1.GetEndPoint(0).Z)
-    #print "after crv2 z = " + str(crv2.GetEndPoint(0).Z)
-
-    res = crv1.Intersect(crv2)
-    #print res
-    if res == DB.SetComparisonResult.Overlap:
-
-        #iResult = DB.IntersectionResultArray()
-        iResult = clr.StrongBox[DB.IntersectionResultArray](DB.IntersectionResultArray())
-        #iResult = StrongBox[resultArray](DB.IntersectionResultArray())
-        crv1.Intersect(crv2,iResult)
-        if iResult.Size > 1:
-            print("%%%%many intersection")
-
-
-        raw_pt = iResult.Item[0].XYZPoint
-        projected_pt = DB.XYZ(raw_pt.X,raw_pt.Y,0)
-        return projected_pt
-    return None
-
 def nearest_Z_from_zList(my_Z, zList):
+    """Find the nearest Z value from a list of Z coordinates"""
     zList.sort(key = lambda x: abs(my_Z - x))
     return zList[0]
 
 
 def process_wall(wall, crvs):
+    """Process a wall and align its horizontal curtain grids to intersecting elements"""
     print("Processing wall: {}".format(output.linkify(wall.Id)))
 
     intersect_pts_Z = []
 
+    # Collect Z coordinates from reference elements
     for crv in crvs:
-
         if isinstance(crv, DB.Level):
-            #print crv.Elevation
-            #print crv.ProjectElevation
-            intersect_pts_Z.append(crv.ProjectElevation )
-            """
-            options = DB.Options()
-            options.View = doc.ActiveView
-            abstract_crv = crv.Geometry[options]
-            print(abstract_crv)
-            """
-
-
-
-        if isinstance(crv, DB.DetailLine ):
+            # Use level's project elevation as reference
+            intersect_pts_Z.append(crv.ProjectElevation)
+        elif isinstance(crv, DB.DetailLine):
+            # Use detail line's Z coordinate as reference
             abstract_crv = crv.GeometryCurve
-            #print abstract_crv.GetEndPoint(0).Z
             intersect_pts_Z.append(abstract_crv.GetEndPoint(0).Z)
 
+    # Get all horizontal grid Z coordinates for reference
     all_grid_zList = [doc.GetElement(x).FullCurve.GetEndPoint(0).Z for x in wall.CurtainGrid.GetUGridLineIds ()]
     all_grid_zList.sort()
-    #print intersect_pts_Z
-    #intersect_pts_Z.append(all_grid_zList[0])
-    #intersect_pts_Z.append(all_grid_zList[-1])
-    #print intersect_pts_Z
 
-
+    # Process each horizontal grid line
     for grid in [doc.GetElement(x) for x in wall.CurtainGrid.GetUGridLineIds ()]:
-        #print "{}".format(output.linkify(grid.Id))
-        #print grid.FullCurve
-        pt_Z = grid.FullCurve .GetEndPoint(0).Z
-
+        pt_Z = grid.FullCurve.GetEndPoint(0).Z
+        
+        # Find the nearest target Z coordinate
         target_pt_Z = nearest_Z_from_zList(pt_Z, intersect_pts_Z)
-
-        vecter = DB.XYZ(0,0,target_pt_Z - pt_Z)
-        #line = DB.Line.CreateBound(target_pt, projected_pt)
-        #doc.Create.NewDetailCurve(doc.ActiveView, line)
-        #print vecter
-        #DB.Transform.CreateTranslation (vecter)
-        DB.ElementTransformUtils.MoveElement(doc, grid.Id,vecter)
+        
+        # Calculate movement vector (only Z direction for horizontal grids)
+        movement_vector = DB.XYZ(0, 0, target_pt_Z - pt_Z)
+        
+        # Move the grid element
+        DB.ElementTransformUtils.MoveElement(doc, grid.Id, movement_vector)
 
 
 
@@ -122,7 +69,7 @@ def move_curtain_grid():
 
     walls = uidoc.Selection.PickObjects(UI.Selection.ObjectType.Element, "Pick walls")
     walls = [doc.GetElement(x) for x in walls]
-    walls = filter(lambda x: isinstance(x, DB.Wall), walls)
+    walls = [x for x in walls if isinstance(x, DB.Wall)]
     if len(walls) == 0:
         NOTIFICATION.messenger("No walls selected.")
         return
