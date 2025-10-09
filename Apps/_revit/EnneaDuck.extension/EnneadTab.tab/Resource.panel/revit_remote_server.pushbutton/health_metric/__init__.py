@@ -118,7 +118,8 @@ class HealthMetric:
                 "workset_names": [],
                 "workset_details": [],
                 "workset_ownership": {},
-                "workset_element_counts": {}
+                "workset_element_counts": {},
+                "workset_element_ownership": {}
             }
             
             # Only process user worksets
@@ -134,16 +135,65 @@ class HealthMetric:
                     "is_editable": workset.IsEditable,
                     "owner": workset.Owner if hasattr(workset, 'Owner') else "Unknown"
                 }
-                worksets_data["workset_details"].append(workset_detail)
                 
-                # Count elements in each workset
+                # Try to get creator and last editor for the workset
+                # Note: Worksets are not elements, so this might not work in all Revit versions
                 try:
+                    # Some versions of Revit API support getting worksharing info for worksets
+                    # by using a representative element or the workset table
+                    workset_detail["creator"] = "Unknown"
+                    workset_detail["last_editor"] = "Unknown"
+                    
+                    # Try to get the first element in the workset to derive ownership info
                     elements_in_workset = DB.FilteredElementCollector(self.doc).WherePasses(
                         DB.ElementWorksetFilter(workset.Id)
                     ).ToElements()
+                    
+                    if elements_in_workset:
+                        # Collect ownership info from elements in this workset
+                        creators = {}
+                        last_editors = {}
+                        current_owners = {}
+                        
+                        for element in elements_in_workset[:100]:  # Sample first 100 elements for performance
+                            try:
+                                info = DB.WorksharingUtils.GetWorksharingTooltipInfo(self.doc, element.Id)
+                                if info:
+                                    creator = info.Creator
+                                    last_editor = info.LastChangedBy
+                                    owner = info.Owner
+                                    
+                                    if creator:
+                                        creators[creator] = creators.get(creator, 0) + 1
+                                    if last_editor:
+                                        last_editors[last_editor] = last_editors.get(last_editor, 0) + 1
+                                    if owner:
+                                        current_owners[owner] = current_owners.get(owner, 0) + 1
+                            except:
+                                continue
+                        
+                        # Store ownership statistics for this workset
+                        worksets_data["workset_element_ownership"][workset.Name] = {
+                            "creators": creators,
+                            "last_editors": last_editors,
+                            "current_owners": current_owners
+                        }
+                        
+                        # Set the most common creator/editor as workset's primary creator/editor
+                        if creators:
+                            workset_detail["primary_creator"] = max(creators.items(), key=lambda x: x[1])[0]
+                        if last_editors:
+                            workset_detail["primary_last_editor"] = max(last_editors.items(), key=lambda x: x[1])[0]
+                        
                     worksets_data["workset_element_counts"][workset.Name] = len(elements_in_workset)
+                    
                 except Exception as e:
                     worksets_data["workset_element_counts"][workset.Name] = 0
+                    worksets_data["workset_element_ownership"][workset.Name] = {
+                        "error": str(e)
+                    }
+                
+                worksets_data["workset_details"].append(workset_detail)
                     
             return worksets_data
         except Exception as e:
@@ -410,19 +460,32 @@ class HealthMetric:
             self.report["families"] = {"error": str(e)}
 
     def _analyze_family_creators(self, families):
-        """Analyze family creators - based on QAQC_runner.py pattern"""
+        """Analyze family creators and last editors - based on QAQC_runner.py pattern"""
         try:
             creator_data = {}
+            last_editor_data = {}
             for family in families:
                 try:
-                    creator = DB.WorksharingUtils.GetWorksharingTooltipInfo(
-                        self.doc, family.Id).Creator
-                    count = creator_data.get(creator, 0)
-                    creator_data[creator] = count + 1
+                    info = DB.WorksharingUtils.GetWorksharingTooltipInfo(
+                        self.doc, family.Id)
+                    if info:
+                        creator = info.Creator
+                        last_editor = info.LastChangedBy
+                        
+                        if creator:
+                            count = creator_data.get(creator, 0)
+                            creator_data[creator] = count + 1
+                        
+                        if last_editor:
+                            count = last_editor_data.get(last_editor, 0)
+                            last_editor_data[last_editor] = count + 1
                 except:
                     pass  # Skip if worksharing info not available
             
-            return creator_data
+            return {
+                "creators": creator_data,
+                "last_editors": last_editor_data
+            }
             
         except Exception as e:
             return {"error": str(e)}
@@ -680,6 +743,7 @@ class HealthMetric:
             # Advanced warning analysis - based on QAQC_runner.py patterns
             warning_category = {}
             user_personal_log = {}
+            user_editor_log = {}
             failed_elements = []
             
             for warning in all_warnings:
@@ -692,24 +756,36 @@ class HealthMetric:
                 # Collect failing elements
                 failed_elements.extend(list(warning.GetFailingElements()))
                 
-                # Process creator information - based on QAQC_runner.py pattern
+                # Process creator and last editor information - based on QAQC_runner.py pattern
                 try:
-                    creators = [DB.WorksharingUtils.GetWorksharingTooltipInfo(
-                        self.doc, x).Creator for x in warning.GetFailingElements()]
-                    
-                    for creator in creators:
-                        if creator not in user_personal_log:
-                            user_personal_log[creator] = {}
+                    failing_elements = warning.GetFailingElements()
+                    for element_id in failing_elements:
+                        info = DB.WorksharingUtils.GetWorksharingTooltipInfo(self.doc, element_id)
+                        if info:
+                            creator = info.Creator
+                            last_editor = info.LastChangedBy
                             
-                        current_log = user_personal_log[creator]
-                        current_log[warning_text] = current_log.get(warning_text, 0) + 1
+                            # Track creator warnings
+                            if creator:
+                                if creator not in user_personal_log:
+                                    user_personal_log[creator] = {}
+                                current_log = user_personal_log[creator]
+                                current_log[warning_text] = current_log.get(warning_text, 0) + 1
+                            
+                            # Track last editor warnings
+                            if last_editor:
+                                if last_editor not in user_editor_log:
+                                    user_editor_log[last_editor] = {}
+                                current_log = user_editor_log[last_editor]
+                                current_log[warning_text] = current_log.get(warning_text, 0) + 1
                 except:
                     pass  # Skip if worksharing info not available
             
             # Store advanced warning analysis
             warnings_data["warning_categories"] = warning_category
             warnings_data["warning_count_per_user"] = self._get_user_element_counts(failed_elements)
-            warnings_data["warning_details_per_user"] = user_personal_log
+            warnings_data["warning_details_per_creator"] = user_personal_log
+            warnings_data["warning_details_per_last_editor"] = user_editor_log
             
             self.report["warnings"] = warnings_data
             
@@ -717,18 +793,31 @@ class HealthMetric:
             self.report["warnings"] = {"error": str(e)}
 
     def _get_user_element_counts(self, elements):
-        """Get element counts per user - based on QAQC_runner.py pattern"""
+        """Get element counts per user (creator and last editor) - based on QAQC_runner.py pattern"""
         try:
-            user_data = {}
+            creator_data = {}
+            last_editor_data = {}
             for element in elements:
                 try:
-                    creator = DB.WorksharingUtils.GetWorksharingTooltipInfo(
-                        self.doc, element.Id).Creator
-                    count = user_data.get(creator, 0)
-                    user_data[creator] = count + 1
+                    info = DB.WorksharingUtils.GetWorksharingTooltipInfo(
+                        self.doc, element.Id)
+                    if info:
+                        creator = info.Creator
+                        last_editor = info.LastChangedBy
+                        
+                        if creator:
+                            count = creator_data.get(creator, 0)
+                            creator_data[creator] = count + 1
+                        
+                        if last_editor:
+                            count = last_editor_data.get(last_editor, 0)
+                            last_editor_data[last_editor] = count + 1
                 except:
                     pass  # Skip if worksharing info not available
-            return user_data
+            return {
+                "by_creator": creator_data,
+                "by_last_editor": last_editor_data
+            }
         except:
             return {}
 
