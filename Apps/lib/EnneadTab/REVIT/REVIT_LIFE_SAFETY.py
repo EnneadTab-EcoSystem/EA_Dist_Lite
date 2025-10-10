@@ -548,7 +548,11 @@ class EgressPathManager:
         for instance in instances:
             view_scale = self.doc.GetElement(instance.OwnerViewId).Scale
             instance.LookupParameter("ScaleFactor_desired").Set(view_scale)
-            instance.LookupParameter(self.para_name_egress_level).Set(self.doc.GetElement(instance.OwnerViewId).GenLevel.Name)
+            try:
+                instance.LookupParameter(self.para_name_egress_level).Set(self.doc.GetElement(instance.OwnerViewId).GenLevel.Name)
+            except:
+                # some time if it is plaaced at drafting view or legend view there is not level information.
+                instance.LookupParameter(self.para_name_egress_level).Set(self.doc.GetElement(instance.OwnerViewId).Name)
 
             path_id = instance.LookupParameter(self.para_name_egress_path_path_id).AsString() or "No Path ID"
             instance.LookupParameter(self.para_name_egress_path_path_id).Set(path_id)
