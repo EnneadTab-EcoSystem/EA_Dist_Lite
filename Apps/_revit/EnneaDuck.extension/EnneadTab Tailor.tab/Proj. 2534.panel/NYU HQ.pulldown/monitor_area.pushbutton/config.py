@@ -45,7 +45,7 @@ SCALED_DGSF_KEY = {
 # Excel file settings
 EXCEL_FILENAME = "Sample.xlsx"
 EXCEL_WORKSHEET = "Sheet1"
-EXCEL_HEADER_ROW = 2  # Row where headers are located (0-based)
+EXCEL_HEADER_ROW = 1  # Row where headers are located (1-based, as per parse_excel_data documentation)
 
 # Primary key for Excel data parsing (use excel version)
 EXCEL_PRIMARY_KEY = PROGRAM_TYPE_DETAIL_KEY[APP_EXCEL]
@@ -53,6 +53,13 @@ EXCEL_PRIMARY_KEY = PROGRAM_TYPE_DETAIL_KEY[APP_EXCEL]
 # =============================================================================
 # REVIT CONFIGURATION
 # =============================================================================
+
+# Area schemes to process (leave empty to process all schemes)
+# Examples: 
+#   ["DGSF Scheme"] - process only DGSF Scheme
+#   ["DGSF Scheme", "GFA Scheme"] - process multiple schemes
+#   [] - process all schemes found in document
+AREA_SCHEMES_TO_PROCESS = ["DGSF Scheme"]
 
 
 
@@ -89,5 +96,9 @@ TABLE_COLUMN_HEADERS = {
 # Matching settings
 # NOTE: Matching uses EXACT match on all 3 parameters (case-insensitive)
 # Department, Program Type, and Program Type Detail must all match exactly
-AREA_TOLERANCE_PERCENTAGE = 5.0   # 5% tolerance for area fulfillment status
+AREA_TOLERANCE_PERCENTAGE = 5.0
+
+# Alert thresholds for highlighting high differences
+COUNT_DELTA_ALERT_THRESHOLD = 10  # Alert if count difference is >= 10
+AREA_PERCENTAGE_ALERT_THRESHOLD = 50.0  # Alert if area percentage difference is >= 50%   # 5% tolerance for area fulfillment status
 

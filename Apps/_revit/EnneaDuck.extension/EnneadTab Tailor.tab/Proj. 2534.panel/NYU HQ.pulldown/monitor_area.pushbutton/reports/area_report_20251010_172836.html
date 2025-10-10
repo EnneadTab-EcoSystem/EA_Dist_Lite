@@ -1,0 +1,736 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Area Requirements vs Actual - Report</title>
+    <style>
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            line-height: 1.5;
+            color: #f8fafc;
+            background: #0a0e13;
+            min-height: 100vh;
+            font-weight: 400;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        
+        .report-header {
+            text-align: center;
+            margin-bottom: 48px;
+            padding: 40px 32px;
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 8px;
+        }
+        
+        .report-header h1 {
+            color: #ffffff;
+            font-size: 2.25rem;
+            margin-bottom: 16px;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+        
+        .report-info {
+            color: #9ca3af;
+            font-size: 0.875rem;
+            font-weight: 400;
+        }
+        
+        .report-info strong {
+            color: #d1d5db;
+            font-weight: 500;
+        }
+        
+        .summary-section, .status-summary, .comparison-section, .unmatched-section, .scheme-summary, .scheme-section {
+            margin-bottom: 32px;
+        }
+        
+        .summary-section h2, .status-summary h2, .comparison-section h2, .unmatched-section h2, .scheme-summary h2, .scheme-section h2 {
+            color: #ffffff;
+            margin-bottom: 24px;
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.025em;
+        }
+        
+        .unmatched-section h3 {
+            color: #f59e0b;
+            margin-bottom: 16px;
+            font-size: 1.125rem;
+            font-weight: 500;
+        }
+        
+        .summary-cards, .scheme-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        
+        .card, .scheme-card {
+            background: #111827;
+            border: 1px solid #1f2937;
+            padding: 24px;
+            border-radius: 6px;
+            text-align: center;
+            transition: all 0.2s ease;
+        }
+        
+        .card:hover, .scheme-card:hover {
+            border-color: #374151;
+            background: #1f2937;
+        }
+        
+        .card h3, .scheme-card h3 {
+            font-size: 0.75rem;
+            margin-bottom: 8px;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+        
+        .card-value {
+            font-size: 1.875rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #ffffff;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .card-label {
+            font-size: 0.75rem;
+            color: #6b7280;
+            font-weight: 400;
+        }
+        
+        .scheme-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            display: block;
+            font-size: 1.5em;
+            font-weight: 700;
+            color: #60a5fa;
+        }
+        
+        .stat-label {
+            display: block;
+            font-size: 0.8em;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+        
+        .status-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+        }
+        
+        .status-card {
+            padding: 25px;
+            border-radius: 12px;
+            text-align: center;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .status-card.fulfilled {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        }
+        
+        .status-card.partial {
+            background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+        }
+        
+        .status-card.missing {
+            background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        }
+        
+        .status-card h3 {
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+        
+        .status-count {
+            font-size: 2.5em;
+            font-weight: 700;
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            border-radius: 8px;
+            background: #111827;
+            border: 1px solid #1f2937;
+            margin-bottom: 24px;
+        }
+        
+        .comparison-table, .unmatched-table {
+            width: 100%;
+            border-collapse: collapse;
+            border-spacing: 0;
+            background-color: transparent;
+            font-size: 0.875rem;
+            border: 1px solid #374151;
+        }
+        
+        .comparison-table th, .unmatched-table th {
+            background: #1f2937;
+            color: #f9fafb;
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border: 1px solid #374151;
+            border-bottom: 2px solid #4b5563;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .comparison-table td, .unmatched-table td {
+            padding: 12px 16px;
+            border: 1px solid #374151;
+            color: #e5e7eb;
+            font-weight: 400;
+            background-color: #111827;
+        }
+        
+        .comparison-table tbody tr, .unmatched-table tbody tr {
+            background-color: #111827;
+            transition: background-color 0.15s ease;
+        }
+        
+        .comparison-table tr:hover td, .unmatched-table tr:hover td {
+            background-color: #1f2937;
+            border-color: #4b5563;
+        }
+        
+        .status-fulfilled {
+            border: 2px solid #10b981;
+            background: linear-gradient(90deg, rgba(16,185,129,0.1) 0%, transparent 100%);
+        }
+        
+        .status-partial {
+            border: 2px solid #f59e0b;
+            background: linear-gradient(90deg, rgba(245,158,11,0.1) 0%, transparent 100%);
+        }
+        
+        .status-missing {
+            border: 2px solid #ef4444;
+            background: linear-gradient(90deg, rgba(239,68,68,0.1) 0%, transparent 100%);
+        }
+        
+        .positive {
+            color: #10b981;
+            font-weight: 700;
+        }
+        
+        .negative {
+            color: #ef4444;
+            font-weight: 700;
+        }
+        
+        .alert-high-difference {
+            background: #7f1d1d !important;
+            color: #fecaca !important;
+            font-weight: 700;
+            border: 2px solid #ef4444 !important;
+            animation: alertPulse 2s infinite;
+        }
+        
+        .alert-count-delta {
+            background: #78350f !important;
+            color: #fed7aa !important;
+            font-weight: 700;
+            border: 2px solid #f59e0b !important;
+        }
+        
+        .alert-area-delta {
+            background: #7c2d12 !important;
+            color: #fed7aa !important;
+            font-weight: 700;
+            border: 2px solid #ea580c !important;
+        }
+        
+        @keyframes alertPulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.6875rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+            display: inline-block;
+            border: 1px solid transparent;
+        }
+        
+        .status-badge.fulfilled {
+            background: #065f46;
+            color: #10b981;
+            border-color: #10b981;
+        }
+        
+        .status-badge.partial {
+            background: #78350f;
+            color: #f59e0b;
+            border-color: #f59e0b;
+        }
+        
+        .status-badge.missing {
+            background: #7f1d1d;
+            color: #ef4444;
+            border-color: #ef4444;
+        }
+        
+        .status-badge.excessive {
+            background: #7c2d12;
+            color: #ea580c;
+            border-color: #ea580c;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .status-badge.unmatched {
+            background: #374151;
+            color: #9ca3af;
+            border-color: #6b7280;
+        }
+        
+        .quality-badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.625rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.025em;
+        }
+        
+        .quality-badge.high {
+            background-color: #0c4a6e;
+            color: #38bdf8;
+            border: 1px solid #0ea5e9;
+        }
+        
+        .quality-badge.medium {
+            background-color: #78350f;
+            color: #fbbf24;
+            border: 1px solid #f59e0b;
+        }
+        
+        .quality-badge.low, .quality-badge.no {
+            background-color: #7f1d1d;
+            color: #f87171;
+            border: 1px solid #ef4444;
+        }
+        
+        .report-footer {
+            text-align: center;
+            margin-top: 48px;
+            padding: 24px;
+            background: #111827;
+            border-radius: 8px;
+            border: 1px solid #1f2937;
+            color: #6b7280;
+            font-size: 0.875rem;
+        }
+        
+        .scheme-comparisons {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        
+        .scheme-section {
+            background: #111827;
+            padding: 24px;
+            border-radius: 8px;
+            border: 1px solid #1f2937;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px 10px;
+            }
+            
+            .summary-cards, .scheme-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .report-header h1 {
+                font-size: 2em;
+            }
+            
+            .card, .scheme-card {
+                padding: 20px;
+            }
+        }
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="report-header">
+            <h1>🏥 Area Requirements vs Actual - Report</h1>
+            <div class="report-info">
+                <p><strong>Generated:</strong> 2025-10-10 17:28:36</p>
+                <p><strong>Project:</strong> NYU HQ - Monitor Area System</p>
+                <p><strong>Area Schemes:</strong> 1 schemes compared</p>
+            </div>
+        </header>
+        
+        <div class="scheme-comparisons">
+        
+        <div class="scheme-comparisons">
+        
+            <div class="scheme-section">
+                <h2>📋 DGSF Scheme - Detailed Comparison</h2>
+                <div class="table-container">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th>Department</th>
+                                <th>Division</th>
+                                <th>Function</th>
+                                <th>Level</th>
+                                <th>Required Count</th>
+                                <th>Required Area (SF)</th>
+                                <th>Actual Count</th>
+                                <th>Actual Area (SF)</th>
+                                <th>Count Delta</th>
+                                <th>Area Delta (SF)</th>
+                                <th>Area % Delta</th>
+                                <th>Status</th>
+                                <th>Match Quality</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            
+                <tr class="status-excessive alert-high-difference">
+                    <td>INPATIENT CARE</td>
+                    <td>INPATIENT CARE</td>
+                    <td><strong>Patient Bed</strong></td>
+                    <td>Level 1  Lobby / ED / Clinical / Support, Level 3  D+T / Patient Rooms</td>
+                    <td>500</td>
+                    <td>35,000</td>
+                    <td>3</td>
+                    <td>211,933</td>
+                    <td class="alert-count-delta">Missing 497</td>
+                    <td class="positive">Exceeding 176,933 SF</td>
+                    <td class="alert-area-delta">+505.5%</td>
+                    <td><span class="status-badge excessive">! Excessive</span></td>
+                    <td><span class="quality-badge low">Low</span></td>
+                </tr>
+            
+                <tr class="status-excessive ">
+                    <td>Emergency</td>
+                    <td>ED CARE</td>
+                    <td><strong>Lobby Support</strong></td>
+                    <td>Level 3  D+T / Patient Rooms</td>
+                    <td>1</td>
+                    <td>300</td>
+                    <td>1</td>
+                    <td>462,292</td>
+                    <td class="positive">Exact Match</td>
+                    <td class="positive">Exceeding 461,992 SF</td>
+                    <td class="alert-area-delta">+153997.3%</td>
+                    <td><span class="status-badge excessive">! Excessive</span></td>
+                    <td><span class="quality-badge low">Low</span></td>
+                </tr>
+            
+                <tr class="status-missing ">
+                    <td>Emergency</td>
+                    <td>ED CARE</td>
+                    <td><strong>Lobby</strong></td>
+                    <td>No Areas</td>
+                    <td>3</td>
+                    <td>1,500</td>
+                    <td>0</td>
+                    <td>0</td>
+                    <td class="negative">Missing 3</td>
+                    <td class="negative">Missing 1,500 SF</td>
+                    <td class="alert-area-delta">-100.0%</td>
+                    <td><span class="status-badge missing">✕ Missing</span></td>
+                    <td><span class="quality-badge no match">No Match</span></td>
+                </tr>
+            
+                        </tbody>
+                    </table>
+                </div>
+                
+                
+        <div class="unmatched-section">
+            <h3>○ Unmatched Areas - DGSF Scheme</h3>
+            <p>The following Revit areas were not matched to any Excel requirements, grouped by level:</p>
+            
+            <div class="level-section">
+                <h4>📍 Level 1  Lobby / ED / Clinical / Support (4 areas, 54,918.4955 SF)</h4>
+                <div class="table-container">
+                    <table class="unmatched-table">
+                        <thead>
+                            <tr>
+                                <th>Department</th>
+                                <th>Division</th>
+                                <th>Function</th>
+                                <th>Area (SF)</th>
+                                <th>Created By</th>
+                                <th>Last Edited By</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            
+                    <tr>
+                        <td>ADMINISTRATION AND STAFF SUPPORT</td>
+                        <td></td>
+                        <td></td>
+                        <td>0 SF</td>
+                        <td>szhangGOODLOOKING</td>
+                        <td>yhuangZZUZV</td>
+                        <td><span class="status-badge unmatched">○ Unmatched</span></td>
+                    </tr>
+                
+                    <tr>
+                        <td>INPATIENT CARE</td>
+                        <td></td>
+                        <td></td>
+                        <td>0 SF</td>
+                        <td>szhangGOODLOOKING</td>
+                        <td>yhuangZZUZV</td>
+                        <td><span class="status-badge unmatched">○ Unmatched</span></td>
+                    </tr>
+                
+                    <tr>
+                        <td>WaterMelon</td>
+                        <td>orange</td>
+                        <td></td>
+                        <td>8,531 SF</td>
+                        <td>szhangGOODLOOKING</td>
+                        <td>Unknown</td>
+                        <td><span class="status-badge unmatched">○ Unmatched</span></td>
+                    </tr>
+                
+                    <tr>
+                        <td>INPATIENT CARE</td>
+                        <td>INPATIENT CARE</td>
+                        <td>Lobby Support</td>
+                        <td>46,387 SF</td>
+                        <td>szhangGOODLOOKING</td>
+                        <td>Unknown</td>
+                        <td><span class="status-badge unmatched">○ Unmatched</span></td>
+                    </tr>
+                
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="level-section">
+                <h4>📍 Level 11  Patient Rooms (1 areas, 227,633.0453 SF)</h4>
+                <div class="table-container">
+                    <table class="unmatched-table">
+                        <thead>
+                            <tr>
+                                <th>Department</th>
+                                <th>Division</th>
+                                <th>Function</th>
+                                <th>Area (SF)</th>
+                                <th>Created By</th>
+                                <th>Last Edited By</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            
+                    <tr>
+                        <td>DIAGNOSTIC AND TREATMENT</td>
+                        <td></td>
+                        <td></td>
+                        <td>227,633 SF</td>
+                        <td>szhangGOODLOOKING</td>
+                        <td>szhangGOODLOOKING</td>
+                        <td><span class="status-badge unmatched">○ Unmatched</span></td>
+                    </tr>
+                
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="level-section">
+                <h4>📍 Level 8  Patient Rooms (3 areas, 50,000.6772 SF)</h4>
+                <div class="table-container">
+                    <table class="unmatched-table">
+                        <thead>
+                            <tr>
+                                <th>Department</th>
+                                <th>Division</th>
+                                <th>Function</th>
+                                <th>Area (SF)</th>
+                                <th>Created By</th>
+                                <th>Last Edited By</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            
+                    <tr>
+                        <td>INPATIENT CARE</td>
+                        <td></td>
+                        <td></td>
+                        <td>20,881 SF</td>
+                        <td>szhangGOODLOOKING</td>
+                        <td>szhangGOODLOOKING</td>
+                        <td><span class="status-badge unmatched">○ Unmatched</span></td>
+                    </tr>
+                
+                    <tr>
+                        <td>EMERGENCY DEPARTMENT</td>
+                        <td></td>
+                        <td></td>
+                        <td>25,558 SF</td>
+                        <td>szhangGOODLOOKING</td>
+                        <td>szhangGOODLOOKING</td>
+                        <td><span class="status-badge unmatched">○ Unmatched</span></td>
+                    </tr>
+                
+                    <tr>
+                        <td>MECHANICAL</td>
+                        <td></td>
+                        <td></td>
+                        <td>3,562 SF</td>
+                        <td>szhangGOODLOOKING</td>
+                        <td>szhangGOODLOOKING</td>
+                        <td><span class="status-badge unmatched">○ Unmatched</span></td>
+                    </tr>
+                
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+        </div>
+        
+            </div>
+            
+        </div>
+        
+        <div class="scheme-summary">
+            <h2>📊 Area Scheme Summary</h2>
+            <div class="scheme-cards">
+        
+                <div class="scheme-card">
+                    <h3>DGSF Scheme</h3>
+                    <div class="scheme-stats">
+                        <div class="stat">
+                            <span class="stat-value">3</span>
+                            <span class="stat-label">Requirements</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">0</span>
+                            <span class="stat-label">Fulfilled</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">12</span>
+                            <span class="stat-label">Areas</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">1,006,777</span>
+                            <span class="stat-label">Total SF</span>
+                        </div>
+                    </div>
+                </div>
+            
+            </div>
+        </div>
+        
+        <footer class="report-footer">
+            <p>Report generated by Monitor Area System | 2025-10-10 17:28:36</p>
+            <p style="margin-top: 10px; font-size: 0.9em; color: #9ca3af;">
+                🦆 Powered by <strong style="color: #60a5fa;">EnneadTab</strong> | 
+                For feature requests, contact <strong style="color: #60a5fa;">Sen Zhang</strong>
+            </p>
+        </footer>
+    </div>
+    
+    <script>
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const table = document.querySelector('.comparison-table');
+            if (table) {
+                const headers = table.querySelectorAll('th');
+                headers.forEach((header, index) => {
+                    header.style.cursor = 'pointer';
+                    header.addEventListener('click', () => {
+                        sortTable(table, index);
+                    });
+                });
+            }
+        });
+        
+        function sortTable(table, columnIndex) {
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            rows.sort((a, b) => {
+                const aValue = a.cells[columnIndex].textContent.trim();
+                const bValue = b.cells[columnIndex].textContent.trim();
+                
+                const aNum = parseFloat(aValue.replace(/[^0-9.-]/g, ''));
+                const bNum = parseFloat(bValue.replace(/[^0-9.-]/g, ''));
+                
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    return aNum - bNum;
+                }
+                
+                return aValue.localeCompare(bValue);
+            });
+            
+            rows.forEach(row => tbody.appendChild(row));
+        }
+        
+    </script>
+</body>
+</html>
+        

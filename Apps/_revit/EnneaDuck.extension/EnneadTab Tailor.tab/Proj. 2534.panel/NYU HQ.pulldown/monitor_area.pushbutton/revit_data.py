@@ -41,6 +41,12 @@ def get_revit_area_data_by_scheme():
     
     for scheme in area_schemes:
         scheme_name = scheme.Name
+        
+        # Filter schemes based on configuration
+        if config.AREA_SCHEMES_TO_PROCESS and scheme_name not in config.AREA_SCHEMES_TO_PROCESS:
+            print("Skipping area scheme '{}' (not in processing list)".format(scheme_name))
+            continue
+            
         print("Processing area scheme: {}".format(scheme_name))
         
         # Get all areas in the document
@@ -60,24 +66,35 @@ def get_revit_area_data_by_scheme():
                 # Get area value directly from area.Area property
                 area_sf = area.Area
                 
-                # Create area object with all 3 parameters
+                # Get level name
+                level = area.Level
+                level_name = level.Name if level else "Unknown Level"
+                
+                # Get creator and editor information
+                creator_name = _get_element_creator(area, doc)
+                editor_name = _get_element_last_editor(area, doc)
+                
+                # Create area object with all parameters plus metadata
                 area_object = {
                     'department': department,
                     'program_type': program_type,
                     'program_type_detail': program_type_detail,
-                    'area_sf': area_sf
+                    'area_sf': area_sf,
+                    'level_name': level_name,
+                    'creator': creator_name,
+                    'last_editor': editor_name
                 }
                 
                 areas_list.append(area_object)
                 
                 print("Area (Dept: {}, Type: {}, Detail: {}) = {:.2f} SF".format(
-                    department, program_type, program_type_detail, area_sf))
+                    department, program_type, program_type_detail, float(area_sf)))
         
         scheme_data[scheme_name] = areas_list
         
         total_sf = sum(area['area_sf'] for area in areas_list)
         print("Scheme '{}' has {} areas totaling {:.0f} SF".format(
-            scheme_name, len(areas_list), total_sf))
+            scheme_name, len(areas_list), float(total_sf)))
     
 
     return scheme_data
@@ -110,12 +127,23 @@ def get_revit_area_data():
         # Get area value directly from area.Area property
         area_sf = area.Area
         
+        # Get level name
+        level = area.Level
+        level_name = level.Name if level else "Unknown Level"
+        
+        # Get creator and editor information
+        creator_name = _get_element_creator(area, doc)
+        editor_name = _get_element_last_editor(area, doc)
+        
         # Create comprehensive area data
         area_data = {
             'department': department,
             'program_type': program_type,
             'program_type_detail': program_type_detail,
-            'area_sf': area_sf
+            'area_sf': area_sf,
+            'level_name': level_name,
+            'creator': creator_name,
+            'last_editor': editor_name
         }
         
         # Use a unique key that includes the 3 parameters for better matching
@@ -123,7 +151,7 @@ def get_revit_area_data():
         out[unique_key] = area_data
         
         print("Area (Dept: {}, Type: {}, Detail: {}) = {:.2f} SF".format(
-            department, program_type, program_type_detail, area_sf))
+            department, program_type, program_type_detail, float(area_sf)))
 
     print("Successfully processed {} areas".format(len(out)))
     
@@ -185,6 +213,10 @@ def _get_all_areas_as_list(doc):
         else:
             scheme_name = "Default Scheme"
         
+        # Filter schemes based on configuration
+        if config.AREA_SCHEMES_TO_PROCESS and scheme_name not in config.AREA_SCHEMES_TO_PROCESS:
+            continue
+        
         # Get the 3 key parameters for proper matching
         department = _get_area_parameter_value(area, config.DEPARTMENT_KEY["revit"])
         program_type = _get_area_parameter_value(area, config.PROGRAM_TYPE_KEY["revit"])
@@ -193,12 +225,23 @@ def _get_all_areas_as_list(doc):
         # Get area value directly from area.Area property
         area_sf = area.Area
         
-        # Create area object with all 3 parameters
+        # Get level name
+        level = area.Level
+        level_name = level.Name if level else "Unknown Level"
+        
+        # Get creator and editor information
+        creator_name = _get_element_creator(area, doc)
+        editor_name = _get_element_last_editor(area, doc)
+        
+        # Create area object with all 3 parameters plus level and metadata
         area_object = {
             'department': department,
             'program_type': program_type,
             'program_type_detail': program_type_detail,
-            'area_sf': area_sf
+            'area_sf': area_sf,
+            'level_name': level_name,
+            'creator': creator_name,
+            'last_editor': editor_name
         }
         
         # Add to scheme's list
@@ -237,3 +280,29 @@ def _get_area_parameter_value(area, parameter_name):
     
         
     raise Exception("ERROR getting parameter '{}': {}".format(parameter_name, "Parameter not found"))
+
+
+def _get_element_creator(element, doc):
+    """Get the creator of an element using Revit API"""
+    try:
+        # Use WorksharingUtils to get element ownership information
+        info = DB.WorksharingUtils.GetWorksharingTooltipInfo(doc, element.Id)
+        if info and info.Creator:
+            return info.Creator
+        else:
+            return "Unknown"
+    except:
+        return "Unknown"
+
+
+def _get_element_last_editor(element, doc):
+    """Get the last editor of an element using Revit API"""
+    try:
+        # Use WorksharingUtils to get element ownership information
+        info = DB.WorksharingUtils.GetWorksharingTooltipInfo(doc, element.Id)
+        if info and info.LastChangedBy:
+            return info.LastChangedBy
+        else:
+            return "Unknown"
+    except:
+        return "Unknown"

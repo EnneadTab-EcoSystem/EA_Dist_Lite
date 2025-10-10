@@ -1,962 +1,12 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
 
-"""
-HTML Export Module - Handles area matching and HTML report generation
-Uses exact matching on 3 parameters: Department, Program Type, Program Type Detail
-"""
-
-import os
-import webbrowser
-import io
-from datetime import datetime
-import config
-
-
-class AreaMatcher:
-    """Exact matching between Excel requirements and Revit areas using 3 parameters"""
-    
-    def _safe_int(self, value):
-        """Safely convert value to integer"""
-        try:
-            return int(float(value)) if value else 0
-        except (ValueError, TypeError):
-            return 0
-    
-    def _safe_float(self, value):
-        """Safely convert value to float"""
-        try:
-            return float(value) if value else 0.0
-        except (ValueError, TypeError):
-            return 0.0
-    
-    def match_areas_to_requirements(self, excel_data, revit_data):
-        """
-        Match Revit areas to Excel requirements
-        
-        Args:
-            excel_data: Dictionary of Excel data with RowData objects
-            revit_data: Dictionary with scheme names as keys and list of area objects as values
-                {
-                    'scheme1': [area_object1, area_object2, ...],
-                    'scheme2': [area_object1, area_object2, ...]
-                }
-            
-        Returns:
-            dict: Dictionary with scheme names as keys and match data as values
-        """
-        all_matches = {}
-        
-        for scheme_name, areas_list in revit_data.items():
-            if isinstance(areas_list, list):
-                matches = self._match_single_scheme(excel_data, areas_list)
-                
-                # Calculate scheme info
-                total_sf = sum(self._safe_float(area['area_sf']) for area in areas_list)
-                scheme_info = {
-                    'name': scheme_name,
-                    'count': len(areas_list),
-                    'total_sf': total_sf
-                }
-                
-                all_matches[scheme_name] = {
-                    'matches': matches,
-                    'scheme_info': scheme_info
-                }
-        
-        return all_matches
-    
-    def _match_single_scheme(self, excel_data, areas_list):
-        """
-        Match areas for a single scheme
-        
-        Args:
-            excel_data: Dictionary of Excel data with RowData objects
-            areas_list: List of area objects
-            
-        Returns:
-            list: List of match results
-        """
-        matches = []
-        
-        for room_key, requirement in excel_data.items():
-            # Extract requirement data from RowData object using Excel column names
-            room_name = getattr(requirement, config.PROGRAM_TYPE_DETAIL_KEY[config.APP_EXCEL], room_key)
-            department = getattr(requirement, config.DEPARTMENT_KEY[config.APP_EXCEL], '')
-            program_type = getattr(requirement, config.PROGRAM_TYPE_KEY[config.APP_EXCEL], '')
-            target_count = getattr(requirement, config.COUNT_KEY[config.APP_EXCEL], 0)
-            target_dgsf = getattr(requirement, config.SCALED_DGSF_KEY[config.APP_EXCEL], 0)
-            
-            # Convert to numeric types to ensure proper calculations
-            target_count = self._safe_int(target_count)
-            target_dgsf = self._safe_float(target_dgsf)
-            
-            # Find matching Revit areas using exact 3-parameter match
-            matching_areas = self._find_matching_areas(
-                room_name,  # program_type_detail
-                department, 
-                program_type, 
-                areas_list
-            )
-            
-            # Calculate actual counts and areas
-            actual_count = len(matching_areas)
-            actual_dgsf = sum(self._safe_float(area['area_sf']) for area in matching_areas)
-            
-            # Calculate deltas
-            count_delta = actual_count - target_count
-            dgsf_delta = actual_dgsf - target_dgsf
-            dgsf_percentage = (dgsf_delta / target_dgsf * 100) if target_dgsf > 0 else 0
-            
-            # Determine status
-            status = self._determine_status(
-                target_count, 
-                target_dgsf, 
-                actual_count, 
-                actual_dgsf
-            )
-            
-            # Get level information from matching areas
-            levels = [area.get('level_name', 'Unknown Level') for area in matching_areas]
-            level_summary = ', '.join(sorted(set(levels))) if levels else 'No Areas'
-            
-            match_result = {
-                'room_name': room_name,
-                'department': department,
-                'division': program_type,
-                'target_count': target_count,
-                'target_dgsf': target_dgsf,
-                'actual_count': actual_count,
-                'actual_dgsf': actual_dgsf,
-                'count_delta': count_delta,
-                'dgsf_delta': dgsf_delta,
-                'dgsf_percentage': dgsf_percentage,
-                'status': status,
-                'matching_areas': matching_areas,
-                'level_summary': level_summary,
-                'match_quality': self._calculate_match_quality_simple(matching_areas, status)
-            }
-            
-            matches.append(match_result)
-        
-        return matches
-    
-    def _find_matching_areas(self, req_detail, req_dept, req_type, areas_list):
-        """
-        Find Revit areas that EXACTLY match the requirement using 3 parameters
-        
-        Args:
-            req_detail: Requirement program type detail
-            req_dept: Requirement department
-            req_type: Requirement program type
-            areas_list: List of area objects
-            
-        Returns:
-            list: List of matching area objects (exact match only)
-        """
-        matching_areas = []
-        
-        for area_object in areas_list:
-            # Get the 3 parameters from area object (using dict keys, not config params)
-            area_dept = area_object.get('department', '')
-            area_type = area_object.get('program_type', '')
-            area_detail = area_object.get('program_type_detail', '')
-            
-            # EXACT match on all 3 parameters (case-insensitive, whitespace-trimmed)
-            if (req_detail.lower().strip() == area_detail.lower().strip() and 
-                req_dept.lower().strip() == area_dept.lower().strip() and 
-                req_type.lower().strip() == area_type.lower().strip()):
-                matching_areas.append(area_object)
-        
-        return matching_areas
-    
-    def _determine_status(self, target_count, target_dgsf, actual_count, actual_dgsf):
-        """Determine fulfillment status with proper overage handling"""
-        # Define tolerance limits
-        tolerance_percentage = config.AREA_TOLERANCE_PERCENTAGE / 100.0
-        
-        # Calculate acceptable ranges
-        min_area = target_dgsf * (1 - tolerance_percentage)
-        max_area = target_dgsf * (1 + tolerance_percentage)
-        
-        # Check if we have any areas at all
-        if actual_count == 0 and actual_dgsf == 0:
-            return "Missing"
-        
-        # Check for excessive overage (more than 200% over target)
-        area_overage_percentage = (actual_dgsf - target_dgsf) / target_dgsf if target_dgsf > 0 else 0
-        count_overage_percentage = (actual_count - target_count) / target_count if target_count > 0 else 0
-        
-        # If area is more than 200% over target, it's excessive
-        if area_overage_percentage > 2.0 or count_overage_percentage > 2.0:
-            return "Excessive"
-        
-        # Check if both count and area are within acceptable ranges
-        count_met = actual_count >= target_count
-        area_met = min_area <= actual_dgsf <= max_area
-        
-        if count_met and area_met:
-            return "Fulfilled"
-        elif actual_count > 0 and actual_dgsf > 0:
-            return "Partial"
-        else:
-            return "Missing"
-    
-    def _calculate_match_quality_simple(self, matching_areas, status=None):
-        """Calculate overall match quality based on number of matches and status"""
-        if not matching_areas:
-            return "No Match"
-        
-        # If status is Excessive, quality should be Low regardless of match count
-        if status == "Excessive":
-            return "Low"
-        
-        # For other statuses, base quality on number of matches
-        if len(matching_areas) == 1:
-            return "High"
-        elif len(matching_areas) <= 3:
-            return "Medium"
-        else:
-            return "Low"
-    
-    def get_unmatched_areas(self, excel_data, areas_list):
-        """
-        Get Revit areas that don't match any Excel requirements
-        
-        Args:
-            excel_data: Dictionary of Excel data with RowData objects
-            areas_list: List of area objects
-            
-        Returns:
-            list: List of unmatched area objects
-        """
-        # Get all matched area objects
-        all_matched_areas = []
-        
-        for room_key, requirement in excel_data.items():
-            room_name = getattr(requirement, config.PROGRAM_TYPE_DETAIL_KEY[config.APP_EXCEL], room_key)
-            department = getattr(requirement, config.DEPARTMENT_KEY[config.APP_EXCEL], '')
-            program_type = getattr(requirement, config.PROGRAM_TYPE_KEY[config.APP_EXCEL], '')
-            
-            matching_areas = self._find_matching_areas(
-                room_name,  # program_type_detail
-                department, 
-                program_type, 
-                areas_list
-            )
-            all_matched_areas.extend(matching_areas)
-        
-        # Find unmatched areas by comparing object references
-        matched_ids = set(id(area) for area in all_matched_areas)
-        unmatched = [area for area in areas_list if id(area) not in matched_ids]
-        
-        return unmatched
-
-
-class HTMLReportGenerator:
-    """Generate HTML reports for area comparison"""
-    
-    def _safe_int(self, value):
-        """Safely convert value to integer"""
-        try:
-            return int(float(value)) if value else 0
-        except (ValueError, TypeError):
-            return 0
-    
-    def _safe_float(self, value):
-        """Safely convert value to float"""
-        try:
-            return float(value) if value else 0.0
-        except (ValueError, TypeError):
-            return 0.0
-    
-    def __init__(self):
-        self.reports_dir = os.path.join(os.path.dirname(__file__), config.REPORTS_DIR)
-        
-        # Create reports directory if it doesn't exist
-        if not os.path.exists(self.reports_dir):
-            os.makedirs(self.reports_dir)
-    
-    def generate_html_report(self, excel_data, revit_data):
-        """
-        Generate the complete HTML report
-        
-        Args:
-            excel_data: Dictionary of Excel data with RowData objects
-            revit_data: Dictionary of area data (single scheme or multiple schemes)
-            
-        Returns:
-            tuple: (filepath, all_matches, all_unmatched_areas)
-        """
-        # Match areas to requirements
-        matcher = AreaMatcher()
-        all_matches = matcher.match_areas_to_requirements(excel_data, revit_data)
-        
-        # Get unmatched areas for each scheme
-        all_unmatched_areas = {}
-        for scheme_name, areas_list in revit_data.items():
-            if isinstance(areas_list, list):
-                unmatched = matcher.get_unmatched_areas(excel_data, areas_list)
-                all_unmatched_areas[scheme_name] = unmatched
-        
-        # Generate HTML content
-        html_content = self._create_html_content(all_matches, all_unmatched_areas)
-        
-        # Save to file
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = "area_report_{}.html".format(timestamp)
-        filepath = os.path.join(self.reports_dir, filename)
-        
-        with io.open(filepath, 'w', encoding='utf-8') as f:
-            f.write(html_content)
-        
-        # Also save as latest_report.html for easy access
-        latest_path = os.path.join(self.reports_dir, config.LATEST_REPORT_FILENAME)
-        with io.open(latest_path, 'w', encoding='utf-8') as f:
-            f.write(html_content)
-        
-        return filepath, all_matches, all_unmatched_areas
-    
-    def _create_html_content(self, all_matches, all_unmatched_areas):
-        """Create the HTML content for the report"""
-        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        # Check if we have multiple schemes or single scheme
-        if isinstance(all_matches, dict) and any(isinstance(value, dict) for value in all_matches.values()):
-            # Multiple schemes
-            return self._create_multiple_scheme_html(all_matches, all_unmatched_areas, current_time)
-        else:
-            # Single scheme (fallback)
-            return self._create_single_scheme_html(all_matches, all_unmatched_areas, current_time)
-    
-    def _create_single_scheme_html(self, matches, unmatched_areas, current_time):
-        """Create HTML for single scheme"""
-        # Calculate summary statistics
-        total_target_count = sum(match['target_count'] for match in matches)
-        total_actual_count = sum(match['actual_count'] for match in matches)
-        total_target_dgsf = sum(match['target_dgsf'] for match in matches)
-        total_actual_dgsf = sum(match['actual_dgsf'] for match in matches)
-        
-        fulfilled_count = sum(1 for match in matches if match['status'] == 'Fulfilled')
-        partial_count = sum(1 for match in matches if match['status'] == 'Partial')
-        missing_count = sum(1 for match in matches if match['status'] == 'Missing')
-        
-        # Count alerts for high differences
-        high_count_delta_alerts = sum(1 for match in matches if abs(match['count_delta']) >= config.COUNT_DELTA_ALERT_THRESHOLD)
-        high_area_delta_alerts = sum(1 for match in matches if abs(match['dgsf_percentage']) >= config.AREA_PERCENTAGE_ALERT_THRESHOLD)
-        extreme_difference_alerts = sum(1 for match in matches if 
-            abs(match['count_delta']) >= config.COUNT_DELTA_ALERT_THRESHOLD and 
-            abs(match['dgsf_percentage']) >= config.AREA_PERCENTAGE_ALERT_THRESHOLD)
-        
-        html = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{report_title}</title>
+    <title>Area Requirements vs Actual - Report</title>
     <style>
-        {css_styles}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header class="report-header">
-            <h1>🏥 {report_title}</h1>
-            <div class="report-info">
-                <p><strong>Generated:</strong> {current_time}</p>
-                <p><strong>Project:</strong> {project_name}</p>
-            </div>
-        </header>
         
-        <div class="comparison-section">
-            <h2>📋 Detailed Comparison</h2>
-            <div class="table-container">
-                <table class="comparison-table">
-                    <thead>
-                        <tr>
-                            <th>{col_area_detail}</th>
-                            <th>{col_department}</th>
-                            <th>{col_program_type}</th>
-                            <th>{col_target_count}</th>
-                            <th>{col_target_dgsf}</th>
-                            <th>{col_actual_count}</th>
-                            <th>{col_actual_dgsf}</th>
-                            <th>{col_count_delta}</th>
-                            <th>{col_dgsf_delta}</th>
-                            <th>{col_dgsf_percentage}</th>
-                            <th>{col_status}</th>
-                            <th>{col_match_quality}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {table_rows}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        {unmatched_section}
-        
-        <div class="summary-section">
-            <h2>📊 Summary</h2>
-            <div class="summary-cards">
-                <div class="card">
-                    <h3>Total Requirements</h3>
-                    <div class="card-value">{total_reqs}</div>
-                    <div class="card-label">Room Types</div>
-                </div>
-                <div class="card">
-                    <h3>Target Count</h3>
-                    <div class="card-value">{target_count}</div>
-                    <div class="card-label">Areas Required</div>
-                </div>
-                <div class="card">
-                    <h3>Actual Count</h3>
-                    <div class="card-value">{actual_count}</div>
-                    <div class="card-label">Areas Found</div>
-                </div>
-                <div class="card">
-                    <h3>Target DGSF</h3>
-                    <div class="card-value">{target_dgsf}</div>
-                    <div class="card-label">Square Feet</div>
-                </div>
-                <div class="card">
-                    <h3>Actual DGSF</h3>
-                    <div class="card-value">{actual_dgsf}</div>
-                    <div class="card-label">Square Feet</div>
-                </div>
-                <div class="card">
-                    <h3>Compliance</h3>
-                    <div class="card-value">{fulfilled_count}/{total_reqs}</div>
-                    <div class="card-label">Fulfilled</div>
-                </div>
-                <div class="card">
-                    <h3>Count Alerts</h3>
-                    <div class="card-value">{high_count_delta_alerts}</div>
-                    <div class="card-label">High Count Differences</div>
-                </div>
-                <div class="card">
-                    <h3>Area Alerts</h3>
-                    <div class="card-value">{high_area_delta_alerts}</div>
-                    <div class="card-label">High Area Differences</div>
-                </div>
-                <div class="card">
-                    <h3>Extreme Alerts</h3>
-                    <div class="card-value">{extreme_difference_alerts}</div>
-                    <div class="card-label">Both High Differences</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="status-summary">
-            <h2>📈 Status Breakdown</h2>
-            <div class="status-cards">
-                <div class="status-card fulfilled">
-                    <h3>✓ Fulfilled</h3>
-                    <div class="status-count">{fulfilled_count}</div>
-                </div>
-                <div class="status-card partial">
-                    <h3>△ Partial</h3>
-                    <div class="status-count">{partial_count}</div>
-                </div>
-                <div class="status-card missing">
-                    <h3>✕ Missing</h3>
-                    <div class="status-count">{missing_count}</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="section-diagram">
-            <h2>🏢 Building Section - Department Distribution</h2>
-            <div class="building-section" id="buildingSection">
-                <!-- Dynamic section diagram will be generated here -->
-            </div>
-            <div class="section-legend" id="sectionLegend">
-                <!-- Dynamic legend will be generated here -->
-            </div>
-        </div>
-        
-        <div class="viewer3d-section">
-            <h2>🌐 3D Interactive Building Viewer</h2>
-            <div class="viewer3d-controls">
-                <button class="control-btn active" data-mode="compliance">Compliance Heatmap</button>
-                <button class="control-btn" data-mode="departments">Department View</button>
-                <button class="control-btn" data-mode="areas">Area Density</button>
-                <button class="control-btn" data-mode="reset">Reset View</button>
-            </div>
-            <div class="viewer3d-container">
-                <canvas id="viewer3d-canvas"></canvas>
-                <div class="viewer3d-info" id="viewer3d-info">
-                    <div class="info-panel">
-                        <h4>Building Information</h4>
-                        <p>Click on areas for details</p>
-                    </div>
-                </div>
-            </div>
-            <div class="viewer3d-legend">
-                <div class="legend-title">Heatmap Legend</div>
-                <div class="legend-items" id="viewer3d-legend">
-                    <!-- Dynamic legend will be generated here -->
-                </div>
-            </div>
-        </div>
-        
-        <div class="chart-section">
-            <h2>📊 Area Fulfillment Overview</h2>
-            <div class="chart-container">
-                <canvas id="areaFulfillmentChart"></canvas>
-            </div>
-        </div>
-        
-        <footer class="report-footer">
-            <p>Report generated by Monitor Area System | {current_time}</p>
-            <p style="margin-top: 10px; font-size: 0.9em; color: #9ca3af;">
-                🦆 Powered by <strong style="color: #60a5fa;">EnneadTab</strong> | 
-                For feature requests, contact <strong style="color: #60a5fa;">Sen Zhang</strong>
-            </p>
-        </footer>
-    </div>
-    
-    <script>
-        {javascript}
-    </script>
-</body>
-</html>
-""".format(
-            report_title=config.REPORT_TITLE,
-            css_styles=self._get_css_styles(),
-            current_time=current_time,
-            project_name=config.PROJECT_NAME,
-            total_reqs=len(matches),
-            target_count="{:,}".format(total_target_count),
-            actual_count="{:,}".format(total_actual_count),
-            target_dgsf="{:,.0f}".format(self._safe_float(total_target_dgsf)),
-            actual_dgsf="{:,.0f}".format(self._safe_float(total_actual_dgsf)),
-            fulfilled_count=fulfilled_count,
-            partial_count=partial_count,
-            missing_count=missing_count,
-            high_count_delta_alerts=high_count_delta_alerts,
-            high_area_delta_alerts=high_area_delta_alerts,
-            extreme_difference_alerts=extreme_difference_alerts,
-            col_area_detail=config.TABLE_COLUMN_HEADERS['area_detail'],
-            col_department=config.TABLE_COLUMN_HEADERS['department'],
-            col_program_type=config.TABLE_COLUMN_HEADERS['program_type'],
-            col_target_count=config.TABLE_COLUMN_HEADERS['target_count'],
-            col_target_dgsf=config.TABLE_COLUMN_HEADERS['target_dgsf'],
-            col_actual_count=config.TABLE_COLUMN_HEADERS['actual_count'],
-            col_actual_dgsf=config.TABLE_COLUMN_HEADERS['actual_dgsf'],
-            col_count_delta=config.TABLE_COLUMN_HEADERS['count_delta'],
-            col_dgsf_delta=config.TABLE_COLUMN_HEADERS['dgsf_delta'],
-            col_dgsf_percentage=config.TABLE_COLUMN_HEADERS['dgsf_percentage'],
-            col_status=config.TABLE_COLUMN_HEADERS['status'],
-            col_match_quality=config.TABLE_COLUMN_HEADERS['match_quality'],
-            table_rows=self._create_table_rows(matches),
-            unmatched_section=self._create_unmatched_section(unmatched_areas),
-            javascript=self._get_javascript()
-        )
-        return html
-    
-    def _create_multiple_scheme_html(self, all_matches, all_unmatched_areas, current_time):
-        """Create HTML for multiple schemes"""
-        html = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{report_title}</title>
-    <style>
-        {css_styles}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header class="report-header">
-            <h1>🏥 {report_title}</h1>
-            <div class="report-info">
-                <p><strong>Generated:</strong> {current_time}</p>
-                <p><strong>Project:</strong> {project_name}</p>
-                <p><strong>Area Schemes:</strong> {scheme_count} schemes compared</p>
-            </div>
-        </header>
-        
-        """.format(
-            report_title=config.REPORT_TITLE,
-            css_styles=self._get_css_styles(),
-            current_time=current_time,
-            project_name=config.PROJECT_NAME,
-            scheme_count=len(all_matches)
-        )
-            
-            html += """
-        <div class="scheme-comparisons">
-        """
-        
-        # Add detailed comparison for each scheme
-        for scheme_name, scheme_data in all_matches.items():
-            matches = scheme_data.get('matches', [])
-            unmatched_areas = all_unmatched_areas.get(scheme_name, {})
-            
-            html += """
-            <div class="scheme-section">
-                <h2>📋 {scheme_name} - Detailed Comparison</h2>
-                <div class="table-container">
-                    <table class="comparison-table">
-                        <thead>
-                            <tr>
-                            <th class="col-dept">Department</th>
-                            <th class="col-division">Division</th>
-                            <th class="col-function">Function</th>
-                            <th class="col-count">Required Count</th>
-                            <th class="col-area">Required Area (SF)</th>
-                            <th class="col-level">Level</th>
-                            <th class="col-count">Actual Count</th>
-                            <th class="col-area">Actual Area (SF)</th>
-                            <th class="col-delta">Count Delta</th>
-                            <th class="col-delta">Area Delta (SF)</th>
-                            <th class="col-delta">Area % Delta</th>
-                            <th class="col-status">Status</th>
-                            <th class="col-quality">Match Quality</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {table_rows}
-                        </tbody>
-                    </table>
-                </div>
-                
-                {unmatched_section}
-            </div>
-            """.format(
-                scheme_name=scheme_name,
-                col_area_detail=config.TABLE_COLUMN_HEADERS['area_detail'],
-                col_department=config.TABLE_COLUMN_HEADERS['department'],
-                col_program_type=config.TABLE_COLUMN_HEADERS['program_type'],
-                col_target_count=config.TABLE_COLUMN_HEADERS['target_count'],
-                col_target_dgsf=config.TABLE_COLUMN_HEADERS['target_dgsf'],
-                col_actual_count=config.TABLE_COLUMN_HEADERS['actual_count'],
-                col_actual_dgsf=config.TABLE_COLUMN_HEADERS['actual_dgsf'],
-                col_count_delta=config.TABLE_COLUMN_HEADERS['count_delta'],
-                col_dgsf_delta=config.TABLE_COLUMN_HEADERS['dgsf_delta'],
-                col_dgsf_percentage=config.TABLE_COLUMN_HEADERS['dgsf_percentage'],
-                col_status=config.TABLE_COLUMN_HEADERS['status'],
-                col_match_quality=config.TABLE_COLUMN_HEADERS['match_quality'],
-                table_rows=self._create_table_rows(matches),
-                unmatched_section=self._create_unmatched_section(unmatched_areas, scheme_name)
-            )
-        
-        html += """
-        </div>
-        
-        <div class="scheme-summary">
-            <h2>📊 Area Scheme Summary</h2>
-            <div class="scheme-cards">
-        """
-        
-        # Add scheme summary cards
-        for scheme_name, scheme_data in all_matches.items():
-            matches = scheme_data.get('matches', [])
-            scheme_info = scheme_data.get('scheme_info', {})
-            
-            fulfilled_count = sum(1 for match in matches if match['status'] == 'Fulfilled')
-            total_count = len(matches)
-            
-            html += """
-                <div class="scheme-card">
-                    <h3>{scheme_name}</h3>
-                    <div class="scheme-stats">
-                        <div class="stat">
-                            <span class="stat-value">{total_count}</span>
-                            <span class="stat-label">Requirements</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-value">{fulfilled_count}</span>
-                            <span class="stat-label">Fulfilled</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-value">{area_count}</span>
-                            <span class="stat-label">Areas</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-value">{total_sf}</span>
-                            <span class="stat-label">Total SF</span>
-                        </div>
-                    </div>
-                </div>
-            """.format(
-                scheme_name=scheme_name,
-                total_count=total_count,
-                fulfilled_count=fulfilled_count,
-                area_count=scheme_info.get('count', 0),
-                total_sf="{:,.0f}".format(self._safe_float(scheme_info.get('total_sf', 0)))
-            )
-        
-        html += """
-            </div>
-        </div>
-        
-        <div class="section-diagram">
-            <h2>🏢 Building Section - Department Distribution</h2>
-            <div class="building-section" id="buildingSection">
-                <!-- Dynamic section diagram will be generated here -->
-            </div>
-            <div class="section-legend" id="sectionLegend">
-                <!-- Dynamic legend will be generated here -->
-            </div>
-        </div>
-        
-        <div class="viewer3d-section">
-            <h2>🌐 3D Interactive Building Viewer</h2>
-            <div class="viewer3d-controls">
-                <button class="control-btn active" data-mode="compliance">Compliance Heatmap</button>
-                <button class="control-btn" data-mode="departments">Department View</button>
-                <button class="control-btn" data-mode="areas">Area Density</button>
-                <button class="control-btn" data-mode="reset">Reset View</button>
-            </div>
-            <div class="viewer3d-container">
-                <canvas id="viewer3d-canvas"></canvas>
-                <div class="viewer3d-info" id="viewer3d-info">
-                    <div class="info-panel">
-                        <h4>Building Information</h4>
-                        <p>Click on areas for details</p>
-                    </div>
-                </div>
-            </div>
-            <div class="viewer3d-legend">
-                <div class="legend-title">Heatmap Legend</div>
-                <div class="legend-items" id="viewer3d-legend">
-                    <!-- Dynamic legend will be generated here -->
-                </div>
-            </div>
-        </div>
-        
-        <div class="chart-section">
-            <h2>📊 Area Fulfillment Overview</h2>
-            <div class="chart-container">
-                <canvas id="areaFulfillmentChart"></canvas>
-            </div>
-        </div>
-        
-        <footer class="report-footer">
-            <p>Report generated by Monitor Area System | {current_time}</p>
-            <p style="margin-top: 10px; font-size: 0.9em; color: #9ca3af;">
-                🦆 Powered by <strong style="color: #60a5fa;">EnneadTab</strong> | 
-                For feature requests, contact <strong style="color: #60a5fa;">Sen Zhang</strong>
-            </p>
-        </footer>
-    </div>
-    
-    <script>
-        {javascript}
-    </script>
-</body>
-</html>
-        """.format(current_time=current_time, javascript=self._get_javascript())
-        
-        return html
-    
-    def _create_table_rows(self, matches):
-        """Create table rows for the comparison table"""
-        rows = []
-        for match in matches:
-            status_class = match['status'].lower()
-            
-            # Check for high differences and apply alert styling
-            count_delta_abs = abs(match['count_delta'])
-            area_percentage_abs = abs(match['dgsf_percentage'])
-            
-            # Determine alert classes
-            count_delta_class = "positive" if match['count_delta'] >= 0 else "negative"
-            dgsf_delta_class = "positive" if match['dgsf_delta'] >= 0 else "negative"
-            percentage_class = "positive" if match['dgsf_percentage'] >= 0 else "negative"
-            
-            # Apply alert styling for high differences
-            if count_delta_abs >= config.COUNT_DELTA_ALERT_THRESHOLD:
-                count_delta_class = "alert-count-delta"
-            
-            if area_percentage_abs >= config.AREA_PERCENTAGE_ALERT_THRESHOLD:
-                percentage_class = "alert-area-delta"
-            
-            # Check if entire row should be highlighted for extreme differences
-            row_alert_class = ""
-            if (count_delta_abs >= config.COUNT_DELTA_ALERT_THRESHOLD and 
-                area_percentage_abs >= config.AREA_PERCENTAGE_ALERT_THRESHOLD):
-                row_alert_class = "alert-high-difference"
-            
-            # Format count delta with descriptive text
-            if match['count_delta'] > 0:
-                count_delta_str = "Exceeding {}".format(abs(match['count_delta']))
-            elif match['count_delta'] < 0:
-                count_delta_str = "Missing {}".format(abs(match['count_delta']))
-            else:
-                count_delta_str = "Exact Match"
-            
-            # Format area delta with descriptive text
-            dgsf_delta = self._safe_float(match['dgsf_delta'])
-            if dgsf_delta > 0:
-                dgsf_delta_str = "Exceeding {:,.0f} SF".format(abs(dgsf_delta))
-            elif dgsf_delta < 0:
-                dgsf_delta_str = "Missing {:,.0f} SF".format(abs(dgsf_delta))
-            else:
-                dgsf_delta_str = "Exact Match"
-            
-            percentage_str = "{:+.1f}%".format(self._safe_float(match['dgsf_percentage'])) if match['dgsf_percentage'] else "+0.0%"
-            
-            rows.append("""
-                <tr class="status-{status_class} {row_alert_class}">
-                    <td class="col-dept">{department}</td>
-                    <td class="col-division">{division}</td>
-                    <td class="col-function"><strong>{room_name}</strong></td>
-                    <td class="col-count">{target_count}</td>
-                    <td class="col-area">{target_dgsf}</td>
-                    <td class="col-level">{level_summary}</td>
-                    <td class="col-count">{actual_count}</td>
-                    <td class="col-area">{actual_dgsf}</td>
-                    <td class="col-delta {count_delta_class}">{count_delta}</td>
-                    <td class="col-delta {dgsf_delta_class}">{dgsf_delta}</td>
-                    <td class="col-delta {percentage_class}">{percentage}</td>
-                    <td class="col-status"><span class="status-badge {status_class}">{status_icon} {status}</span></td>
-                    <td class="col-quality"><span class="quality-badge {quality_class}">{match_quality}</span></td>
-                </tr>
-            """.format(
-                status_class=status_class,
-                row_alert_class=row_alert_class,
-                room_name=match['room_name'],
-                department=match['department'],
-                division=match['division'],
-                level_summary=match['level_summary'],
-                target_count="{:,}".format(match['target_count']),
-                target_dgsf="{:,.0f}".format(self._safe_float(match['target_dgsf'])),
-                actual_count="{:,}".format(match['actual_count']),
-                actual_dgsf="{:,.0f}".format(self._safe_float(match['actual_dgsf'])),
-                count_delta_class=count_delta_class,
-                count_delta=count_delta_str,
-                dgsf_delta_class=dgsf_delta_class,
-                dgsf_delta=dgsf_delta_str,
-                percentage_class=percentage_class,
-                percentage=percentage_str,
-                status_icon=self._get_status_icon(match['status']),
-                status=match['status'],
-                quality_class=match['match_quality'].lower(),
-                match_quality=match['match_quality']
-            ))
-        
-        return "".join(rows)
-    
-    def _create_unmatched_section(self, unmatched_areas, scheme_name=None):
-        """
-        Create section for unmatched areas
-        
-        Args:
-            unmatched_areas: List of unmatched area objects
-            scheme_name: Name of the scheme (optional)
-            
-        Returns:
-            str: HTML for unmatched section
-        """
-        if not unmatched_areas:
-            return ""
-        
-        # Group unmatched areas by level
-        areas_by_level = {}
-        for area_object in unmatched_areas:
-            level_name = area_object.get('level_name', 'Unknown Level')
-            if level_name not in areas_by_level:
-                areas_by_level[level_name] = []
-            areas_by_level[level_name].append(area_object)
-        
-        # Create HTML for each level
-        level_sections = []
-        for level_name, level_areas in sorted(areas_by_level.items()):
-            level_rows = []
-            level_total_sf = 0
-            
-            for area_object in level_areas:
-            area_sf = area_object.get('area_sf', 0)
-            area_dept = area_object.get('department', '')
-            area_type = area_object.get('program_type', '')
-            area_detail = area_object.get('program_type_detail', '')
-                creator = area_object.get('creator', 'Unknown')
-                last_editor = area_object.get('last_editor', 'Unknown')
-                level_total_sf += area_sf
-                
-                level_rows.append("""
-                    <tr>
-                        <td class="col-dept">{area_dept}</td>
-                        <td class="col-division">{area_type}</td>
-                        <td class="col-function">{area_detail}</td>
-                        <td class="col-area">{area_sf} SF</td>
-                        <td class="col-level">{creator}</td>
-                        <td class="col-level">{last_editor}</td>
-                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                </tr>
-            """.format(
-                area_dept=area_dept,
-                area_type=area_type,
-                    area_detail=area_detail,
-                    area_sf="{:,.0f}".format(self._safe_float(area_sf)),
-                    creator=creator,
-                    last_editor=last_editor
-                ))
-            
-            level_sections.append("""
-            <div class="level-section">
-                <h4>📍 {level_name} ({area_count} areas, {total_sf:,} SF)</h4>
-            <div class="table-container">
-                <table class="unmatched-table">
-                    <thead>
-                        <tr>
-                                <th class="col-dept">Department</th>
-                                <th class="col-division">Division</th>
-                                <th class="col-function">Function</th>
-                                <th class="col-area">Area (SF)</th>
-                                <th class="col-level">Created By</th>
-                                <th class="col-level">Last Edited By</th>
-                                <th class="col-status">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                            {level_rows}
-                    </tbody>
-                </table>
-            </div>
-            </div>
-            """.format(
-                level_name=level_name.replace('/', ' / '),  # Add spaces around slashes
-                area_count=len(level_areas),
-                total_sf=int(round(level_total_sf)),  # Round to whole number for readability
-                level_rows="".join(level_rows)
-            ))
-        
-        section_title = "○ Unmatched Areas"
-        if scheme_name:
-            section_title = "{} - {}".format(section_title, scheme_name)
-        
-        return """
-        <div class="unmatched-section">
-            <h3>{section_title}</h3>
-            <p>The following Revit areas were not matched to any Excel requirements, grouped by level:</p>
-            {level_sections}
-        </div>
-        """.format(
-            section_title=section_title,
-            level_sections="".join(level_sections)
-        )
-    
-    def _get_status_icon(self, status):
-        """Get icon for status"""
-        icons = {
-            "Fulfilled": "✓",
-            "Partial": "△",
-            "Missing": "✕",
-            "Excessive": "!"
-        }
-        return icons.get(status, "?")
-    
-    def _get_css_styles(self):
-        """Get CSS styles for the report - High-Tech Minimalist Theme"""
-        return """
         * {
             margin: 0;
             padding: 0;
@@ -1796,11 +846,337 @@ class HTMLReportGenerator:
                 padding: 20px;
             }
         }
-        """
+        
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="report-header">
+            <h1>🏥 Area Requirements vs Actual - Report</h1>
+            <div class="report-info">
+                <p><strong>Generated:</strong> 2025-10-10 18:14:15</p>
+                <p><strong>Project:</strong> NYU HQ - Monitor Area System</p>
+                <p><strong>Area Schemes:</strong> 1 schemes compared</p>
+            </div>
+        </header>
+        
+        
+        <div class="scheme-comparisons">
+        
+            <div class="scheme-section">
+                <h2>📋 DGSF Scheme - Detailed Comparison</h2>
+                <div class="table-container">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                            <th class="col-dept">Department</th>
+                            <th class="col-division">Division</th>
+                            <th class="col-function">Function</th>
+                            <th class="col-count">Required Count</th>
+                            <th class="col-area">Required Area (SF)</th>
+                            <th class="col-level">Level</th>
+                            <th class="col-count">Actual Count</th>
+                            <th class="col-area">Actual Area (SF)</th>
+                            <th class="col-delta">Count Delta</th>
+                            <th class="col-delta">Area Delta (SF)</th>
+                            <th class="col-delta">Area % Delta</th>
+                            <th class="col-status">Status</th>
+                            <th class="col-quality">Match Quality</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            
+                <tr class="status-excessive alert-high-difference">
+                    <td class="col-dept">INPATIENT CARE</td>
+                    <td class="col-division">INPATIENT CARE</td>
+                    <td class="col-function"><strong>Patient Bed</strong></td>
+                    <td class="col-count">500</td>
+                    <td class="col-area">35,000</td>
+                    <td class="col-level">Level 1  Lobby / ED / Clinical / Support, Level 3  D+T / Patient Rooms</td>
+                    <td class="col-count">3</td>
+                    <td class="col-area">211,933</td>
+                    <td class="col-delta alert-count-delta">Missing 497</td>
+                    <td class="col-delta positive">Exceeding 176,933 SF</td>
+                    <td class="col-delta alert-area-delta">+505.5%</td>
+                    <td class="col-status"><span class="status-badge excessive">! Excessive</span></td>
+                    <td class="col-quality"><span class="quality-badge low">Low</span></td>
+                </tr>
+            
+                <tr class="status-excessive ">
+                    <td class="col-dept">Emergency</td>
+                    <td class="col-division">ED CARE</td>
+                    <td class="col-function"><strong>Lobby Support</strong></td>
+                    <td class="col-count">1</td>
+                    <td class="col-area">300</td>
+                    <td class="col-level">Level 3  D+T / Patient Rooms</td>
+                    <td class="col-count">1</td>
+                    <td class="col-area">462,292</td>
+                    <td class="col-delta positive">Exact Match</td>
+                    <td class="col-delta positive">Exceeding 461,992 SF</td>
+                    <td class="col-delta alert-area-delta">+153997.3%</td>
+                    <td class="col-status"><span class="status-badge excessive">! Excessive</span></td>
+                    <td class="col-quality"><span class="quality-badge low">Low</span></td>
+                </tr>
+            
+                <tr class="status-missing ">
+                    <td class="col-dept">Emergency</td>
+                    <td class="col-division">ED CARE</td>
+                    <td class="col-function"><strong>Lobby</strong></td>
+                    <td class="col-count">3</td>
+                    <td class="col-area">1,500</td>
+                    <td class="col-level">No Areas</td>
+                    <td class="col-count">0</td>
+                    <td class="col-area">0</td>
+                    <td class="col-delta negative">Missing 3</td>
+                    <td class="col-delta negative">Missing 1,500 SF</td>
+                    <td class="col-delta alert-area-delta">-100.0%</td>
+                    <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                    <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                </tr>
+            
+                        </tbody>
+                    </table>
+                </div>
+                
+                
+        <div class="unmatched-section">
+            <h3>○ Unmatched Areas - DGSF Scheme</h3>
+            <p>The following Revit areas were not matched to any Excel requirements, grouped by level:</p>
+            
+            <div class="level-section">
+                <h4>📍 Level 1  Lobby  /  ED  /  Clinical  /  Support (4 areas, 54,918 SF)</h4>
+            <div class="table-container">
+                <table class="unmatched-table">
+                    <thead>
+                        <tr>
+                                <th class="col-dept">Department</th>
+                                <th class="col-division">Division</th>
+                                <th class="col-function">Function</th>
+                                <th class="col-area">Area (SF)</th>
+                                <th class="col-level">Created By</th>
+                                <th class="col-level">Last Edited By</th>
+                                <th class="col-status">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                            
+                    <tr>
+                        <td class="col-dept">ADMINISTRATION AND STAFF SUPPORT</td>
+                        <td class="col-division"></td>
+                        <td class="col-function"></td>
+                        <td class="col-area">0 SF</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-level">yhuangZZUZV</td>
+                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
+                </tr>
+            
+                    <tr>
+                        <td class="col-dept">INPATIENT CARE</td>
+                        <td class="col-division"></td>
+                        <td class="col-function"></td>
+                        <td class="col-area">0 SF</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-level">yhuangZZUZV</td>
+                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
+                </tr>
+            
+                    <tr>
+                        <td class="col-dept">WaterMelon</td>
+                        <td class="col-division">orange</td>
+                        <td class="col-function"></td>
+                        <td class="col-area">8,531 SF</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
+                </tr>
+            
+                    <tr>
+                        <td class="col-dept">INPATIENT CARE</td>
+                        <td class="col-division">INPATIENT CARE</td>
+                        <td class="col-function">Lobby Support</td>
+                        <td class="col-area">46,387 SF</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
+                </tr>
+            
+                    </tbody>
+                </table>
+            </div>
+            </div>
+            
+            <div class="level-section">
+                <h4>📍 Level 11  Patient Rooms (1 areas, 227,633 SF)</h4>
+            <div class="table-container">
+                <table class="unmatched-table">
+                    <thead>
+                        <tr>
+                                <th class="col-dept">Department</th>
+                                <th class="col-division">Division</th>
+                                <th class="col-function">Function</th>
+                                <th class="col-area">Area (SF)</th>
+                                <th class="col-level">Created By</th>
+                                <th class="col-level">Last Edited By</th>
+                                <th class="col-status">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                            
+                    <tr>
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division"></td>
+                        <td class="col-function"></td>
+                        <td class="col-area">227,633 SF</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
+                </tr>
+            
+                    </tbody>
+                </table>
+            </div>
+            </div>
+            
+            <div class="level-section">
+                <h4>📍 Level 8  Patient Rooms (3 areas, 50,001 SF)</h4>
+            <div class="table-container">
+                <table class="unmatched-table">
+                    <thead>
+                        <tr>
+                                <th class="col-dept">Department</th>
+                                <th class="col-division">Division</th>
+                                <th class="col-function">Function</th>
+                                <th class="col-area">Area (SF)</th>
+                                <th class="col-level">Created By</th>
+                                <th class="col-level">Last Edited By</th>
+                                <th class="col-status">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                            
+                    <tr>
+                        <td class="col-dept">INPATIENT CARE</td>
+                        <td class="col-division"></td>
+                        <td class="col-function"></td>
+                        <td class="col-area">20,881 SF</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
+                </tr>
+            
+                    <tr>
+                        <td class="col-dept">EMERGENCY DEPARTMENT</td>
+                        <td class="col-division"></td>
+                        <td class="col-function"></td>
+                        <td class="col-area">25,558 SF</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
+                </tr>
+            
+                    <tr>
+                        <td class="col-dept">MECHANICAL</td>
+                        <td class="col-division"></td>
+                        <td class="col-function"></td>
+                        <td class="col-area">3,562 SF</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
+                </tr>
+            
+                    </tbody>
+                </table>
+            </div>
+            </div>
+            
+        </div>
+        
+            </div>
+            
+        </div>
+        
+        <div class="scheme-summary">
+            <h2>📊 Area Scheme Summary</h2>
+            <div class="scheme-cards">
+        
+                <div class="scheme-card">
+                    <h3>DGSF Scheme</h3>
+                    <div class="scheme-stats">
+                        <div class="stat">
+                            <span class="stat-value">3</span>
+                            <span class="stat-label">Requirements</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">0</span>
+                            <span class="stat-label">Fulfilled</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">12</span>
+                            <span class="stat-label">Areas</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-value">1,006,777</span>
+                            <span class="stat-label">Total SF</span>
+                        </div>
+                    </div>
+                </div>
+            
+            </div>
+        </div>
+        
+        <div class="section-diagram">
+            <h2>🏢 Building Section - Department Distribution</h2>
+            <div class="building-section" id="buildingSection">
+                <!-- Dynamic section diagram will be generated here -->
+            </div>
+            <div class="section-legend" id="sectionLegend">
+                <!-- Dynamic legend will be generated here -->
+            </div>
+        </div>
+        
+        <div class="viewer3d-section">
+            <h2>🌐 3D Interactive Building Viewer</h2>
+            <div class="viewer3d-controls">
+                <button class="control-btn active" data-mode="compliance">Compliance Heatmap</button>
+                <button class="control-btn" data-mode="departments">Department View</button>
+                <button class="control-btn" data-mode="areas">Area Density</button>
+                <button class="control-btn" data-mode="reset">Reset View</button>
+            </div>
+            <div class="viewer3d-container">
+                <canvas id="viewer3d-canvas"></canvas>
+                <div class="viewer3d-info" id="viewer3d-info">
+                    <div class="info-panel">
+                        <h4>Building Information</h4>
+                        <p>Click on areas for details</p>
+                    </div>
+                </div>
+            </div>
+            <div class="viewer3d-legend">
+                <div class="legend-title">Heatmap Legend</div>
+                <div class="legend-items" id="viewer3d-legend">
+                    <!-- Dynamic legend will be generated here -->
+                </div>
+            </div>
+        </div>
+        
+        <div class="chart-section">
+            <h2>📊 Area Fulfillment Overview</h2>
+            <div class="chart-container">
+                <canvas id="areaFulfillmentChart"></canvas>
+            </div>
+        </div>
+        
+        <footer class="report-footer">
+            <p>Report generated by Monitor Area System | 2025-10-10 18:14:15</p>
+            <p style="margin-top: 10px; font-size: 0.9em; color: #9ca3af;">
+                🦆 Powered by <strong style="color: #60a5fa;">EnneadTab</strong> | 
+                For feature requests, contact <strong style="color: #60a5fa;">Sen Zhang</strong>
+            </p>
+        </footer>
+    </div>
     
-    def _get_javascript(self):
-        """Get JavaScript for interactive features"""
-        return """
+    <script>
+        
         // Load Chart.js and Three.js from CDN
         const chartScript = document.createElement('script');
         chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js';
@@ -1900,16 +1276,6 @@ class HTMLReportGenerator:
             
             // Extract data from table rows
             const tableRows = document.querySelectorAll('.comparison-table tbody tr');
-            console.log('Found table rows for chart:', tableRows.length);
-            
-            if (tableRows.length === 0) {
-                console.log('No table rows found, using demo data');
-                // Use demo data
-                fulfilledArea = 750000;
-                totalRequiredArea = 1000000;
-                mismatchedArea = 150000;
-                missingArea = 100000;
-            } else {
             tableRows.forEach(row => {
                 const cells = row.cells;
                 if (cells.length >= 8) {
@@ -1928,7 +1294,6 @@ class HTMLReportGenerator:
                     }
                 }
             });
-            }
             
             // Calculate percentages
             const totalArea = Math.max(totalRequiredArea, fulfilledArea + mismatchedArea);
@@ -2586,15 +1951,8 @@ class HTMLReportGenerator:
             
             rows.forEach(row => tbody.appendChild(row));
         }
-        """
-    
-    def open_report_in_browser(self, filepath=None):
-        """Open the report in the default browser"""
-        if filepath is None:
-            filepath = os.path.join(self.reports_dir, config.LATEST_REPORT_FILENAME)
         
-        if os.path.exists(filepath):
-            webbrowser.open("file://{}".format(os.path.abspath(filepath)))
-            return True
-        else:
-            return False
+    </script>
+</body>
+</html>
+        
