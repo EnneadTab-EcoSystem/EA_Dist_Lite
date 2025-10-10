@@ -133,18 +133,15 @@ class HealthMetric:
                     "id": workset.Id.IntegerValue,
                     "is_open": workset.IsOpen,
                     "is_editable": workset.IsEditable,
-                    "owner": workset.Owner if hasattr(workset, 'Owner') else "Unknown"
+                    "owner": workset.Owner if hasattr(workset, 'Owner') else "Unknown",
+                    "creator": "Unknown",
+                    "last_editor": "Unknown"
                 }
                 
                 # Try to get creator and last editor for the workset
-                # Note: Worksets are not elements, so this might not work in all Revit versions
+                # Note: Worksets are not elements, so we derive this from elements in the workset
                 try:
-                    # Some versions of Revit API support getting worksharing info for worksets
-                    # by using a representative element or the workset table
-                    workset_detail["creator"] = "Unknown"
-                    workset_detail["last_editor"] = "Unknown"
-                    
-                    # Try to get the first element in the workset to derive ownership info
+                    # Get elements in the workset to derive ownership info
                     elements_in_workset = DB.FilteredElementCollector(self.doc).WherePasses(
                         DB.ElementWorksetFilter(workset.Id)
                     ).ToElements()
@@ -172,7 +169,7 @@ class HealthMetric:
                             except:
                                 continue
                         
-                        # Store ownership statistics for this workset
+                        # Store ownership statistics for this workset (detailed breakdown)
                         worksets_data["workset_element_ownership"][workset.Name] = {
                             "creators": creators,
                             "last_editors": last_editors,
@@ -180,10 +177,13 @@ class HealthMetric:
                         }
                         
                         # Set the most common creator/editor as workset's primary creator/editor
+                        # These represent the dominant contributor to this workset
                         if creators:
-                            workset_detail["primary_creator"] = max(creators.items(), key=lambda x: x[1])[0]
+                            workset_detail["creator"] = max(creators.items(), key=lambda x: x[1])[0]
+                            workset_detail["creator_count"] = creators[workset_detail["creator"]]
                         if last_editors:
-                            workset_detail["primary_last_editor"] = max(last_editors.items(), key=lambda x: x[1])[0]
+                            workset_detail["last_editor"] = max(last_editors.items(), key=lambda x: x[1])[0]
+                            workset_detail["last_editor_count"] = last_editors[workset_detail["last_editor"]]
                         
                     worksets_data["workset_element_counts"][workset.Name] = len(elements_in_workset)
                     
@@ -239,14 +239,86 @@ class HealthMetric:
             except:
                 self.report["purgeable_elements"] = 0
             
-            # Warnings
+            # Warnings with detailed element information
             all_warnings = self.doc.GetWarnings()
             self.report["warning_count"] = len(all_warnings)
+            
+            # Collect detailed warning information
+            warning_details = []
+            warning_creators = {}
+            warning_last_editors = {}
+            
+            for warning in all_warnings:
+                try:
+                    warning_info = {
+                        "description": warning.GetDescriptionText(),
+                        "severity": str(warning.GetSeverity()),
+                        "element_ids": [],
+                        "elements_info": []
+                    }
+                    
+                    # Get element IDs involved in the warning
+                    element_ids = warning.GetFailingElements()
+                    if element_ids:
+                        for elem_id in element_ids:
+                            try:
+                                warning_info["element_ids"].append(elem_id.IntegerValue)
+                                
+                                # Get element and its creator/last editor
+                                element = self.doc.GetElement(elem_id)
+                                if element:
+                                    elem_info = {
+                                        "id": elem_id.IntegerValue,
+                                        "category": element.Category.Name if element.Category else "Unknown",
+                                        "creator": "Unknown",
+                                        "last_editor": "Unknown"
+                                    }
+                                    
+                                    # Get worksharing info
+                                    try:
+                                        info = DB.WorksharingUtils.GetWorksharingTooltipInfo(self.doc, elem_id)
+                                        if info:
+                                            if info.Creator:
+                                                elem_info["creator"] = info.Creator
+                                                count = warning_creators.get(info.Creator, 0)
+                                                warning_creators[info.Creator] = count + 1
+                                            if info.LastChangedBy:
+                                                elem_info["last_editor"] = info.LastChangedBy
+                                                count = warning_last_editors.get(info.LastChangedBy, 0)
+                                                warning_last_editors[info.LastChangedBy] = count + 1
+                                    except:
+                                        pass  # Skip if worksharing info not available
+                                    
+                                    warning_info["elements_info"].append(elem_info)
+                            except:
+                                continue
+                    
+                    warning_details.append(warning_info)
+                except Exception as e:
+                    # Skip warnings that fail to process
+                    continue
+            
+            self.report["warning_details"] = warning_details[:100]  # Limit to 100 warnings for performance
+            self.report["warning_creators"] = warning_creators
+            self.report["warning_last_editors"] = warning_last_editors
             
             # Critical warnings
             critical_warnings = [w for w in all_warnings if w.GetSeverity() == DB.FailureSeverity.Error]
             self.report["critical_warning_count"] = len(critical_warnings)
             
+            # Critical warning details
+            critical_warning_details = []
+            for warning in critical_warnings[:50]:  # Limit to 50 critical warnings
+                try:
+                    critical_info = {
+                        "description": warning.GetDescriptionText(),
+                        "element_ids": [e.IntegerValue for e in warning.GetFailingElements()]
+                    }
+                    critical_warning_details.append(critical_info)
+                except:
+                    continue
+            
+            self.report["critical_warning_details"] = critical_warning_details
 
             
         except Exception as e:
@@ -354,6 +426,49 @@ class HealthMetric:
             used_template_names = set(usage.keys())
             unused_templates = [x for x in all_templates if x.Name not in used_template_names]
             templates_data["unused_view_templates"] = len(unused_templates)
+            
+            # Collect detailed view template information with creator and last editor
+            template_details = []
+            for template in all_templates:
+                try:
+                    template_info = {
+                        "name": template.Name,
+                        "id": template.Id.IntegerValue,
+                        "view_type": str(template.ViewType) if hasattr(template, 'ViewType') else "Unknown",
+                        "is_used": template.Name in used_template_names,
+                        "usage_count": usage.get(template.Name, 0),
+                        "creator": "Unknown",
+                        "last_editor": "Unknown"
+                    }
+                    
+                    # Get creator and last editor from WorksharingUtils
+                    try:
+                        info = DB.WorksharingUtils.GetWorksharingTooltipInfo(self.doc, template.Id)
+                        if info:
+                            if info.Creator:
+                                template_info["creator"] = info.Creator
+                            if info.LastChangedBy:
+                                template_info["last_editor"] = info.LastChangedBy
+                    except:
+                        pass  # Skip if worksharing info not available
+                    
+                    template_details.append(template_info)
+                except Exception as e:
+                    # Skip templates that fail
+                    continue
+            
+            templates_data["view_template_details"] = template_details
+            
+            # Add creator and last editor statistics
+            templates_data["view_template_creators"] = self._analyze_template_creators(all_templates)
+            templates_data["unused_view_template_details"] = [
+                {
+                    "name": t.Name,
+                    "id": t.Id.IntegerValue,
+                    "view_type": str(t.ViewType) if hasattr(t, 'ViewType') else "Unknown"
+                }
+                for t in unused_templates
+            ]
             
             # Filters
             filters = DB.FilteredElementCollector(self.doc).OfClass(DB.ParameterFilterElement).ToElements()
@@ -468,6 +583,37 @@ class HealthMetric:
                 try:
                     info = DB.WorksharingUtils.GetWorksharingTooltipInfo(
                         self.doc, family.Id)
+                    if info:
+                        creator = info.Creator
+                        last_editor = info.LastChangedBy
+                        
+                        if creator:
+                            count = creator_data.get(creator, 0)
+                            creator_data[creator] = count + 1
+                        
+                        if last_editor:
+                            count = last_editor_data.get(last_editor, 0)
+                            last_editor_data[last_editor] = count + 1
+                except:
+                    pass  # Skip if worksharing info not available
+            
+            return {
+                "creators": creator_data,
+                "last_editors": last_editor_data
+            }
+            
+        except Exception as e:
+            return {"error": str(e)}
+
+    def _analyze_template_creators(self, templates):
+        """Analyze view template creators and last editors"""
+        try:
+            creator_data = {}
+            last_editor_data = {}
+            for template in templates:
+                try:
+                    info = DB.WorksharingUtils.GetWorksharingTooltipInfo(
+                        self.doc, template.Id)
                     if info:
                         creator = info.Creator
                         last_editor = info.LastChangedBy
