@@ -80,6 +80,14 @@ class ExternalEventRunner:
         return handler.OUT
 
 
+    def unregister(self, func_name):
+        event = getattr(self, "ext_event_{}".format(func_name))
+        handler = getattr(self, "simple_event_handler_{}".format(func_name))
+        event.Dispose ()
+        delattr(self, "simple_event_handler_{}".format(func_name))
+        delattr(self, "ext_event_{}".format(func_name))
+
+
 
 
 

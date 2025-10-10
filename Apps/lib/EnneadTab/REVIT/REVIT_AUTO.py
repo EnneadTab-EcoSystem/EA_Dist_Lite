@@ -24,11 +24,13 @@ Intentionally not using args to pass around, becasue
 
 class RevitUpdater:
     tasks = []
+    active_updaters = []  # Track all active updater instances
     """
     probally make more sense if register at startup.
 
     example:
     def my_func():
+        from Autodesk.Revit import DB # You need to import it here to avoid external command error, or you can define it ina dedicated sciprt.
         doc = __revit__.ActiveUIDocument.Document # pyright: ignore
         if not doc:
             return
@@ -62,6 +64,7 @@ class RevitUpdater:
 
 
         RevitUpdater.tasks.append(func.__name__)
+        RevitUpdater.active_updaters.append(self)  # Track this instance
         
 
 
@@ -90,6 +93,64 @@ class RevitUpdater:
 
     def stop(self):
         self.stop_flag = True
+
+
+    def unregister(self):
+        RevitUpdater.tasks.remove(self.func.__name__)
+        self.registered_func_runner.unregister(self.func.__name__)
+        # Remove from active updaters list
+        if self in RevitUpdater.active_updaters:
+            RevitUpdater.active_updaters.remove(self)
+
+    @classmethod
+    def cleanup_all_events(cls):
+        """Clean up all registered external events - call this when Revit is shutting down"""
+        print("Cleaning up all RevitUpdater events...")
+        
+        # Clean up tracked events
+        for updater in cls.active_updaters[:]:  # Use slice copy to avoid modification during iteration
+            try:
+                updater.stop()
+                updater.unregister()
+                print("Cleaned up tracked event: {}".format(updater.func.__name__))
+            except Exception as e:
+                print("Error cleaning up tracked event {}: {}".format(updater.func.__name__, str(e)))
+        
+        # Clear the lists
+        cls.tasks.clear()
+        cls.active_updaters.clear()
+        
+        # Force cleanup of any orphaned events by checking common function names
+        cls._cleanup_orphaned_events()
+        
+        print("All RevitUpdater events cleaned up.")
+
+    @classmethod
+    def _cleanup_orphaned_events(cls):
+        """Attempt to cleanup orphaned events from previous sessions"""
+        print("Attempting to cleanup orphaned events...")
+        
+        # Common function names that might have been registered
+        potential_orphaned_funcs = [
+            'export_area_data',
+            'my_func',
+            'monitor_area_func',
+            'area_monitor_func'
+        ]
+        
+        for func_name in potential_orphaned_funcs:
+            try:
+                # Try to create a dummy updater to unregister any existing event
+                if func_name in cls.tasks:
+                    print("Found orphaned event: {}, attempting cleanup...".format(func_name))
+                    # Create a dummy function with the same name
+                    dummy_func = type('DummyFunc', (), {'__name__': func_name})()
+                    dummy_updater = RevitUpdater(dummy_func)
+                    dummy_updater.stop()
+                    dummy_updater.unregister()
+                    print("Successfully cleaned up orphaned event: {}".format(func_name))
+            except Exception as e:
+                print("Could not cleanup orphaned event {}: {}".format(func_name, str(e)))
 
 
 

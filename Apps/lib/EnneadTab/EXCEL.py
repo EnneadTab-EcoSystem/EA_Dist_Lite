@@ -582,7 +582,7 @@ def _read_data_from_excel_locally(filepath, worksheet, return_dict, headless):
                 break
             time.sleep(0.1)
             wait += 1
-            print ("{}/{}/{}".format(wait, max_wait, job_data.get("status")))
+            # print ("{}/{}/{}".format(wait, max_wait, job_data.get("status")))
         raw_data = DATA_FILE.get_data("excel_handler_output")
         # Convert string keys back to tuple keys
         converted_data = {}

@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# window excel and word lock files
+~$*
+
 # credential files
 credential.json
 
