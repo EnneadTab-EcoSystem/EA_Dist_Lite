@@ -8,10 +8,13 @@ from datetime import datetime
 class HealthMetric:
     def __init__(self, doc):
         self.doc = doc
-        self.report = {}
-        self.report["is_EnneadTab_Available"] = False  # Standalone version
-        self.report["timestamp"] = datetime.now().isoformat()
-        self.report["document_title"] = doc.Title
+        self.report = {
+            "version": "v2",
+            "timestamp": datetime.now().isoformat(),
+            "document_title": doc.Title,
+            "is_EnneadTab_Available": False,  # Standalone version
+            "checks": {}
+        }
 
     def check(self):
         """Run comprehensive health metric collection with progress logging"""
@@ -44,13 +47,19 @@ class HealthMetric:
             self._check_line_count()
             print("STATUS: Line counts completed, checking warnings...")
             self._check_warnings()
+            print("STATUS: Warnings completed, checking file size...")
+            self._check_file_size()
+            print("STATUS: File size completed, checking filled regions...")
+            self._check_filled_regions()
+            print("STATUS: Filled regions completed, checking grids/levels...")
+            self._check_grids_levels()
             print("STATUS: All health metric checks completed successfully!")
             
             return self.report
         except Exception as e:
             print("STATUS: HealthMetric failed at: {}".format(str(e)))
             # Add error to report and return partial results
-            self.report["health_metric_error"] = str(traceback.format_exc())
+            self.report["error"] = str(traceback.format_exc())
             return self.report
 
     def _check_project_info(self):
@@ -87,10 +96,10 @@ class HealthMetric:
             # Add timestamp
             project_info["timestamp"] = datetime.now().isoformat()
             
-            self.report["project_info"] = project_info
+            self.report["checks"]["project_info"] = project_info
             
         except Exception as e:
-            self.report["project_info"] = {"error": str(e)}
+            self.report["checks"]["project_info"] = {"error": str(traceback.format_exc())}
 
     def _get_project_phases(self):
         """Get project phases information"""
@@ -190,14 +199,14 @@ class HealthMetric:
                 except Exception as e:
                     worksets_data["workset_element_counts"][workset.Name] = 0
                     worksets_data["workset_element_ownership"][workset.Name] = {
-                        "error": str(e)
+                        "error": str(traceback.format_exc())
                     }
                 
                 worksets_data["workset_details"].append(workset_detail)
                     
             return worksets_data
         except Exception as e:
-            return {"error": str(e)}
+            return {"error": str(traceback.format_exc())}
 
     def _check_linked_files(self):
         """Check linked files information"""
@@ -216,17 +225,21 @@ class HealthMetric:
                     }
                     linked_files.append(link_info)
             
-            self.report["linked_files"] = linked_files
-            self.report["linked_files_count"] = len(linked_files)
+            self.report["checks"]["linked_files"] = {
+                "linked_files": linked_files,
+                "linked_files_count": len(linked_files)
+            }
         except Exception as e:
-            self.report["linked_files_error"] = str(e)
+            self.report["checks"]["linked_files"] = {"error": str(traceback.format_exc())}
 
     def _check_critical_elements(self):
         """Check critical elements metrics"""
         try:
+            critical_elements_data = {}
+            
             # Total elements
             all_elements = DB.FilteredElementCollector(self.doc).WhereElementIsNotElementType().ToElements()
-            self.report["total_elements"] = len(all_elements)
+            critical_elements_data["total_elements"] = len(all_elements)
             
             # Purgeable elements (2024+ feature)
             try:
@@ -235,13 +248,13 @@ class HealthMetric:
                         DB.FilteredElementCollector(self.doc).OfClass(DB.ElementType)
                     )
                 ).ToElements()
-                self.report["purgeable_elements"] = len(purgeable_elements)
+                critical_elements_data["purgeable_elements"] = len(purgeable_elements)
             except:
-                self.report["purgeable_elements"] = 0
+                critical_elements_data["purgeable_elements"] = 0
             
             # Warnings with detailed element information
             all_warnings = self.doc.GetWarnings()
-            self.report["warning_count"] = len(all_warnings)
+            critical_elements_data["warning_count"] = len(all_warnings)
             
             # Collect detailed warning information
             warning_details = []
@@ -298,13 +311,13 @@ class HealthMetric:
                     # Skip warnings that fail to process
                     continue
             
-            self.report["warning_details"] = warning_details[:100]  # Limit to 100 warnings for performance
-            self.report["warning_creators"] = warning_creators
-            self.report["warning_last_editors"] = warning_last_editors
+            critical_elements_data["warning_details"] = warning_details[:100]  # Limit to 100 warnings for performance
+            critical_elements_data["warning_creators"] = warning_creators
+            critical_elements_data["warning_last_editors"] = warning_last_editors
             
             # Critical warnings
             critical_warnings = [w for w in all_warnings if w.GetSeverity() == DB.FailureSeverity.Error]
-            self.report["critical_warning_count"] = len(critical_warnings)
+            critical_elements_data["critical_warning_count"] = len(critical_warnings)
             
             # Critical warning details
             critical_warning_details = []
@@ -318,11 +331,12 @@ class HealthMetric:
                 except:
                     continue
             
-            self.report["critical_warning_details"] = critical_warning_details
-
+            critical_elements_data["critical_warning_details"] = critical_warning_details
+            
+            self.report["checks"]["critical_elements"] = critical_elements_data
             
         except Exception as e:
-            self.report["critical_elements_error"] = str(e)
+            self.report["checks"]["critical_elements"] = {"error": str(traceback.format_exc())}
 
 
 
@@ -340,10 +354,10 @@ class HealthMetric:
             unbounded_rooms = [r for r in rooms if r.Area == 0]
             rooms_data["unbounded_rooms"] = len(unbounded_rooms)
             
-            self.report["rooms"] = rooms_data
+            self.report["checks"]["rooms"] = rooms_data
             
         except Exception as e:
-            self.report["rooms"] = {"error": str(e)}
+            self.report["checks"]["rooms"] = {"error": str(traceback.format_exc())}
 
     def _check_sheets_views(self):
         """Check sheets and views metrics"""
@@ -395,10 +409,10 @@ class HealthMetric:
             views_data["view_count_by_type_non_template"] = view_count_by_type_non_template
             views_data["view_count_by_type_template"] = view_count_by_type_template
             
-            self.report["views_sheets"] = views_data
+            self.report["checks"]["views_sheets"] = views_data
             
         except Exception as e:
-            self.report["views_sheets"] = {"error": str(e)}
+            self.report["checks"]["views_sheets"] = {"error": str(traceback.format_exc())}
 
 
     def _check_templates_filters(self):
@@ -483,18 +497,34 @@ class HealthMetric:
                         filter_ids = view.GetFilters()
                         if filter_ids:
                             for filter_id in filter_ids:
-                                used_filters.add(filter_id.IntegerValue)
+                                try:
+                                    # Defensive access to IntegerValue
+                                    if hasattr(filter_id, 'IntegerValue'):
+                                        used_filters.add(filter_id.IntegerValue)
+                                    else:
+                                        # Fallback: convert to int if possible
+                                        used_filters.add(int(filter_id))
+                                except:
+                                    continue
                 except Exception as e:
                     # Skip views that don't support filters (like schedules, legends, etc.)
                     continue
             
-            unused_filters = [f for f in filters if f.Id.IntegerValue not in used_filters]
+            # Safely get unused filters
+            unused_filters = []
+            for f in filters:
+                try:
+                    filter_int_id = f.Id.IntegerValue if hasattr(f.Id, 'IntegerValue') else int(f.Id)
+                    if filter_int_id not in used_filters:
+                        unused_filters.append(f)
+                except:
+                    continue
             templates_data["unused_filters"] = len(unused_filters)
             
-            self.report["templates_filters"] = templates_data
+            self.report["checks"]["templates_filters"] = templates_data
             
         except Exception as e:
-            self.report["templates_filters"] = {"error": str(e)}
+            self.report["checks"]["templates_filters"] = {"error": str(traceback.format_exc())}
 
     def _check_cad_files(self):
         """Check CAD files metrics"""
@@ -528,10 +558,10 @@ class HealthMetric:
                 pass
             cad_data["cad_layers_imports_in_families"] = cad_layers_in_families
             
-            self.report["cad_files"] = cad_data
+            self.report["checks"]["cad_files"] = cad_data
             
         except Exception as e:
-            self.report["cad_files"] = {"error": str(e)}
+            self.report["checks"]["cad_files"] = {"error": str(traceback.format_exc())}
 
     def _check_families(self):
         """Check families metrics with advanced analysis"""
@@ -569,10 +599,10 @@ class HealthMetric:
             families_data["in_place_families_creators"] = self._analyze_family_creators(in_place_families)
             families_data["non_parametric_families_creators"] = self._analyze_family_creators(non_parametric_families)
             
-            self.report["families"] = families_data
+            self.report["checks"]["families"] = families_data
             
         except Exception as e:
-            self.report["families"] = {"error": str(e)}
+            self.report["checks"]["families"] = {"error": str(traceback.format_exc())}
 
     def _analyze_family_creators(self, families):
         """Analyze family creators and last editors - based on QAQC_runner.py pattern"""
@@ -603,7 +633,7 @@ class HealthMetric:
             }
             
         except Exception as e:
-            return {"error": str(e)}
+            return {"error": str(traceback.format_exc())}
 
     def _analyze_template_creators(self, templates):
         """Analyze view template creators and last editors"""
@@ -634,7 +664,7 @@ class HealthMetric:
             }
             
         except Exception as e:
-            return {"error": str(e)}
+            return {"error": str(traceback.format_exc())}
 
     def _find_unused_families(self, families):
         """Find families that have no instances placed in the project"""
@@ -673,87 +703,95 @@ class HealthMetric:
             return {
                 "count": 0,
                 "names": [],
-                "error": str(e)
+                "error": str(traceback.format_exc())
             }
 
     def _check_graphical_elements(self):
         """Check graphical 2D elements metrics"""
         try:
+            graphical_data = {}
+            
             # Detail lines - use CurveElement and filter for DetailCurve type
             curve_elements = DB.FilteredElementCollector(self.doc).OfClass(DB.CurveElement).ToElements()
             detail_lines = [ce for ce in curve_elements if ce.CurveElementType.ToString() == "DetailCurve"]
-            self.report["detail_lines"] = len(detail_lines)
+            graphical_data["detail_lines"] = len(detail_lines)
             
             # Line patterns
             line_patterns = DB.FilteredElementCollector(self.doc).OfClass(DB.LinePatternElement).ToElements()
-            self.report["line_patterns"] = len(line_patterns)
+            graphical_data["line_patterns"] = len(line_patterns)
             
             # Text notes
             text_notes = DB.FilteredElementCollector(self.doc).OfClass(DB.TextNote).ToElements()
-            self.report["text_notes_instances"] = len(text_notes)
+            graphical_data["text_notes_instances"] = len(text_notes)
             
             # Text note types
             text_note_types = DB.FilteredElementCollector(self.doc).OfClass(DB.TextNoteType).ToElements()
-            self.report["text_notes_types"] = len(text_note_types)
+            graphical_data["text_notes_types"] = len(text_note_types)
             
             # Text notes with solid background
             solid_background_notes = [tn for tn in text_note_types if hasattr(tn, 'Background') and tn.Background == DB.TextNoteBackground.Solid]
-            self.report["text_notes_types_solid_background"] = len(solid_background_notes)
+            graphical_data["text_notes_types_solid_background"] = len(solid_background_notes)
             
             # Text notes width factor != 1
             width_factor_notes = [tn for tn in text_note_types if hasattr(tn, 'WidthFactor') and tn.WidthFactor != 1.0]
-            self.report["text_notes_width_factor_not_1"] = len(width_factor_notes)
+            graphical_data["text_notes_width_factor_not_1"] = len(width_factor_notes)
             
             # Text notes all caps
             all_caps_notes = [tn for tn in text_note_types if hasattr(tn, 'AllCaps') and tn.AllCaps]
-            self.report["text_notes_all_caps"] = len(all_caps_notes)
+            graphical_data["text_notes_all_caps"] = len(all_caps_notes)
             
             # Dimensions
             dimensions = DB.FilteredElementCollector(self.doc).OfClass(DB.Dimension).ToElements()
-            self.report["dimensions"] = len(dimensions)
+            graphical_data["dimensions"] = len(dimensions)
             
             # Dimension types
             dimension_types = DB.FilteredElementCollector(self.doc).OfClass(DB.DimensionType).ToElements()
-            self.report["dimension_types"] = len(dimension_types)
+            graphical_data["dimension_types"] = len(dimension_types)
             
             # Dimension overrides
             dimension_overrides = [d for d in dimensions if d.ValueOverride != ""]
-            self.report["dimension_overrides"] = len(dimension_overrides)
+            graphical_data["dimension_overrides"] = len(dimension_overrides)
             
             # Revision clouds
             revision_clouds = DB.FilteredElementCollector(self.doc).OfClass(DB.RevisionCloud).ToElements()
-            self.report["revision_clouds"] = len(revision_clouds)
+            graphical_data["revision_clouds"] = len(revision_clouds)
+            
+            self.report["checks"]["graphical_elements"] = graphical_data
             
         except Exception as e:
-            self.report["graphical_elements_error"] = str(e)
+            self.report["checks"]["graphical_elements"] = {"error": str(traceback.format_exc())}
 
     def _check_groups(self):
         """Check groups metrics with usage analysis"""
         try:
+            groups_data = {}
+            
             # Model groups
             model_groups = DB.FilteredElementCollector(self.doc).OfClass(DB.Group).ToElements()
-            self.report["model_group_instances"] = len(model_groups)
+            groups_data["model_group_instances"] = len(model_groups)
             
             # Model group types
             model_group_types = DB.FilteredElementCollector(self.doc).OfClass(DB.GroupType).ToElements()
-            self.report["model_group_types"] = len(model_group_types)
+            groups_data["model_group_types"] = len(model_group_types)
             
             # Detail groups - use category instead of class
             detail_groups = DB.FilteredElementCollector(self.doc).OfCategory(DB.BuiltInCategory.OST_IOSDetailGroups).WhereElementIsNotElementType().ToElements()
-            self.report["detail_group_instances"] = len(detail_groups)
+            groups_data["detail_group_instances"] = len(detail_groups)
             
             # Detail group types
             detail_group_types = DB.FilteredElementCollector(self.doc).OfCategory(DB.BuiltInCategory.OST_IOSDetailGroups).WhereElementIsElementType().ToElements()
-            self.report["detail_group_types"] = len(detail_group_types)
+            groups_data["detail_group_types"] = len(detail_group_types)
             
             # Advanced group usage analysis - based on QAQC_runner.py pattern
-            self._analyze_group_usage(model_groups, "model_group")
-            self._analyze_group_usage(detail_groups, "detail_group")
+            self._analyze_group_usage(model_groups, "model_group", groups_data)
+            self._analyze_group_usage(detail_groups, "detail_group", groups_data)
+            
+            self.report["checks"]["groups"] = groups_data
             
         except Exception as e:
-            self.report["groups_error"] = str(e)
+            self.report["checks"]["groups"] = {"error": str(traceback.format_exc())}
 
-    def _analyze_group_usage(self, groups, group_type):
+    def _analyze_group_usage(self, groups, group_type, groups_data):
         """Analyze group usage patterns - based on QAQC_runner.py pattern"""
         try:
             type_data = {}
@@ -766,7 +804,7 @@ class HealthMetric:
             threshold = 10
             overused_groups = [type_name for type_name, count in type_data.items() if count > threshold]
             
-            self.report["{}_usage_analysis".format(group_type)] = {
+            groups_data["{}_usage_analysis".format(group_type)] = {
                 "total_types": len(type_data),
                 "overused_count": len(overused_groups),
                 "overused_groups": overused_groups,
@@ -775,11 +813,13 @@ class HealthMetric:
             }
             
         except Exception as e:
-            self.report["{}_usage_analysis_error".format(group_type)] = str(e)
+            groups_data["{}_usage_analysis_error".format(group_type)] = str(e)
 
     def _check_reference_planes(self):
         """Check reference planes metrics"""
         try:
+            ref_planes_data = {}
+            
             # Reference planes - based on QAQC_runner.py pattern
             all_ref_planes = DB.FilteredElementCollector(self.doc).OfClass(DB.ReferencePlane).ToElements()
             # Only get ref planes whose workset is not read-only (project refs, not family refs)
@@ -794,7 +834,7 @@ class HealthMetric:
                     # If we can't check workset, include it (safer approach)
                     ref_planes.append(rp)
             
-            self.report["reference_planes"] = len(ref_planes)
+            ref_planes_data["reference_planes"] = len(ref_planes)
             
             # Unnamed reference planes - based on QAQC_runner.py pattern
             # Check for default "Reference Plane" name and empty/whitespace names
@@ -802,18 +842,23 @@ class HealthMetric:
                                  rp.Name == "Reference Plane" or 
                                  not rp.Name or 
                                  rp.Name.strip() == ""]
-            self.report["reference_planes_no_name"] = len(unnamed_ref_planes)
+            ref_planes_data["reference_planes_no_name"] = len(unnamed_ref_planes)
+            
+            self.report["checks"]["reference_planes"] = ref_planes_data
             
         except Exception as e:
-            self.report["reference_planes_error"] = str(e)
+            self.report["checks"]["reference_planes"] = {"error": str(traceback.format_exc())}
 
     def _check_materials(self):
         """Check materials count"""
         try:
+            materials_data = {}
             materials = DB.FilteredElementCollector(self.doc).OfClass(DB.Material).ToElements()
-            self.report["materials"] = len(materials)
+            materials_data["materials"] = len(materials)
+            
+            self.report["checks"]["materials"] = materials_data
         except Exception as e:
-            self.report["materials_error"] = str(e)
+            self.report["checks"]["materials"] = {"error": str(traceback.format_exc())}
 
     def _check_line_count(self):
         """Check detail and model line usage with per-view breakdown"""
@@ -856,10 +901,10 @@ class HealthMetric:
             
             line_data["detail_lines_per_view"] = detail_lines_per_view
             
-            self.report["line_count"] = line_data
+            self.report["checks"]["line_count"] = line_data
             
         except Exception as e:
-            self.report["line_count_error"] = str(e)
+            self.report["checks"]["line_count"] = {"error": str(traceback.format_exc())}
 
     def _check_warnings(self):
         """Check warnings metrics with advanced analysis"""
@@ -933,10 +978,10 @@ class HealthMetric:
             warnings_data["warning_details_per_creator"] = user_personal_log
             warnings_data["warning_details_per_last_editor"] = user_editor_log
             
-            self.report["warnings"] = warnings_data
+            self.report["checks"]["warnings"] = warnings_data
             
         except Exception as e:
-            self.report["warnings"] = {"error": str(e)}
+            self.report["checks"]["warnings"] = {"error": str(traceback.format_exc())}
 
     def _get_user_element_counts(self, elements):
         """Get element counts per user (creator and last editor) - based on QAQC_runner.py pattern"""
@@ -966,6 +1011,123 @@ class HealthMetric:
             }
         except:
             return {}
+
+    def _check_file_size(self):
+        """Check file size in MB"""
+        try:
+            file_size_data = {}
+            
+            # Get file path
+            file_path = self.doc.PathName
+            if file_path:
+                try:
+                    import os
+                    file_size_bytes = os.path.getsize(file_path)
+                    file_size_mb = file_size_bytes / (1024.0 * 1024.0)
+                    file_size_data["file_size_mb"] = round(file_size_mb, 2)
+                    file_size_data["file_size_bytes"] = file_size_bytes
+                    file_size_data["file_path"] = file_path
+                except:
+                    file_size_data["file_size_mb"] = 0
+                    file_size_data["file_size_bytes"] = 0
+                    file_size_data["error"] = "Could not determine file size"
+            else:
+                file_size_data["file_size_mb"] = 0
+                file_size_data["file_size_bytes"] = 0
+                file_size_data["note"] = "Document not saved"
+            
+            self.report["checks"]["file_size"] = file_size_data
+            
+        except Exception as e:
+            self.report["checks"]["file_size"] = {"error": str(traceback.format_exc())}
+
+    def _check_filled_regions(self):
+        """Check filled regions count"""
+        try:
+            filled_regions_data = {}
+            
+            # Get all filled regions
+            filled_regions = DB.FilteredElementCollector(self.doc).OfClass(DB.FilledRegion).ToElements()
+            filled_regions_data["filled_regions"] = len(filled_regions)
+            
+            # Filled regions by type
+            filled_region_types = {}
+            for fr in filled_regions:
+                try:
+                    fr_type = self.doc.GetElement(fr.GetTypeId())
+                    if fr_type:
+                        type_name = fr_type.Name
+                        current_count = filled_region_types.get(type_name, 0)
+                        filled_region_types[type_name] = current_count + 1
+                except:
+                    continue
+            
+            filled_regions_data["filled_regions_by_type"] = filled_region_types
+            
+            # Filled regions per view
+            filled_regions_per_view = {}
+            for fr in filled_regions:
+                try:
+                    owner_view_id = fr.OwnerViewId
+                    if owner_view_id and owner_view_id != DB.ElementId.InvalidElementId:
+                        view = self.doc.GetElement(owner_view_id)
+                        if view:
+                            view_name = view.Name
+                            current_count = filled_regions_per_view.get(view_name, 0)
+                            filled_regions_per_view[view_name] = current_count + 1
+                except:
+                    continue
+            
+            filled_regions_data["filled_regions_per_view"] = filled_regions_per_view
+            
+            self.report["checks"]["filled_regions"] = filled_regions_data
+            
+        except Exception as e:
+            self.report["checks"]["filled_regions"] = {"error": str(traceback.format_exc())}
+
+    def _check_grids_levels(self):
+        """Check grids and levels pinning status"""
+        try:
+            grids_levels_data = {}
+            
+            # Grids
+            grids = DB.FilteredElementCollector(self.doc).OfClass(DB.Grid).ToElements()
+            grids_levels_data["total_grids"] = len(grids)
+            
+            unpinned_grids = [g for g in grids if not g.Pinned]
+            grids_levels_data["unpinned_grids"] = len(unpinned_grids)
+            grids_levels_data["pinned_grids"] = len(grids) - len(unpinned_grids)
+            
+            # Levels
+            levels = DB.FilteredElementCollector(self.doc).OfClass(DB.Level).ToElements()
+            grids_levels_data["total_levels"] = len(levels)
+            
+            unpinned_levels = [l for l in levels if not l.Pinned]
+            grids_levels_data["unpinned_levels"] = len(unpinned_levels)
+            grids_levels_data["pinned_levels"] = len(levels) - len(unpinned_levels)
+            
+            # Get details of unpinned grids
+            unpinned_grid_names = []
+            for grid in unpinned_grids:
+                try:
+                    unpinned_grid_names.append(grid.Name)
+                except:
+                    continue
+            grids_levels_data["unpinned_grid_names"] = sorted(unpinned_grid_names)
+            
+            # Get details of unpinned levels
+            unpinned_level_names = []
+            for level in unpinned_levels:
+                try:
+                    unpinned_level_names.append(level.Name)
+                except:
+                    continue
+            grids_levels_data["unpinned_level_names"] = sorted(unpinned_level_names)
+            
+            self.report["checks"]["grids_levels"] = grids_levels_data
+            
+        except Exception as e:
+            self.report["checks"]["grids_levels"] = {"error": str(traceback.format_exc())}
 
     def _check_enneadtab_availability(self):
         """Check if EnneadTab is available in the current session"""

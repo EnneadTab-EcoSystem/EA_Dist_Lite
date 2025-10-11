@@ -399,10 +399,10 @@ def run_metric(doc, job_payload, paths=None):
             _append_debug("Starting HealthMetric.check() - this may take time on large models...", paths)
             print("STATUS: Running comprehensive health metrics (may take 1-2 minutes for large models)...")
             
-            result = health_metric.check()
+            reports = health_metric.check()
             _append_debug("Real HealthMetric completed successfully", paths)
             print("STATUS: Real health metrics completed successfully")
-            return result, None
+            return reports, None
                 
         except Exception as check_ex:
             raise Exception("HealthMetric.check() failed: {}".format(str(check_ex)))
@@ -647,7 +647,14 @@ def revit_remote_server():
         # 4) write output file
         _write_heartbeat("Writing output file...", paths)
         out_name = _format_output_filename(job)
-        out_path = _join(_ensure_output_dir(paths), out_name)
+        
+        # Create project subfolder for organized output
+        project_name = job.get("project_name", "Unknown_Project")
+        project_folder = _join(_ensure_output_dir(paths), project_name)
+        if not os.path.exists(project_folder):
+            os.makedirs(project_folder)
+        
+        out_path = _join(project_folder, out_name)
         output_payload = {
             "job_metadata": {
                 "job_id": job.get("job_id"),
