@@ -26,14 +26,14 @@ class ExportError:
 class ModelExporter:
     """
     Main export coordinator for Revit models.
-    Exports first 10 sheets from print-set to JPG, PDF, and DWG formats.
+    Exports ALL sheets from ALL print-sets (union) to JPG, PDF, and DWG formats.
     
     Fixed Settings (hardcoded, same for all exports):
     - Image: 150 DPI, 1920px width
     - PDF: Individual PDFs per sheet
     - DWG: 2018 format, AIA layer standard
     - Timeout: 60s/image, 120s/PDF, 180s/DWG
-    - Max sheets: 10 (from print-set)
+    - Sheet Selection: Union of all ViewSheetSets (all printable sheets)
     """
     
     # Fixed export settings - same for ALL projects
@@ -41,7 +41,7 @@ class ModelExporter:
     IMAGE_WIDTH = 1920
     PDF_COMBINE = False  # Individual PDFs per sheet
     DWG_VERSION = DB.ACADVersion.R2018
-    MAX_SHEETS = 10  # Export first 10 sheets from print-set
+    MAX_SHEETS = None  # Export ALL sheets from print sets (no limit)
     
     TIMEOUTS = {
         "image": 60,   # 60s per image
@@ -84,7 +84,7 @@ class ModelExporter:
                 "image_width": self.IMAGE_WIDTH,
                 "pdf_combine": self.PDF_COMBINE,
                 "dwg_version": "2018",
-                "max_sheets": self.MAX_SHEETS
+                "sheet_selection": "all_print_sets"
             }
         }
     
@@ -104,41 +104,64 @@ class ModelExporter:
     
     def _get_printset_sheets(self):
         """
-        Get first N sheets from the print-set.
+        Get sheets from ALL print-sets (union of all printable sheets).
+        Collects sheets from every ViewSheetSet and removes duplicates.
         Returns (sheets_list, error_message)
         """
         try:
             print_manager = self.doc.PrintManager
             view_sheet_setting = print_manager.ViewSheetSetting
             
-            # Check if print-set has sheets
-            if view_sheet_setting.CurrentViewSheetSet.Size == 0:
-                return [], "No sheets in print-set"
+            # Get ALL ViewSheetSets from the document
+            all_sets = view_sheet_setting.AvailableViewSheetSets
+            if not all_sets or all_sets.Size == 0:
+                print("WARNING: No print sets found in document")
+                return [], "No print sets configured"
             
-            # Get sheets from print-set
-            sheet_ids = view_sheet_setting.CurrentViewSheetSet.Views
-            if not sheet_ids or sheet_ids.Size == 0:
-                return [], "Print-set is empty"
+            print("INFO: Found {} print set(s), collecting sheets from all...".format(all_sets.Size))
             
+            # Collect unique sheet IDs from ALL print sets (union)
+            unique_sheet_ids = set()
+            for view_sheet_set in all_sets:
+                if view_sheet_set and view_sheet_set.Views:
+                    set_name = view_sheet_set.Name if hasattr(view_sheet_set, 'Name') else 'Unnamed'
+                    sheet_count = view_sheet_set.Views.Size if view_sheet_set.Views else 0
+                    print("  - Print set '{}': {} sheet(s)".format(set_name, sheet_count))
+                    
+                    for sheet_id in view_sheet_set.Views:
+                        unique_sheet_ids.add(sheet_id)
+            
+            if not unique_sheet_ids:
+                return [], "All print sets are empty"
+            
+            print("INFO: Total unique sheets across all print sets: {}".format(len(unique_sheet_ids)))
+            
+            # Convert sheet IDs to ViewSheet objects
             sheets = []
-            for sheet_id in sheet_ids:
+            for sheet_id in unique_sheet_ids:
                 sheet = self.doc.GetElement(sheet_id)
                 if sheet and isinstance(sheet, DB.ViewSheet):
-                    sheets.append(sheet)
-                    if len(sheets) >= self.MAX_SHEETS:
-                        break
+                    if not sheet.IsPlaceholder:  # Skip placeholder sheets
+                        sheets.append(sheet)
             
             if not sheets:
-                return [], "No valid sheets found in print-set"
+                return [], "No valid sheets found in print sets"
             
+            # Sort sheets by sheet number for consistent ordering
+            sheets.sort(key=lambda s: s.SheetNumber)
+            
+            print("INFO: Exporting {} valid sheet(s) from all print sets".format(len(sheets)))
             return sheets, None
             
         except Exception as e:
-            return [], "Failed to get print-set sheets: {}".format(str(e))
+            import traceback
+            error_detail = traceback.format_exc()
+            print("ERROR: Failed to get print set sheets: {}".format(error_detail))
+            return [], "Failed to get print set sheets: {}".format(str(e))
     
     def _get_fallback_sheets(self):
         """
-        Fallback: Get first N sheets from document if print-set fails.
+        Fallback: Get ALL sheets from document if print-set fails.
         Returns (sheets_list, error_message)
         """
         try:
@@ -151,29 +174,31 @@ class ModelExporter:
             if not valid_sheets:
                 return [], "No sheets found in document"
             
-            # Take first N sheets
-            sheets = valid_sheets[:self.MAX_SHEETS]
-            return sheets, None
+            # Sort by sheet number for consistent ordering
+            valid_sheets.sort(key=lambda s: s.SheetNumber)
+            
+            print("INFO: Fallback - exporting ALL {} sheet(s) from document".format(len(valid_sheets)))
+            return valid_sheets, None
             
         except Exception as e:
             return [], "Failed to get fallback sheets: {}".format(str(e))
     
     def _get_sheets_to_export(self):
         """
-        Get sheets to export (print-set first, fallback to first N sheets).
+        Get sheets to export (ALL print-set sheets first, fallback to ALL document sheets).
         Returns (sheets_list, source_description, error_message)
         """
-        # Try print-set first
+        # Try print-sets first (union of all ViewSheetSets)
         sheets, error = self._get_printset_sheets()
         if sheets:
-            return sheets, "print-set", None
+            return sheets, "all print sets ({} sheets)".format(len(sheets)), None
         
-        print("WARNING: Print-set unavailable ({}), using fallback...".format(error))
+        print("WARNING: Print-sets unavailable ({}), using fallback...".format(error))
         
-        # Fallback to first N sheets
+        # Fallback to ALL sheets in document
         sheets, error = self._get_fallback_sheets()
         if sheets:
-            return sheets, "first {} sheets (fallback)".format(len(sheets)), None
+            return sheets, "all sheets in document ({} sheets - fallback)".format(len(sheets)), None
         
         # Both failed
         return [], None, "No sheets available: {}".format(error)

@@ -86,6 +86,14 @@ class DWGExporter:
             filename = safe_filename(sheet.SheetNumber, sheet.Name)
             output_path = os.path.join(export_dir, "{}.dwg".format(filename))
             
+            # Delete existing file to allow overwrite (Revit won't overwrite by default)
+            if os.path.exists(output_path):
+                try:
+                    os.remove(output_path)
+                    print("      Removed existing file: {}".format(output_path))
+                except Exception as e:
+                    print("      WARNING: Could not remove existing file: {}".format(e))
+            
             # Configure DWG export options
             options = DB.DWGExportOptions()
             options.FileVersion = self.parent.DWG_VERSION  # AutoCAD 2018

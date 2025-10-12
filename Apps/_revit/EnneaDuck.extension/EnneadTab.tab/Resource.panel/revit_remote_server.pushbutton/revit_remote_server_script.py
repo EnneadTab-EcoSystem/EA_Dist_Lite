@@ -335,8 +335,18 @@ def get_doc(job_payload, paths=None):
         except Exception as ex:
             _append_debug("Setting DetachFromCentralOption failed: {}".format(ex), paths)
         
-        # Open with minimal load: close all worksets for reliability
-        wsconfig = DB.WorksetConfiguration(DB.WorksetConfigurationOption.CloseAllWorksets)
+        # Configure workset loading based on whether exporter will run
+        # If exporter enabled: Open all worksets (sheets need content visible for export)
+        # If health metrics only: Close all worksets (faster, more reliable)
+        run_exporter = job_payload.get("run_exporter", False)
+        if run_exporter:
+            # Open all worksets so sheet content is visible for export
+            wsconfig = DB.WorksetConfiguration(DB.WorksetConfigurationOption.OpenAllWorksets)
+            _append_debug("Exporter enabled - opening ALL worksets for sheet export", paths)
+        else:
+            # Close all worksets for faster, more reliable health metrics
+            wsconfig = DB.WorksetConfiguration(DB.WorksetConfigurationOption.CloseAllWorksets)
+            _append_debug("Health metrics only - closing all worksets for performance", paths)
         opts.SetOpenWorksetsConfiguration(wsconfig)
         
         _append_debug("Opening document with Revit API...", paths)

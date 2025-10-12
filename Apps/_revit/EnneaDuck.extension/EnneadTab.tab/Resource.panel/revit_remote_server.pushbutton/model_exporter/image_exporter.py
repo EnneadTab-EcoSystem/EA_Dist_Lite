@@ -86,6 +86,14 @@ class ImageExporter:
             filename = safe_filename(sheet.SheetNumber, sheet.Name)
             output_path = os.path.join(export_dir, "{}.jpg".format(filename))
             
+            # Delete existing file to allow overwrite (Revit won't overwrite by default)
+            if os.path.exists(output_path):
+                try:
+                    os.remove(output_path)
+                    print("      Removed existing file: {}".format(output_path))
+                except Exception as e:
+                    print("      WARNING: Could not remove existing file: {}".format(e))
+            
             # Configure image export options
             options = DB.ImageExportOptions()
             options.ZoomType = DB.ZoomFitType.FitToPage
@@ -103,8 +111,27 @@ class ImageExporter:
             
             # Export with timeout check
             export_start = time.time()
+            
+            # Debug: Print export settings
+            print("      Image export settings:")
+            print("        FilePath: {}".format(options.FilePath))
+            print("        PixelSize: {}".format(options.PixelSize))
+            print("        Resolution: {}".format(options.ImageResolution))
+            print("        Sheet ID: {}".format(sheet.Id))
+            
+            # ExportImage returns void, but may fail silently
             self.doc.ExportImage(options)
             export_duration = time.time() - export_start
+            
+            print("      ExportImage completed in {:.2f}s".format(export_duration))
+            
+            # Debug: Check what files exist in export directory
+            import glob
+            pattern = os.path.join(export_dir, "{}*".format(safe_filename(sheet.SheetNumber, sheet.Name)))
+            matching_files = glob.glob(pattern)
+            print("      Files matching pattern '{}*':".format(safe_filename(sheet.SheetNumber, sheet.Name)))
+            for f in matching_files:
+                print("        - {} ({} bytes)".format(os.path.basename(f), os.path.getsize(f)))
             
             # Check timeout (warning only, not failure)
             timeout = self.parent.TIMEOUTS["image"]
@@ -116,6 +143,7 @@ class ImageExporter:
             # Validate exported file
             is_valid, error_msg = validate_export(output_path, min_size_kb=10)
             if not is_valid:
+                print("      ERROR: Expected file not found: {}".format(output_path))
                 cleanup_failed_export(output_path)
                 return {
                     "status": "failed",

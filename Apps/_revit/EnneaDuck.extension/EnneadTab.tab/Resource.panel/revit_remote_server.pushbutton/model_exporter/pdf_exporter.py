@@ -86,21 +86,45 @@ class PDFExporter:
             filename = safe_filename(sheet.SheetNumber, sheet.Name)
             output_path = os.path.join(export_dir, "{}.pdf".format(filename))
             
-            # Configure PDF export options
+            # Delete existing file to allow overwrite (Revit won't overwrite by default)
+            if os.path.exists(output_path):
+                try:
+                    os.remove(output_path)
+                    print("      Removed existing file: {}".format(output_path))
+                except Exception as e:
+                    print("      WARNING: Could not remove existing file: {}".format(e))
+            
+            # Configure PDF export options  
             options = DB.PDFExportOptions()
             options.StopOnError = False
+            options.FileName = filename  # Set filename in options
             # Note: CombineMultipleSheets removed - not available in Revit 2024+
-            # Individual PDFs per sheet is default behavior when exporting single views
             
-            # Create view ID list with single sheet (.NET List for compatibility)
+            # Create view ID list (using .NET List for API compatibility)
             from System.Collections.Generic import List  # pyright: ignore
             view_ids = List[DB.ElementId]()
             view_ids.Add(sheet.Id)
             
             # Export with timeout check
             export_start = time.time()
-            self.doc.Export(export_dir, filename, view_ids, options)
+            # For PDF, use PrintManager-based export which is more reliable in 2024+
+            self.doc.Export(export_dir, view_ids, options)
             export_duration = time.time() - export_start
+            
+            # PDF export auto-generates filename, find the actual output file
+            import glob
+            pdf_pattern = os.path.join(export_dir, "{}*.pdf".format(sheet.SheetNumber))
+            pdf_files = glob.glob(pdf_pattern)
+            if pdf_files:
+                actual_output = pdf_files[0]  # Take first match
+                # Rename to our desired filename if different
+                if actual_output != output_path:
+                    try:
+                        if os.path.exists(output_path):
+                            os.remove(output_path)
+                        os.rename(actual_output, output_path)
+                    except:
+                        output_path = actual_output  # Use the auto-generated name
             
             # Check timeout (warning only, not failure)
             timeout = self.parent.TIMEOUTS["pdf"]
