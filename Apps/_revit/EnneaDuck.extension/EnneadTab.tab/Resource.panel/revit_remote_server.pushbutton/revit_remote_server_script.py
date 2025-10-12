@@ -425,8 +425,10 @@ def run_metric(doc, job_payload, paths=None):
 
 def _format_time(seconds):
     """Format time in readable format"""
-    if seconds < 60:
-        return "{} seconds".format(int(seconds))
+    if seconds < 1:
+        return "{:.2f} seconds".format(seconds)
+    elif seconds < 60:
+        return "{} seconds".format(int(round(seconds)))
     elif seconds < 3600:
         minutes = int(seconds // 60)
         secs = int(seconds % 60)
@@ -628,21 +630,81 @@ def revit_remote_server():
                 print("STATUS: Health metrics completed with error: {}".format(error_msg))
             else:
                 _write_heartbeat("Health metrics completed", paths)
-        finally:
-            try:
-                if must_close and doc is not None:
-                    _write_heartbeat("Closing document...", paths)
-                    doc.Close(False)
-                    _write_heartbeat("Document closed", paths)
-            except Exception as e:
-                _append_debug("Failed to close document: {}".format(traceback.format_exc()), paths)
-        
-        # Calculate execution time
-        execution_time = time.time() - begin_time
+        except Exception as e:
+            _append_debug("Health metrics exception: {}".format(traceback.format_exc()), paths)
+            raise
 
         # Get file size information
         model_path = job.get('model_path', '')
         file_size_info = _get_file_size_info(model_path)
+
+        # Try to run model exports (completely isolated from health metrics)
+        # Export is controlled by run_exporter flag in job (set based on computer configuration)
+        export_data = None
+        export_error = None
+        run_exporter = job.get("run_exporter", False)  # Default to False for backward compatibility
+        
+        if run_exporter:
+            # Check if document is valid before attempting exports
+            if doc is None:
+                print("WARNING: Document is null - skipping model exports")
+                export_data = {
+                    "export_status": "skipped",
+                    "error": "Document failed to open - exports skipped",
+                    "summary": {
+                        "total_sheets": 0,
+                        "successful_sheets": 0,
+                        "failed_sheets": 0,
+                        "partial_failures": 0
+                    }
+                }
+                _append_debug("Exporter skipped - document is null", paths)
+            else:
+                _write_heartbeat("Starting model exports...", paths)
+                print("STATUS: Running model exporter (computer configured for both health metric + exporter)")
+                try:
+                    from model_exporter import ModelExporter
+                    
+                    # Create export output directory
+                    export_base_path = _join(_ensure_output_dir(paths), "exports")
+                    if not os.path.exists(export_base_path):
+                        os.makedirs(export_base_path)
+                    
+                    exporter = ModelExporter(doc, export_base_path)
+                    export_data = exporter.export_all()
+                
+                    print("STATUS: Model export completed - {}/{} sheets successful".format(
+                        export_data["summary"]["successful_sheets"],
+                        export_data["summary"]["total_sheets"]
+                    ))
+                    _write_heartbeat("Model exports completed", paths)
+                except Exception as e:
+                    # Export failure does NOT affect health metrics
+                    export_error = str(e)
+                    export_data = {
+                        "export_status": "failed",
+                        "error": str(e),
+                        "traceback": traceback.format_exc()
+                    }
+                    print("WARNING: Model export failed: {}".format(str(e)))
+                    _append_debug("Model export failed: {}".format(traceback.format_exc()), paths)
+                    _write_heartbeat("Model exports failed (continuing with health metrics)", paths)
+                    # Continue to write output - health metrics are still valid
+        else:
+            print("STATUS: Skipping model exporter (computer configured for health metric only)")
+            _append_debug("Exporter skipped based on computer configuration (run_exporter=False)", paths)
+
+        # Close document AFTER both health metrics and exports complete
+        try:
+            if must_close and doc is not None:
+                _write_heartbeat("Closing document...", paths)
+                doc.Close(False)
+                _write_heartbeat("Document closed", paths)
+        except Exception as e:
+            _append_debug("Failed to close document: {}".format(traceback.format_exc()), paths)
+
+        # Calculate total execution time (includes health metrics + exports)
+        execution_time = time.time() - begin_time
 
         # 4) write output file
         _write_heartbeat("Writing output file...", paths)
@@ -668,7 +730,8 @@ def revit_remote_server():
                 "execution_time_seconds": round(execution_time, 2),
                 "execution_time_readable": _format_time(execution_time)
             },
-            "result_data": result,
+            "health_metric_result": result,  # Renamed from result_data
+            "export_data": export_data,      # New field for export metadata
             "status": "completed" + (" with error" if error_msg else "")
         }
         _save_json(out_path, output_payload)
