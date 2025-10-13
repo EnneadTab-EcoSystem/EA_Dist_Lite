@@ -15,13 +15,6 @@
         
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Source+Code+Pro:wght@400;500;600&display=swap');
         
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-        }
-        
         body {
             font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             line-height: 1.5;
@@ -29,7 +22,6 @@
             background: #0a0e13;
             min-height: 100vh;
             font-weight: 400;
-            position: relative;
         }
         
         .container {
@@ -857,19 +849,17 @@
             }
         }
         
-        /* Sticky Search Bar at Bottom - Floating Element */
+        /* Sticky Search Bar at Bottom */
         .search-bar-container {
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            width: 100%;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
             background: linear-gradient(180deg, rgba(10, 14, 19, 0) 0%, rgba(10, 14, 19, 0.8) 15%, #0a0e13 30%);
             padding: 24px 0 16px 0;
-            z-index: 10000;
+            z-index: 1000;
             box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(8px);
-            pointer-events: auto;
         }
         
         .search-bar-content {
@@ -989,7 +979,7 @@
             border: 2px solid #374151;
             border-radius: 8px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-            z-index: 9999;
+            z-index: 10000;
             min-width: 220px;
             display: none;
             overflow: hidden;
@@ -1026,136 +1016,6 @@
             text-align: center;
         }
         
-        /* Minimap Navigation Styles */
-        .minimap-nav {
-            position: fixed;
-            right: 24px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #111827;
-            border: 1px solid #1f2937;
-            border-radius: 8px;
-            padding: 16px 12px;
-            z-index: 998;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-            max-height: 80vh;
-            overflow-y: auto;
-            min-width: 200px;
-            transition: all 0.3s ease;
-        }
-        
-        .minimap-nav:hover {
-            border-color: #374151;
-            box-shadow: 0 12px 50px rgba(0, 0, 0, 0.7);
-        }
-        
-        .minimap-title {
-            color: #9ca3af;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 1px solid #1f2937;
-            text-align: center;
-        }
-        
-        .minimap-item {
-            display: flex;
-            align-items: center;
-            padding: 8px 12px;
-            margin: 4px 0;
-            color: #9ca3af;
-            font-size: 0.8rem;
-            cursor: pointer;
-            border-radius: 6px;
-            transition: all 0.2s ease;
-            border-left: 3px solid transparent;
-            position: relative;
-        }
-        
-        .minimap-item:hover {
-            background: #1f2937;
-            color: #f8fafc;
-            border-left-color: #60a5fa;
-            transform: translateX(-2px);
-        }
-        
-        .minimap-item.active {
-            background: #1f2937;
-            color: #60a5fa;
-            border-left-color: #60a5fa;
-            font-weight: 600;
-        }
-        
-        .minimap-item.active::before {
-            content: '';
-            position: absolute;
-            left: -12px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 8px;
-            height: 8px;
-            background: #60a5fa;
-            border-radius: 50%;
-            box-shadow: 0 0 8px rgba(96, 165, 250, 0.6);
-        }
-        
-        .minimap-icon {
-            margin-right: 8px;
-            font-size: 1rem;
-            min-width: 16px;
-            text-align: center;
-        }
-        
-        .minimap-toggle {
-            position: fixed;
-            right: 24px;
-            top: 24px;
-            background: #111827;
-            border: 1px solid #1f2937;
-            border-radius: 6px;
-            padding: 8px 12px;
-            color: #9ca3af;
-            cursor: pointer;
-            z-index: 999;
-            font-size: 0.875rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-        
-        .minimap-toggle:hover {
-            background: #1f2937;
-            color: #60a5fa;
-            border-color: #374151;
-        }
-        
-        .minimap-nav.hidden {
-            opacity: 0;
-            pointer-events: none;
-            transform: translateY(-50%) translateX(20px);
-        }
-        
-        /* Scrollbar styling for minimap */
-        .minimap-nav::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        .minimap-nav::-webkit-scrollbar-track {
-            background: #0a0e13;
-            border-radius: 3px;
-        }
-        
-        .minimap-nav::-webkit-scrollbar-thumb {
-            background: #374151;
-            border-radius: 3px;
-        }
-        
-        .minimap-nav::-webkit-scrollbar-thumb:hover {
-            background: #4b5563;
-        }
-        
     </style>
 </head>
 <body>
@@ -1163,7 +1023,7 @@
         <header class="report-header">
             <h1>🏥 Area Requirements vs Actual - Report</h1>
             <div class="report-info">
-                <p><strong>Generated:</strong> 2025-10-13 15:22:11</p>
+                <p><strong>Generated:</strong> 2025-10-13 14:58:25</p>
                 <p><strong>Project:</strong> NYU HQ - Monitor Area System</p>
                 <p><strong>Area Scheme:</strong> DGSF Scheme</p>
             </div>
@@ -3275,7 +3135,7 @@
         </div>
         
         <footer class="report-footer">
-            <p>Report generated by Monitor Area System | 2025-10-13 15:22:11</p>
+            <p>Report generated by Monitor Area System | 2025-10-13 14:58:25</p>
             <p style="margin-top: 10px; font-size: 0.9em; color: #9ca3af;">
                 🦆 Powered by <strong style="color: #60a5fa;">EnneadTab</strong> | 
                 For feature requests, contact <strong style="color: #60a5fa;">Sen Zhang</strong>
@@ -3309,38 +3169,6 @@
             <span>Expand All Departments</span>
         </div>
     </div>
-    
-    <!-- Minimap Navigation Panel -->
-    <div class="minimap-toggle" onclick="toggleMinimap()" title="Toggle Navigation Panel">
-        🗺️ Nav
-    </div>
-    <nav class="minimap-nav" id="minimapNav">
-        <div class="minimap-title">📍 Quick Navigation</div>
-        <div class="minimap-item" onclick="scrollToSection('report-header')" data-section="report-header">
-            <span class="minimap-icon">🏥</span>
-            <span>Report Header</span>
-        </div>
-        <div class="minimap-item" onclick="scrollToSection('department-summary-section')" data-section="department-summary-section">
-            <span class="minimap-icon">📊</span>
-            <span>Department Summary</span>
-        </div>
-        <div class="minimap-item" onclick="scrollToSection('comparison-section')" data-section="comparison-section">
-            <span class="minimap-icon">📋</span>
-            <span>Detailed Comparison</span>
-        </div>
-        <div class="minimap-item" onclick="scrollToSection('unmatched-section')" data-section="unmatched-section">
-            <span class="minimap-icon">⚠️</span>
-            <span>Unmatched Areas</span>
-        </div>
-        <div class="minimap-item" onclick="scrollToSection('summary-section')" data-section="summary-section">
-            <span class="minimap-icon">📊</span>
-            <span>Summary</span>
-        </div>
-        <div class="minimap-item" onclick="scrollToSection('status-summary')" data-section="status-summary">
-            <span class="minimap-icon">📈</span>
-            <span>Status Breakdown</span>
-        </div>
-    </nav>
     
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
     <script>
@@ -4600,115 +4428,6 @@
             });
             
             rows.forEach(row => tbody.appendChild(row));
-        }
-        
-        // ========== Minimap Navigation Functions ==========
-        
-        // Toggle minimap visibility
-        function toggleMinimap() {
-            const minimap = document.getElementById('minimapNav');
-            if (minimap) {
-                minimap.classList.toggle('hidden');
-            }
-        }
-        
-        // Scroll to a specific section
-        function scrollToSection(sectionClass) {
-            // Try to find element by class first
-            let section = document.querySelector('.' + sectionClass);
-            
-            // If not found by class, try by ID
-            if (!section) {
-                section = document.getElementById(sectionClass);
-            }
-            
-            // If still not found, try finding header or section containing the class
-            if (!section) {
-                section = document.querySelector('[class*="' + sectionClass + '"]');
-            }
-            
-            if (section) {
-                const headerOffset = 80; // Offset for fixed elements
-                const elementPosition = section.getBoundingClientRect().top;
-                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
-                
-                window.scrollTo({
-                    top: offsetPosition,
-                    behavior: 'smooth'
-                });
-            }
-        }
-        
-        // Update active state of minimap items based on scroll position
-        function updateMinimapActiveState() {
-            const sections = [
-                'report-header',
-                'department-summary-section',
-                'comparison-section',
-                'unmatched-section',
-                'summary-section',
-                'status-summary'
-            ];
-            
-            const scrollPosition = window.scrollY + 200; // Offset for detection
-            
-            let activeSection = null;
-            
-            // Find which section is currently in view
-            for (const sectionClass of sections) {
-                let section = document.querySelector('.' + sectionClass);
-                
-                if (!section) {
-                    section = document.getElementById(sectionClass);
-                }
-                
-                if (!section) {
-                    section = document.querySelector('[class*="' + sectionClass + '"]');
-                }
-                
-                if (section) {
-                    const sectionTop = section.offsetTop;
-                    const sectionBottom = sectionTop + section.offsetHeight;
-                    
-                    if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
-                        activeSection = sectionClass;
-                        break;
-                    }
-                }
-            }
-            
-            // Update active class on minimap items
-            const minimapItems = document.querySelectorAll('.minimap-item');
-            minimapItems.forEach(item => {
-                const itemSection = item.getAttribute('data-section');
-                if (itemSection === activeSection) {
-                    item.classList.add('active');
-                } else {
-                    item.classList.remove('active');
-                }
-            });
-        }
-        
-        // Initialize minimap functionality
-        function initializeMinimap() {
-            console.log('Initializing minimap navigation...');
-            
-            // Update active state on scroll
-            window.addEventListener('scroll', function() {
-                updateMinimapActiveState();
-            });
-            
-            // Set initial active state
-            updateMinimapActiveState();
-            
-            console.log('Minimap navigation initialized');
-        }
-        
-        // Call minimap initialization after DOM is ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeMinimap);
-        } else {
-            initializeMinimap();
         }
         
     </script>

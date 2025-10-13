@@ -51,6 +51,8 @@ def get_panel_type_from_width(side_frame_width, family_name):
     """Get panel type based on side frame width and family type."""
     if "tower_main" in family_name.lower():
         return TOWER_MAIN_MAPPING.get(side_frame_width, "BAD")
+    elif "tower_ground_main" in family_name.lower():
+        return TOWER_MAIN_MAPPING.get(side_frame_width, "BAD")
     elif "podium_main" in family_name.lower():
         return PODIUM_MAIN_MAPPING.get(side_frame_width, "BAD")
     else:
@@ -93,27 +95,29 @@ def create_mapping_legend(doc):
             t.RollBack()
             return
         
-        # Create text notes for Tower Main mapping
+        # Create text notes for Tower Main mapping with improved formatting
         print("Creating Tower Main mapping legend...")
         tower_x = 0
         tower_y = 0
-        tower_text = "TOWER MAIN MAPPING:\n"
-        for side_frame_w in sorted(TOWER_MAIN_MAPPING.keys()):
-            panel_type = TOWER_MAIN_MAPPING[side_frame_w]
-            tower_text += "{} -> {}\n".format(side_frame_w, panel_type)
+        tower_text = "TOWER PANEL TYPE:\n"
+        # Sort by panel type (TA, TB, TC)
+        sorted_tower_items = sorted(TOWER_MAIN_MAPPING.items(), key=lambda x: x[1])
+        for side_frame_w, panel_type in sorted_tower_items:
+            tower_text += "{}: {} mm\n".format(panel_type, side_frame_w)
         
         # Create text note for Tower Main
         tower_point = DB.XYZ(tower_x, tower_y, 0)
         tower_text_note = DB.TextNote.Create(doc, view.Id, tower_point, tower_text, text_note_type.Id)
         
-        # Create text notes for Podium Main mapping
+        # Create text notes for Podium Main mapping with improved formatting
         print("Creating Podium Main mapping legend...")
-        podium_x = 30  # Offset to the right
+        podium_x = 50  # Offset to the right
         podium_y = 0
-        podium_text = "PODIUM MAIN MAPPING:\n"
-        for side_frame_w in sorted(PODIUM_MAIN_MAPPING.keys()):
-            panel_type = PODIUM_MAIN_MAPPING[side_frame_w]
-            podium_text += "{} -> {}\n".format(side_frame_w, panel_type)
+        podium_text = "PODIUM PANEL TYPE:\n"
+        # Sort by panel type (PA, PB, PC, PD, PE)
+        sorted_podium_items = sorted(PODIUM_MAIN_MAPPING.items(), key=lambda x: x[1])
+        for side_frame_w, panel_type in sorted_podium_items:
+            podium_text += "{}: {} mm\n".format(panel_type, side_frame_w)
         
         # Create text note for Podium Main
         podium_point = DB.XYZ(podium_x, podium_y, 0)
@@ -134,21 +138,21 @@ def create_mapping_legend(doc):
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def assign_panel_type(doc):
-    """Assign panel type based on side frame width mapping for all tower_main and podium_main panels."""
+    """Assign panel type based on side frame width mapping for all tower_main, tower_ground_main, and podium_main panels."""
     
     # Get all family instances using standard Revit API
     collector = DB.FilteredElementCollector(doc)
     all_elements = collector.OfClass(DB.FamilyInstance).ToElements()
     
-    # Filter for tower_main and podium_main families using EnneadTab
+    # Filter for tower_main, tower_ground_main, and podium_main families
     target_panels = []
     for element in all_elements:
         family_name = get_family_type(element)
-        if "tower_main" in family_name.lower() or "podium_main" in family_name.lower():
+        if "tower_main" in family_name.lower() or "tower_ground_main" in family_name.lower() or "podium_main" in family_name.lower():
             target_panels.append(element)
     
     if not target_panels:
-        print("No tower_main or podium_main panels found in the document.")
+        print("No tower_main, tower_ground_main, or podium_main panels found in the document.")
         return
     
     print("Found {} panels to process...".format(len(target_panels)))
@@ -199,7 +203,7 @@ def assign_panel_type(doc):
                 else:
                     mapped_values.add(side_frame_width)
                     # Track which mappings are actually used
-                    if "tower_main" in family_name.lower():
+                    if "tower_main" in family_name.lower() or "tower_ground_main" in family_name.lower():
                         used_tower_mappings.add(side_frame_width)
                     elif "podium_main" in family_name.lower():
                         used_podium_mappings.add(side_frame_width)
@@ -229,12 +233,12 @@ def assign_panel_type(doc):
     # Bad mappings by family
     if bad_values:
         print("\nBAD MAPPINGS BY FAMILY:")
-        tower_bad = [v for v in bad_values if bad_mappings_by_family.get(v, "").lower().find("tower_main") != -1]
+        tower_bad = [v for v in bad_values if bad_mappings_by_family.get(v, "").lower().find("tower_main") != -1 or bad_mappings_by_family.get(v, "").lower().find("tower_ground_main") != -1]
         podium_bad = [v for v in bad_values if bad_mappings_by_family.get(v, "").lower().find("podium_main") != -1]
         other_bad = [v for v in bad_values if v not in tower_bad and v not in podium_bad]
         
         if tower_bad:
-            print("  Tower Main: {}".format(sorted(tower_bad)))
+            print("  Tower Main (includes ground): {}".format(sorted(tower_bad)))
         if podium_bad:
             print("  Podium Main: {}".format(sorted(podium_bad)))
         if other_bad:
