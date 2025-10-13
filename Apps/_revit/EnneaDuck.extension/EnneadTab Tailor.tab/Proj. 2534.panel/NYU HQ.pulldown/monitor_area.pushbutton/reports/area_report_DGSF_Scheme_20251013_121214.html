@@ -293,7 +293,6 @@
         .col-delta { width: 14%; }
         .col-status { width: 10%; }
         .col-quality { width: 8%; }
-        .col-suggestion { width: 20%; }
         
         /* Add thick division line between Required Area and Level */
         .comparison-table th:nth-child(5),
@@ -889,47 +888,52 @@
             color: #6b7280;
         }
         
-        .clear-search-btn {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #374151;
-            border: none;
-            color: #f8fafc;
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 1.2rem;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .clear-search-btn:hover {
-            background: #60a5fa;
-            transform: translateY(-50%) scale(1.1);
-        }
-        
-        .search-status {
+        .search-results {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 8px;
             margin-top: 8px;
-            padding: 8px 12px;
-            background: #1f2937;
-            border-radius: 6px;
-            color: #9ca3af;
-            font-size: 0.875rem;
             display: none;
         }
         
-        .search-status.active {
+        .search-results.active {
             display: block;
         }
         
-        .search-status .count {
-            color: #60a5fa;
+        .search-result-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid #1f2937;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .search-result-item:hover {
+            background: #1f2937;
+        }
+        
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        
+        .search-result-title {
             font-weight: 600;
+            color: #60a5fa;
+            margin-bottom: 4px;
+        }
+        
+        .search-result-meta {
+            font-size: 0.875rem;
+            color: #9ca3af;
+        }
+        
+        .search-highlight {
+            background: rgba(96, 165, 250, 0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
         }
         
         /* Department collapse styles */
@@ -939,28 +943,6 @@
         
         .department-header.collapsed .collapse-icon {
             transform: rotate(-90deg);
-        }
-        
-        /* Search filter styles */
-        .dept-row.search-hidden {
-            display: none !important;
-        }
-        
-        .department-header.search-hidden {
-            display: none !important;
-        }
-        
-        /* Suggestion column styles */
-        .suggestion-text {
-            color: #9ca3af;
-            font-size: 0.9rem;
-            font-style: italic;
-        }
-        
-        .suggestion-text strong {
-            color: #60a5fa;
-            font-weight: 600;
-            font-style: normal;
         }
         
         /* Context Menu Styles */
@@ -1014,7 +996,7 @@
         <header class="report-header">
             <h1>🏥 Area Requirements vs Actual - Report</h1>
             <div class="report-info">
-                <p><strong>Generated:</strong> 2025-10-13 12:35:19</p>
+                <p><strong>Generated:</strong> 2025-10-13 12:12:14</p>
                 <p><strong>Project:</strong> NYU HQ - Monitor Area System</p>
                 <p><strong>Area Scheme:</strong> DGSF Scheme</p>
             </div>
@@ -1859,22 +1841,6 @@
                     </td>
                 </tr>
             
-                    <tr class="status-missing alert-high-difference dept-row" data-dept="dept_3" data-search-dept="INPATIENT CARE UNIT" data-search-division="Licensed Beds" data-search-function="Patient Units_Universal Med Surg">
-                        <td class="col-dept">INPATIENT CARE UNIT</td>
-                        <td class="col-division">Licensed Beds</td>
-                        <td class="col-function"><strong>Patient Units_Universal Med Surg</strong></td>
-                        <td class="col-count">252</td>
-                        <td class="col-area">253,638</td>
-                        <td class="col-level">No Areas</td>
-                        <td class="col-count">0</td>
-                        <td class="col-area">0</td>
-                        <td class="col-delta alert-count-delta">Missing 252</td>
-                        <td class="col-delta negative">Missing 253,638 SF</td>
-                        <td class="col-delta alert-area-delta">-100.0%</td>
-                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
-                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
-                    </tr>
-                
                     <tr class="status-missing alert-high-difference dept-row" data-dept="dept_3" data-search-dept="INPATIENT CARE UNIT" data-search-division="Licensed Beds - Mother/Baby + Peds" data-search-function="NICU">
                         <td class="col-dept">INPATIENT CARE UNIT</td>
                         <td class="col-division">Licensed Beds - Mother/Baby + Peds</td>
@@ -2422,7 +2388,7 @@
             <p>The following Revit areas were not matched to any Excel requirements, grouped by level:</p>
             
             <div class="level-section">
-                <h4>📍 Level 1  Lobby  /  ED  /  Clinical  /  Support (5 areas, 72,155 SF)</h4>
+                <h4>📍 Level 1  Lobby  /  ED  /  Clinical  /  Support (3 areas, 7,487 SF)</h4>
             <div class="table-container">
                 <table class="unmatched-table">
                     <thead>
@@ -2434,7 +2400,6 @@
                                 <th class="col-level">Created By</th>
                                 <th class="col-level">Last Edited By</th>
                                 <th class="col-status">Status</th>
-                                <th class="col-suggestion">Suggested Match</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2447,7 +2412,6 @@
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-level">yhuangZZUZV</td>
                         <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>DIAGNOSTIC AND TREATMENT-Imaging & Diagnostic Services-Nuclear Medicine</strong>?</span></td>
                 </tr>
             
                     <tr>
@@ -2458,7 +2422,6 @@
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-level">yhuangZZUZV</td>
                         <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>INPATIENT CARE UNIT-Licensed Beds-Patient Units_Universal Med Surg</strong>?</span></td>
                 </tr>
             
                     <tr>
@@ -2469,29 +2432,6 @@
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>INPATIENT CARE UNIT-Licensed Beds-Patient Units_Universal Med Surg</strong>?</span></td>
-                </tr>
-            
-                    <tr>
-                        <td class="col-dept">INPATIENT CARE</td>
-                        <td class="col-division"></td>
-                        <td class="col-function"></td>
-                        <td class="col-area">64,668 SF</td>
-                        <td class="col-level">cfleetwoodACGCC</td>
-                        <td class="col-level">cfleetwoodACGCC</td>
-                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>INPATIENT CARE UNIT-Licensed Beds-Patient Units_Universal Med Surg</strong>?</span></td>
-                </tr>
-            
-                    <tr>
-                        <td class="col-dept">INPATIENT CARE</td>
-                        <td class="col-division"></td>
-                        <td class="col-function"></td>
-                        <td class="col-area">0 SF</td>
-                        <td class="col-level">cfleetwoodACGCC</td>
-                        <td class="col-level">cfleetwoodACGCC</td>
-                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>INPATIENT CARE UNIT-Licensed Beds-Patient Units_Universal Med Surg</strong>?</span></td>
                 </tr>
             
                     </tbody>
@@ -2512,7 +2452,6 @@
                                 <th class="col-level">Created By</th>
                                 <th class="col-level">Last Edited By</th>
                                 <th class="col-status">Status</th>
-                                <th class="col-suggestion">Suggested Match</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2525,7 +2464,6 @@
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>DIAGNOSTIC AND TREATMENT-Imaging & Diagnostic Services-Nuclear Medicine</strong>?</span></td>
                 </tr>
             
                     </tbody>
@@ -2546,7 +2484,6 @@
                                 <th class="col-level">Created By</th>
                                 <th class="col-level">Last Edited By</th>
                                 <th class="col-status">Status</th>
-                                <th class="col-suggestion">Suggested Match</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2559,7 +2496,6 @@
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>INPATIENT CARE UNIT-Licensed Beds-Patient Units_Universal Med Surg</strong>?</span></td>
                 </tr>
             
                     <tr>
@@ -2570,7 +2506,6 @@
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>INPATIENT CARE UNIT-Licensed Beds-Patient Units_Universal Med Surg</strong>?</span></td>
                 </tr>
             
                     <tr>
@@ -2581,7 +2516,6 @@
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>EMERGENCY CARE SERVICES-Emergency Department-Treatment positions</strong>?</span></td>
                 </tr>
             
                     </tbody>
@@ -2590,7 +2524,7 @@
             </div>
             
             <div class="level-section">
-                <h4>📍 Level 8  Patient Rooms (7 areas, 75,986 SF)</h4>
+                <h4>📍 Level 8  Patient Rooms (3 areas, 50,001 SF)</h4>
             <div class="table-container">
                 <table class="unmatched-table">
                     <thead>
@@ -2602,7 +2536,6 @@
                                 <th class="col-level">Created By</th>
                                 <th class="col-level">Last Edited By</th>
                                 <th class="col-status">Status</th>
-                                <th class="col-suggestion">Suggested Match</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2615,18 +2548,16 @@
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>INPATIENT CARE UNIT-Licensed Beds-Patient Units_Universal Med Surg</strong>?</span></td>
                 </tr>
             
                     <tr>
                         <td class="col-dept">EMERGENCY DEPARTMENT</td>
                         <td class="col-division">CANCER</td>
                         <td class="col-function">Bronch/Endo</td>
-                        <td class="col-area">43,470 SF</td>
+                        <td class="col-area">25,558 SF</td>
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>DIAGNOSTIC AND TREATMENT-Procedure-Bronch/Endo</strong>?</span></td>
                 </tr>
             
                     <tr>
@@ -2637,51 +2568,6 @@
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>DIAGNOSTIC AND TREATMENT-Imaging & Diagnostic Services-Nuclear Medicine</strong>?</span></td>
-                </tr>
-            
-                    <tr>
-                        <td class="col-dept">PUBLIC SUPPORT</td>
-                        <td class="col-division">Departmental Offices</td>
-                        <td class="col-function">Lobby Support</td>
-                        <td class="col-area">3,361 SF</td>
-                        <td class="col-level">szhangGOODLOOKING</td>
-                        <td class="col-level">szhangGOODLOOKING</td>
-                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>PUBLIC SUPPORT-Café & Retail-Cafeteria</strong>?</span></td>
-                </tr>
-            
-                    <tr>
-                        <td class="col-dept">PUBLIC SUPPORT</td>
-                        <td class="col-division">Departmental Offices</td>
-                        <td class="col-function">C-Section</td>
-                        <td class="col-area">1,414 SF</td>
-                        <td class="col-level">szhangGOODLOOKING</td>
-                        <td class="col-level">szhangGOODLOOKING</td>
-                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>PUBLIC SUPPORT-Café & Retail-Cafeteria</strong>?</span></td>
-                </tr>
-            
-                    <tr>
-                        <td class="col-dept">PUBLIC SUPPORT</td>
-                        <td class="col-division">ED CARE</td>
-                        <td class="col-function"></td>
-                        <td class="col-area">1,721 SF</td>
-                        <td class="col-level">szhangGOODLOOKING</td>
-                        <td class="col-level">szhangGOODLOOKING</td>
-                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>PUBLIC SUPPORT-Café & Retail-Cafeteria</strong>?</span></td>
-                </tr>
-            
-                    <tr>
-                        <td class="col-dept">PUBLIC SUPPORT</td>
-                        <td class="col-division">ED CARE</td>
-                        <td class="col-function"></td>
-                        <td class="col-area">1,578 SF</td>
-                        <td class="col-level">szhangGOODLOOKING</td>
-                        <td class="col-level">szhangGOODLOOKING</td>
-                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>PUBLIC SUPPORT-Café & Retail-Cafeteria</strong>?</span></td>
                 </tr>
             
                     </tbody>
@@ -2697,12 +2583,12 @@
             <div class="summary-cards">
                 <div class="card">
                     <h3>Total Requirements</h3>
-                    <div class="card-value">82</div>
+                    <div class="card-value">81</div>
                     <div class="card-label">Room Types</div>
                 </div>
                 <div class="card">
                     <h3>Target Count</h3>
-                    <div class="card-value">818</div>
+                    <div class="card-value">566</div>
                     <div class="card-label">Areas Required</div>
                 </div>
                 <div class="card">
@@ -2712,7 +2598,7 @@
                 </div>
                 <div class="card">
                     <h3>Target DGSF</h3>
-                    <div class="card-value">1,263,418</div>
+                    <div class="card-value">1,009,780</div>
                     <div class="card-label">Square Feet</div>
                 </div>
                 <div class="card">
@@ -2722,22 +2608,22 @@
                 </div>
                 <div class="card">
                     <h3>Compliance</h3>
-                    <div class="card-value">0/82</div>
+                    <div class="card-value">0/81</div>
                     <div class="card-label">Fulfilled</div>
                 </div>
                 <div class="card">
                     <h3>Count Alerts</h3>
-                    <div class="card-value">13</div>
+                    <div class="card-value">12</div>
                     <div class="card-label">High Count Differences</div>
                 </div>
                 <div class="card">
                     <h3>Area Alerts</h3>
-                    <div class="card-value">73</div>
+                    <div class="card-value">72</div>
                     <div class="card-label">High Area Differences</div>
                 </div>
                 <div class="card">
                     <h3>Extreme Alerts</h3>
-                    <div class="card-value">12</div>
+                    <div class="card-value">11</div>
                     <div class="card-label">Both High Differences</div>
                 </div>
             </div>
@@ -2756,7 +2642,7 @@
                 </div>
                 <div class="status-card missing">
                     <h3>✕ Missing</h3>
-                    <div class="status-count">73</div>
+                    <div class="status-count">72</div>
                 </div>
             </div>
         </div>
@@ -2856,12 +2742,12 @@
                         <span style="display: inline-block; width: 10px; height: 10px; background: #a9d4e9; border-radius: 50%; margin-right: 8px;"></span>
                         INPATIENT CARE UNIT
                     </td>
-                    <td class="col-count">590</td>
-                    <td class="col-area">577,731</td>
+                    <td class="col-count">338</td>
+                    <td class="col-area">324,093</td>
                     <td class="col-count">0</td>
                     <td class="col-area">0</td>
-                    <td class="col-delta">-590</td>
-                    <td class="col-delta">-577,731 SF</td>
+                    <td class="col-delta">-338</td>
+                    <td class="col-delta">-324,093 SF</td>
                     <td class="col-delta">-100.0%</td>
                     <td class="col-status"><span class="status-badge partial">△ Under</span></td>
                 </tr>
@@ -2917,7 +2803,7 @@
             </div>
             
             <script id="departmentChartData" type="application/json">
-            {"actual_dgsf": [8531.3965254428549, 0, 0, 0, 0, 0, 46387.098975668407], "percentages": [-97.460440398451269, -100.0, -100.0, -100.0, -100.0, -100.0, -27.790941818698006], "colors": ["#beca8c", "#dcd5c2", "#fce4d6", "#a9d4e9", "#fcf19c", "#f5c859", "#f1b3ad"], "departments": ["DIAGNOSTIC AND TREATMENT", "BUILDING SUPPORT", "CLINICAL SUPPORT", "INPATIENT CARE UNIT", "PUBLIC SUPPORT", "ADMINISTRATION & STAFF SUPPORT", "EMERGENCY CARE SERVICES"], "target_dgsf": [335940.0, 98472.0, 91125.980000000010, 577731.0, 51282.0, 44627.0, 64240.000000000007]}
+            {"actual_dgsf": [8531.3965254428549, 0, 0, 0, 0, 0, 46387.098975668407], "percentages": [-97.460440398451269, -100.0, -100.0, -100.0, -100.0, -100.0, -27.790941818698006], "colors": ["#beca8c", "#dcd5c2", "#fce4d6", "#a9d4e9", "#fcf19c", "#f5c859", "#f1b3ad"], "departments": ["DIAGNOSTIC AND TREATMENT", "BUILDING SUPPORT", "CLINICAL SUPPORT", "INPATIENT CARE UNIT", "PUBLIC SUPPORT", "ADMINISTRATION & STAFF SUPPORT", "EMERGENCY CARE SERVICES"], "target_dgsf": [335940.0, 98472.0, 91125.980000000010, 324093.0, 51282.0, 44627.0, 64240.000000000007]}
             </script>
             
             <script>
@@ -2943,7 +2829,7 @@
         </div>
         
         <footer class="report-footer">
-            <p>Report generated by Monitor Area System | 2025-10-13 12:35:19</p>
+            <p>Report generated by Monitor Area System | 2025-10-13 12:12:14</p>
             <p style="margin-top: 10px; font-size: 0.9em; color: #9ca3af;">
                 🦆 Powered by <strong style="color: #60a5fa;">EnneadTab</strong> | 
                 For feature requests, contact <strong style="color: #60a5fa;">Sen Zhang</strong>
@@ -2954,11 +2840,8 @@
     <!-- Sticky Search Bar at Bottom -->
     <div class="search-bar-container">
         <div class="search-bar-content">
-            <div style="position: relative;">
-                <input type="text" id="fuzzySearch" placeholder="🔍 Filter by department, division, or function... (fuzzy search enabled)" />
-                <button id="clearSearch" class="clear-search-btn" style="display: none;" onclick="clearSearchFilter()">✕</button>
-            </div>
-            <div id="searchStatus" class="search-status"></div>
+            <input type="text" id="fuzzySearch" placeholder="🔍 Search departments, divisions, or functions... (fuzzy search enabled)" />
+            <div id="searchResults" class="search-results"></div>
         </div>
     </div>
     
@@ -3019,20 +2902,20 @@
             // Initialize context menu
             initializeContextMenu();
             
-            // Table sorting disabled per user request
-            // const table = document.querySelector('.comparison-table');
-            // if (table) {
-            //     console.log('Found comparison table, adding sorting...');
-            //     const headers = table.querySelectorAll('th');
-            //     headers.forEach((header, index) => {
-            //         header.style.cursor = 'pointer';
-            //         header.addEventListener('click', () => {
-            //             sortTable(table, index);
-            //         });
-            //     });
-            // } else {
-            //     console.log('No comparison table found');
-            // }
+            // Initialize table sorting
+            const table = document.querySelector('.comparison-table');
+            if (table) {
+                console.log('Found comparison table, adding sorting...');
+                const headers = table.querySelectorAll('th');
+                headers.forEach((header, index) => {
+                    header.style.cursor = 'pointer';
+                    header.addEventListener('click', () => {
+                        sortTable(table, index);
+                    });
+                });
+            } else {
+                console.log('No comparison table found');
+            }
             
             // Initialize donut chart if canvas exists
             const ctx = document.getElementById('areaFulfillmentChart');
@@ -4001,12 +3884,12 @@
             deptHeader.classList.toggle('collapsed');
         }
         
-        // Fuzzy search filter initialization
+        // Fuzzy search initialization
         let fuseInstance = null;
         let searchData = [];
         
         function initializeFuzzySearch() {
-            console.log('Initializing fuzzy search filter...');
+            console.log('Initializing fuzzy search...');
             
             // Collect all searchable items from table
             const rows = document.querySelectorAll('.dept-row');
@@ -4028,114 +3911,93 @@
                 distance: 100, // Maximum distance for matching
                 ignoreLocation: true, // Don't care about position of match
                 useExtendedSearch: false,
-                minMatchCharLength: 1
+                minMatchCharLength: 2
             };
             
             fuseInstance = new Fuse(searchData, fuseOptions);
             
             // Setup search input event
             const searchInput = document.getElementById('fuzzySearch');
-            const searchStatus = document.getElementById('searchStatus');
-            const clearBtn = document.getElementById('clearSearch');
+            const searchResults = document.getElementById('searchResults');
             
-            if (searchInput && searchStatus) {
+            if (searchInput && searchResults) {
                 searchInput.addEventListener('input', function(e) {
                     const query = e.target.value.trim();
                     
-                    if (query.length < 1) {
-                        // Clear filter when search is empty
-                        clearSearchFilter();
+                    if (query.length < 2) {
+                        searchResults.classList.remove('active');
                         return;
                     }
                     
                     // Perform fuzzy search
                     const results = fuseInstance.search(query);
-                    const matchingElements = new Set(results.map(r => r.item.element));
                     
-                    // Filter rows - hide non-matching, show matching
-                    let visibleCount = 0;
-                    searchData.forEach(item => {
-                        if (matchingElements.has(item.element)) {
-                            item.element.classList.remove('search-hidden');
-                            visibleCount++;
-                        } else {
-                            item.element.classList.add('search-hidden');
-                        }
-                    });
-                    
-                    // Update department header visibility
-                    updateDepartmentHeadersVisibility();
-                    
-                    // Show clear button
-                    clearBtn.style.display = 'flex';
-                    
-                    // Update status
-                    if (visibleCount === 0) {
-                        searchStatus.innerHTML = '<span class="count">No matches found</span> for "' + query + '"';
-                    } else {
-                        searchStatus.innerHTML = 'Showing <span class="count">' + visibleCount + '</span> matching item(s) for "' + query + '"';
+                    if (results.length === 0) {
+                        searchResults.innerHTML = '<div class="search-result-item"><div class="search-result-title">No matches found</div></div>';
+                        searchResults.classList.add('active');
+                        return;
                     }
-                    searchStatus.classList.add('active');
+                    
+                    // Display results (limit to top 10)
+                    searchResults.innerHTML = results.slice(0, 10).map(result => {
+                        const item = result.item;
+                        return `
+                            <div class="search-result-item" onclick="jumpToRow(this)" data-row-element="${encodeSearchId(item)}">
+                                <div class="search-result-title">${item.function}</div>
+                                <div class="search-result-meta">
+                                    ${item.department} > ${item.division}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                    
+                    searchResults.classList.add('active');
+                });
+                
+                // Close results when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!e.target.closest('.search-bar-content')) {
+                        searchResults.classList.remove('active');
+                    }
                 });
             }
         }
         
-        // Update department header visibility based on visible rows
-        function updateDepartmentHeadersVisibility() {
-            const allDeptHeaders = document.querySelectorAll('.department-header');
+        // Encode search item for data attribute
+        function encodeSearchId(item) {
+            const index = searchData.indexOf(item);
+            return index;
+        }
+        
+        // Jump to selected row
+        function jumpToRow(element) {
+            const index = parseInt(element.getAttribute('data-row-element'));
+            const item = searchData[index];
             
-            allDeptHeaders.forEach(header => {
-                const deptId = header.getAttribute('data-dept-id');
+            if (item && item.element) {
+                // First, expand the department if collapsed
+                const deptId = item.element.getAttribute('data-dept');
                 const deptRows = document.querySelectorAll('.dept-row[data-dept="' + deptId + '"]');
+                const deptHeader = document.querySelector('.department-header[data-dept-id="' + deptId + '"]');
                 
-                // Check if any rows in this department are visible (not search-hidden)
-                let hasVisibleRows = false;
-                deptRows.forEach(row => {
-                    if (!row.classList.contains('search-hidden')) {
-                        hasVisibleRows = true;
-                    }
-                });
-                
-                // Show/hide department header based on visible rows
-                if (hasVisibleRows) {
-                    header.classList.remove('search-hidden');
-                    // Auto-expand department to show filtered results
-                    if (header.classList.contains('collapsed')) {
-                        deptRows.forEach(row => row.classList.remove('collapsed'));
-                        header.classList.remove('collapsed');
-                    }
-                } else {
-                    header.classList.add('search-hidden');
+                if (deptHeader && deptHeader.classList.contains('collapsed')) {
+                    toggleDepartment(deptId);
                 }
-            });
-        }
-        
-        // Clear search filter
-        function clearSearchFilter() {
-            // Remove search-hidden class from all rows
-            const allRows = document.querySelectorAll('.dept-row');
-            allRows.forEach(row => row.classList.remove('search-hidden'));
-            
-            // Remove search-hidden class from all headers
-            const allHeaders = document.querySelectorAll('.department-header');
-            allHeaders.forEach(header => header.classList.remove('search-hidden'));
-            
-            // Clear search input
-            const searchInput = document.getElementById('fuzzySearch');
-            if (searchInput) {
-                searchInput.value = '';
-            }
-            
-            // Hide clear button
-            const clearBtn = document.getElementById('clearSearch');
-            if (clearBtn) {
-                clearBtn.style.display = 'none';
-            }
-            
-            // Hide status
-            const searchStatus = document.getElementById('searchStatus');
-            if (searchStatus) {
-                searchStatus.classList.remove('active');
+                
+                // Scroll to the row with smooth animation
+                item.element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Highlight the row temporarily
+                item.element.style.outline = '3px solid #60a5fa';
+                item.element.style.outlineOffset = '-3px';
+                
+                setTimeout(() => {
+                    item.element.style.outline = '';
+                    item.element.style.outlineOffset = '';
+                }, 2000);
+                
+                // Close search results
+                document.getElementById('searchResults').classList.remove('active');
             }
         }
         

@@ -35,8 +35,6 @@ def get_revit_area_data_by_scheme():
         # Fallback: get all areas without scheme filtering
         return _get_all_areas_as_list(doc)
     
-    print("Found {} area schemes in document".format(len(area_schemes)))
-    
     scheme_data = {}
     
     for scheme in area_schemes:
@@ -44,10 +42,7 @@ def get_revit_area_data_by_scheme():
         
         # Filter schemes based on configuration
         if config.AREA_SCHEMES_TO_PROCESS and scheme_name not in config.AREA_SCHEMES_TO_PROCESS:
-            print("Skipping area scheme '{}' (not in processing list)".format(scheme_name))
             continue
-            
-        print("Processing area scheme: {}".format(scheme_name))
         
         # Get all areas in the document
         all_areas = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_Areas).WhereElementIsNotElementType().ToElements()
@@ -86,15 +81,8 @@ def get_revit_area_data_by_scheme():
                 }
                 
                 areas_list.append(area_object)
-                
-                print("Area (Dept: {}, Type: {}, Detail: {}) = {:.2f} SF".format(
-                    department, program_type, program_type_detail, float(area_sf)))
         
         scheme_data[scheme_name] = areas_list
-        
-        total_sf = sum(area['area_sf'] for area in areas_list)
-        print("Scheme '{}' has {} areas totaling {:.0f} SF".format(
-            scheme_name, len(areas_list), float(total_sf)))
     
 
     return scheme_data
@@ -149,11 +137,6 @@ def get_revit_area_data():
         # Use a unique key that includes the 3 parameters for better matching
         unique_key = "{} | {} | {}".format(program_type_detail, department, program_type)
         out[unique_key] = area_data
-        
-        print("Area (Dept: {}, Type: {}, Detail: {}) = {:.2f} SF".format(
-            department, program_type, program_type_detail, float(area_sf)))
-
-    print("Successfully processed {} areas".format(len(out)))
     
 
     return out

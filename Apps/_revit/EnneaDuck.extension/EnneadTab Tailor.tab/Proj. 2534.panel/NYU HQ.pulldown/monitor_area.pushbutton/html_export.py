@@ -86,6 +86,7 @@ class AreaMatcher:
             program_type = getattr(requirement, config.PROGRAM_TYPE_KEY[config.APP_EXCEL], '')
             target_count = getattr(requirement, config.COUNT_KEY[config.APP_EXCEL], 0)
             target_dgsf = getattr(requirement, config.SCALED_DGSF_KEY[config.APP_EXCEL], 0)
+            color = getattr(requirement, 'COLOR', None)  # Extract color from Excel
             
             # Convert to numeric types to ensure proper calculations
             target_count = self._safe_int(target_count)
@@ -103,10 +104,19 @@ class AreaMatcher:
             actual_count = len(matching_areas)
             actual_dgsf = sum(self._safe_float(area['area_sf']) for area in matching_areas)
             
-            # Calculate deltas
-            count_delta = actual_count - target_count
-            dgsf_delta = actual_dgsf - target_dgsf
-            dgsf_percentage = (dgsf_delta / target_dgsf * 100) if target_dgsf > 0 else 0
+            # Calculate deltas (handle None values)
+            # If target is None or 0, delta should be None (no requirement)
+            if target_count is None or target_count == 0:
+                count_delta = None  # No count requirement
+            else:
+                count_delta = actual_count - target_count
+                
+            if target_dgsf is None or target_dgsf == 0:
+                dgsf_delta = None  # No area requirement
+                dgsf_percentage = None
+            else:
+                dgsf_delta = actual_dgsf - target_dgsf
+                dgsf_percentage = (dgsf_delta / target_dgsf * 100)
             
             # Determine status
             status = self._determine_status(
@@ -124,6 +134,7 @@ class AreaMatcher:
                 'room_name': room_name,
                 'department': department,
                 'division': program_type,
+                'color': color,  # Include color from Excel
                 'target_count': target_count,
                 'target_dgsf': target_dgsf,
                 'actual_count': actual_count,
@@ -175,32 +186,59 @@ class AreaMatcher:
         # Define tolerance limits
         tolerance_percentage = config.AREA_TOLERANCE_PERCENTAGE / 100.0
         
-        # Calculate acceptable ranges
-        min_area = target_dgsf * (1 - tolerance_percentage)
-        max_area = target_dgsf * (1 + tolerance_percentage)
+        # Handle None/0 values (no requirement)
+        has_count_requirement = target_count is not None and target_count > 0
+        has_area_requirement = target_dgsf is not None and target_dgsf > 0
+        
+        # If no requirements at all, return "No Requirement"
+        if not has_count_requirement and not has_area_requirement:
+            return "No Requirement"
         
         # Check if we have any areas at all
         if actual_count == 0 and actual_dgsf == 0:
             return "Missing"
         
-        # Check for excessive overage (more than 200% over target)
-        area_overage_percentage = (actual_dgsf - target_dgsf) / target_dgsf if target_dgsf > 0 else 0
-        count_overage_percentage = (actual_count - target_count) / target_count if target_count > 0 else 0
+        # Calculate acceptable ranges for area (only if there's an area requirement)
+        if has_area_requirement:
+            min_area = target_dgsf * (1 - tolerance_percentage)
+            max_area = target_dgsf * (1 + tolerance_percentage)
+            area_overage_percentage = (actual_dgsf - target_dgsf) / target_dgsf
+        else:
+            area_overage_percentage = 0
         
-        # If area is more than 200% over target, it's excessive
+        # Calculate count overage (only if there's a count requirement)
+        if has_count_requirement:
+            count_overage_percentage = (actual_count - target_count) / float(target_count)
+        else:
+            count_overage_percentage = 0
+        
+        # Check for excessive overage (more than 200% over target)
         if area_overage_percentage > 2.0 or count_overage_percentage > 2.0:
             return "Excessive"
         
-        # Check if both count and area are within acceptable ranges
-        count_met = actual_count >= target_count
-        area_met = min_area <= actual_dgsf <= max_area
+        # Check fulfillment based on what requirements exist
+        if has_count_requirement and has_area_requirement:
+            # Both requirements exist - check both
+            count_met = actual_count >= target_count
+            area_met = min_area <= actual_dgsf <= max_area
+            if count_met and area_met:
+                return "Fulfilled"
+            elif actual_count > 0 and actual_dgsf > 0:
+                return "Partial"
+        elif has_count_requirement:
+            # Only count requirement exists
+            if actual_count >= target_count:
+                return "Fulfilled"
+            elif actual_count > 0:
+                return "Partial"
+        elif has_area_requirement:
+            # Only area requirement exists
+            if min_area <= actual_dgsf <= max_area:
+                return "Fulfilled"
+            elif actual_dgsf > 0:
+                return "Partial"
         
-        if count_met and area_met:
-            return "Fulfilled"
-        elif actual_count > 0 and actual_dgsf > 0:
-            return "Partial"
-        else:
-            return "Missing"
+        return "Missing"
     
     def _calculate_match_quality_simple(self, matching_areas, status=None):
         """Calculate overall match quality based on number of matches and status"""
@@ -276,18 +314,47 @@ class HTMLReportGenerator:
         # Create reports directory if it doesn't exist
         if not os.path.exists(self.reports_dir):
             os.makedirs(self.reports_dir)
+        
+        # Initialize color hierarchy
+        self.color_hierarchy = {
+            'department': {},
+            'division': {},
+            'room_name': {}
+        }
     
-    def generate_html_report(self, excel_data, revit_data):
+    def get_color(self, level, name, fallback='#6b7280'):
         """
-        Generate the complete HTML report
+        Get color from hierarchy with fallback logic.
+        
+        Args:
+            level: 'department', 'division', or 'room_name'
+            name: Name to look up
+            fallback: Default color if not found
+            
+        Returns:
+            str: Hex color code
+        """
+        return self.color_hierarchy.get(level, {}).get(name, fallback)
+    
+    def generate_html_report(self, excel_data, revit_data, color_hierarchy=None):
+        """
+        Generate separate HTML reports for each scheme
         
         Args:
             excel_data: Dictionary of Excel data with RowData objects
-            revit_data: Dictionary of area data (single scheme or multiple schemes)
+            revit_data: Dictionary of area data by scheme {scheme_name: [areas]}
+            color_hierarchy: Dict with color mappings at department/division/room levels
             
         Returns:
-            tuple: (filepath, all_matches, all_unmatched_areas)
+            tuple: (list of filepaths, all_matches, all_unmatched_areas)
         """
+        # Store color hierarchy for use in HTML generation
+        self.color_hierarchy = color_hierarchy or {
+            'department': {},
+            'division': {},
+            'room_name': {}
+        }
+        
         # Match areas to requirements
         matcher = AreaMatcher()
         all_matches = matcher.match_areas_to_requirements(excel_data, revit_data)
@@ -299,52 +366,69 @@ class HTMLReportGenerator:
                 unmatched = matcher.get_unmatched_areas(excel_data, areas_list)
                 all_unmatched_areas[scheme_name] = unmatched
         
-        # Generate HTML content
-        html_content = self._create_html_content(all_matches, all_unmatched_areas)
-        
-        # Save to file
+        # Generate one HTML per scheme
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = "area_report_{}.html".format(timestamp)
-        filepath = os.path.join(self.reports_dir, filename)
-        
-        with io.open(filepath, 'w', encoding='utf-8') as f:
-            f.write(html_content)
-        
-        # Also save as latest_report.html for easy access
-        latest_path = os.path.join(self.reports_dir, config.LATEST_REPORT_FILENAME)
-        with io.open(latest_path, 'w', encoding='utf-8') as f:
-            f.write(html_content)
-        
-        return filepath, all_matches, all_unmatched_areas
-    
-    def _create_html_content(self, all_matches, all_unmatched_areas):
-        """Create the HTML content for the report"""
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        filepaths = []
         
-        # Check if we have multiple schemes or single scheme
-        if isinstance(all_matches, dict) and any(isinstance(value, dict) for value in all_matches.values()):
-            # Multiple schemes
-            return self._create_multiple_scheme_html(all_matches, all_unmatched_areas, current_time)
-        else:
-            # Single scheme (fallback)
-            return self._create_single_scheme_html(all_matches, all_unmatched_areas, current_time)
+        for scheme_name, scheme_data in all_matches.items():
+            # Extract matches for this scheme
+            matches = scheme_data.get('matches', [])
+            unmatched_areas = all_unmatched_areas.get(scheme_name, {})
+            
+            # Generate HTML for this scheme
+            html_content = self._create_scheme_html(
+                scheme_name=scheme_name,
+                matches=matches,
+                unmatched_areas=unmatched_areas,
+                current_time=current_time
+            )
+            
+            # Save to scheme-specific file
+            safe_scheme_name = scheme_name.replace(" ", "_").replace("/", "_")
+            filename = "area_report_{}_{}.html".format(safe_scheme_name, timestamp)
+            filepath = os.path.join(self.reports_dir, filename)
+            
+            with io.open(filepath, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            
+            filepaths.append(filepath)
+        
+        # Save the first (or only) report as latest_report.html for easy access
+        if filepaths:
+            latest_path = os.path.join(self.reports_dir, config.LATEST_REPORT_FILENAME)
+            with io.open(latest_path, 'w', encoding='utf-8') as f:
+                # Use the first scheme's HTML as the latest
+                first_scheme = list(all_matches.keys())[0]
+                first_matches = all_matches[first_scheme].get('matches', [])
+                first_unmatched = all_unmatched_areas.get(first_scheme, {})
+                latest_html = self._create_scheme_html(
+                    scheme_name=first_scheme,
+                    matches=first_matches,
+                    unmatched_areas=first_unmatched,
+                    current_time=current_time
+                )
+                f.write(latest_html)
+        
+        return filepaths, all_matches, all_unmatched_areas
     
-    def _create_single_scheme_html(self, matches, unmatched_areas, current_time):
+    def _create_scheme_html(self, scheme_name, matches, unmatched_areas, current_time):
         """Create HTML for single scheme"""
         # Calculate summary statistics
-        total_target_count = sum(match['target_count'] for match in matches)
-        total_actual_count = sum(match['actual_count'] for match in matches)
-        total_target_dgsf = sum(match['target_dgsf'] for match in matches)
-        total_actual_dgsf = sum(match['actual_dgsf'] for match in matches)
+        total_target_count = sum(match['target_count'] for match in matches if match['target_count'] is not None)
+        total_actual_count = sum(match['actual_count'] for match in matches if match['actual_count'] is not None)
+        total_target_dgsf = sum(match['target_dgsf'] for match in matches if match['target_dgsf'] is not None)
+        total_actual_dgsf = sum(match['actual_dgsf'] for match in matches if match['actual_dgsf'] is not None)
         
         fulfilled_count = sum(1 for match in matches if match['status'] == 'Fulfilled')
         partial_count = sum(1 for match in matches if match['status'] == 'Partial')
         missing_count = sum(1 for match in matches if match['status'] == 'Missing')
         
-        # Count alerts for high differences
-        high_count_delta_alerts = sum(1 for match in matches if abs(match['count_delta']) >= config.COUNT_DELTA_ALERT_THRESHOLD)
-        high_area_delta_alerts = sum(1 for match in matches if abs(match['dgsf_percentage']) >= config.AREA_PERCENTAGE_ALERT_THRESHOLD)
+        # Count alerts for high differences (skip None values)
+        high_count_delta_alerts = sum(1 for match in matches if match['count_delta'] is not None and abs(match['count_delta']) >= config.COUNT_DELTA_ALERT_THRESHOLD)
+        high_area_delta_alerts = sum(1 for match in matches if match['dgsf_percentage'] is not None and abs(match['dgsf_percentage']) >= config.AREA_PERCENTAGE_ALERT_THRESHOLD)
         extreme_difference_alerts = sum(1 for match in matches if 
+            match['count_delta'] is not None and match['dgsf_percentage'] is not None and
             abs(match['count_delta']) >= config.COUNT_DELTA_ALERT_THRESHOLD and 
             abs(match['dgsf_percentage']) >= config.AREA_PERCENTAGE_ALERT_THRESHOLD)
         
@@ -366,6 +450,7 @@ class HTMLReportGenerator:
             <div class="report-info">
                 <p><strong>Generated:</strong> {current_time}</p>
                 <p><strong>Project:</strong> {project_name}</p>
+                <p><strong>Area Scheme:</strong> {scheme_name}</p>
             </div>
         </header>
         
@@ -375,11 +460,12 @@ class HTMLReportGenerator:
                 <table class="comparison-table">
                     <thead>
                         <tr>
-                            <th>{col_area_detail}</th>
                             <th>{col_department}</th>
                             <th>{col_program_type}</th>
+                            <th>{col_area_detail}</th>
                             <th>{col_target_count}</th>
                             <th>{col_target_dgsf}</th>
+                            <th>Level Summary</th>
                             <th>{col_actual_count}</th>
                             <th>{col_actual_dgsf}</th>
                             <th>{col_count_delta}</th>
@@ -467,46 +553,9 @@ class HTMLReportGenerator:
             </div>
         </div>
         
-        <div class="section-diagram">
-            <h2>🏢 Building Section - Department Distribution</h2>
-            <div class="building-section" id="buildingSection">
-                <!-- Dynamic section diagram will be generated here -->
-            </div>
-            <div class="section-legend" id="sectionLegend">
-                <!-- Dynamic legend will be generated here -->
-            </div>
-        </div>
-        
-        <div class="viewer3d-section">
-            <h2>🌐 3D Interactive Building Viewer</h2>
-            <div class="viewer3d-controls">
-                <button class="control-btn active" data-mode="compliance">Compliance Heatmap</button>
-                <button class="control-btn" data-mode="departments">Department View</button>
-                <button class="control-btn" data-mode="areas">Area Density</button>
-                <button class="control-btn" data-mode="reset">Reset View</button>
-            </div>
-            <div class="viewer3d-container">
-                <canvas id="viewer3d-canvas"></canvas>
-                <div class="viewer3d-info" id="viewer3d-info">
-                    <div class="info-panel">
-                        <h4>Building Information</h4>
-                        <p>Click on areas for details</p>
-                    </div>
-                </div>
-            </div>
-            <div class="viewer3d-legend">
-                <div class="legend-title">Heatmap Legend</div>
-                <div class="legend-items" id="viewer3d-legend">
-                    <!-- Dynamic legend will be generated here -->
-                </div>
-            </div>
-        </div>
-        
-        <div class="chart-section">
-            <h2>📊 Area Fulfillment Overview</h2>
-            <div class="chart-container">
-                <canvas id="areaFulfillmentChart"></canvas>
-            </div>
+        <div class="department-summary-section">
+            <h2>📊 Department Fulfillment Summary</h2>
+            {department_summary_table}
         </div>
         
         <footer class="report-footer">
@@ -518,6 +567,30 @@ class HTMLReportGenerator:
         </footer>
     </div>
     
+    <!-- Sticky Search Bar at Bottom -->
+    <div class="search-bar-container">
+        <div class="search-bar-content">
+            <div style="position: relative;">
+                <input type="text" id="fuzzySearch" placeholder="🔍 Filter by department, division, or function... (fuzzy search enabled)" />
+                <button id="clearSearch" class="clear-search-btn" style="display: none;" onclick="clearSearchFilter()">✕</button>
+            </div>
+            <div id="searchStatus" class="search-status"></div>
+        </div>
+    </div>
+    
+    <!-- Right-Click Context Menu -->
+    <div id="contextMenu" class="context-menu">
+        <div class="context-menu-item" onclick="collapseAllDepartments()">
+            <span class="context-menu-icon">▲</span>
+            <span>Collapse All Departments</span>
+        </div>
+        <div class="context-menu-item" onclick="expandAllDepartments()">
+            <span class="context-menu-icon">▼</span>
+            <span>Expand All Departments</span>
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
     <script>
         {javascript}
     </script>
@@ -528,11 +601,12 @@ class HTMLReportGenerator:
             css_styles=self._get_css_styles(),
             current_time=current_time,
             project_name=config.PROJECT_NAME,
+            scheme_name=scheme_name,
             total_reqs=len(matches),
-            target_count="{:,}".format(total_target_count),
-            actual_count="{:,}".format(total_actual_count),
-            target_dgsf="{:,.0f}".format(self._safe_float(total_target_dgsf)),
-            actual_dgsf="{:,.0f}".format(self._safe_float(total_actual_dgsf)),
+            target_count="{:,}".format(int(float(total_target_count))),
+            actual_count="{:,}".format(int(float(total_actual_count))),
+            target_dgsf="{:,.0f}".format(float(self._safe_float(total_target_dgsf))),
+            actual_dgsf="{:,.0f}".format(float(self._safe_float(total_actual_dgsf))),
             fulfilled_count=fulfilled_count,
             partial_count=partial_count,
             missing_count=missing_count,
@@ -552,304 +626,360 @@ class HTMLReportGenerator:
             col_status=config.TABLE_COLUMN_HEADERS['status'],
             col_match_quality=config.TABLE_COLUMN_HEADERS['match_quality'],
             table_rows=self._create_table_rows(matches),
-            unmatched_section=self._create_unmatched_section(unmatched_areas),
+            unmatched_section=self._create_unmatched_section(unmatched_areas, matches),
+            department_summary_table=self._create_department_summary_table(matches),
             javascript=self._get_javascript()
         )
         return html
     
-    def _create_multiple_scheme_html(self, all_matches, all_unmatched_areas, current_time):
-        """Create HTML for multiple schemes"""
-        html = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{report_title}</title>
-    <style>
-        {css_styles}
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header class="report-header">
-            <h1>🏥 {report_title}</h1>
-            <div class="report-info">
-                <p><strong>Generated:</strong> {current_time}</p>
-                <p><strong>Project:</strong> {project_name}</p>
-                <p><strong>Area Schemes:</strong> {scheme_count} schemes compared</p>
-            </div>
-        </header>
-        
-        """.format(
-            report_title=config.REPORT_TITLE,
-            css_styles=self._get_css_styles(),
-            current_time=current_time,
-            project_name=config.PROJECT_NAME,
-            scheme_count=len(all_matches)
-        )
-            
-            html += """
-        <div class="scheme-comparisons">
-        """
-        
-        # Add detailed comparison for each scheme
-        for scheme_name, scheme_data in all_matches.items():
-            matches = scheme_data.get('matches', [])
-            unmatched_areas = all_unmatched_areas.get(scheme_name, {})
-            
-            html += """
-            <div class="scheme-section">
-                <h2>📋 {scheme_name} - Detailed Comparison</h2>
-                <div class="table-container">
-                    <table class="comparison-table">
-                        <thead>
-                            <tr>
-                            <th class="col-dept">Department</th>
-                            <th class="col-division">Division</th>
-                            <th class="col-function">Function</th>
-                            <th class="col-count">Required Count</th>
-                            <th class="col-area">Required Area (SF)</th>
-                            <th class="col-level">Level</th>
-                            <th class="col-count">Actual Count</th>
-                            <th class="col-area">Actual Area (SF)</th>
-                            <th class="col-delta">Count Delta</th>
-                            <th class="col-delta">Area Delta (SF)</th>
-                            <th class="col-delta">Area % Delta</th>
-                            <th class="col-status">Status</th>
-                            <th class="col-quality">Match Quality</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {table_rows}
-                        </tbody>
-                    </table>
-                </div>
-                
-                {unmatched_section}
-            </div>
-            """.format(
-                scheme_name=scheme_name,
-                col_area_detail=config.TABLE_COLUMN_HEADERS['area_detail'],
-                col_department=config.TABLE_COLUMN_HEADERS['department'],
-                col_program_type=config.TABLE_COLUMN_HEADERS['program_type'],
-                col_target_count=config.TABLE_COLUMN_HEADERS['target_count'],
-                col_target_dgsf=config.TABLE_COLUMN_HEADERS['target_dgsf'],
-                col_actual_count=config.TABLE_COLUMN_HEADERS['actual_count'],
-                col_actual_dgsf=config.TABLE_COLUMN_HEADERS['actual_dgsf'],
-                col_count_delta=config.TABLE_COLUMN_HEADERS['count_delta'],
-                col_dgsf_delta=config.TABLE_COLUMN_HEADERS['dgsf_delta'],
-                col_dgsf_percentage=config.TABLE_COLUMN_HEADERS['dgsf_percentage'],
-                col_status=config.TABLE_COLUMN_HEADERS['status'],
-                col_match_quality=config.TABLE_COLUMN_HEADERS['match_quality'],
-                table_rows=self._create_table_rows(matches),
-                unmatched_section=self._create_unmatched_section(unmatched_areas, scheme_name)
-            )
-        
-        html += """
-        </div>
-        
-        <div class="scheme-summary">
-            <h2>📊 Area Scheme Summary</h2>
-            <div class="scheme-cards">
-        """
-        
-        # Add scheme summary cards
-        for scheme_name, scheme_data in all_matches.items():
-            matches = scheme_data.get('matches', [])
-            scheme_info = scheme_data.get('scheme_info', {})
-            
-            fulfilled_count = sum(1 for match in matches if match['status'] == 'Fulfilled')
-            total_count = len(matches)
-            
-            html += """
-                <div class="scheme-card">
-                    <h3>{scheme_name}</h3>
-                    <div class="scheme-stats">
-                        <div class="stat">
-                            <span class="stat-value">{total_count}</span>
-                            <span class="stat-label">Requirements</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-value">{fulfilled_count}</span>
-                            <span class="stat-label">Fulfilled</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-value">{area_count}</span>
-                            <span class="stat-label">Areas</span>
-                        </div>
-                        <div class="stat">
-                            <span class="stat-value">{total_sf}</span>
-                            <span class="stat-label">Total SF</span>
-                        </div>
-                    </div>
-                </div>
-            """.format(
-                scheme_name=scheme_name,
-                total_count=total_count,
-                fulfilled_count=fulfilled_count,
-                area_count=scheme_info.get('count', 0),
-                total_sf="{:,.0f}".format(self._safe_float(scheme_info.get('total_sf', 0)))
-            )
-        
-        html += """
-            </div>
-        </div>
-        
-        <div class="section-diagram">
-            <h2>🏢 Building Section - Department Distribution</h2>
-            <div class="building-section" id="buildingSection">
-                <!-- Dynamic section diagram will be generated here -->
-            </div>
-            <div class="section-legend" id="sectionLegend">
-                <!-- Dynamic legend will be generated here -->
-            </div>
-        </div>
-        
-        <div class="viewer3d-section">
-            <h2>🌐 3D Interactive Building Viewer</h2>
-            <div class="viewer3d-controls">
-                <button class="control-btn active" data-mode="compliance">Compliance Heatmap</button>
-                <button class="control-btn" data-mode="departments">Department View</button>
-                <button class="control-btn" data-mode="areas">Area Density</button>
-                <button class="control-btn" data-mode="reset">Reset View</button>
-            </div>
-            <div class="viewer3d-container">
-                <canvas id="viewer3d-canvas"></canvas>
-                <div class="viewer3d-info" id="viewer3d-info">
-                    <div class="info-panel">
-                        <h4>Building Information</h4>
-                        <p>Click on areas for details</p>
-                    </div>
-                </div>
-            </div>
-            <div class="viewer3d-legend">
-                <div class="legend-title">Heatmap Legend</div>
-                <div class="legend-items" id="viewer3d-legend">
-                    <!-- Dynamic legend will be generated here -->
-                </div>
-            </div>
-        </div>
-        
-        <div class="chart-section">
-            <h2>📊 Area Fulfillment Overview</h2>
-            <div class="chart-container">
-                <canvas id="areaFulfillmentChart"></canvas>
-            </div>
-        </div>
-        
-        <footer class="report-footer">
-            <p>Report generated by Monitor Area System | {current_time}</p>
-            <p style="margin-top: 10px; font-size: 0.9em; color: #9ca3af;">
-                🦆 Powered by <strong style="color: #60a5fa;">EnneadTab</strong> | 
-                For feature requests, contact <strong style="color: #60a5fa;">Sen Zhang</strong>
-            </p>
-        </footer>
-    </div>
-    
-    <script>
-        {javascript}
-    </script>
-</body>
-</html>
-        """.format(current_time=current_time, javascript=self._get_javascript())
-        
-        return html
-    
     def _create_table_rows(self, matches):
-        """Create table rows for the comparison table"""
+        """Create table rows for the comparison table, grouped by department"""
         rows = []
+        
+        # Group matches by department
+        from collections import OrderedDict
+        department_groups = OrderedDict()
         for match in matches:
-            status_class = match['status'].lower()
+            dept = match['department'] or 'No Department'
+            if dept not in department_groups:
+                department_groups[dept] = []
+            department_groups[dept].append(match)
+        
+        # Generate rows for each department group
+        for dept_index, (dept_name, dept_matches) in enumerate(department_groups.items()):
+            # Add department header row - use department-level color from hierarchy
+            dept_color = self.get_color('department', dept_name)
+            # Fallback to first room's color if no department color found
+            if dept_color == '#6b7280' and dept_matches:
+                dept_color = dept_matches[0].get('color', '#6b7280')
             
-            # Check for high differences and apply alert styling
-            count_delta_abs = abs(match['count_delta'])
-            area_percentage_abs = abs(match['dgsf_percentage'])
-            
-            # Determine alert classes
-            count_delta_class = "positive" if match['count_delta'] >= 0 else "negative"
-            dgsf_delta_class = "positive" if match['dgsf_delta'] >= 0 else "negative"
-            percentage_class = "positive" if match['dgsf_percentage'] >= 0 else "negative"
-            
-            # Apply alert styling for high differences
-            if count_delta_abs >= config.COUNT_DELTA_ALERT_THRESHOLD:
-                count_delta_class = "alert-count-delta"
-            
-            if area_percentage_abs >= config.AREA_PERCENTAGE_ALERT_THRESHOLD:
-                percentage_class = "alert-area-delta"
-            
-            # Check if entire row should be highlighted for extreme differences
-            row_alert_class = ""
-            if (count_delta_abs >= config.COUNT_DELTA_ALERT_THRESHOLD and 
-                area_percentage_abs >= config.AREA_PERCENTAGE_ALERT_THRESHOLD):
-                row_alert_class = "alert-high-difference"
-            
-            # Format count delta with descriptive text
-            if match['count_delta'] > 0:
-                count_delta_str = "Exceeding {}".format(abs(match['count_delta']))
-            elif match['count_delta'] < 0:
-                count_delta_str = "Missing {}".format(abs(match['count_delta']))
-            else:
-                count_delta_str = "Exact Match"
-            
-            # Format area delta with descriptive text
-            dgsf_delta = self._safe_float(match['dgsf_delta'])
-            if dgsf_delta > 0:
-                dgsf_delta_str = "Exceeding {:,.0f} SF".format(abs(dgsf_delta))
-            elif dgsf_delta < 0:
-                dgsf_delta_str = "Missing {:,.0f} SF".format(abs(dgsf_delta))
-            else:
-                dgsf_delta_str = "Exact Match"
-            
-            percentage_str = "{:+.1f}%".format(self._safe_float(match['dgsf_percentage'])) if match['dgsf_percentage'] else "+0.0%"
-            
+            # Make department header collapsible with toggle icon
+            dept_id = "dept_{}".format(dept_index)
             rows.append("""
-                <tr class="status-{status_class} {row_alert_class}">
-                    <td class="col-dept">{department}</td>
-                    <td class="col-division">{division}</td>
-                    <td class="col-function"><strong>{room_name}</strong></td>
-                    <td class="col-count">{target_count}</td>
-                    <td class="col-area">{target_dgsf}</td>
-                    <td class="col-level">{level_summary}</td>
-                    <td class="col-count">{actual_count}</td>
-                    <td class="col-area">{actual_dgsf}</td>
-                    <td class="col-delta {count_delta_class}">{count_delta}</td>
-                    <td class="col-delta {dgsf_delta_class}">{dgsf_delta}</td>
-                    <td class="col-delta {percentage_class}">{percentage}</td>
-                    <td class="col-status"><span class="status-badge {status_class}">{status_icon} {status}</span></td>
-                    <td class="col-quality"><span class="quality-badge {quality_class}">{match_quality}</span></td>
+                <tr class="department-header" data-dept-id="{dept_id}" onclick="toggleDepartment('{dept_id}')" style="background: linear-gradient(90deg, {color} 0%, rgba(17, 24, 39, 0.8) 100%); cursor: pointer;">
+                    <td colspan="13" style="padding: 12px 16px; font-weight: 600; font-size: 1.1em; color: white; border-left: 4px solid {color};">
+                        <span class="collapse-icon" id="icon_{dept_id}" style="display: inline-block; margin-right: 8px; transition: transform 0.3s ease;">▼</span>
+                        <span style="display: inline-block; width: 12px; height: 12px; background: {color}; border-radius: 50%; margin-right: 8px;"></span>
+                        {dept_name}
+                    </td>
                 </tr>
-            """.format(
-                status_class=status_class,
-                row_alert_class=row_alert_class,
-                room_name=match['room_name'],
-                department=match['department'],
-                division=match['division'],
-                level_summary=match['level_summary'],
-                target_count="{:,}".format(match['target_count']),
-                target_dgsf="{:,.0f}".format(self._safe_float(match['target_dgsf'])),
-                actual_count="{:,}".format(match['actual_count']),
-                actual_dgsf="{:,.0f}".format(self._safe_float(match['actual_dgsf'])),
-                count_delta_class=count_delta_class,
-                count_delta=count_delta_str,
-                dgsf_delta_class=dgsf_delta_class,
-                dgsf_delta=dgsf_delta_str,
-                percentage_class=percentage_class,
-                percentage=percentage_str,
-                status_icon=self._get_status_icon(match['status']),
-                status=match['status'],
-                quality_class=match['match_quality'].lower(),
-                match_quality=match['match_quality']
-            ))
+            """.format(color=dept_color, dept_name=dept_name, dept_id=dept_id))
+            
+            # Calculate department totals
+            dept_target_count = sum(m['target_count'] for m in dept_matches if m['target_count'] is not None)
+            dept_target_dgsf = sum(m['target_dgsf'] for m in dept_matches if m['target_dgsf'] is not None)
+            dept_actual_count = sum(m['actual_count'] for m in dept_matches)
+            dept_actual_dgsf = sum(m['actual_dgsf'] for m in dept_matches)
+            dept_count_delta = dept_actual_count - dept_target_count if dept_target_count > 0 else None
+            dept_dgsf_delta = dept_actual_dgsf - dept_target_dgsf if dept_target_dgsf > 0 else None
+            
+            # Add rows for this department
+            for match in dept_matches:
+                status_class = match['status'].lower()
+                
+                # Check for high differences and apply alert styling (handle None values)
+                count_delta_abs = abs(match['count_delta']) if match['count_delta'] is not None else 0
+                area_percentage_abs = abs(match['dgsf_percentage']) if match['dgsf_percentage'] is not None else 0
+                
+                # Determine alert classes (handle None values)
+                if match['count_delta'] is None:
+                    count_delta_class = "neutral"
+                else:
+                    count_delta_class = "positive" if match['count_delta'] >= 0 else "negative"
+                    
+                if match['dgsf_delta'] is None:
+                    dgsf_delta_class = "neutral"
+                else:
+                    dgsf_delta_class = "positive" if match['dgsf_delta'] >= 0 else "negative"
+                    
+                if match['dgsf_percentage'] is None:
+                    percentage_class = "neutral"
+                else:
+                    percentage_class = "positive" if match['dgsf_percentage'] >= 0 else "negative"
+                
+                # Apply alert styling for high differences
+                if count_delta_abs >= config.COUNT_DELTA_ALERT_THRESHOLD:
+                    count_delta_class = "alert-count-delta"
+                
+                if area_percentage_abs >= config.AREA_PERCENTAGE_ALERT_THRESHOLD:
+                    percentage_class = "alert-area-delta"
+                
+                # Check if entire row should be highlighted for extreme differences
+                row_alert_class = ""
+                if (count_delta_abs >= config.COUNT_DELTA_ALERT_THRESHOLD and 
+                    area_percentage_abs >= config.AREA_PERCENTAGE_ALERT_THRESHOLD):
+                    row_alert_class = "alert-high-difference"
+                
+                # Format count delta with descriptive text
+                if match['count_delta'] is None:
+                    count_delta_str = "N/A (No Req.)"
+                elif match['count_delta'] > 0:
+                    count_delta_str = "Exceeding {}".format(abs(match['count_delta']))
+                elif match['count_delta'] < 0:
+                    count_delta_str = "Missing {}".format(abs(match['count_delta']))
+                else:
+                    count_delta_str = "Exact Match"
+                
+                # Format area delta with descriptive text
+                dgsf_delta = match['dgsf_delta']
+                if dgsf_delta is None:
+                    dgsf_delta_str = "N/A (No Req.)"
+                elif dgsf_delta > 0:
+                    dgsf_delta_str = "Exceeding {:,.0f} SF".format(float(abs(dgsf_delta)))
+                elif dgsf_delta < 0:
+                    dgsf_delta_str = "Missing {:,.0f} SF".format(float(abs(dgsf_delta)))
+                else:
+                    dgsf_delta_str = "Exact Match"
+                
+                # Format percentage
+                if match['dgsf_percentage'] is None:
+                    percentage_str = "N/A"
+                else:
+                    percentage_str = "{:+.1f}%".format(float(self._safe_float(match['dgsf_percentage'])))
+                
+                rows.append("""
+                    <tr class="status-{status_class} {row_alert_class} dept-row" data-dept="{dept_id}" data-search-dept="{department}" data-search-division="{division}" data-search-function="{room_name}">
+                        <td class="col-dept">{department}</td>
+                        <td class="col-division">{division}</td>
+                        <td class="col-function"><strong>{room_name}</strong></td>
+                        <td class="col-count">{target_count}</td>
+                        <td class="col-area">{target_dgsf}</td>
+                        <td class="col-level">{level_summary}</td>
+                        <td class="col-count">{actual_count}</td>
+                        <td class="col-area">{actual_dgsf}</td>
+                        <td class="col-delta {count_delta_class}">{count_delta}</td>
+                        <td class="col-delta {dgsf_delta_class}">{dgsf_delta}</td>
+                        <td class="col-delta {percentage_class}">{percentage}</td>
+                        <td class="col-status"><span class="status-badge {status_class}">{status_icon} {status}</span></td>
+                        <td class="col-quality"><span class="quality-badge {quality_class}">{match_quality}</span></td>
+                    </tr>
+                """.format(
+                    dept_id=dept_id,
+                    status_class=status_class,
+                    row_alert_class=row_alert_class,
+                    department=match['department'],
+                    division=match['division'],
+                    room_name=match['room_name'],
+                    level_summary=match['level_summary'],
+                    target_count="Any" if (match['target_count'] is None or match['target_count'] == 0) else "{:,}".format(int(float(match['target_count']))),
+                    target_dgsf="N/A" if (match['target_dgsf'] is None or match['target_dgsf'] == 0) else "{:,.0f}".format(float(self._safe_float(match['target_dgsf']))),
+                    actual_count="{:,}".format(int(float(match['actual_count']))),
+                    actual_dgsf="{:,.0f}".format(float(self._safe_float(match['actual_dgsf']))),
+                    count_delta_class=count_delta_class,
+                    count_delta=count_delta_str,
+                    dgsf_delta_class=dgsf_delta_class,
+                    dgsf_delta=dgsf_delta_str,
+                    percentage_class=percentage_class,
+                    percentage=percentage_str,
+                    status_icon=self._get_status_icon(match['status']),
+                    status=match['status'],
+                    quality_class=match['match_quality'].lower(),
+                    match_quality=match['match_quality']
+                ))
         
         return "".join(rows)
     
-    def _create_unmatched_section(self, unmatched_areas, scheme_name=None):
+    def _create_department_summary_table(self, matches):
+        """Create department-level fulfillment summary table with visual charts"""
+        from collections import OrderedDict
+        import json
+        
+        # Group matches by department
+        department_groups = OrderedDict()
+        for match in matches:
+            dept = match['department'] or 'No Department'
+            if dept not in department_groups:
+                department_groups[dept] = {
+                    'matches': []
+                }
+            department_groups[dept]['matches'].append(match)
+        
+        # Data for charts
+        chart_data = {
+            'departments': [],
+            'target_dgsf': [],
+            'actual_dgsf': [],
+            'colors': [],
+            'percentages': []
+        }
+        
+        # Generate department summary rows
+        rows = []
+        for dept_name, dept_data in department_groups.items():
+            dept_matches = dept_data['matches']
+            # Use department-level color from hierarchy
+            dept_color = self.get_color('department', dept_name)
+            # Fallback to first match's color if no department color found
+            if dept_color == '#6b7280' and dept_matches:
+                dept_color = dept_matches[0].get('color', '#6b7280')
+            
+            # Calculate department totals
+            dept_target_count = sum(m['target_count'] for m in dept_matches if m['target_count'] is not None)
+            dept_target_dgsf = sum(m['target_dgsf'] for m in dept_matches if m['target_dgsf'] is not None)
+            dept_actual_count = sum(m['actual_count'] for m in dept_matches)
+            dept_actual_dgsf = sum(m['actual_dgsf'] for m in dept_matches)
+            
+            # Calculate deltas and percentages
+            if dept_target_count > 0:
+                dept_count_delta = dept_actual_count - dept_target_count
+                dept_count_percentage = (dept_count_delta / float(dept_target_count) * 100) if dept_target_count > 0 else 0
+            else:
+                dept_count_delta = None
+                dept_count_percentage = None
+                
+            if dept_target_dgsf > 0:
+                dept_dgsf_delta = dept_actual_dgsf - dept_target_dgsf
+                dept_dgsf_percentage = (dept_dgsf_delta / dept_target_dgsf * 100) if dept_target_dgsf > 0 else 0
+            else:
+                dept_dgsf_delta = None
+                dept_dgsf_percentage = None
+            
+            # Add to chart data
+            chart_data['departments'].append(dept_name)
+            chart_data['target_dgsf'].append(float(dept_target_dgsf) if dept_target_dgsf else 0)
+            chart_data['actual_dgsf'].append(float(dept_actual_dgsf) if dept_actual_dgsf else 0)
+            chart_data['colors'].append(dept_color)
+            chart_data['percentages'].append(float(dept_dgsf_percentage) if dept_dgsf_percentage is not None else 0)
+            
+            # Status styling
+            if dept_dgsf_percentage is not None:
+                if abs(dept_dgsf_percentage) <= 5:
+                    status_class = "fulfilled"
+                    status_icon = "✓"
+                    status_text = "On Target"
+                elif dept_dgsf_percentage > 5:
+                    status_class = "excessive"
+                    status_icon = "↑"
+                    status_text = "Over"
+                else:
+                    status_class = "partial"
+                    status_icon = "△"
+                    status_text = "Under"
+            else:
+                status_class = "no requirement"
+                status_icon = "—"
+                status_text = "N/A"
+            
+            # Format values
+            count_delta_str = "N/A" if dept_count_delta is None else "{:+d}".format(int(dept_count_delta))
+            dgsf_delta_str = "N/A" if dept_dgsf_delta is None else "{:+,.0f} SF".format(float(dept_dgsf_delta))
+            dgsf_pct_str = "N/A" if dept_dgsf_percentage is None else "{:+.1f}%".format(float(dept_dgsf_percentage))
+            
+            rows.append("""
+                <tr style="border-left: 4px solid {color};">
+                    <td style="font-weight: 600;">
+                        <span style="display: inline-block; width: 10px; height: 10px; background: {color}; border-radius: 50%; margin-right: 8px;"></span>
+                        {dept_name}
+                    </td>
+                    <td class="col-count">{target_count}</td>
+                    <td class="col-area">{target_dgsf}</td>
+                    <td class="col-count">{actual_count}</td>
+                    <td class="col-area">{actual_dgsf}</td>
+                    <td class="col-delta">{count_delta}</td>
+                    <td class="col-delta">{dgsf_delta}</td>
+                    <td class="col-delta">{dgsf_pct}</td>
+                    <td class="col-status"><span class="status-badge {status_class}">{status_icon} {status_text}</span></td>
+                </tr>
+            """.format(
+                color=dept_color,
+                dept_name=dept_name,
+                target_count="Any" if dept_target_count == 0 else "{:,}".format(int(float(dept_target_count))),
+                target_dgsf="N/A" if dept_target_dgsf == 0 else "{:,.0f}".format(float(dept_target_dgsf)),
+                actual_count="{:,}".format(int(float(dept_actual_count))),
+                actual_dgsf="{:,.0f}".format(float(dept_actual_dgsf)),
+                count_delta=count_delta_str,
+                dgsf_delta=dgsf_delta_str,
+                dgsf_pct=dgsf_pct_str,
+                status_class=status_class.lower().replace(" ", "_"),
+                status_icon=status_icon,
+                status_text=status_text
+            ))
+        
+        # Serialize chart data to JSON for JavaScript
+        chart_data_json = json.dumps(chart_data)
+        
+        table_html = """
+            <div class="department-summary-container">
+                <!-- Charts Section -->
+                <div class="charts-section" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;">
+                    <div class="chart-card" style="background: #1e293b; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+                        <h3 style="color: #e2e8f0; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">📊 Target vs Actual DGSF</h3>
+                        <canvas id="deptComparisonChart" style="max-height: 400px;"></canvas>
+                    </div>
+                    <div class="chart-card" style="background: #1e293b; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+                        <h3 style="color: #e2e8f0; margin: 0 0 16px 0; font-size: 16px; font-weight: 600;">📈 Fulfillment Percentage</h3>
+                        <canvas id="deptPercentageChart" style="max-height: 400px;"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Collapsible Data Table Section -->
+                <div class="table-toggle-section" style="margin-top: 24px;">
+                    <button onclick="toggleDepartmentTable()" 
+                            style="background: #374151; color: #e5e7eb; border: none; padding: 12px 24px; 
+                                   border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 500;
+                                   transition: all 0.3s ease; display: flex; align-items: center; gap: 8px;
+                                   margin: 0 auto;">
+                        <span id="tableToggleIcon">▼</span>
+                        <span id="tableToggleText">Show Detailed Table</span>
+                    </button>
+                </div>
+                
+                <div id="departmentTableContainer" class="department-summary-table" style="display: none; margin-top: 16px; opacity: 0; transition: opacity 0.3s ease;">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 20%;">Department</th>
+                                <th style="width: 10%;">Target Count</th>
+                                <th style="width: 12%;">Target DGSF</th>
+                                <th style="width: 10%;">Actual Count</th>
+                                <th style="width: 12%;">Actual DGSF</th>
+                                <th style="width: 10%;">Count Δ</th>
+                                <th style="width: 12%;">DGSF Δ</th>
+                                <th style="width: 8%;">DGSF %</th>
+                                <th style="width: 10%;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {rows}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <script id="departmentChartData" type="application/json">
+            {chart_data_json}
+            </script>
+            
+            <script>
+                function toggleDepartmentTable() {{
+                    const container = document.getElementById('departmentTableContainer');
+                    const icon = document.getElementById('tableToggleIcon');
+                    const text = document.getElementById('tableToggleText');
+                    
+                    if (container.style.display === 'none') {{
+                        container.style.display = 'block';
+                        setTimeout(() => {{ container.style.opacity = '1'; }}, 10);
+                        icon.textContent = '▲';
+                        text.textContent = 'Hide Detailed Table';
+                    }} else {{
+                        container.style.opacity = '0';
+                        setTimeout(() => {{ container.style.display = 'none'; }}, 300);
+                        icon.textContent = '▼';
+                        text.textContent = 'Show Detailed Table';
+                    }}
+                }}
+            </script>
+        """.format(rows="".join(rows), chart_data_json=chart_data_json)
+        
+        return table_html
+    
+    def _create_unmatched_section(self, unmatched_areas, valid_matches=None, scheme_name=None):
         """
-        Create section for unmatched areas
+        Create section for unmatched areas with suggestions
         
         Args:
             unmatched_areas: List of unmatched area objects
+            valid_matches: List of valid match dictionaries (for suggestions)
             scheme_name: Name of the scheme (optional)
             
         Returns:
@@ -857,6 +987,62 @@ class HTMLReportGenerator:
         """
         if not unmatched_areas:
             return ""
+        
+        # Build list of valid items for fuzzy matching suggestions
+        valid_items = []
+        if valid_matches:
+            for match in valid_matches:
+                valid_items.append({
+                    'department': match.get('department', ''),
+                    'division': match.get('division', ''),
+                    'function': match.get('room_name', ''),
+                    'combined': "{}-{}-{}".format(
+                        match.get('department', ''),
+                        match.get('division', ''),
+                        match.get('room_name', '')
+                    )
+                })
+        
+        def find_best_suggestion(unmatched_dept, unmatched_div, unmatched_func):
+            """Find the closest matching valid item using fuzzy matching"""
+            if not valid_items:
+                return None
+            
+            best_match = None
+            best_score = float('inf')
+            
+            for valid_item in valid_items:
+                # Calculate similarity score (simple approach)
+                # Check if any component matches exactly
+                dept_match = unmatched_dept.lower() == valid_item['department'].lower()
+                div_match = unmatched_div.lower() == valid_item['division'].lower()
+                func_match = unmatched_func.lower() == valid_item['function'].lower()
+                
+                # Score based on matches (lower is better)
+                score = 3  # Start with worst case
+                if dept_match:
+                    score -= 1
+                if div_match:
+                    score -= 1
+                if func_match:
+                    score -= 1
+                
+                # Also check substring matches
+                if not dept_match and unmatched_dept.lower() in valid_item['department'].lower():
+                    score -= 0.3
+                if not div_match and unmatched_div.lower() in valid_item['division'].lower():
+                    score -= 0.3
+                if not func_match and unmatched_func.lower() in valid_item['function'].lower():
+                    score -= 0.3
+                
+                if score < best_score:
+                    best_score = score
+                    best_match = valid_item
+            
+            # Only return suggestion if there's at least one partial match
+            if best_match and best_score < 3:
+                return best_match
+            return None
         
         # Group unmatched areas by level
         areas_by_level = {}
@@ -873,13 +1059,24 @@ class HTMLReportGenerator:
             level_total_sf = 0
             
             for area_object in level_areas:
-            area_sf = area_object.get('area_sf', 0)
-            area_dept = area_object.get('department', '')
-            area_type = area_object.get('program_type', '')
-            area_detail = area_object.get('program_type_detail', '')
+                area_sf = area_object.get('area_sf', 0)
+                area_dept = area_object.get('department', '')
+                area_type = area_object.get('program_type', '')
+                area_detail = area_object.get('program_type_detail', '')
                 creator = area_object.get('creator', 'Unknown')
                 last_editor = area_object.get('last_editor', 'Unknown')
                 level_total_sf += area_sf
+                
+                # Find best suggestion for this unmatched area
+                suggestion = find_best_suggestion(area_dept, area_type, area_detail)
+                if suggestion:
+                    suggestion_text = '<span class="suggestion-text">Do you mean <strong>{}-{}-{}</strong>?</span>'.format(
+                        suggestion['department'],
+                        suggestion['division'],
+                        suggestion['function']
+                    )
+                else:
+                    suggestion_text = '<span style="color: #6b7280;">No suggestion available</span>'
                 
                 level_rows.append("""
                     <tr>
@@ -890,14 +1087,16 @@ class HTMLReportGenerator:
                         <td class="col-level">{creator}</td>
                         <td class="col-level">{last_editor}</td>
                         <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
+                        <td class="col-suggestion">{suggestion}</td>
                 </tr>
             """.format(
                 area_dept=area_dept,
                 area_type=area_type,
                     area_detail=area_detail,
-                    area_sf="{:,.0f}".format(self._safe_float(area_sf)),
+                    area_sf="{:,.0f}".format(float(self._safe_float(area_sf))),
                     creator=creator,
-                    last_editor=last_editor
+                    last_editor=last_editor,
+                    suggestion=suggestion_text
                 ))
             
             level_sections.append("""
@@ -914,6 +1113,7 @@ class HTMLReportGenerator:
                                 <th class="col-level">Created By</th>
                                 <th class="col-level">Last Edited By</th>
                                 <th class="col-status">Status</th>
+                                <th class="col-suggestion">Suggested Match</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1243,6 +1443,7 @@ class HTMLReportGenerator:
         .col-delta { width: 14%; }
         .col-status { width: 10%; }
         .col-quality { width: 8%; }
+        .col-suggestion { width: 20%; }
         
         /* Add thick division line between Required Area and Level */
         .comparison-table th:nth-child(5),
@@ -1796,6 +1997,165 @@ class HTMLReportGenerator:
                 padding: 20px;
             }
         }
+        
+        /* Sticky Search Bar at Bottom */
+        .search-bar-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, transparent 0%, #0a0e13 20%);
+            padding: 20px 0 0 0;
+            z-index: 1000;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+        }
+        
+        .search-bar-content {
+            max-width: 95vw;
+            margin: 0 auto;
+            padding: 0 24px 16px 24px;
+        }
+        
+        #fuzzySearch {
+            width: 100%;
+            padding: 14px 20px;
+            background: #111827;
+            border: 2px solid #1f2937;
+            border-radius: 8px;
+            color: #f8fafc;
+            font-size: 1rem;
+            font-family: 'Roboto', sans-serif;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        #fuzzySearch:focus {
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+        }
+        
+        #fuzzySearch::placeholder {
+            color: #6b7280;
+        }
+        
+        .clear-search-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #374151;
+            border: none;
+            color: #f8fafc;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .clear-search-btn:hover {
+            background: #60a5fa;
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .search-status {
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: #1f2937;
+            border-radius: 6px;
+            color: #9ca3af;
+            font-size: 0.875rem;
+            display: none;
+        }
+        
+        .search-status.active {
+            display: block;
+        }
+        
+        .search-status .count {
+            color: #60a5fa;
+            font-weight: 600;
+        }
+        
+        /* Department collapse styles */
+        .dept-row.collapsed {
+            display: none;
+        }
+        
+        .department-header.collapsed .collapse-icon {
+            transform: rotate(-90deg);
+        }
+        
+        /* Search filter styles */
+        .dept-row.search-hidden {
+            display: none !important;
+        }
+        
+        .department-header.search-hidden {
+            display: none !important;
+        }
+        
+        /* Suggestion column styles */
+        .suggestion-text {
+            color: #9ca3af;
+            font-size: 0.9rem;
+            font-style: italic;
+        }
+        
+        .suggestion-text strong {
+            color: #60a5fa;
+            font-weight: 600;
+            font-style: normal;
+        }
+        
+        /* Context Menu Styles */
+        .context-menu {
+            position: fixed;
+            background: #1f2937;
+            border: 2px solid #374151;
+            border-radius: 8px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+            z-index: 10000;
+            min-width: 220px;
+            display: none;
+            overflow: hidden;
+        }
+        
+        .context-menu.active {
+            display: block;
+        }
+        
+        .context-menu-item {
+            padding: 12px 16px;
+            color: #f8fafc;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 0.95rem;
+            border-bottom: 1px solid #374151;
+        }
+        
+        .context-menu-item:last-child {
+            border-bottom: none;
+        }
+        
+        .context-menu-item:hover {
+            background: #374151;
+        }
+        
+        .context-menu-icon {
+            font-size: 1.1rem;
+            color: #60a5fa;
+            width: 20px;
+            text-align: center;
+        }
         """
     
     def _get_javascript(self):
@@ -1837,20 +2197,26 @@ class HTMLReportGenerator:
         function initializeComponents() {
             console.log('Initializing components...');
             
-            // Initialize table sorting
-            const table = document.querySelector('.comparison-table');
-            if (table) {
-                console.log('Found comparison table, adding sorting...');
-                const headers = table.querySelectorAll('th');
-                headers.forEach((header, index) => {
-                    header.style.cursor = 'pointer';
-                    header.addEventListener('click', () => {
-                        sortTable(table, index);
-                    });
-                });
-            } else {
-                console.log('No comparison table found');
-            }
+            // Initialize fuzzy search
+            initializeFuzzySearch();
+            
+            // Initialize context menu
+            initializeContextMenu();
+            
+            // Table sorting disabled per user request
+            // const table = document.querySelector('.comparison-table');
+            // if (table) {
+            //     console.log('Found comparison table, adding sorting...');
+            //     const headers = table.querySelectorAll('th');
+            //     headers.forEach((header, index) => {
+            //         header.style.cursor = 'pointer';
+            //         header.addEventListener('click', () => {
+            //             sortTable(table, index);
+            //         });
+            //     });
+            // } else {
+            //     console.log('No comparison table found');
+            // }
             
             // Initialize donut chart if canvas exists
             const ctx = document.getElementById('areaFulfillmentChart');
@@ -1861,9 +2227,249 @@ class HTMLReportGenerator:
                 console.log('Chart canvas or Chart.js not available');
             }
             
+            // Initialize department charts
+            initializeDepartmentCharts();
+            
             // Initialize building section diagram
             console.log('Creating building section...');
             createBuildingSection();
+        }
+        
+        function initializeDepartmentCharts() {
+            console.log('Initializing department charts...');
+            
+            // Get chart data from script tag
+            const chartDataElement = document.getElementById('departmentChartData');
+            if (!chartDataElement) {
+                console.log('No department chart data found');
+                return;
+            }
+            
+            const chartData = JSON.parse(chartDataElement.textContent);
+            console.log('Department chart data:', chartData);
+            
+            // Create comparison chart
+            const comparisonCanvas = document.getElementById('deptComparisonChart');
+            if (comparisonCanvas) {
+                createDepartmentComparisonChart(comparisonCanvas, chartData);
+            }
+            
+            // Create percentage chart
+            const percentageCanvas = document.getElementById('deptPercentageChart');
+            if (percentageCanvas) {
+                createDepartmentPercentageChart(percentageCanvas, chartData);
+            }
+        }
+        
+        function createDepartmentComparisonChart(canvas, data) {
+            console.log('Creating department comparison chart...');
+            
+            new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: data.departments,
+                    datasets: [
+                        {
+                            label: 'Target DGSF',
+                            data: data.target_dgsf,
+                            backgroundColor: data.colors.map(c => c + '40'),
+                            borderColor: data.colors,
+                            borderWidth: 2,
+                            borderRadius: 6,
+                            borderSkipped: false
+                        },
+                        {
+                            label: 'Actual DGSF',
+                            data: data.actual_dgsf,
+                            backgroundColor: data.colors.map(c => c + '80'),
+                            borderColor: data.colors,
+                            borderWidth: 2,
+                            borderRadius: 6,
+                            borderSkipped: false
+                        }
+                    ]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                color: '#e5e7eb',
+                                font: {
+                                    family: 'Roboto',
+                                    size: 12
+                                },
+                                padding: 16,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#1f2937',
+                            titleColor: '#f9fafb',
+                            bodyColor: '#e5e7eb',
+                            borderColor: '#374151',
+                            borderWidth: 1,
+                            padding: 12,
+                            displayColors: true,
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.dataset.label || '';
+                                    const value = context.parsed.x;
+                                    return label + ': ' + value.toLocaleString() + ' SF';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: false,
+                            grid: {
+                                color: '#374151',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#9ca3af',
+                                font: {
+                                    family: 'Roboto',
+                                    size: 11
+                                },
+                                callback: function(value) {
+                                    return value.toLocaleString();
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Square Feet (SF)',
+                                color: '#9ca3af',
+                                font: {
+                                    family: 'Roboto',
+                                    size: 12,
+                                    weight: '500'
+                                }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#e5e7eb',
+                                font: {
+                                    family: 'Roboto',
+                                    size: 12,
+                                    weight: '500'
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeInOutQuart'
+                    }
+                }
+            });
+        }
+        
+        function createDepartmentPercentageChart(canvas, data) {
+            console.log('Creating department percentage chart...');
+            
+            // Color code based on percentage
+            const barColors = data.percentages.map(pct => {
+                if (Math.abs(pct) <= 5) return '#10b981'; // Green - on target
+                if (pct > 5) return '#f59e0b'; // Orange - over
+                return '#ef4444'; // Red - under
+            });
+            
+            new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: data.departments,
+                    datasets: [{
+                        label: 'Fulfillment %',
+                        data: data.percentages,
+                        backgroundColor: barColors.map(c => c + '80'),
+                        borderColor: barColors,
+                        borderWidth: 2,
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: '#1f2937',
+                            titleColor: '#f9fafb',
+                            bodyColor: '#e5e7eb',
+                            borderColor: '#374151',
+                            borderWidth: 1,
+                            padding: 12,
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.parsed.x;
+                                    const status = Math.abs(value) <= 5 ? 'On Target' : 
+                                                   value > 5 ? 'Over' : 'Under';
+                                    return status + ': ' + (value > 0 ? '+' : '') + value.toFixed(1) + '%';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                color: '#374151',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#9ca3af',
+                                font: {
+                                    family: 'Roboto',
+                                    size: 11
+                                },
+                                callback: function(value) {
+                                    return (value > 0 ? '+' : '') + value + '%';
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'Percentage Difference',
+                                color: '#9ca3af',
+                                font: {
+                                    family: 'Roboto',
+                                    size: 12,
+                                    weight: '500'
+                                }
+                            }
+                        },
+                        y: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#e5e7eb',
+                                font: {
+                                    family: 'Roboto',
+                                    size: 12,
+                                    weight: '500'
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1500,
+                        easing: 'easeInOutQuart'
+                    }
+                }
+            });
         }
         
         function initialize3DViewer() {
@@ -2564,6 +3170,220 @@ class HTMLReportGenerator:
                 <p><strong>Actual Area:</strong> ${userData.actualArea.toLocaleString()} SF</p>
                 <p><strong>Compliance:</strong> ${(userData.compliance * 100).toFixed(1)}%</p>
             `;
+        }
+        
+        // Toggle department collapse
+        function toggleDepartment(deptId) {
+            const deptRows = document.querySelectorAll('.dept-row[data-dept="' + deptId + '"]');
+            const deptHeader = document.querySelector('.department-header[data-dept-id="' + deptId + '"]');
+            const icon = document.getElementById('icon_' + deptId);
+            
+            deptRows.forEach(row => {
+                row.classList.toggle('collapsed');
+            });
+            
+            deptHeader.classList.toggle('collapsed');
+        }
+        
+        // Fuzzy search filter initialization
+        let fuseInstance = null;
+        let searchData = [];
+        
+        function initializeFuzzySearch() {
+            console.log('Initializing fuzzy search filter...');
+            
+            // Collect all searchable items from table
+            const rows = document.querySelectorAll('.dept-row');
+            searchData = Array.from(rows).map(row => ({
+                element: row,
+                department: row.getAttribute('data-search-dept') || '',
+                division: row.getAttribute('data-search-division') || '',
+                function: row.getAttribute('data-search-function') || ''
+            }));
+            
+            // Initialize Fuse.js with fuzzy search options
+            const fuseOptions = {
+                keys: [
+                    { name: 'department', weight: 0.4 },
+                    { name: 'division', weight: 0.3 },
+                    { name: 'function', weight: 0.3 }
+                ],
+                threshold: 0.4, // More lenient matching (0.0 = exact, 1.0 = match anything)
+                distance: 100, // Maximum distance for matching
+                ignoreLocation: true, // Don't care about position of match
+                useExtendedSearch: false,
+                minMatchCharLength: 1
+            };
+            
+            fuseInstance = new Fuse(searchData, fuseOptions);
+            
+            // Setup search input event
+            const searchInput = document.getElementById('fuzzySearch');
+            const searchStatus = document.getElementById('searchStatus');
+            const clearBtn = document.getElementById('clearSearch');
+            
+            if (searchInput && searchStatus) {
+                searchInput.addEventListener('input', function(e) {
+                    const query = e.target.value.trim();
+                    
+                    if (query.length < 1) {
+                        // Clear filter when search is empty
+                        clearSearchFilter();
+                        return;
+                    }
+                    
+                    // Perform fuzzy search
+                    const results = fuseInstance.search(query);
+                    const matchingElements = new Set(results.map(r => r.item.element));
+                    
+                    // Filter rows - hide non-matching, show matching
+                    let visibleCount = 0;
+                    searchData.forEach(item => {
+                        if (matchingElements.has(item.element)) {
+                            item.element.classList.remove('search-hidden');
+                            visibleCount++;
+                        } else {
+                            item.element.classList.add('search-hidden');
+                        }
+                    });
+                    
+                    // Update department header visibility
+                    updateDepartmentHeadersVisibility();
+                    
+                    // Show clear button
+                    clearBtn.style.display = 'flex';
+                    
+                    // Update status
+                    if (visibleCount === 0) {
+                        searchStatus.innerHTML = '<span class="count">No matches found</span> for "' + query + '"';
+                    } else {
+                        searchStatus.innerHTML = 'Showing <span class="count">' + visibleCount + '</span> matching item(s) for "' + query + '"';
+                    }
+                    searchStatus.classList.add('active');
+                });
+            }
+        }
+        
+        // Update department header visibility based on visible rows
+        function updateDepartmentHeadersVisibility() {
+            const allDeptHeaders = document.querySelectorAll('.department-header');
+            
+            allDeptHeaders.forEach(header => {
+                const deptId = header.getAttribute('data-dept-id');
+                const deptRows = document.querySelectorAll('.dept-row[data-dept="' + deptId + '"]');
+                
+                // Check if any rows in this department are visible (not search-hidden)
+                let hasVisibleRows = false;
+                deptRows.forEach(row => {
+                    if (!row.classList.contains('search-hidden')) {
+                        hasVisibleRows = true;
+                    }
+                });
+                
+                // Show/hide department header based on visible rows
+                if (hasVisibleRows) {
+                    header.classList.remove('search-hidden');
+                    // Auto-expand department to show filtered results
+                    if (header.classList.contains('collapsed')) {
+                        deptRows.forEach(row => row.classList.remove('collapsed'));
+                        header.classList.remove('collapsed');
+                    }
+                } else {
+                    header.classList.add('search-hidden');
+                }
+            });
+        }
+        
+        // Clear search filter
+        function clearSearchFilter() {
+            // Remove search-hidden class from all rows
+            const allRows = document.querySelectorAll('.dept-row');
+            allRows.forEach(row => row.classList.remove('search-hidden'));
+            
+            // Remove search-hidden class from all headers
+            const allHeaders = document.querySelectorAll('.department-header');
+            allHeaders.forEach(header => header.classList.remove('search-hidden'));
+            
+            // Clear search input
+            const searchInput = document.getElementById('fuzzySearch');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            
+            // Hide clear button
+            const clearBtn = document.getElementById('clearSearch');
+            if (clearBtn) {
+                clearBtn.style.display = 'none';
+            }
+            
+            // Hide status
+            const searchStatus = document.getElementById('searchStatus');
+            if (searchStatus) {
+                searchStatus.classList.remove('active');
+            }
+        }
+        
+        // Context Menu Functions
+        function initializeContextMenu() {
+            const contextMenu = document.getElementById('contextMenu');
+            
+            // Show context menu on right-click
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                
+                // Position the context menu at mouse location
+                contextMenu.style.left = e.pageX + 'px';
+                contextMenu.style.top = e.pageY + 'px';
+                contextMenu.classList.add('active');
+            });
+            
+            // Hide context menu on regular click
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.context-menu')) {
+                    contextMenu.classList.remove('active');
+                }
+            });
+            
+            // Hide context menu on scroll
+            document.addEventListener('scroll', function() {
+                contextMenu.classList.remove('active');
+            });
+        }
+        
+        // Collapse all departments
+        function collapseAllDepartments() {
+            const allDeptHeaders = document.querySelectorAll('.department-header');
+            allDeptHeaders.forEach(header => {
+                const deptId = header.getAttribute('data-dept-id');
+                const deptRows = document.querySelectorAll('.dept-row[data-dept="' + deptId + '"]');
+                
+                // Collapse if not already collapsed
+                if (!header.classList.contains('collapsed')) {
+                    deptRows.forEach(row => row.classList.add('collapsed'));
+                    header.classList.add('collapsed');
+                }
+            });
+            
+            // Hide context menu
+            document.getElementById('contextMenu').classList.remove('active');
+        }
+        
+        // Expand all departments
+        function expandAllDepartments() {
+            const allDeptHeaders = document.querySelectorAll('.department-header');
+            allDeptHeaders.forEach(header => {
+                const deptId = header.getAttribute('data-dept-id');
+                const deptRows = document.querySelectorAll('.dept-row[data-dept="' + deptId + '"]');
+                
+                // Expand if collapsed
+                if (header.classList.contains('collapsed')) {
+                    deptRows.forEach(row => row.classList.remove('collapsed'));
+                    header.classList.remove('collapsed');
+                }
+            });
+            
+            // Hide context menu
+            document.getElementById('contextMenu').classList.remove('active');
         }
         
         function sortTable(table, columnIndex) {

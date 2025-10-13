@@ -17,25 +17,25 @@ APP_REVIT = "revit"
 
 DEPARTMENT_KEY = {
     APP_REVIT: "Area_$Department",
-    APP_EXCEL: "Department"
+    APP_EXCEL: "DEPARTMENT"
 }
 
 PROGRAM_TYPE_KEY = {
     APP_REVIT: "Area_$Department_Program Type",
-    APP_EXCEL: "Program Type"
+    APP_EXCEL: "DIVISION"
 }
 
 PROGRAM_TYPE_DETAIL_KEY = {
     APP_REVIT: "Area_$Department_Program Type Detail",
-    APP_EXCEL: "Program Type Detail"
+    APP_EXCEL: "ROOM NAME"
 }
 
 COUNT_KEY = {
-    APP_EXCEL: "COUNT"
+    APP_EXCEL: "KEY UNIT"
 }
 
 SCALED_DGSF_KEY = {
-    APP_EXCEL: "SCALED DGSF"
+    APP_EXCEL: "DGSF+"
 }
 
 # =============================================================================
@@ -43,8 +43,8 @@ SCALED_DGSF_KEY = {
 # =============================================================================
 
 # Excel file settings
-EXCEL_FILENAME = "Sample.xlsx"
-EXCEL_WORKSHEET = "Sheet1"
+EXCEL_FILENAME = r"J:\2534\2_Master File\B-70_Programming\01_Program & Analysis\NYULLI Melville Program.xlsx"
+EXCEL_WORKSHEET = "Hospital Program TARGET_DESIGN"
 EXCEL_HEADER_ROW = 1  # Row where headers are located (1-based, as per parse_excel_data documentation)
 
 # Primary key for Excel data parsing (use excel version)
@@ -61,6 +61,14 @@ EXCEL_PRIMARY_KEY = PROGRAM_TYPE_DETAIL_KEY[APP_EXCEL]
 #   [] - process all schemes found in document
 AREA_SCHEMES_TO_PROCESS = ["DGSF Scheme"]
 
+# Color scheme names to update from Excel color hierarchy
+# Maps hierarchy level to Revit color scheme name
+COLOR_SCHEME_NAMES = {
+    'department': 'Department Category_Primary',
+    'division': 'Division_Primary',
+    'room_name': 'RoomName_Primary'
+}
+
 
 
 # =============================================================================
@@ -75,9 +83,9 @@ PROJECT_NAME = "NYU HQ - Monitor Area System"
 
 # HTML table column headers (for display)
 TABLE_COLUMN_HEADERS = {
-    "area_detail": "Area Detail",
+    "area_detail": "Room Name",
     "department": "Department", 
-    "program_type": "Program Type",
+    "program_type": "Division",
     "target_count": "Target Count",
     "target_dgsf": "Target DGSF",
     "actual_count": "Actual Count",
