@@ -98,9 +98,14 @@ class ElementInfoExtractor:
         if hasattr(self.spatial_element, 'Level'):
             level = self.spatial_element.Level
             if level:
+                # Use Value property for Revit 2024+, fallback to IntegerValue for older versions
+                try:
+                    level_id = level.Id.Value
+                except AttributeError:
+                    level_id = level.Id.IntegerValue
                 return {
                     'name': level.Name,
-                    'id': level.Id.IntegerValue,
+                    'id': level_id,
                     'elevation': level.Elevation
                 }
         

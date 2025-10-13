@@ -61,9 +61,10 @@ def get_revit_area_data_by_scheme():
                 # Get area value directly from area.Area property
                 area_sf = area.Area
                 
-                # Get level name
+                # Get level name and elevation
                 level = area.Level
                 level_name = level.Name if level else "Unknown Level"
+                level_elevation = level.Elevation if level else 0
                 
                 # Get creator and editor information
                 creator_name = _get_element_creator(area, doc)
@@ -76,6 +77,7 @@ def get_revit_area_data_by_scheme():
                     'program_type_detail': program_type_detail,
                     'area_sf': area_sf,
                     'level_name': level_name,
+                    'level_elevation': level_elevation,
                     'creator': creator_name,
                     'last_editor': editor_name
                 }
@@ -115,9 +117,10 @@ def get_revit_area_data():
         # Get area value directly from area.Area property
         area_sf = area.Area
         
-        # Get level name
+        # Get level name and elevation
         level = area.Level
         level_name = level.Name if level else "Unknown Level"
+        level_elevation = level.Elevation if level else 0
         
         # Get creator and editor information
         creator_name = _get_element_creator(area, doc)
@@ -130,6 +133,7 @@ def get_revit_area_data():
             'program_type_detail': program_type_detail,
             'area_sf': area_sf,
             'level_name': level_name,
+            'level_elevation': level_elevation,
             'creator': creator_name,
             'last_editor': editor_name
         }

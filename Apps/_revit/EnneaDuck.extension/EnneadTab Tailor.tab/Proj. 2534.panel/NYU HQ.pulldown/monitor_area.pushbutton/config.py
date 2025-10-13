@@ -78,7 +78,7 @@ COLOR_SCHEME_NAMES = {
 # Report settings
 REPORTS_DIR = "reports"
 LATEST_REPORT_FILENAME = "latest_report.html"
-REPORT_TITLE = "Area Requirements vs Actual - Report"
+REPORT_TITLE = "EnneadTab - Excel Area Requirements vs Revit Actual Areas Report"
 PROJECT_NAME = "NYU HQ - Monitor Area System"
 
 # HTML table column headers (for display)

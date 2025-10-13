@@ -447,6 +447,17 @@ class HTMLReportGenerator:
     </style>
 </head>
 <body>
+    <!-- Floating Search Bar - Fixed at Bottom of Viewport -->
+    <div class="search-bar-container">
+        <div class="search-bar-content">
+            <div style="position: relative;">
+                <input type="text" id="fuzzySearch" placeholder="🔍 Filter by department, division, or function... (fuzzy search enabled)" />
+                <button id="clearSearch" class="clear-search-btn" style="display: none;" onclick="clearSearchFilter()">✕</button>
+            </div>
+            <div id="searchStatus" class="search-status"></div>
+        </div>
+    </div>
+    
     <div class="container">
         <header class="report-header">
             <h1>🏥 {report_title}</h1>
@@ -455,15 +466,56 @@ class HTMLReportGenerator:
                 <p><strong>Project:</strong> {project_name}</p>
                 <p><strong>Area Scheme:</strong> {scheme_name}</p>
             </div>
+            <div class="visualization-note">
+                <p><strong>📊 Multiple Visualization Modes:</strong> This report presents the same data from different angles. Use <strong>TreeView</strong> for hierarchical navigation (Department → Division → Room) or <strong>TableView</strong> for detailed tabular analysis. Both views contain identical information organized for different analysis needs.</p>
+            </div>
+            
+            <div class="legend-section">
+                <h4>📌 Symbol Legend</h4>
+                <div class="legend-grid">
+                    <div class="legend-item">
+                        <span class="legend-icon status-fulfilled">✓</span>
+                        <span class="legend-label"><strong>Fulfilled</strong> - All requirements met (count and area within tolerance)</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-icon status-partial">△</span>
+                        <span class="legend-label"><strong>Partial</strong> - Some areas found but requirements not fully met</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-icon status-missing">✕</span>
+                        <span class="legend-label"><strong>Missing</strong> - No areas found or zero count/area</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-icon status-unknown">?</span>
+                        <span class="legend-label"><strong>Unknown</strong> - Status could not be determined</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-icon status-excessive">!</span>
+                        <span class="legend-label"><strong>Excessive</strong> - Significantly exceeds requirements</span>
+                    </div>
+                </div>
+            </div>
         </header>
         
         <div class="department-summary-section">
             <h2>📊 Department Fulfillment Summary</h2>
             {department_summary_table}
+            {department_by_level_viz}
+        </div>
+        
+        <div class="tree-view-section">
+            <h2>🌳 TreeView</h2>
+            <div class="tree-controls">
+                <button onclick="expandAllTreeNodes()">Expand All</button>
+                <button onclick="collapseAllTreeNodes()">Collapse All</button>
+            </div>
+            <div class="tree-container">
+                {tree_view_html}
+            </div>
         </div>
         
         <div class="comparison-section">
-            <h2>📋 Detailed Comparison</h2>
+            <h2>📋 TableView</h2>
             <div class="table-container">
                 <table class="comparison-table">
                     <thead>
@@ -497,47 +549,47 @@ class HTMLReportGenerator:
             <div class="summary-cards">
                 <div class="card">
                     <h3>Total Requirements</h3>
-                    <div class="card-value">{total_reqs}</div>
+                    <div class="card-value" title="Total number of unique room types defined in the Excel program">{total_reqs}</div>
                     <div class="card-label">Room Types</div>
                 </div>
                 <div class="card">
                     <h3>Target Count</h3>
-                    <div class="card-value">{target_count}</div>
+                    <div class="card-value" title="Total number of areas required according to the Excel program">{target_count}</div>
                     <div class="card-label">Areas Required</div>
                 </div>
                 <div class="card">
                     <h3>Actual Count</h3>
-                    <div class="card-value">{actual_count}</div>
+                    <div class="card-value" title="Total number of areas found in the Revit model">{actual_count}</div>
                     <div class="card-label">Areas Found</div>
                 </div>
                 <div class="card">
                     <h3>Target DGSF</h3>
-                    <div class="card-value">{target_dgsf}</div>
+                    <div class="card-value" title="Target Department Gross Square Feet from the Excel program">{target_dgsf}</div>
                     <div class="card-label">Square Feet</div>
                 </div>
                 <div class="card">
                     <h3>Actual DGSF</h3>
-                    <div class="card-value">{actual_dgsf}</div>
+                    <div class="card-value" title="Actual Department Gross Square Feet measured in the Revit model">{actual_dgsf}</div>
                     <div class="card-label">Square Feet</div>
                 </div>
                 <div class="card">
                     <h3>Compliance</h3>
-                    <div class="card-value">{fulfilled_count}/{total_reqs}</div>
+                    <div class="card-value" title="Number of room types that have at least one instance in Revit out of total requirements">{fulfilled_count}/{total_reqs}</div>
                     <div class="card-label">Fulfilled</div>
                 </div>
                 <div class="card">
                     <h3>Count Alerts</h3>
-                    <div class="card-value">{high_count_delta_alerts}</div>
+                    <div class="card-value" title="Room types with significant difference between target and actual count">{high_count_delta_alerts}</div>
                     <div class="card-label">High Count Differences</div>
                 </div>
                 <div class="card">
                     <h3>Area Alerts</h3>
-                    <div class="card-value">{high_area_delta_alerts}</div>
+                    <div class="card-value" title="Room types with significant difference between target and actual DGSF">{high_area_delta_alerts}</div>
                     <div class="card-label">High Area Differences</div>
                 </div>
                 <div class="card">
                     <h3>Extreme Alerts</h3>
-                    <div class="card-value">{extreme_difference_alerts}</div>
+                    <div class="card-value" title="Room types with both high count difference AND high area difference">{extreme_difference_alerts}</div>
                     <div class="card-label">Both High Differences</div>
                 </div>
             </div>
@@ -570,30 +622,19 @@ class HTMLReportGenerator:
         </footer>
     </div>
     
-    <!-- Sticky Search Bar at Bottom - Outside container for true fixed positioning -->
-    <div class="search-bar-container">
-        <div class="search-bar-content">
-            <div style="position: relative;">
-                <input type="text" id="fuzzySearch" placeholder="🔍 Filter by department, division, or function... (fuzzy search enabled)" />
-                <button id="clearSearch" class="clear-search-btn" style="display: none;" onclick="clearSearchFilter()">✕</button>
-            </div>
-            <div id="searchStatus" class="search-status"></div>
-        </div>
-    </div>
-    
     <!-- Right-Click Context Menu -->
     <div id="contextMenu" class="context-menu">
         <div class="context-menu-item" onclick="returnToTop()">
             <span class="context-menu-icon">⬆️</span>
             <span>Return to Top</span>
         </div>
-        <div class="context-menu-item" onclick="collapseAllDepartments()">
-            <span class="context-menu-icon">▲</span>
-            <span>Collapse All Departments</span>
-        </div>
-        <div class="context-menu-item" onclick="expandAllDepartments()">
+        <div class="context-menu-item" onclick="expandAllViews()">
             <span class="context-menu-icon">▼</span>
-            <span>Expand All Departments</span>
+            <span>Expand All</span>
+        </div>
+        <div class="context-menu-item" onclick="collapseAllViews()">
+            <span class="context-menu-icon">▲</span>
+            <span>Collapse All</span>
         </div>
     </div>
     
@@ -611,9 +652,13 @@ class HTMLReportGenerator:
             <span class="minimap-icon">📊</span>
             <span>Department Summary</span>
         </div>
+        <div class="minimap-item" onclick="scrollToSection('tree-view-section')" data-section="tree-view-section">
+            <span class="minimap-icon">🌳</span>
+            <span>TreeView</span>
+        </div>
         <div class="minimap-item" onclick="scrollToSection('comparison-section')" data-section="comparison-section">
             <span class="minimap-icon">📋</span>
-            <span>Detailed Comparison</span>
+            <span>TableView</span>
         </div>
         <div class="minimap-item" onclick="scrollToSection('unmatched-section')" data-section="unmatched-section">
             <span class="minimap-icon">⚠️</span>
@@ -667,6 +712,8 @@ class HTMLReportGenerator:
             table_rows=self._create_table_rows(matches),
             unmatched_section=self._create_unmatched_section(unmatched_areas, matches),
             department_summary_table=self._create_department_summary_table(matches),
+            department_by_level_viz=self._create_department_by_level_visualization(matches, unmatched_areas),
+            tree_view_html=self._create_tree_view_html(matches),
             javascript=self._get_javascript()
         )
         return html
@@ -699,7 +746,7 @@ class HTMLReportGenerator:
             dept_id = "dept_{}".format(dept_index)
             rows.append("""
                 <tr class="department-header" data-dept-id="{dept_id}" onclick="toggleDepartment('{dept_id}')" style="background: linear-gradient(90deg, {color} 0%, rgba(17, 24, 39, 0.8) 100%); cursor: pointer;">
-                    <td colspan="13" style="padding: 12px 16px; font-weight: 600; font-size: 1.1em; color: white; border-left: 4px solid {color};">
+                    <td colspan="13" style="padding: 12px 16px; font-weight: 600; font-size: 1.1em; color: white; border: 4px solid {color};">
                         <span class="collapse-icon" id="icon_{dept_id}" style="display: inline-block; margin-right: 8px; transition: transform 0.3s ease;">▼</span>
                         <span style="display: inline-block; width: 12px; height: 12px; background: {color}; border-radius: 50%; margin-right: 8px;"></span>
                         {dept_name}
@@ -914,7 +961,7 @@ class HTMLReportGenerator:
             dgsf_pct_str = "N/A" if dept_dgsf_percentage is None else "{:+.1f}%".format(float(dept_dgsf_percentage))
             
             rows.append("""
-                <tr style="border-left: 4px solid {color};">
+                <tr style="border: 4px solid {color};">
                     <td style="font-weight: 600;">
                         <span style="display: inline-block; width: 10px; height: 10px; background: {color}; border-radius: 50%; margin-right: 8px;"></span>
                         {dept_name}
@@ -1020,6 +1067,425 @@ class HTMLReportGenerator:
         """.format(rows="".join(rows), chart_data_json=chart_data_json)
         
         return table_html
+    
+    def _create_tree_structure(self, matches):
+        """Create hierarchical tree structure: Department → Division → Room Name with aggregated metrics"""
+        from collections import OrderedDict
+        
+        tree = OrderedDict()
+        
+        # Build the hierarchy
+        for match in matches:
+            dept = match['department'] or 'No Department'
+            division = match['division'] or 'No Division'
+            room_name = match['room_name'] or 'Unknown Room'
+            
+            # Initialize department level
+            if dept not in tree:
+                tree[dept] = {
+                    'color': self.get_color('department', dept),
+                    'excel_row_index': match['excel_row_index'],
+                    'divisions': OrderedDict(),
+                    'metrics': {
+                        'target_count': 0,
+                        'target_dgsf': 0,
+                        'actual_count': 0,
+                        'actual_dgsf': 0
+                    }
+                }
+            
+            # Initialize division level
+            if division not in tree[dept]['divisions']:
+                tree[dept]['divisions'][division] = {
+                    'color': self.get_color('division', division),
+                    'excel_row_index': match['excel_row_index'],
+                    'rooms': OrderedDict(),
+                    'metrics': {
+                        'target_count': 0,
+                        'target_dgsf': 0,
+                        'actual_count': 0,
+                        'actual_dgsf': 0
+                    }
+                }
+            
+            # Initialize room level
+            if room_name not in tree[dept]['divisions'][division]['rooms']:
+                tree[dept]['divisions'][division]['rooms'][room_name] = {
+                    'color': self.get_color('room_name', room_name),
+                    'excel_row_index': match['excel_row_index'],
+                    'matches': [],
+                    'metrics': {
+                        'target_count': 0,
+                        'target_dgsf': 0,
+                        'actual_count': 0,
+                        'actual_dgsf': 0
+                    }
+                }
+            
+            # Add match to room
+            tree[dept]['divisions'][division]['rooms'][room_name]['matches'].append(match)
+            
+            # Aggregate metrics at room level
+            room_metrics = tree[dept]['divisions'][division]['rooms'][room_name]['metrics']
+            room_metrics['target_count'] += match['target_count'] if match['target_count'] is not None else 0
+            room_metrics['target_dgsf'] += match['target_dgsf'] if match['target_dgsf'] is not None else 0
+            room_metrics['actual_count'] += match['actual_count']
+            room_metrics['actual_dgsf'] += match['actual_dgsf']
+            
+            # Aggregate metrics at division level
+            div_metrics = tree[dept]['divisions'][division]['metrics']
+            div_metrics['target_count'] += match['target_count'] if match['target_count'] is not None else 0
+            div_metrics['target_dgsf'] += match['target_dgsf'] if match['target_dgsf'] is not None else 0
+            div_metrics['actual_count'] += match['actual_count']
+            div_metrics['actual_dgsf'] += match['actual_dgsf']
+            
+            # Aggregate metrics at department level
+            dept_metrics = tree[dept]['metrics']
+            dept_metrics['target_count'] += match['target_count'] if match['target_count'] is not None else 0
+            dept_metrics['target_dgsf'] += match['target_dgsf'] if match['target_dgsf'] is not None else 0
+            dept_metrics['actual_count'] += match['actual_count']
+            dept_metrics['actual_dgsf'] += match['actual_dgsf']
+        
+        # Sort tree by Excel order
+        sorted_tree = OrderedDict(sorted(tree.items(), key=lambda x: x[1]['excel_row_index']))
+        for dept in sorted_tree.values():
+            dept['divisions'] = OrderedDict(sorted(dept['divisions'].items(), key=lambda x: x[1]['excel_row_index']))
+            for division in dept['divisions'].values():
+                division['rooms'] = OrderedDict(sorted(division['rooms'].items(), key=lambda x: x[1]['excel_row_index']))
+        
+        return sorted_tree
+    
+    def _create_tree_view_html(self, matches):
+        """Generate tree view HTML with hierarchical structure and interactive expand/collapse"""
+        tree_data = self._create_tree_structure(matches)
+        
+        html_parts = []
+        dept_counter = 0
+        
+        for dept_name, dept_info in tree_data.items():
+            dept_id = "tree_dept_{}".format(dept_counter)
+            dept_color = dept_info['color']
+            dept_metrics = dept_info['metrics']
+            
+            # Calculate department-level deltas and percentages
+            dept_count_delta = dept_metrics['actual_count'] - dept_metrics['target_count']
+            dept_dgsf_delta = dept_metrics['actual_dgsf'] - dept_metrics['target_dgsf']
+            dept_dgsf_percentage = (dept_dgsf_delta / dept_metrics['target_dgsf'] * 100) if dept_metrics['target_dgsf'] > 0 else 0
+            
+            # Department node
+            html_parts.append("""
+            <div class="tree-node tree-node-dept" data-node-id="{dept_id}">
+                <div class="tree-node-header" onclick="toggleTreeNode('{dept_id}')" style="border: 4px solid {dept_color};">
+                    <span class="tree-toggle-icon" id="tree_icon_{dept_id}">▼</span>
+                    <span class="tree-color-dot" style="background: {dept_color};"></span>
+                    <span class="tree-node-label">{dept_name}</span>
+                    <div class="tree-node-metrics">
+                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>{actual_count}</strong>/{target_count} Count</span>
+                        <span class="tree-metric-delta {delta_class}" title="Count difference: Actual minus Target">{count_delta_str}</span>
+                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>{actual_dgsf}</strong>/{target_dgsf} DGSF</span>
+                        <span class="tree-metric-delta {delta_class}" title="DGSF difference: Actual minus Target">{dgsf_delta_str}</span>
+                        <span class="tree-metric-percentage {percentage_class}" title="Percentage of target DGSF achieved">{dgsf_percentage}%</span>
+                    </div>
+                </div>
+                <div class="tree-node-children" id="tree_children_{dept_id}">
+            """.format(
+                dept_id=dept_id,
+                dept_color=dept_color,
+                dept_name=dept_name,
+                target_count=int(dept_metrics['target_count']),
+                actual_count=int(dept_metrics['actual_count']),
+                target_dgsf="{:,.0f}".format(float(dept_metrics['target_dgsf'])),
+                actual_dgsf="{:,.0f}".format(float(dept_metrics['actual_dgsf'])),
+                count_delta_str="{:+d}".format(int(dept_count_delta)),
+                dgsf_delta_str="{:+,.0f} SF".format(float(dept_dgsf_delta)),
+                dgsf_percentage="{:+.1f}".format(float(dept_dgsf_percentage)),
+                delta_class="positive" if dept_count_delta >= 0 else "negative",
+                percentage_class="positive" if dept_dgsf_percentage >= 0 else "negative"
+            ))
+            
+            # Division nodes
+            div_counter = 0
+            for division_name, division_info in dept_info['divisions'].items():
+                div_id = "{}_div_{}".format(dept_id, div_counter)
+                div_color = division_info['color']
+                div_metrics = division_info['metrics']
+                
+                # Calculate division-level deltas
+                div_count_delta = div_metrics['actual_count'] - div_metrics['target_count']
+                div_dgsf_delta = div_metrics['actual_dgsf'] - div_metrics['target_dgsf']
+                div_dgsf_percentage = (div_dgsf_delta / div_metrics['target_dgsf'] * 100) if div_metrics['target_dgsf'] > 0 else 0
+                
+                html_parts.append("""
+                <div class="tree-node tree-node-division" data-node-id="{div_id}">
+                    <div class="tree-node-header" onclick="toggleTreeNode('{div_id}')" style="border: 3px solid {div_color};">
+                        <span class="tree-toggle-icon" id="tree_icon_{div_id}">▼</span>
+                        <span class="tree-color-dot" style="background: {div_color};"></span>
+                        <span class="tree-node-label">{division_name}</span>
+                        <div class="tree-node-metrics">
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>{actual_count}</strong>/{target_count} Count</span>
+                            <span class="tree-metric-delta {delta_class}" title="Count difference: Actual minus Target">{count_delta_str}</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>{actual_dgsf}</strong>/{target_dgsf} DGSF</span>
+                            <span class="tree-metric-delta {delta_class}" title="DGSF difference: Actual minus Target">{dgsf_delta_str}</span>
+                            <span class="tree-metric-percentage {percentage_class}" title="Percentage of target DGSF achieved">{dgsf_percentage}%</span>
+                        </div>
+                    </div>
+                    <div class="tree-node-children" id="tree_children_{div_id}">
+                """.format(
+                    div_id=div_id,
+                    div_color=div_color,
+                    division_name=division_name,
+                    target_count=int(div_metrics['target_count']),
+                    actual_count=int(div_metrics['actual_count']),
+                    target_dgsf="{:,.0f}".format(float(div_metrics['target_dgsf'])),
+                    actual_dgsf="{:,.0f}".format(float(div_metrics['actual_dgsf'])),
+                    count_delta_str="{:+d}".format(int(div_count_delta)),
+                    dgsf_delta_str="{:+,.0f} SF".format(float(div_dgsf_delta)),
+                    dgsf_percentage="{:+.1f}".format(float(div_dgsf_percentage)),
+                    delta_class="positive" if div_count_delta >= 0 else "negative",
+                    percentage_class="positive" if div_dgsf_percentage >= 0 else "negative"
+                ))
+                
+                # Room nodes
+                for room_name, room_info in division_info['rooms'].items():
+                    room_color = room_info['color']
+                    room_metrics = room_info['metrics']
+                    
+                    # Calculate room-level deltas
+                    room_count_delta = room_metrics['actual_count'] - room_metrics['target_count']
+                    room_dgsf_delta = room_metrics['actual_dgsf'] - room_metrics['target_dgsf']
+                    room_dgsf_percentage = (room_dgsf_delta / room_metrics['target_dgsf'] * 100) if room_metrics['target_dgsf'] > 0 else 0
+                    
+                    # Determine status from first match
+                    room_status = room_info['matches'][0]['status'] if room_info['matches'] else 'Unknown'
+                    status_icon = self._get_status_icon(room_status)
+                    
+                    # Create tooltip for status icon
+                    status_tooltips = {
+                        'Perfect Match': 'Perfect Match: Count and DGSF are both within acceptable range',
+                        'Count Close': 'Count Close: Room count is close to target but DGSF needs attention',
+                        'Area Close': 'Area Close: DGSF is close to target but count needs attention',
+                        'High Count Diff': 'High Count Difference: Significant difference in number of areas',
+                        'High Area Diff': 'High Area Difference: Significant difference in DGSF',
+                        'Extreme Difference': 'Extreme Difference: Both count and DGSF have significant differences',
+                        'Unknown': 'Unknown status'
+                    }
+                    status_tooltip = status_tooltips.get(room_status, 'Status: ' + str(room_status))
+                    
+                    # Pre-format all values to avoid IronPython format issues
+                    room_target_count_int = int(room_metrics['target_count'])
+                    room_actual_count_int = int(room_metrics['actual_count'])
+                    room_target_dgsf_str = "{:,.0f}".format(float(room_metrics['target_dgsf']))
+                    room_actual_dgsf_str = "{:,.0f}".format(float(room_metrics['actual_dgsf']))
+                    room_count_delta_int = int(room_count_delta)
+                    if room_count_delta_int >= 0:
+                        room_count_delta_str = "+{0}".format(room_count_delta_int)
+                    else:
+                        room_count_delta_str = "{0}".format(room_count_delta_int)
+                    room_dgsf_delta_str = "{:,.0f} SF".format(float(room_dgsf_delta))
+                    if room_dgsf_delta >= 0:
+                        room_dgsf_delta_str = "+" + room_dgsf_delta_str
+                    room_dgsf_percentage_str = "{:.1f}".format(float(room_dgsf_percentage))
+                    if room_dgsf_percentage >= 0:
+                        room_dgsf_percentage_str = "+" + room_dgsf_percentage_str
+                    room_delta_class = "positive" if room_count_delta >= 0 else "negative"
+                    room_percentage_class = "positive" if room_dgsf_percentage >= 0 else "negative"
+                    
+                    html_parts.append("""
+                    <div class="tree-node tree-node-room">
+                        <div class="tree-node-header" style="border: 2px solid {room_color};">
+                            <span class="tree-color-dot" style="background: {room_color};"></span>
+                            <span class="tree-node-label">{room_name}</span>
+                            <span class="tree-status-icon" title="{status_tooltip}">{status_icon}</span>
+                            <div class="tree-node-metrics">
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>{actual_count}</strong>/{target_count} Count</span>
+                                <span class="tree-metric-delta {delta_class}" title="Count difference: Actual minus Target">{count_delta_str}</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>{actual_dgsf}</strong>/{target_dgsf} DGSF</span>
+                                <span class="tree-metric-delta {delta_class}" title="DGSF difference: Actual minus Target">{dgsf_delta_str}</span>
+                                <span class="tree-metric-percentage {percentage_class}" title="Percentage of target DGSF achieved">{dgsf_percentage}%</span>
+                            </div>
+                        </div>
+                    </div>
+                    """.format(
+                        room_color=room_color,
+                        room_name=room_name,
+                        status_icon=status_icon,
+                        status_tooltip=status_tooltip,
+                        target_count=room_target_count_int,
+                        actual_count=room_actual_count_int,
+                        target_dgsf=room_target_dgsf_str,
+                        actual_dgsf=room_actual_dgsf_str,
+                        count_delta_str=room_count_delta_str,
+                        dgsf_delta_str=room_dgsf_delta_str,
+                        dgsf_percentage=room_dgsf_percentage_str,
+                        delta_class=room_delta_class,
+                        percentage_class=room_percentage_class
+                    ))
+                
+                # Close division node
+                html_parts.append("""
+                    </div>
+                </div>
+                """)
+                div_counter += 1
+            
+            # Close department node
+            html_parts.append("""
+                </div>
+            </div>
+            """)
+            dept_counter += 1
+        
+        return "".join(html_parts)
+    
+    def _create_department_by_level_visualization(self, matches, unmatched_areas):
+        """Create visualization showing departments per Revit level with DGSF, highlighting unapproved ones"""
+        from collections import OrderedDict
+        
+        # Dictionary to store departments by level with DGSF and elevation
+        # Structure: {level_name: {'elevation': float, 'departments': {dept_name: {'dgsf': float, 'approved': bool}}}}
+        levels_data = OrderedDict()
+        
+        # First, collect all approved department names globally
+        all_approved_departments = set()
+        for match in matches:
+            dept_name = match.get('department', 'Unknown')
+            all_approved_departments.add(dept_name)
+        
+        # Debug: Print approved departments
+        print("DEBUG - Approved departments from Excel matches:")
+        for dept in sorted(all_approved_departments):
+            print("  - '{}'".format(dept))
+        
+        # Process matched (approved) departments with DGSF and collect elevations
+        for match in matches:
+            dept_name = match.get('department', 'Unknown')
+            matching_areas = match.get('matching_areas', [])
+            
+            # Group areas by level and collect DGSF
+            for area in matching_areas:
+                level_name = area.get('level_name', 'Unknown Level')
+                area_dgsf = area.get('area_sf', 0)
+                level_elevation = area.get('level_elevation', 0)
+                
+                if level_name not in levels_data:
+                    levels_data[level_name] = {'elevation': level_elevation, 'departments': {}}
+                
+                if dept_name not in levels_data[level_name]['departments']:
+                    levels_data[level_name]['departments'][dept_name] = {'dgsf': 0, 'approved': True}
+                
+                levels_data[level_name]['departments'][dept_name]['dgsf'] += area_dgsf
+        
+        # Process unmatched (unapproved) departments with DGSF and elevation
+        # Also collect unique unapproved departments for debug output
+        unapproved_depts_found = set()
+        
+        for area in unmatched_areas:
+            level_name = area.get('level_name', 'Unknown Level')
+            dept_name = area.get('department', 'Unknown')
+            area_dgsf = area.get('area_sf', 0)
+            level_elevation = area.get('level_elevation', 0)
+            
+            if level_name not in levels_data:
+                levels_data[level_name] = {'elevation': level_elevation, 'departments': {}}
+            
+            if dept_name not in levels_data[level_name]['departments']:
+                # Check if this department is approved globally
+                is_approved = dept_name in all_approved_departments
+                levels_data[level_name]['departments'][dept_name] = {'dgsf': 0, 'approved': is_approved}
+                
+                # Track unapproved departments for debug
+                if not is_approved:
+                    unapproved_depts_found.add(dept_name)
+            
+            levels_data[level_name]['departments'][dept_name]['dgsf'] += area_dgsf
+        
+        # Debug: Print unapproved departments found in Revit
+        if unapproved_depts_found:
+            print("\nDEBUG - Unapproved departments found in Revit (not matching Excel):")
+            for dept in sorted(unapproved_depts_found):
+                print("  - '{}'".format(dept))
+            print("\nPlease check spelling in Revit parameters to match Excel exactly.")
+        
+        if not levels_data:
+            return ""
+        
+        # Sort levels by elevation (highest first, descending order)
+        sorted_levels = sorted(levels_data.items(), key=lambda x: x[1]['elevation'], reverse=True)
+        
+        # Create HTML
+        level_rows = []
+        for level_name, level_data in sorted_levels:
+            # Extract departments dictionary and elevation
+            departments = level_data['departments']
+            level_elevation = level_data['elevation']
+            
+            # Sort departments by name
+            sorted_depts = sorted(departments.items())
+            
+            # Calculate level total DGSF
+            level_total_dgsf = sum([dept_info['dgsf'] for dept_info in departments.values()])
+            
+            # Create department badges with DGSF
+            dept_badges = []
+            unapproved_count = 0
+            
+            for dept_name, dept_info in sorted_depts:
+                dgsf_value = dept_info['dgsf']
+                is_approved = dept_info['approved']
+                
+                # Explicitly cast to float for IronPython 2.7 compatibility
+                dgsf_str = "{0:,.0f}".format(float(dgsf_value))
+                
+                if is_approved:
+                    dept_badges.append('<span class="dept-badge dept-approved" title="Approved department: {0} DGSF">{1}<br><small>{2} SF</small></span>'.format(
+                        dgsf_str, dept_name, dgsf_str))
+                else:
+                    unapproved_count += 1
+                    dept_badges.append('<span class="dept-badge dept-unapproved" title="Unapproved department: {0} DGSF - Not in Excel program">⚠️ {1}<br><small>{2} SF</small></span>'.format(
+                        dgsf_str, dept_name, dgsf_str))
+            
+            # Explicitly cast to float for IronPython 2.7 compatibility
+            total_dgsf_str = "{0:,.0f}".format(float(level_total_dgsf))
+            level_elevation_str = "{0:.2f}".format(float(level_elevation))
+            
+            level_rows.append("""
+            <tr>
+                <td class="level-name-col"><strong>{level_name}</strong><br><small class="level-elevation">Elev: {elevation} ft</small></td>
+                <td class="dept-count-col">{total_count} departments<br><small class="level-total-dgsf">{total_dgsf} SF Total</small></td>
+                <td class="unapproved-count-col {unapproved_class}">{unapproved_text}</td>
+                <td class="dept-badges-col">{dept_badges}</td>
+            </tr>
+            """.format(
+                level_name=level_name,
+                elevation=level_elevation_str,
+                total_count=len(departments),
+                total_dgsf=total_dgsf_str,
+                unapproved_class="has-unapproved" if unapproved_count > 0 else "no-unapproved",
+                unapproved_text="{} UNAPPROVED".format(unapproved_count) if unapproved_count > 0 else "All Approved",
+                dept_badges=" ".join(dept_badges)
+            ))
+        
+        return """
+        <div class="department-by-level-subsection">
+            <h3>🏢 Departments by Revit Level</h3>
+            <p class="section-description">Overview of all departments found on each level with DGSF (Department Gross Square Feet). <span class="unapproved-warning">⚠️ Unapproved departments</span> are not in the Excel program requirements and need review. Each badge shows the department name and its total DGSF on that level.</p>
+            <div class="table-container">
+                <table class="level-dept-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Level</th>
+                            <th style="width: 15%;">Departments & Total DGSF</th>
+                            <th style="width: 15%;">Status</th>
+                            <th style="width: 55%;">Department Details (with DGSF)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {level_rows}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        """.format(level_rows="".join(level_rows))
     
     def _create_unmatched_section(self, unmatched_areas, valid_matches=None, scheme_name=None):
         """
@@ -1184,6 +1650,12 @@ class HTMLReportGenerator:
         return """
         <div class="unmatched-section">
             <h3>{section_title}</h3>
+            <div class="unmatched-alert">
+                <div class="alert-icon">⚠️</div>
+                <div class="alert-content">
+                    <strong>Action Required:</strong> These areas are not approved in the Excel program requirements. Please review and update the area parameters in Revit to match approved program entries, or add them to the Excel requirements if they are valid new spaces.
+                </div>
+            </div>
             <p>The following Revit areas were not matched to any Excel requirements, grouped by level:</p>
             {level_sections}
         </div>
@@ -1218,6 +1690,8 @@ class HTMLReportGenerator:
             padding: 0;
             width: 100%;
             height: 100%;
+            overflow-x: hidden;
+            position: relative;
         }
         
         body {
@@ -1228,6 +1702,7 @@ class HTMLReportGenerator:
             min-height: 100vh;
             font-weight: 400;
             position: relative;
+            overflow-y: auto;
         }
         
         .container {
@@ -1236,6 +1711,7 @@ class HTMLReportGenerator:
             margin: 0 auto;
             padding: 24px;
             padding-bottom: 150px; /* Add space for fixed search bar */
+            padding-right: 260px; /* Add space for minimap navigation */
             animation: fadeInUp 0.8s ease-out;
         }
         
@@ -1296,6 +1772,251 @@ class HTMLReportGenerator:
             font-weight: 500;
         }
         
+        .visualization-note {
+            margin-top: 24px;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
+            border-left: 4px solid #3b82f6;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #d1d5db;
+            line-height: 1.6;
+        }
+        
+        .visualization-note strong {
+            color: #60a5fa;
+            font-weight: 600;
+        }
+        
+        .visualization-note p {
+            margin: 0;
+        }
+        
+        .legend-section {
+            margin-top: 24px;
+            padding: 20px;
+            background: rgba(31, 41, 55, 0.6);
+            border: 1px solid rgba(75, 85, 99, 0.4);
+            border-radius: 8px;
+        }
+        
+        .legend-section h4 {
+            color: #f3f4f6;
+            font-size: 1rem;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            background: rgba(17, 24, 39, 0.6);
+            border-radius: 6px;
+            border: 1px solid rgba(75, 85, 99, 0.3);
+        }
+        
+        .legend-icon {
+            font-size: 1.5rem;
+            font-weight: bold;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        
+        .legend-icon.status-fulfilled {
+            color: #10b981;
+            background: rgba(16, 185, 129, 0.15);
+        }
+        
+        .legend-icon.status-partial {
+            color: #f59e0b;
+            background: rgba(245, 158, 11, 0.15);
+        }
+        
+        .legend-icon.status-missing {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.15);
+        }
+        
+        .legend-icon.status-unknown {
+            color: #9ca3af;
+            background: rgba(156, 163, 175, 0.15);
+        }
+        
+        .legend-icon.status-excessive {
+            color: #8b5cf6;
+            background: rgba(139, 92, 246, 0.15);
+        }
+        
+        .legend-label {
+            color: #d1d5db;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .legend-label strong {
+            color: #f3f4f6;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            .legend-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Department by Level Visualization Styles */
+        .department-by-level-subsection {
+            margin: 32px 0 0 0;
+            padding: 24px;
+            background: rgba(31, 41, 55, 0.4);
+            border-radius: 8px;
+            border: 1px solid rgba(75, 85, 99, 0.3);
+            border-top: 3px solid #60a5fa;
+        }
+        
+        .department-by-level-subsection h3 {
+            color: #f3f4f6;
+            margin-bottom: 12px;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        
+        .section-description {
+            color: #9ca3af;
+            font-size: 0.95rem;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .unapproved-warning {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        
+        .level-dept-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: rgba(17, 24, 39, 0.4);
+        }
+        
+        .level-dept-table thead {
+            background: rgba(31, 41, 55, 0.8);
+        }
+        
+        .level-dept-table th {
+            padding: 14px 16px;
+            text-align: left;
+            color: #f3f4f6;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border-bottom: 2px solid rgba(75, 85, 99, 0.5);
+        }
+        
+        .level-dept-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(75, 85, 99, 0.2);
+            color: #d1d5db;
+            vertical-align: middle;
+        }
+        
+        .level-dept-table tbody tr:hover {
+            background: rgba(55, 65, 81, 0.3);
+        }
+        
+        .level-name-col {
+            font-size: 1.05rem;
+            color: #f3f4f6;
+        }
+        
+        .dept-count-col {
+            color: #9ca3af;
+            font-size: 0.9rem;
+        }
+        
+        .unapproved-count-col {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        .unapproved-count-col.has-unapproved {
+            color: #ef4444;
+        }
+        
+        .unapproved-count-col.no-unapproved {
+            color: #10b981;
+        }
+        
+        .dept-badges-col {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .dept-badge {
+            display: inline-block;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            white-space: normal;
+            text-align: center;
+            margin: 4px;
+            min-width: 120px;
+        }
+        
+        .dept-badge small {
+            display: block;
+            font-size: 0.75rem;
+            margin-top: 4px;
+            opacity: 0.85;
+            font-weight: 400;
+        }
+        
+        .dept-badge.dept-approved {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        
+        .dept-badge.dept-unapproved {
+            background: rgba(239, 68, 68, 0.15);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            animation: badgePulse 2s ease-in-out infinite;
+        }
+        
+        .level-total-dgsf {
+            display: block;
+            color: #60a5fa;
+            font-weight: 600;
+            margin-top: 6px;
+            font-size: 0.9rem;
+        }
+        
+        @keyframes badgePulse {
+            0%, 100% {
+                border-color: rgba(239, 68, 68, 0.4);
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+            50% {
+                border-color: rgba(239, 68, 68, 0.6);
+                box-shadow: 0 0 0 4px rgba(239, 68, 68, 0);
+            }
+        }
+        
         .summary-section, .status-summary, .comparison-section, .unmatched-section, .scheme-summary, .scheme-section {
             margin-bottom: 32px;
         }
@@ -1313,6 +2034,58 @@ class HTMLReportGenerator:
             margin-bottom: 16px;
             font-size: 1.125rem;
             font-weight: 500;
+        }
+        
+        .unmatched-alert {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 20px 24px;
+            margin: 20px 0;
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
+            border: 2px solid #ef4444;
+            border-left: 6px solid #dc2626;
+            border-radius: 8px;
+            animation: alertPulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes alertPulse {
+            0%, 100% {
+                border-color: #ef4444;
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+            }
+            50% {
+                border-color: #dc2626;
+                box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
+            }
+        }
+        
+        .alert-icon {
+            font-size: 2rem;
+            line-height: 1;
+            flex-shrink: 0;
+            animation: alertShake 3s ease-in-out infinite;
+        }
+        
+        @keyframes alertShake {
+            0%, 100% { transform: rotate(0deg); }
+            10%, 30%, 50%, 70%, 90% { transform: rotate(-10deg); }
+            20%, 40%, 60%, 80% { transform: rotate(10deg); }
+        }
+        
+        .alert-content {
+            flex: 1;
+            color: #fca5a5;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        
+        .alert-content strong {
+            color: #ef4444;
+            font-weight: 700;
+            font-size: 1.05rem;
+            display: block;
+            margin-bottom: 6px;
         }
         
         .summary-cards, .scheme-cards {
@@ -1738,9 +2511,11 @@ class HTMLReportGenerator:
         }
         
         .level-elevation {
+            display: block;
             color: #9ca3af;
-            font-size: 0.75rem;
-            margin-bottom: 12px;
+            font-size: 0.8rem;
+            margin-top: 4px;
+            font-weight: 400;
         }
         
         .department-pills {
@@ -1995,6 +2770,7 @@ class HTMLReportGenerator:
         @media (max-width: 768px) {
             .container {
                 padding: 15px 10px;
+                padding-right: 10px; /* Remove minimap spacing on mobile */
             }
             
             .comparison-table, .unmatched-table {
@@ -2061,13 +2837,16 @@ class HTMLReportGenerator:
             bottom: 0 !important;
             left: 0 !important;
             right: 0 !important;
-            width: 100%;
+            width: 100vw !important;
             background: linear-gradient(180deg, rgba(10, 14, 19, 0) 0%, rgba(10, 14, 19, 0.8) 15%, #0a0e13 30%);
             padding: 24px 0 16px 0;
-            z-index: 10000;
+            z-index: 999999 !important;
             box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
             backdrop-filter: blur(8px);
             pointer-events: auto;
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+            margin: 0 !important;
         }
         
         .search-bar-content {
@@ -2269,21 +3048,21 @@ class HTMLReportGenerator:
             cursor: pointer;
             border-radius: 6px;
             transition: all 0.2s ease;
-            border-left: 3px solid transparent;
+            border: 3px solid transparent;
             position: relative;
         }
         
         .minimap-item:hover {
             background: #1f2937;
             color: #f8fafc;
-            border-left-color: #60a5fa;
+            border-color: #60a5fa;
             transform: translateX(-2px);
         }
         
         .minimap-item.active {
             background: #1f2937;
             color: #60a5fa;
-            border-left-color: #60a5fa;
+            border-color: #60a5fa;
             font-weight: 600;
         }
         
@@ -2352,6 +3131,288 @@ class HTMLReportGenerator:
         
         .minimap-nav::-webkit-scrollbar-thumb:hover {
             background: #4b5563;
+        }
+        
+        /* Tree View Styles */
+        .tree-view-section {
+            margin: 32px 0;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.6) 0%, rgba(31, 41, 55, 0.4) 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(75, 85, 99, 0.3);
+        }
+        
+        .tree-view-section h2 {
+            color: #f3f4f6;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .tree-controls {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .tree-controls button {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+            color: #e5e7eb;
+            border: 1px solid rgba(75, 85, 99, 0.5);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+        
+        .tree-controls button:hover {
+            background: linear-gradient(135deg, #4b5563 0%, #374151 100%);
+            border-color: #60a5fa;
+            transform: translateY(-1px);
+        }
+        
+        .tree-container {
+            background: rgba(17, 24, 39, 0.4);
+            border-radius: 8px;
+            padding: 16px;
+            border: 1px solid rgba(75, 85, 99, 0.2);
+        }
+        
+        .tree-node {
+            margin-bottom: 4px;
+            position: relative;
+        }
+        
+        .tree-node-dept {
+            margin-bottom: 8px;
+        }
+        
+        .tree-node-division {
+            margin-left: 32px;
+            margin-bottom: 6px;
+        }
+        
+        .tree-node-division::before {
+            content: '';
+            position: absolute;
+            left: -16px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(75, 85, 99, 0.5);
+        }
+        
+        .tree-node-division::after {
+            content: '';
+            position: absolute;
+            left: -16px;
+            top: 22px;
+            width: 14px;
+            height: 2px;
+            background: rgba(75, 85, 99, 0.5);
+        }
+        
+        .tree-node-room {
+            margin-left: 32px;
+            margin-bottom: 4px;
+        }
+        
+        .tree-node-room::before {
+            content: '';
+            position: absolute;
+            left: -16px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: rgba(75, 85, 99, 0.4);
+        }
+        
+        .tree-node-room::after {
+            content: '';
+            position: absolute;
+            left: -16px;
+            top: 22px;
+            width: 14px;
+            height: 2px;
+            background: rgba(75, 85, 99, 0.4);
+        }
+        
+        /* Hide vertical line extension for last child */
+        .tree-node-division:last-child::before,
+        .tree-node-room:last-child::before {
+            height: 22px;
+        }
+        
+        .tree-node-header {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            background: rgba(31, 41, 55, 0.6);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            gap: 8px;
+            border-width: 4px;
+            border-style: solid;
+        }
+        
+        .tree-node-header:hover {
+            background: rgba(55, 65, 81, 0.8);
+            transform: translateX(2px);
+        }
+        
+        .tree-node-dept .tree-node-header {
+            background: rgba(31, 41, 55, 0.8);
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+        
+        .tree-node-division .tree-node-header {
+            background: rgba(31, 41, 55, 0.6);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        .tree-node-room .tree-node-header {
+            background: rgba(31, 41, 55, 0.4);
+            font-weight: 400;
+            font-size: 0.9rem;
+            cursor: default;
+        }
+        
+        .tree-toggle-icon {
+            width: 20px;
+            text-align: center;
+            font-size: 0.8rem;
+            transition: transform 0.3s ease;
+            color: #9ca3af;
+        }
+        
+        .tree-toggle-icon.collapsed {
+            transform: rotate(-90deg);
+        }
+        
+        .tree-color-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        
+        .tree-node-label {
+            color: #f3f4f6;
+            flex-grow: 1;
+            min-width: 200px;
+        }
+        
+        .tree-status-icon {
+            margin-left: 8px;
+            font-size: 1.1rem;
+        }
+        
+        .tree-node-metrics {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-left: auto;
+            flex-wrap: wrap;
+        }
+        
+        .tree-metric {
+            color: #9ca3af;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            cursor: help;
+        }
+        
+        .tree-metric strong {
+            color: #e5e7eb;
+            font-weight: 600;
+        }
+        
+        /* Tooltip Enhancement */
+        [title] {
+            position: relative;
+        }
+        
+        .card-value[title],
+        .tree-metric[title],
+        .tree-metric-delta[title],
+        .tree-metric-percentage[title],
+        .tree-status-icon[title] {
+            cursor: help;
+        }
+        
+        .tree-metric-delta {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .tree-metric-delta.positive {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+        
+        .tree-metric-delta.negative {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        
+        .tree-metric-percentage {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .tree-metric-percentage.positive {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+        
+        .tree-metric-percentage.negative {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        
+        .tree-node-children {
+            margin-top: 4px;
+            overflow: hidden;
+            transition: max-height 0.3s ease, opacity 0.3s ease;
+            position: relative;
+        }
+        
+        /* Vertical connector line for department-level children */
+        .tree-node-dept > .tree-node-children {
+            margin-left: 24px;
+            border-left: 2px solid rgba(75, 85, 99, 0.3);
+            padding-left: 8px;
+        }
+        
+        /* Vertical connector line for division-level children */
+        .tree-node-division > .tree-node-children {
+            border-left: 2px solid rgba(75, 85, 99, 0.25);
+            padding-left: 8px;
+        }
+        
+        .tree-node-children.collapsed {
+            max-height: 0 !important;
+            opacity: 0;
+        }
+        
+        /* Responsive adjustments for tree view */
+        @media (max-width: 1200px) {
+            .tree-node-metrics {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
         }
         """
     
@@ -3524,27 +4585,77 @@ class HTMLReportGenerator:
         function initializeContextMenu() {
             const contextMenu = document.getElementById('contextMenu');
             
-            // Show context menu on right-click
+            if (!contextMenu) {
+                console.error('Context menu element not found');
+                return;
+            }
+            
+            // Show context menu on right-click anywhere on the page
             document.addEventListener('contextmenu', function(e) {
                 e.preventDefault();
+                e.stopPropagation();
                 
-                // Position the context menu at mouse location
-                contextMenu.style.left = e.pageX + 'px';
-                contextMenu.style.top = e.pageY + 'px';
+                // Get mouse position
+                var mouseX = e.clientX;
+                var mouseY = e.clientY;
+                
+                // Show menu first to get its dimensions
+                contextMenu.style.display = 'block';
                 contextMenu.classList.add('active');
+                
+                var menuWidth = contextMenu.offsetWidth;
+                var menuHeight = contextMenu.offsetHeight;
+                var windowWidth = window.innerWidth;
+                var windowHeight = window.innerHeight;
+                
+                // Calculate position - ensure menu stays within viewport
+                var left = mouseX;
+                var top = mouseY;
+                
+                // Adjust if menu would go off right edge
+                if (mouseX + menuWidth > windowWidth) {
+                    left = windowWidth - menuWidth - 10;
+                }
+                
+                // Adjust if menu would go off bottom edge
+                if (mouseY + menuHeight > windowHeight) {
+                    top = windowHeight - menuHeight - 10;
+                }
+                
+                // Ensure menu doesn't go off left or top edge
+                if (left < 10) left = 10;
+                if (top < 10) top = 10;
+                
+                // Position the context menu
+                contextMenu.style.left = left + 'px';
+                contextMenu.style.top = top + 'px';
+                
+                console.log('Context menu shown at:', left, top);
             });
             
             // Hide context menu on regular click
             document.addEventListener('click', function(e) {
                 if (!e.target.closest('.context-menu')) {
                     contextMenu.classList.remove('active');
+                    contextMenu.style.display = 'none';
                 }
             });
             
             // Hide context menu on scroll
             document.addEventListener('scroll', function() {
                 contextMenu.classList.remove('active');
+                contextMenu.style.display = 'none';
             });
+            
+            // Hide context menu on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    contextMenu.classList.remove('active');
+                    contextMenu.style.display = 'none';
+                }
+            });
+            
+            console.log('Context menu initialized');
         }
         
         // Collapse all departments
@@ -3560,9 +4671,6 @@ class HTMLReportGenerator:
                     header.classList.add('collapsed');
                 }
             });
-            
-            // Hide context menu
-            document.getElementById('contextMenu').classList.remove('active');
         }
         
         // Expand all departments
@@ -3578,9 +4686,33 @@ class HTMLReportGenerator:
                     header.classList.remove('collapsed');
                 }
             });
+        }
+        
+        // Unified functions to control both TreeView and TableView
+        function expandAllViews() {
+            // Expand TreeView nodes
+            expandAllTreeNodes();
+            
+            // Expand TableView departments
+            expandAllDepartments();
             
             // Hide context menu
-            document.getElementById('contextMenu').classList.remove('active');
+            var menu = document.getElementById('contextMenu');
+            menu.classList.remove('active');
+            menu.style.display = 'none';
+        }
+        
+        function collapseAllViews() {
+            // Collapse TreeView nodes
+            collapseAllTreeNodes();
+            
+            // Collapse TableView departments
+            collapseAllDepartments();
+            
+            // Hide context menu
+            var menu = document.getElementById('contextMenu');
+            menu.classList.remove('active');
+            menu.style.display = 'none';
         }
         
         // Return to top of page
@@ -3591,7 +4723,9 @@ class HTMLReportGenerator:
             });
             
             // Hide context menu
-            document.getElementById('contextMenu').classList.remove('active');
+            var menu = document.getElementById('contextMenu');
+            menu.classList.remove('active');
+            menu.style.display = 'none';
         }
         
         function sortTable(table, columnIndex) {
@@ -3722,6 +4856,163 @@ class HTMLReportGenerator:
             document.addEventListener('DOMContentLoaded', initializeMinimap);
         } else {
             initializeMinimap();
+        }
+        
+        // Tree View Functions
+        function updateParentHeights(element) {
+            // Traverse up and update all parent .tree-node-children heights
+            var parent = element.parentElement;
+            while (parent) {
+                if (parent.classList && parent.classList.contains('tree-node-children')) {
+                    if (!parent.classList.contains('collapsed')) {
+                        parent.style.maxHeight = parent.scrollHeight + 'px';
+                    }
+                }
+                parent = parent.parentElement;
+            }
+        }
+        
+        function toggleTreeNode(nodeId) {
+            const icon = document.getElementById('tree_icon_' + nodeId);
+            const children = document.getElementById('tree_children_' + nodeId);
+            
+            if (!children) return;
+            
+            if (children.classList.contains('collapsed')) {
+                // Expand
+                children.classList.remove('collapsed');
+                // Need to temporarily set to 'none' to get true scrollHeight
+                var currentMaxHeight = children.style.maxHeight;
+                children.style.maxHeight = 'none';
+                var height = children.scrollHeight;
+                children.style.maxHeight = currentMaxHeight;
+                
+                // Trigger reflow and set the height
+                setTimeout(function() {
+                    children.style.maxHeight = height + 'px';
+                }, 0);
+                
+                if (icon) {
+                    icon.classList.remove('collapsed');
+                    icon.textContent = '▼';
+                }
+                
+                // Update parent heights after a short delay
+                setTimeout(function() {
+                    updateParentHeights(children);
+                }, 50);
+            } else {
+                // Collapse
+                children.classList.add('collapsed');
+                children.style.maxHeight = '0';
+                if (icon) {
+                    icon.classList.add('collapsed');
+                    icon.textContent = '▶';
+                }
+                
+                // Update parent heights
+                setTimeout(function() {
+                    updateParentHeights(children);
+                }, 50);
+            }
+        }
+        
+        function expandAllTreeNodes() {
+            const allChildren = document.querySelectorAll('.tree-node-children');
+            const allIcons = document.querySelectorAll('.tree-toggle-icon');
+            
+            // First, remove collapsed class from all
+            allChildren.forEach(function(child) {
+                child.classList.remove('collapsed');
+            });
+            
+            // Set all icons
+            allIcons.forEach(function(icon) {
+                icon.classList.remove('collapsed');
+                icon.textContent = '▼';
+            });
+            
+            // Set all to maxHeight none to allow natural expansion
+            allChildren.forEach(function(child) {
+                child.style.maxHeight = 'none';
+            });
+            
+            // Force reflow
+            void document.body.offsetHeight;
+            
+            // Now set the calculated heights from deepest to shallowest
+            setTimeout(function() {
+                var childrenArray = Array.prototype.slice.call(allChildren);
+                
+                // Find depth of each element
+                var childrenWithDepth = childrenArray.map(function(child) {
+                    var depth = 0;
+                    var parent = child.parentElement;
+                    while (parent) {
+                        if (parent.classList.contains('tree-node-children')) {
+                            depth++;
+                        }
+                        parent = parent.parentElement;
+                    }
+                    return { element: child, depth: depth };
+                });
+                
+                // Sort by depth descending (deepest first)
+                childrenWithDepth.sort(function(a, b) {
+                    return b.depth - a.depth;
+                });
+                
+                // Set heights starting from deepest
+                childrenWithDepth.forEach(function(item) {
+                    var child = item.element;
+                    child.style.maxHeight = 'none';
+                    var height = child.scrollHeight;
+                    child.style.maxHeight = height + 'px';
+                });
+                
+                // Final pass after another reflow
+                setTimeout(function() {
+                    childrenWithDepth.forEach(function(item) {
+                        var child = item.element;
+                        child.style.maxHeight = 'none';
+                        var height = child.scrollHeight;
+                        child.style.maxHeight = height + 'px';
+                    });
+                }, 50);
+            }, 10);
+        }
+        
+        function collapseAllTreeNodes() {
+            const allChildren = document.querySelectorAll('.tree-node-children');
+            const allIcons = document.querySelectorAll('.tree-toggle-icon');
+            
+            allChildren.forEach(function(child) {
+                child.classList.add('collapsed');
+                child.style.maxHeight = '0';
+            });
+            
+            allIcons.forEach(function(icon) {
+                icon.classList.add('collapsed');
+                icon.textContent = '▶';
+            });
+        }
+        
+        // Initialize tree view - set initial max-height for all children
+        function initializeTreeView() {
+            const allChildren = document.querySelectorAll('.tree-node-children');
+            allChildren.forEach(function(child) {
+                // Set initial max-height based on content
+                child.style.maxHeight = child.scrollHeight + 'px';
+            });
+            
+            console.log('Tree view initialized');
+        }
+        
+        // Call tree view initialization after DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeTreeView);
+        } else {
+            initializeTreeView();
         }
         """
     
