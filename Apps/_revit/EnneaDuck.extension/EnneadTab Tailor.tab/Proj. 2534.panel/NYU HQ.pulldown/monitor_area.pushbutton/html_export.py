@@ -9,6 +9,7 @@ Uses exact matching on 3 parameters: Department, Program Type, Program Type Deta
 import os
 import webbrowser
 import io
+import time
 from datetime import datetime
 import config
 
@@ -332,6 +333,51 @@ class HTMLReportGenerator:
             'division': {},
             'room_name': {}
         }
+        
+        # Clean up old reports
+        self._cleanup_old_reports()
+    
+    def _cleanup_old_reports(self, max_days=2):
+        """
+        Delete report files older than max_days from the reports directory.
+        Keeps latest_report.html regardless of age.
+        
+        Args:
+            max_days: Maximum age of reports to keep in days (default: 2)
+        """
+        try:
+            if not os.path.exists(self.reports_dir):
+                return
+            
+            current_time = time.time()
+            max_age_seconds = max_days * 24 * 60 * 60  # Convert days to seconds
+            deleted_count = 0
+            
+            for filename in os.listdir(self.reports_dir):
+                # Skip the latest_report.html - always keep it
+                if filename == config.LATEST_REPORT_FILENAME:
+                    continue
+                
+                # Only process HTML files
+                if not filename.endswith('.html'):
+                    continue
+                
+                filepath = os.path.join(self.reports_dir, filename)
+                
+                # Check if file is older than max_days
+                try:
+                    file_age = current_time - os.path.getmtime(filepath)
+                    if file_age > max_age_seconds:
+                        os.remove(filepath)
+                        deleted_count += 1
+                        print("Deleted old report: {}".format(filename))
+                except Exception as e:
+                    print("Error deleting {}: {}".format(filename, str(e)))
+            
+            if deleted_count > 0:
+                print("Cleaned up {} old report(s) older than {} days".format(deleted_count, max_days))
+        except Exception as e:
+            print("Error during report cleanup: {}".format(str(e)))
     
     def get_color(self, level, name, fallback='#6b7280'):
         """
@@ -2096,7 +2142,7 @@ class HTMLReportGenerator:
         
         .summary-cards, .scheme-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 16px;
             margin-bottom: 20px;
         }
@@ -2201,7 +2247,7 @@ class HTMLReportGenerator:
         
         .status-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
         }
         
@@ -2815,9 +2861,18 @@ class HTMLReportGenerator:
             .container {
                 padding-right: 24px !important;
             }
+            
+            /* Show 2 cards per row on tablets */
+            .summary-cards, .scheme-cards {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
+            
+            .status-cards {
+                grid-template-columns: repeat(2, 1fr) !important;
+            }
         }
         
-        @media (max-width: 768px) {
+        @media (max-width: 600px) {
             .container {
                 padding: 15px 10px;
                 padding-right: 10px !important; /* Remove minimap spacing on mobile */
@@ -2870,9 +2925,9 @@ class HTMLReportGenerator:
             .col-delta { width: 15%; }
             .col-status { width: 6%; }
             
-            /* Summary cards - stack vertically */
+            /* Summary cards - stack vertically on very small screens only */
             .summary-cards {
-                grid-template-columns: 1fr !important;
+                grid-template-columns: repeat(2, 1fr) !important;
             }
             
             /* Tree view adjustments */
@@ -2884,44 +2939,6 @@ class HTMLReportGenerator:
             .tree-node-metrics {
                 width: 100%;
                 margin-top: 8px;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            .comparison-table, .unmatched-table {
-                font-size: 0.7rem;
-            }
-            
-            .comparison-table th, .unmatched-table th,
-            .comparison-table td, .unmatched-table td {
-                padding: 6px 4px;
-            }
-            
-            /* Further adjust for very small screens */
-            .col-dept { width: 18%; }
-            .col-division { width: 15%; }
-            .col-function { width: 18%; }
-            .col-level { width: 18%; }
-            .col-count { width: 12%; }
-            .col-area { width: 15%; }
-            .col-delta { width: 18%; }
-            .col-status { width: 8%; }
-            }
-            
-            .summary-cards, .scheme-cards {
-                grid-template-columns: 1fr;
-            }
-            
-            .status-cards {
-                grid-template-columns: 1fr;
-            }
-            
-            .report-header h1 {
-                font-size: 2em;
-            }
-            
-            .card, .scheme-card {
-                padding: 20px;
             }
         }
         

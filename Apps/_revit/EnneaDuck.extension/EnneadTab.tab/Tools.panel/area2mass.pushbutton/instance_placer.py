@@ -103,13 +103,27 @@ class FamilyInstancePlacer:
             return False
     
     def _collect_existing_instances(self, family_symbol):
-        """Collect existing instances of the specified family type to delete."""
+        """Collect existing instances of the specified family type to delete.
+        This ensures only one instance per area/room by deleting all instances
+        of families with matching names before creating a new one."""
         try:
             collector = DB.FilteredElementCollector(self.project_doc).OfClass(DB.FamilyInstance)
             instances = []
+            target_family_name = self.family_name
+            
             for instance in collector:
                 try:
-                    if instance.Symbol and instance.Symbol.Id == family_symbol.Id:
+                    if not instance.Symbol:
+                        continue
+                    
+                    # Get family of this instance
+                    inst_family = instance.Symbol.Family
+                    if not inst_family:
+                        continue
+                    
+                    # Check if family name matches our target family name
+                    inst_family_name = inst_family.Name
+                    if inst_family_name == target_family_name:
                         instances.append(instance)
                 except Exception:
                     pass
@@ -246,6 +260,15 @@ class FamilyInstancePlacer:
         
         if not instance:
             return False
+
+        # Set Offset from Host to 0
+        try:
+            for para_name in ["Elevation from Level", "Offset from Host"]:
+                para = instance.LookupParameter(para_name)
+                if para and not para.IsReadOnly:
+                    para.Set(0)
+        except Exception as e:
+            pass
 
         # Pin instance
         try:
