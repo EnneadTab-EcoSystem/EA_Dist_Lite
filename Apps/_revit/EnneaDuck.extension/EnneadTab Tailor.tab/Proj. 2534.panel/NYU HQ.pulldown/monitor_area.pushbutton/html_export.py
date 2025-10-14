@@ -78,12 +78,20 @@ class AreaMatcher:
             list: List of match results
         """
         matches = []
-        excel_row_index = 0  # Track Excel row order
         
         for room_key, requirement in excel_data.items():
-            excel_row_index += 1
+            # Get actual Excel row number from RowData object
+            excel_row_index = getattr(requirement, '_row_number', 0)
             # Extract requirement data from RowData object using Excel column names
-            room_name = getattr(requirement, config.PROGRAM_TYPE_DETAIL_KEY[config.APP_EXCEL], room_key)
+            # Extract room name from composite key if needed
+            if config.USE_COMPOSITE_KEY and config.COMPOSITE_KEY_SEPARATOR in room_key:
+                parts = room_key.split(config.COMPOSITE_KEY_SEPARATOR)
+                if len(parts) == 3:
+                    room_name = parts[2]  # dept | division | room_name
+                else:
+                    room_name = room_key
+            else:
+                room_name = getattr(requirement, config.PROGRAM_TYPE_DETAIL_KEY[config.APP_EXCEL], room_key)
             department = getattr(requirement, config.DEPARTMENT_KEY[config.APP_EXCEL], '')
             program_type = getattr(requirement, config.PROGRAM_TYPE_KEY[config.APP_EXCEL], '')
             target_count = getattr(requirement, config.COUNT_KEY[config.APP_EXCEL], 0)
@@ -590,6 +598,13 @@ class HTMLReportGenerator:
     
     <!-- Right-Click Context Menu -->
     <div id="contextMenu" class="context-menu">
+        <!-- Search Bar -->
+        <div class="context-menu-search">
+            <input type="text" id="searchInput" placeholder="🔍 Search (Dept/Division/Room)..." autocomplete="off" />
+        </div>
+        <!-- Suggestions Dropdown (appears above search bar) -->
+        <div id="searchSuggestions" class="search-suggestions"></div>
+        
         <div class="context-menu-item" onclick="returnToTop()">
             <span class="context-menu-icon">⬆️</span>
             <span>Return to Top</span>
@@ -1034,6 +1049,9 @@ class HTMLReportGenerator:
         from collections import OrderedDict
         
         tree = OrderedDict()
+        
+        # Sort matches by Excel row index to preserve Excel ordering
+        matches = sorted(matches, key=lambda x: x['excel_row_index'])
         
         # Build the hierarchy
         for match in matches:
@@ -1557,12 +1575,18 @@ class HTMLReportGenerator:
                 # Find best suggestion for this unmatched area
                 suggestion = find_best_suggestion(area_dept, area_type, area_detail)
                 if suggestion:
-                    suggestion_text = '<span class="suggestion-text">Do you mean <strong>{}-{}-{}</strong>?</span>'.format(
+                    # Store plain text suggestion in area_object for parameter update
+                    plain_suggestion = "{} | {} | {}".format(
                         suggestion['department'],
                         suggestion['division'],
                         suggestion['function']
                     )
+                    area_object['suggestion_text'] = plain_suggestion
+                    
+                    # Create HTML version for display
+                    suggestion_text = '<span class="suggestion-text">Do you mean <strong>{}</strong>?</span>'.format(plain_suggestion)
                 else:
+                    area_object['suggestion_text'] = ''  # No suggestion
                     suggestion_text = '<span style="color: #6b7280;">No suggestion available</span>'
                 
                 level_rows.append("""
@@ -2474,6 +2498,11 @@ class HTMLReportGenerator:
             margin: 0 auto;
         }
         
+        .chart-card {
+            position: relative;
+            z-index: 1;
+        }
+        
         .section-diagram {
             margin: 48px 0;
             padding: 32px;
@@ -2926,9 +2955,9 @@ class HTMLReportGenerator:
             border-radius: 8px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
             z-index: 9999;
-            min-width: 220px;
+            min-width: 350px;
             display: none;
-            overflow: hidden;
+            overflow: visible;
         }
         
         .context-menu.active {
@@ -2960,6 +2989,112 @@ class HTMLReportGenerator:
             color: #60a5fa;
             width: 20px;
             text-align: center;
+        }
+        
+        /* Search Bar Styles */
+        .context-menu-search {
+            position: relative;
+            padding: 12px;
+            border-bottom: 1px solid #374151;
+        }
+        
+        #searchInput {
+            width: 100%;
+            padding: 8px 12px;
+            background: #111827;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            color: #f8fafc;
+            font-size: 0.9rem;
+            outline: none;
+            transition: border-color 0.2s ease;
+        }
+        
+        #searchInput:focus {
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.2);
+        }
+        
+        #searchInput::placeholder {
+            color: #6b7280;
+        }
+        
+        /* Search Suggestions Dropdown (appears ABOVE search bar) */
+        .search-suggestions {
+            position: absolute;
+            bottom: 100%;
+            left: 12px;
+            right: 12px;
+            margin-bottom: 8px;
+            background: #1f2937;
+            border: 2px solid #60a5fa;
+            border-radius: 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(96, 165, 250, 0.3);
+            display: none;
+            z-index: 99999;
+        }
+        
+        .search-suggestions.active {
+            display: block;
+        }
+        
+        .suggestion-item {
+            padding: 10px 12px;
+            color: #f8fafc;
+            cursor: pointer;
+            border-bottom: 1px solid #374151;
+            transition: background 0.2s ease;
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .suggestion-item:hover {
+            background: #1f2937;
+        }
+        
+        .suggestion-item.selected {
+            background: #374151;
+        }
+        
+        .suggestion-path {
+            font-size: 0.85rem;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+        
+        .suggestion-match {
+            color: #60a5fa;
+            font-weight: 600;
+        }
+        
+        .no-results {
+            padding: 12px;
+            color: #6b7280;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        .suggestion-header {
+            padding: 8px 12px;
+            color: #9ca3af;
+            font-size: 0.8rem;
+            font-style: italic;
+            border-bottom: 1px solid #374151;
+            background: #0f172a;
+        }
+        
+        /* Highlight animation for navigated nodes */
+        @keyframes highlightFlash {
+            0%, 100% { background: transparent; }
+            50% { background: rgba(96, 165, 250, 0.3); }
+        }
+        
+        .tree-node.highlighted {
+            animation: highlightFlash 1.5s ease-in-out 2;
         }
         
         /* Minimap Navigation Styles */
@@ -3703,6 +3838,259 @@ class HTMLReportGenerator:
             });
         }
         
+        // Fuzzy Search Functions
+        function levenshteinDistance(str1, str2) {
+            var s1 = str1.toLowerCase();
+            var s2 = str2.toLowerCase();
+            var len1 = s1.length;
+            var len2 = s2.length;
+            
+            var matrix = [];
+            for (var i = 0; i <= len1; i++) {
+                matrix[i] = [i];
+            }
+            for (var j = 0; j <= len2; j++) {
+                matrix[0][j] = j;
+            }
+            
+            for (var i = 1; i <= len1; i++) {
+                for (var j = 1; j <= len2; j++) {
+                    var cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+                    matrix[i][j] = Math.min(
+                        matrix[i - 1][j] + 1,
+                        matrix[i][j - 1] + 1,
+                        matrix[i - 1][j - 1] + cost
+                    );
+                }
+            }
+            
+            return matrix[len1][len2];
+        }
+        
+        function fuzzyMatch(query, target) {
+            if (!query || !target) return 0;
+            
+            var q = query.toLowerCase();
+            var t = target.toLowerCase();
+            
+            // Exact match gets highest score
+            if (t === q) return 1.0;
+            
+            // Starts with query
+            if (t.indexOf(q) === 0) return 0.9;
+            
+            // Contains query
+            if (t.indexOf(q) !== -1) return 0.7;
+            
+            // Use Levenshtein distance for fuzzy matching
+            var distance = levenshteinDistance(q, t);
+            var maxLen = Math.max(q.length, t.length);
+            
+            if (distance <= 2 && maxLen > 3) {
+                // Allow 1-2 character difference for typos
+                return 0.6 - (distance * 0.1);
+            }
+            
+            // Similarity score based on Levenshtein
+            var similarity = 1 - (distance / maxLen);
+            
+            if (similarity > 0.5) {
+                return similarity * 0.5; // Scale down partial matches
+            }
+            
+            return 0;
+        }
+        
+        function performSearch(query) {
+            if (!query || query.trim().length < 2) {
+                console.log('Search query too short:', query);
+                return [];
+            }
+            
+            console.log('Performing search for:', query);
+            var results = [];
+            var allNodes = document.querySelectorAll('[data-search-dept], [data-search-division], [data-search-function]');
+            console.log('Found', allNodes.length, 'searchable nodes');
+            
+            allNodes.forEach(function(node) {
+                var dept = node.getAttribute('data-search-dept') || '';
+                var division = node.getAttribute('data-search-division') || '';
+                var func = node.getAttribute('data-search-function') || '';
+                
+                // Skip nodes without any searchable content
+                if (!dept && !division && !func) return;
+                
+                // Calculate fuzzy match scores for each field
+                var deptScore = fuzzyMatch(query, dept);
+                var divScore = fuzzyMatch(query, division);
+                var funcScore = fuzzyMatch(query, func);
+                
+                // Overall score is the maximum of the three
+                var maxScore = Math.max(deptScore, divScore, funcScore);
+                
+                if (maxScore > 0.3) {
+                    results.push({
+                        node: node,
+                        department: dept,
+                        division: division,
+                        function: func,
+                        score: maxScore,
+                        matchedField: deptScore >= divScore && deptScore >= funcScore ? 'dept' : 
+                                      divScore >= funcScore ? 'division' : 'function'
+                    });
+                }
+            });
+            
+            // Sort by score descending
+            results.sort(function(a, b) {
+                return b.score - a.score;
+            });
+            
+            console.log('Search found', results.length, 'results');
+            
+            // Return top 10 results
+            return results.slice(0, 10);
+        }
+        
+        function highlightMatch(text, query) {
+            if (!query || !text) return text;
+            
+            var lowerText = text.toLowerCase();
+            var lowerQuery = query.toLowerCase();
+            var index = lowerText.indexOf(lowerQuery);
+            
+            if (index !== -1) {
+                var before = text.substring(0, index);
+                var match = text.substring(index, index + query.length);
+                var after = text.substring(index + query.length);
+                return before + '<span class="suggestion-match">' + match + '</span>' + after;
+            }
+            
+            return text;
+        }
+        
+        function displaySearchSuggestions(results, query) {
+            console.log('displaySearchSuggestions called with', results.length, 'results');
+            var suggestionsDiv = document.getElementById('searchSuggestions');
+            
+            if (!suggestionsDiv) {
+                console.error('searchSuggestions div not found!');
+                return;
+            }
+            
+            if (!results || results.length === 0) {
+                console.log('No results, showing no matches message');
+                suggestionsDiv.innerHTML = '<div class="no-results">No matches found</div>';
+                suggestionsDiv.classList.add('active');
+                return;
+            }
+            
+            var html = '';
+            
+            // Add "Do you mean..." header if there are results
+            if (results.length > 0) {
+                html += '<div class="suggestion-header">Do you mean...</div>';
+            }
+            
+            results.forEach(function(result, index) {
+                var dept = highlightMatch(result.department, query);
+                var div = highlightMatch(result.division, query);
+                var func = highlightMatch(result.function, query);
+                
+                var path = dept + ' | ' + div + ' | ' + func;
+                
+                html += '<div class="suggestion-item" data-index="' + index + '" onclick="selectSuggestion(' + index + ')">';
+                html += '<div class="suggestion-path">' + path + '</div>';
+                html += '</div>';
+            });
+            
+            suggestionsDiv.innerHTML = html;
+            suggestionsDiv.classList.add('active');
+            
+            console.log('Suggestions HTML set, classList:', suggestionsDiv.classList);
+            console.log('Suggestions display style:', window.getComputedStyle(suggestionsDiv).display);
+            console.log('Suggestions position:', window.getComputedStyle(suggestionsDiv).position);
+            console.log('Suggestions innerHTML length:', suggestionsDiv.innerHTML.length);
+            
+            // Store results globally for selection
+            window.currentSearchResults = results;
+        }
+        
+        function clearSearchSuggestions() {
+            var suggestionsDiv = document.getElementById('searchSuggestions');
+            suggestionsDiv.classList.remove('active');
+            suggestionsDiv.innerHTML = '';
+            window.currentSearchResults = [];
+        }
+        
+        function selectSuggestion(index) {
+            if (!window.currentSearchResults || !window.currentSearchResults[index]) {
+                return;
+            }
+            
+            var result = window.currentSearchResults[index];
+            navigateToNode(result.node);
+            
+            // Clear search
+            var searchInput = document.getElementById('searchInput');
+            searchInput.value = '';
+            clearSearchSuggestions();
+            
+            // Hide context menu
+            var contextMenu = document.getElementById('contextMenu');
+            contextMenu.classList.remove('active');
+            contextMenu.style.display = 'none';
+        }
+        
+        function navigateToNode(nodeElement) {
+            if (!nodeElement) return;
+            
+            // Expand all parent nodes
+            var parent = nodeElement.parentElement;
+            while (parent) {
+                if (parent.classList && parent.classList.contains('tree-node-children')) {
+                    // This is a children container, expand it
+                    parent.classList.remove('collapsed');
+                    parent.style.maxHeight = 'none';
+                    
+                    // Find and update the toggle icon
+                    var parentNode = parent.previousElementSibling;
+                    if (parentNode) {
+                        var icon = parentNode.querySelector('.tree-toggle-icon');
+                        if (icon) {
+                            icon.textContent = '▼';
+                            icon.classList.remove('collapsed');
+                        }
+                    }
+                }
+                parent = parent.parentElement;
+            }
+            
+            // Update all parent heights
+            setTimeout(function() {
+                var allExpanded = document.querySelectorAll('.tree-node-children:not(.collapsed)');
+                allExpanded.forEach(function(child) {
+                    child.style.maxHeight = 'none';
+                    var height = child.scrollHeight;
+                    child.style.maxHeight = height + 'px';
+                });
+            }, 50);
+            
+            // Scroll to the node
+            setTimeout(function() {
+                nodeElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+                
+                // Add highlight effect
+                nodeElement.classList.add('highlighted');
+                setTimeout(function() {
+                    nodeElement.classList.remove('highlighted');
+                }, 3000);
+            }, 200);
+        }
+        
         // Context Menu Functions
         function initializeContextMenu() {
             const contextMenu = document.getElementById('contextMenu');
@@ -3760,6 +4148,9 @@ class HTMLReportGenerator:
                 if (!e.target.closest('.context-menu')) {
                     contextMenu.classList.remove('active');
                     contextMenu.style.display = 'none';
+                    clearSearchSuggestions();
+                    var searchInput = document.getElementById('searchInput');
+                    if (searchInput) searchInput.value = '';
                 }
             });
             
@@ -3767,6 +4158,7 @@ class HTMLReportGenerator:
             document.addEventListener('scroll', function() {
                 contextMenu.classList.remove('active');
                 contextMenu.style.display = 'none';
+                clearSearchSuggestions();
             });
             
             // Hide context menu on escape key
@@ -3774,8 +4166,84 @@ class HTMLReportGenerator:
                 if (e.key === 'Escape') {
                     contextMenu.classList.remove('active');
                     contextMenu.style.display = 'none';
+                    clearSearchSuggestions();
+                    var searchInput = document.getElementById('searchInput');
+                    if (searchInput) searchInput.value = '';
                 }
             });
+            
+            // Search input event handlers
+            console.log('Setting up search handlers...');
+            var searchInput = document.getElementById('searchInput');
+            var searchSuggestions = document.getElementById('searchSuggestions');
+            console.log('searchInput element:', searchInput);
+            console.log('searchSuggestions element:', searchSuggestions);
+            
+            if (searchInput) {
+                console.log('Attaching search event listeners...');
+                // Prevent context menu from closing when clicking in search area
+                searchInput.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+                
+                searchSuggestions.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+                
+                // Real-time search as user types
+                searchInput.addEventListener('input', function(e) {
+                    var query = e.target.value;
+                    console.log('Search input changed:', query);
+                    
+                    if (!query || query.trim().length < 2) {
+                        clearSearchSuggestions();
+                        return;
+                    }
+                    
+                    var results = performSearch(query);
+                    displaySearchSuggestions(results, query);
+                });
+                
+                // Keyboard navigation
+                searchInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        // Select first suggestion
+                        if (window.currentSearchResults && window.currentSearchResults.length > 0) {
+                            selectSuggestion(0);
+                        }
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        searchInput.value = '';
+                        clearSearchSuggestions();
+                    }
+                });
+                
+                // Focus search input when context menu opens
+                var observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.attributeName === 'class') {
+                            if (contextMenu.classList.contains('active')) {
+                                setTimeout(function() {
+                                    searchInput.focus();
+                                }, 100);
+                            } else {
+                                searchInput.value = '';
+                                clearSearchSuggestions();
+                            }
+                        }
+                    });
+                });
+                
+                observer.observe(contextMenu, {
+                    attributes: true,
+                    attributeFilter: ['class']
+                });
+                
+                console.log('Search event listeners attached successfully!');
+            } else {
+                console.error('searchInput element not found! Cannot attach search listeners.');
+            }
             
             console.log('Context menu initialized');
         }
@@ -4481,83 +4949,6 @@ class HTMLReportGenerator:
             deptHeader.classList.toggle('collapsed');
         }
         
-        // Context Menu Functions
-        function initializeContextMenu() {
-            const contextMenu = document.getElementById('contextMenu');
-            
-            if (!contextMenu) {
-                console.error('Context menu element not found');
-                return;
-            }
-            
-            // Show context menu on right-click anywhere on the page
-            document.addEventListener('contextmenu', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Get mouse position
-                var mouseX = e.clientX;
-                var mouseY = e.clientY;
-                
-                // Show menu first to get its dimensions
-                contextMenu.style.display = 'block';
-                contextMenu.classList.add('active');
-                
-                var menuWidth = contextMenu.offsetWidth;
-                var menuHeight = contextMenu.offsetHeight;
-                var windowWidth = window.innerWidth;
-                var windowHeight = window.innerHeight;
-                
-                // Calculate position - ensure menu stays within viewport
-                var left = mouseX;
-                var top = mouseY;
-                
-                // Adjust if menu would go off right edge
-                if (mouseX + menuWidth > windowWidth) {
-                    left = windowWidth - menuWidth - 10;
-                }
-                
-                // Adjust if menu would go off bottom edge
-                if (mouseY + menuHeight > windowHeight) {
-                    top = windowHeight - menuHeight - 10;
-                }
-                
-                // Ensure menu doesn't go off left or top edge
-                if (left < 10) left = 10;
-                if (top < 10) top = 10;
-                
-                // Position the context menu
-                contextMenu.style.left = left + 'px';
-                contextMenu.style.top = top + 'px';
-                
-                console.log('Context menu shown at:', left, top);
-            });
-            
-            // Hide context menu on regular click
-            document.addEventListener('click', function(e) {
-                if (!e.target.closest('.context-menu')) {
-                    contextMenu.classList.remove('active');
-                    contextMenu.style.display = 'none';
-                }
-            });
-            
-            // Hide context menu on scroll
-            document.addEventListener('scroll', function() {
-                contextMenu.classList.remove('active');
-                contextMenu.style.display = 'none';
-            });
-            
-            // Hide context menu on escape key
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    contextMenu.classList.remove('active');
-                    contextMenu.style.display = 'none';
-                }
-            });
-            
-            console.log('Context menu initialized');
-        }
-        
         // Collapse all departments
         function collapseAllDepartments() {
             const allDeptHeaders = document.querySelectorAll('.department-header');
@@ -4811,22 +5202,33 @@ class HTMLReportGenerator:
                 return;
             }
             
-            let targetY = 0;
+            let lastScrollY = window.scrollY;
             let currentY = 0;
-            const delay = 0.1; // Delay factor for parallax effect (0.1 = slower follow)
+            let scrollVelocity = 0;
+            const dampingFactor = 0.15; // How much the logo moves with scroll (lower = less movement)
+            const returnSpeed = 0.08; // How fast it returns to original position (lower = slower)
             
-            // Update target position on scroll
+            // Update on scroll - calculate scroll velocity
             window.addEventListener('scroll', function() {
-                targetY = window.scrollY * delay;
-            });
+                const currentScrollY = window.scrollY;
+                scrollVelocity = (currentScrollY - lastScrollY) * dampingFactor;
+                lastScrollY = currentScrollY;
+            }, { passive: true });
             
             // Smooth animation loop
             function animateLogo() {
-                // Lerp (linear interpolation) for smooth delayed movement
-                currentY += (targetY - currentY) * 0.1;
+                // Apply scroll velocity to current position (creates lag effect)
+                // Invert velocity so logo lags behind: when scrolling down, logo stays up
+                currentY -= scrollVelocity;
                 
-                // Apply transform
-                logo.style.transform = 'translateY(-' + currentY + 'px)';
+                // Gradually reduce velocity
+                scrollVelocity *= 0.85;
+                
+                // Pull logo back to original position (0)
+                currentY += (0 - currentY) * returnSpeed;
+                
+                // Apply transform - move logo based on scroll lag
+                logo.style.transform = 'translateY(' + currentY + 'px)';
                 
                 // Continue animation
                 requestAnimationFrame(animateLogo);

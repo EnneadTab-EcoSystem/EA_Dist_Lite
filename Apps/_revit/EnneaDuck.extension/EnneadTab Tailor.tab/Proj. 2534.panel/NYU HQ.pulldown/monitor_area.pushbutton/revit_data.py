@@ -79,7 +79,8 @@ def get_revit_area_data_by_scheme():
                     'level_name': level_name,
                     'level_elevation': level_elevation,
                     'creator': creator_name,
-                    'last_editor': editor_name
+                    'last_editor': editor_name,
+                    'revit_element': area  # Store reference to Revit element for parameter updates
                 }
                 
                 areas_list.append(area_object)
@@ -228,7 +229,8 @@ def _get_all_areas_as_list(doc):
             'area_sf': area_sf,
             'level_name': level_name,
             'creator': creator_name,
-            'last_editor': editor_name
+            'last_editor': editor_name,
+            'revit_element': area  # Store reference to Revit element for parameter updates
         }
         
         # Add to scheme's list

@@ -38,6 +38,9 @@ SCALED_DGSF_KEY = {
     APP_EXCEL: "DGSF+"
 }
 
+# Parameter for storing unmatched area suggestions
+UNMATCHED_SUGGESTION_PARAM = "UnMatchedSuggestion"
+
 # =============================================================================
 # EXCEL CONFIGURATION
 # =============================================================================
@@ -49,6 +52,11 @@ EXCEL_HEADER_ROW = 1  # Row where headers are located (1-based, as per parse_exc
 
 # Primary key for Excel data parsing (use excel version)
 EXCEL_PRIMARY_KEY = PROGRAM_TYPE_DETAIL_KEY[APP_EXCEL]
+
+# Composite key settings
+USE_COMPOSITE_KEY = True
+COMPOSITE_KEY_SEPARATOR = " | "  # Separator between dept, division, room name
+COMPOSITE_KEY_COLUMN_NAME = "COMPOSITE_KEY"  # Name of the synthetic column
 
 # =============================================================================
 # REVIT CONFIGURATION

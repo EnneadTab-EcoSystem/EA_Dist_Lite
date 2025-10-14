@@ -308,6 +308,59 @@ def extract_color_hierarchy(raw_data, header_row):
     return color_hierarchy
 
 
+def add_composite_key_column(raw_data, header_row):
+    """
+    Add a composite key column (DEPT|DIV|ROOM) to prevent data loss from duplicate room names.
+    Must be called BEFORE parse_excel_data to preserve all rows.
+    """
+    if not config.USE_COMPOSITE_KEY:
+        return raw_data
+    
+    # Get header map
+    header_map = EXCEL.get_header_map(raw_data, header_row)
+    
+    # Find column indices
+    dept_col = None
+    div_col = None
+    room_col = None
+    
+    for col, header in header_map.items():
+        if header == config.DEPARTMENT_KEY[config.APP_EXCEL]:
+            dept_col = col
+        elif header == config.PROGRAM_TYPE_KEY[config.APP_EXCEL]:
+            div_col = col
+        elif header == config.PROGRAM_TYPE_DETAIL_KEY[config.APP_EXCEL]:
+            room_col = col
+    
+    # Find next available column for composite key
+    max_col = max(col for row, col in raw_data.keys())
+    composite_col = max_col + 1
+    
+    # Add composite key header
+    raw_data[(header_row, composite_col)] = {"value": config.COMPOSITE_KEY_COLUMN_NAME}
+    
+    # Get all unique row numbers after header
+    row_numbers = sorted(set(row for row, col in raw_data.keys() if row > header_row))
+    
+    # Add composite key values
+    for row in row_numbers:
+        dept = raw_data.get((row, dept_col), {}).get("value", "") if dept_col else ""
+        div = raw_data.get((row, div_col), {}).get("value", "") if div_col else ""
+        room = raw_data.get((row, room_col), {}).get("value", "") if room_col else ""
+        
+        composite_key = "{}{}{}{}{}".format(
+            dept,
+            config.COMPOSITE_KEY_SEPARATOR,
+            div,
+            config.COMPOSITE_KEY_SEPARATOR,
+            room
+        )
+        raw_data[(row, composite_col)] = {"value": composite_key}
+    
+    print("Added composite key column to {} rows".format(len(row_numbers)))
+    return raw_data
+
+
 def get_excel_data():
     """
     Read and parse Excel data using configuration from config.py
@@ -341,6 +394,10 @@ def get_excel_data():
     # Enrich sparse data
     enriched_data = enrich_sparse_data(color_extracted_data, config.EXCEL_HEADER_ROW)
     
+    # Add composite key column if enabled (BEFORE parsing to prevent data loss)
+    if config.USE_COMPOSITE_KEY:
+        enriched_data = add_composite_key_column(enriched_data, config.EXCEL_HEADER_ROW)
+    
     # Count rows before filtering
     rows_before = len(set(row for row, col in enriched_data.keys() if row > config.EXCEL_HEADER_ROW))
     print("Total rows in Excel (after header): {}".format(rows_before))
@@ -353,10 +410,11 @@ def get_excel_data():
     print("Rows with ROOM NAME filled: {}".format(rows_after))
     print("Rows filtered out (no ROOM NAME): {}".format(rows_before - rows_after))
     
-    # Parse into structured format
+    # Parse into structured format (use composite key if enabled)
+    parse_key = config.COMPOSITE_KEY_COLUMN_NAME if config.USE_COMPOSITE_KEY else config.EXCEL_PRIMARY_KEY
     parsed_data = EXCEL.parse_excel_data(
         filtered_data, 
-        key_name=config.EXCEL_PRIMARY_KEY, 
+        key_name=parse_key, 
         header_row=config.EXCEL_HEADER_ROW
     )
     
