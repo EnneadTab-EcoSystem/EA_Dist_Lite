@@ -15,43 +15,34 @@
         
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Source+Code+Pro:wght@400;500;600&display=swap');
         
-        html {
+        html, body {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
             overflow-x: hidden;
-            overflow-y: scroll;
-            scroll-behavior: smooth;
+            position: relative;
         }
         
         body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            min-height: 100%;
             font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             line-height: 1.5;
             color: #f8fafc;
             background: #0a0e13;
+            min-height: 100vh;
             font-weight: 400;
             position: relative;
+            overflow-y: auto;
         }
         
         .container {
             max-width: 95vw;
-            width: 100%;
+            min-width: 1200px;
             margin: 0 auto;
             padding: 24px;
-            padding-bottom: 150px;
+            padding-bottom: 150px; /* Add space for fixed search bar */
             padding-right: 260px; /* Add space for minimap navigation */
             animation: fadeInUp 0.8s ease-out;
-        }
-        
-        @media (min-width: 1200px) {
-            .container {
-                min-width: 1200px;
-            }
         }
         
         @keyframes fadeInUp {
@@ -356,11 +347,11 @@
             }
         }
         
-        .summary-section, .status-summary, .unmatched-section, .scheme-summary, .scheme-section {
+        .summary-section, .status-summary, .comparison-section, .unmatched-section, .scheme-summary, .scheme-section {
             margin-bottom: 32px;
         }
         
-        .summary-section h2, .status-summary h2, .unmatched-section h2, .scheme-summary h2, .scheme-section h2 {
+        .summary-section h2, .status-summary h2, .comparison-section h2, .unmatched-section h2, .scheme-summary h2, .scheme-section h2 {
             color: #ffffff;
             margin-bottom: 24px;
             font-size: 1.5rem;
@@ -429,21 +420,9 @@
         
         .summary-cards, .scheme-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
             margin-bottom: 20px;
-        }
-        
-        @media (min-width: 1400px) {
-            .summary-cards, .scheme-cards {
-                grid-template-columns: repeat(5, 1fr);
-            }
-        }
-        
-        @media (min-width: 1024px) and (max-width: 1399px) {
-            .summary-cards, .scheme-cards {
-                grid-template-columns: repeat(4, 1fr);
-            }
         }
         
         .summary-cards .card:nth-child(1) { animation-delay: 0.1s; }
@@ -534,20 +513,8 @@
         
         .status-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 20px;
-        }
-        
-        @media (min-width: 1400px) {
-            .status-cards {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-        
-        @media (min-width: 1024px) and (max-width: 1399px) {
-            .status-cards {
-                grid-template-columns: repeat(3, 1fr);
-            }
         }
         
         .status-card {
@@ -1130,53 +1097,10 @@
             border: 1px solid #1f2937;
         }
         
-        @media (max-width: 1024px) {
-            /* Stack charts vertically on tablets and smaller */
-            .charts-section {
-                grid-template-columns: 1fr !important;
-            }
-            
-            .minimap-nav {
-                display: none !important;
-            }
-            
-            .container {
-                padding-right: 24px !important;
-            }
-        }
-        
         @media (max-width: 768px) {
             .container {
                 padding: 15px 10px;
-                padding-right: 10px !important; /* Remove minimap spacing on mobile */
-                padding-bottom: 100px !important;
-            }
-            
-            /* Make department summary more compact */
-            .department-summary-container {
-                padding: 0 !important;
-            }
-            
-            .chart-card {
-                padding: 16px !important;
-            }
-            
-            .chart-card h3 {
-                font-size: 14px !important;
-            }
-            
-            canvas {
-                max-height: 300px !important;
-            }
-            
-            /* Department by level table */
-            .level-dept-table {
-                font-size: 0.85rem !important;
-            }
-            
-            .dept-badge {
-                font-size: 0.75rem !important;
-                padding: 4px 8px !important;
+                padding-right: 10px; /* Remove minimap spacing on mobile */
             }
             
             .comparison-table, .unmatched-table {
@@ -1197,22 +1121,6 @@
             .col-area { width: 12%; }
             .col-delta { width: 15%; }
             .col-status { width: 6%; }
-            
-            /* Summary cards - stack vertically */
-            .summary-cards {
-                grid-template-columns: 1fr !important;
-            }
-            
-            /* Tree view adjustments */
-            .tree-node-header {
-                flex-direction: column;
-                align-items: flex-start !important;
-            }
-            
-            .tree-node-metrics {
-                width: 100%;
-                margin-top: 8px;
-            }
         }
         
         @media (max-width: 480px) {
@@ -1253,6 +1161,102 @@
             }
         }
         
+        /* Sticky Search Bar at Bottom - Floating Element with Follow Effect */
+        .search-bar-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100vw;
+            background: linear-gradient(180deg, rgba(10, 14, 19, 0) 0%, rgba(10, 14, 19, 0.8) 15%, #0a0e13 30%);
+            padding: 24px 0 16px 0;
+            z-index: 999999;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            pointer-events: auto;
+            margin: 0;
+            will-change: transform;
+        }
+        
+        .search-bar-content {
+            max-width: 95vw;
+            margin: 0 auto;
+            padding: 0 24px 16px 24px;
+            position: relative;
+        }
+        
+        #fuzzySearch {
+            width: 100%;
+            padding: 14px 20px;
+            background: #111827;
+            border: 2px solid #1f2937;
+            border-radius: 8px;
+            color: #f8fafc;
+            font-size: 1rem;
+            font-family: 'Roboto', sans-serif;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        #fuzzySearch:focus {
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
+        }
+        
+        #fuzzySearch::placeholder {
+            color: #6b7280;
+        }
+        
+        .clear-search-btn {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #374151;
+            border: none;
+            color: #f8fafc;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .clear-search-btn:hover {
+            background: #60a5fa;
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .search-status {
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            right: 0;
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            background: #1f2937;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            color: #9ca3af;
+            font-size: 0.875rem;
+            display: none;
+            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .search-status.active {
+            display: block;
+        }
+        
+        .search-status .count {
+            color: #60a5fa;
+            font-weight: 600;
+        }
+        
         /* Department collapse styles */
         .dept-row.collapsed {
             display: none;
@@ -1260,6 +1264,19 @@
         
         .department-header.collapsed .collapse-icon {
             transform: rotate(-90deg);
+        }
+        
+        /* Search filter styles */
+        .dept-row.search-hidden {
+            display: none !important;
+        }
+        
+        .department-header.search-hidden {
+            display: none !important;
+        }
+        
+        .tree-node.search-hidden {
+            display: none !important;
         }
         
         /* Suggestion column styles */
@@ -1734,7 +1751,7 @@
         /* EnneadTab Logo - Lower Left with Parallax */
         .ennead-logo-container {
             position: fixed;
-            left: 35px;
+            left: 20px;
             bottom: 80px;
             z-index: 100;
             pointer-events: none;
@@ -1743,11 +1760,11 @@
         }
         
         .ennead-logo {
-            height: 45px;
+            height: 150px;
             width: auto;
             transform: rotate(-90deg);
             transform-origin: left center;
-            opacity: 0.6;
+            opacity: 0.7;
             transition: opacity 0.3s ease;
         }
         
@@ -1764,6 +1781,17 @@
     </style>
 </head>
 <body>
+    <!-- Floating Search Bar - Fixed at Bottom of Viewport -->
+    <div class="search-bar-container">
+        <div class="search-bar-content">
+            <div style="position: relative;">
+                <input type="text" id="fuzzySearch" placeholder="🔍 Filter by department, division, or function... (fuzzy search enabled)" />
+                <button id="clearSearch" class="clear-search-btn" style="display: none;" onclick="clearSearchFilter()">✕</button>
+            </div>
+            <div id="searchStatus" class="search-status"></div>
+        </div>
+    </div>
+    
     <!-- EnneadTab Logo - Lower Left with Parallax -->
     <div class="ennead-logo-container" id="enneadLogo">
         <img src="../icon_logo_dark_background.png" alt="EnneadTab Logo" class="ennead-logo">
@@ -1773,12 +1801,12 @@
         <header class="report-header">
             <h1>🏥 EnneadTab - Excel Area Requirements vs Revit Actual Areas Report</h1>
             <div class="report-info">
-                <p><strong>Generated:</strong> 2025-10-13 18:49:51</p>
+                <p><strong>Generated:</strong> 2025-10-13 18:13:23</p>
                 <p><strong>Project:</strong> NYU HQ - Monitor Area System</p>
                 <p><strong>Area Scheme:</strong> DGSF Scheme</p>
             </div>
             <div class="visualization-note">
-                <p><strong>📊 TreeView Visualization:</strong> This report presents data in a hierarchical tree structure for easy navigation through <strong>Department → Division → Room</strong> relationships. Expand and collapse nodes to explore the organizational structure and metrics at each level.</p>
+                <p><strong>📊 Multiple Visualization Modes:</strong> This report presents the same data from different angles. Use <strong>TreeView</strong> for hierarchical navigation (Department → Division → Room) or <strong>TableView</strong> for detailed tabular analysis. Both views contain identical information organized for different analysis needs.</p>
             </div>
             
             <div class="legend-section">
@@ -3973,6 +4001,1570 @@
             </div>
         </div>
         
+        <div class="comparison-section">
+            <h2>📋 TableView</h2>
+            <div class="table-container">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Department</th>
+                            <th>Division</th>
+                            <th>Room Name</th>
+                            <th>Target Count</th>
+                            <th>Target DGSF</th>
+                            <th>Level Summary</th>
+                            <th>Actual Count</th>
+                            <th>Actual DGSF</th>
+                            <th>Count Delta</th>
+                            <th>DGSF Delta</th>
+                            <th>DGSF %</th>
+                            <th>Status</th>
+                            <th>Match Quality</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        
+                <tr class="department-header" data-dept-id="dept_0" onclick="toggleDepartment('dept_0')" style="background: linear-gradient(90deg, #beca8c 0%, rgba(17, 24, 39, 0.8) 100%); cursor: pointer;">
+                    <td colspan="13" style="padding: 12px 16px; font-weight: 600; font-size: 1.1em; color: white; border: 4px solid #beca8c;">
+                        <span class="collapse-icon" id="icon_dept_0" style="display: inline-block; margin-right: 8px; transition: transform 0.3s ease;">▼</span>
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #beca8c; border-radius: 50%; margin-right: 8px;"></span>
+                        DIAGNOSTIC AND TREATMENT
+                    </td>
+                </tr>
+            
+                    <tr class="status-partial  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Radiation Oncology" data-search-function="Radiation Oncology">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Radiation Oncology</td>
+                        <td class="col-function"><strong>Radiation Oncology</strong></td>
+                        <td class="col-count">2</td>
+                        <td class="col-area">13,200</td>
+                        <td class="col-level">Level 1  Lobby / ED / Clinical / Support</td>
+                        <td class="col-count">1</td>
+                        <td class="col-area">8,343</td>
+                        <td class="col-delta negative">Missing 1</td>
+                        <td class="col-delta negative">Missing 4,857 SF</td>
+                        <td class="col-delta negative">-36.8%</td>
+                        <td class="col-status"><span class="status-badge partial">△ Partial</span></td>
+                        <td class="col-quality"><span class="quality-badge high">High</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Procedure" data-search-function="Interventional Radiology">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Procedure</td>
+                        <td class="col-function"><strong>Interventional Radiology</strong></td>
+                        <td class="col-count">6</td>
+                        <td class="col-area">31,020</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 6</td>
+                        <td class="col-delta negative">Missing 31,020 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Labor & Delivery" data-search-function="C-Section">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Labor & Delivery</td>
+                        <td class="col-function"><strong>C-Section</strong></td>
+                        <td class="col-count">5</td>
+                        <td class="col-area">4,840</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 5</td>
+                        <td class="col-delta negative">Missing 4,840 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing alert-high-difference dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Surgery & Procedures" data-search-function="General ORs">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Surgery & Procedures</td>
+                        <td class="col-function"><strong>General ORs</strong></td>
+                        <td class="col-count">15</td>
+                        <td class="col-area">69,300</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta alert-count-delta">Missing 15</td>
+                        <td class="col-delta negative">Missing 69,300 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Imaging & Diagnostic Services" data-search-function="PET">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Imaging & Diagnostic Services</td>
+                        <td class="col-function"><strong>PET</strong></td>
+                        <td class="col-count">1</td>
+                        <td class="col-area">2,035</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 1</td>
+                        <td class="col-delta negative">Missing 2,035 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Procedure" data-search-function="Minor Procedure Room (EP)">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Procedure</td>
+                        <td class="col-function"><strong>Minor Procedure Room (EP)</strong></td>
+                        <td class="col-count">1</td>
+                        <td class="col-area">3,960</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 1</td>
+                        <td class="col-delta negative">Missing 3,960 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing alert-high-difference dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Dialysis" data-search-function="Dialysis (8 Chairs + 2 ISO Rooms)">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Dialysis</td>
+                        <td class="col-function"><strong>Dialysis (8 Chairs + 2 ISO Rooms)</strong></td>
+                        <td class="col-count">10</td>
+                        <td class="col-area">5,720</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta alert-count-delta">Missing 10</td>
+                        <td class="col-delta negative">Missing 5,720 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Imaging & Diagnostic Services" data-search-function="CT">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Imaging & Diagnostic Services</td>
+                        <td class="col-function"><strong>CT</strong></td>
+                        <td class="col-count">3</td>
+                        <td class="col-area">6,105</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 3</td>
+                        <td class="col-delta negative">Missing 6,105 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Procedure" data-search-function="Minor Procedure Room (IR)">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Procedure</td>
+                        <td class="col-function"><strong>Minor Procedure Room (IR)</strong></td>
+                        <td class="col-count">1</td>
+                        <td class="col-area">3,960</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 1</td>
+                        <td class="col-delta negative">Missing 3,960 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing alert-high-difference dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Labor & Delivery" data-search-function="Triage">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Labor & Delivery</td>
+                        <td class="col-function"><strong>Triage</strong></td>
+                        <td class="col-count">10</td>
+                        <td class="col-area">4,840</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta alert-count-delta">Missing 10</td>
+                        <td class="col-delta negative">Missing 4,840 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Surgery & Procedures" data-search-function="Hybrid/Interoperative OR + MRI">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Surgery & Procedures</td>
+                        <td class="col-function"><strong>Hybrid/Interoperative OR + MRI</strong></td>
+                        <td class="col-count">2</td>
+                        <td class="col-area">11,440</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 2</td>
+                        <td class="col-delta negative">Missing 11,440 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Imaging & Diagnostic Services" data-search-function="Ultrasound">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Imaging & Diagnostic Services</td>
+                        <td class="col-function"><strong>Ultrasound</strong></td>
+                        <td class="col-count">4</td>
+                        <td class="col-area">8,140</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 4</td>
+                        <td class="col-delta negative">Missing 8,140 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Surgery & Procedures" data-search-function="Other ORs with fixed Imaging">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Surgery & Procedures</td>
+                        <td class="col-function"><strong>Other ORs with fixed Imaging</strong></td>
+                        <td class="col-count">6</td>
+                        <td class="col-area">31,020</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 6</td>
+                        <td class="col-delta negative">Missing 31,020 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Imaging & Diagnostic Services" data-search-function="Nuclear Medicine">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Imaging & Diagnostic Services</td>
+                        <td class="col-function"><strong>Nuclear Medicine</strong></td>
+                        <td class="col-count">3</td>
+                        <td class="col-area">6,105</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 3</td>
+                        <td class="col-delta negative">Missing 6,105 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing alert-high-difference dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Post Procedural Care Unit" data-search-function="Post Procedural Observation (PPCU)">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Post Procedural Care Unit</td>
+                        <td class="col-function"><strong>Post Procedural Observation (PPCU)</strong></td>
+                        <td class="col-count">36</td>
+                        <td class="col-area">25,740</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta alert-count-delta">Missing 36</td>
+                        <td class="col-delta negative">Missing 25,740 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing alert-high-difference dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Labor & Delivery" data-search-function="Labor and Delivery">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Labor & Delivery</td>
+                        <td class="col-function"><strong>Labor and Delivery</strong></td>
+                        <td class="col-count">16</td>
+                        <td class="col-area">34,320</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta alert-count-delta">Missing 16</td>
+                        <td class="col-delta negative">Missing 34,320 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Procedure" data-search-function="Bronch/Endo">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Procedure</td>
+                        <td class="col-function"><strong>Bronch/Endo</strong></td>
+                        <td class="col-count">6</td>
+                        <td class="col-area">19,800</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 6</td>
+                        <td class="col-delta negative">Missing 19,800 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Imaging & Diagnostic Services" data-search-function="MRI">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Imaging & Diagnostic Services</td>
+                        <td class="col-function"><strong>MRI</strong></td>
+                        <td class="col-count">2</td>
+                        <td class="col-area">4,070</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 2</td>
+                        <td class="col-delta negative">Missing 4,070 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Imaging & Diagnostic Services" data-search-function="Non-Invasive Cardiology">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Imaging & Diagnostic Services</td>
+                        <td class="col-function"><strong>Non-Invasive Cardiology</strong></td>
+                        <td class="col-count">7</td>
+                        <td class="col-area">2,860</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 7</td>
+                        <td class="col-delta negative">Missing 2,860 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Imaging & Diagnostic Services" data-search-function="XR/Fluoroscopic Room">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Imaging & Diagnostic Services</td>
+                        <td class="col-function"><strong>XR/Fluoroscopic Room</strong></td>
+                        <td class="col-count">3</td>
+                        <td class="col-area">6,105</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 3</td>
+                        <td class="col-delta negative">Missing 6,105 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-partial  dept-row" data-dept="dept_0" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Procedure" data-search-function="Cath/EP">
+                        <td class="col-dept">DIAGNOSTIC AND TREATMENT</td>
+                        <td class="col-division">Procedure</td>
+                        <td class="col-function"><strong>Cath/EP</strong></td>
+                        <td class="col-count">8</td>
+                        <td class="col-area">41,360</td>
+                        <td class="col-level">Level 1  Lobby / ED / Clinical / Support</td>
+                        <td class="col-count">1</td>
+                        <td class="col-area">8,212</td>
+                        <td class="col-delta negative">Missing 7</td>
+                        <td class="col-delta negative">Missing 33,148 SF</td>
+                        <td class="col-delta alert-area-delta">-80.1%</td>
+                        <td class="col-status"><span class="status-badge partial">△ Partial</span></td>
+                        <td class="col-quality"><span class="quality-badge high">High</span></td>
+                    </tr>
+                
+                <tr class="department-header" data-dept-id="dept_1" onclick="toggleDepartment('dept_1')" style="background: linear-gradient(90deg, #f1b3ad 0%, rgba(17, 24, 39, 0.8) 100%); cursor: pointer;">
+                    <td colspan="13" style="padding: 12px 16px; font-weight: 600; font-size: 1.1em; color: white; border: 4px solid #f1b3ad;">
+                        <span class="collapse-icon" id="icon_dept_1" style="display: inline-block; margin-right: 8px; transition: transform 0.3s ease;">▼</span>
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #f1b3ad; border-radius: 50%; margin-right: 8px;"></span>
+                        EMERGENCY CARE SERVICES
+                    </td>
+                </tr>
+            
+                    <tr class="status-partial  dept-row" data-dept="dept_1" data-search-dept="EMERGENCY CARE SERVICES" data-search-division="Emergency Department" data-search-function="Treatment positions">
+                        <td class="col-dept">EMERGENCY CARE SERVICES</td>
+                        <td class="col-division">Emergency Department</td>
+                        <td class="col-function"><strong>Treatment positions</strong></td>
+                        <td class="col-count">73</td>
+                        <td class="col-area">64,240</td>
+                        <td class="col-level">Level 1  Lobby / ED / Clinical / Support</td>
+                        <td class="col-count">1</td>
+                        <td class="col-area">62,464</td>
+                        <td class="col-delta alert-count-delta">Missing 72</td>
+                        <td class="col-delta negative">Missing 1,776 SF</td>
+                        <td class="col-delta negative">-2.8%</td>
+                        <td class="col-status"><span class="status-badge partial">△ Partial</span></td>
+                        <td class="col-quality"><span class="quality-badge high">High</span></td>
+                    </tr>
+                
+                    <tr class="status-partial  dept-row" data-dept="dept_1" data-search-dept="EMERGENCY CARE SERVICES" data-search-division="Emergency Department" data-search-function="ED Imaging">
+                        <td class="col-dept">EMERGENCY CARE SERVICES</td>
+                        <td class="col-division">Emergency Department</td>
+                        <td class="col-function"><strong>ED Imaging</strong></td>
+                        <td class="col-count">8</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">Level 1  Lobby / ED / Clinical / Support</td>
+                        <td class="col-count">1</td>
+                        <td class="col-area">195,732</td>
+                        <td class="col-delta negative">Missing 7</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge partial">△ Partial</span></td>
+                        <td class="col-quality"><span class="quality-badge high">High</span></td>
+                    </tr>
+                
+                <tr class="department-header" data-dept-id="dept_2" onclick="toggleDepartment('dept_2')" style="background: linear-gradient(90deg, #fce4d6 0%, rgba(17, 24, 39, 0.8) 100%); cursor: pointer;">
+                    <td colspan="13" style="padding: 12px 16px; font-weight: 600; font-size: 1.1em; color: white; border: 4px solid #fce4d6;">
+                        <span class="collapse-icon" id="icon_dept_2" style="display: inline-block; margin-right: 8px; transition: transform 0.3s ease;">▼</span>
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #fce4d6; border-radius: 50%; margin-right: 8px;"></span>
+                        CLINICAL SUPPORT
+                    </td>
+                </tr>
+            
+                    <tr class="status-missing  dept-row" data-dept="dept_2" data-search-dept="CLINICAL SUPPORT" data-search-division="Laboratory Services" data-search-function="Clinical Labs & Lab Support">
+                        <td class="col-dept">CLINICAL SUPPORT</td>
+                        <td class="col-division">Laboratory Services</td>
+                        <td class="col-function"><strong>Clinical Labs & Lab Support</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">20,773</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 20,773 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_2" data-search-dept="CLINICAL SUPPORT" data-search-division="CSPD & Pharmacy" data-search-function="Main Pharmacy">
+                        <td class="col-dept">CLINICAL SUPPORT</td>
+                        <td class="col-division">CSPD & Pharmacy</td>
+                        <td class="col-function"><strong>Main Pharmacy</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">12,100</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 12,100 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_2" data-search-dept="CLINICAL SUPPORT" data-search-division="CSPD & Pharmacy" data-search-function="Central Sterile">
+                        <td class="col-dept">CLINICAL SUPPORT</td>
+                        <td class="col-division">CSPD & Pharmacy</td>
+                        <td class="col-function"><strong>Central Sterile</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">22,000</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 22,000 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_2" data-search-dept="CLINICAL SUPPORT" data-search-division="Laboratory Services" data-search-function="Pathology Office and Laboratory Admin">
+                        <td class="col-dept">CLINICAL SUPPORT</td>
+                        <td class="col-division">Laboratory Services</td>
+                        <td class="col-function"><strong>Pathology Office and Laboratory Admin</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">17,553</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 17,553 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-partial  dept-row" data-dept="dept_2" data-search-dept="CLINICAL SUPPORT" data-search-division="CSPD & Pharmacy" data-search-function="Retail Pharmacy">
+                        <td class="col-dept">CLINICAL SUPPORT</td>
+                        <td class="col-division">CSPD & Pharmacy</td>
+                        <td class="col-function"><strong>Retail Pharmacy</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">3,300</td>
+                        <td class="col-level">Level 1  Lobby / ED / Clinical / Support</td>
+                        <td class="col-count">1</td>
+                        <td class="col-area">3,550</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta positive">Exceeding 250 SF</td>
+                        <td class="col-delta positive">+7.6%</td>
+                        <td class="col-status"><span class="status-badge partial">△ Partial</span></td>
+                        <td class="col-quality"><span class="quality-badge high">High</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_2" data-search-dept="CLINICAL SUPPORT" data-search-division="Laboratory Services" data-search-function="Morgue">
+                        <td class="col-dept">CLINICAL SUPPORT</td>
+                        <td class="col-division">Laboratory Services</td>
+                        <td class="col-function"><strong>Morgue</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">2,200</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 2,200 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_2" data-search-dept="CLINICAL SUPPORT" data-search-division="Laboratory Services" data-search-function="Transfusion Services">
+                        <td class="col-dept">CLINICAL SUPPORT</td>
+                        <td class="col-division">Laboratory Services</td>
+                        <td class="col-function"><strong>Transfusion Services</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_2" data-search-dept="CLINICAL SUPPORT" data-search-division="CSPD & Pharmacy" data-search-function="Biomed ( Clinical Engineering)">
+                        <td class="col-dept">CLINICAL SUPPORT</td>
+                        <td class="col-division">CSPD & Pharmacy</td>
+                        <td class="col-function"><strong>Biomed ( Clinical Engineering)</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">5,500</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 5,500 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_2" data-search-dept="CLINICAL SUPPORT" data-search-division="Laboratory Services" data-search-function="Blood Bank">
+                        <td class="col-dept">CLINICAL SUPPORT</td>
+                        <td class="col-division">Laboratory Services</td>
+                        <td class="col-function"><strong>Blood Bank</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">5,500</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 5,500 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_2" data-search-dept="CLINICAL SUPPORT" data-search-division="CSPD & Pharmacy" data-search-function="Respiratory Therapy">
+                        <td class="col-dept">CLINICAL SUPPORT</td>
+                        <td class="col-division">CSPD & Pharmacy</td>
+                        <td class="col-function"><strong>Respiratory Therapy</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">2,200</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 2,200 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                <tr class="department-header" data-dept-id="dept_3" onclick="toggleDepartment('dept_3')" style="background: linear-gradient(90deg, #dcd5c2 0%, rgba(17, 24, 39, 0.8) 100%); cursor: pointer;">
+                    <td colspan="13" style="padding: 12px 16px; font-weight: 600; font-size: 1.1em; color: white; border: 4px solid #dcd5c2;">
+                        <span class="collapse-icon" id="icon_dept_3" style="display: inline-block; margin-right: 8px; transition: transform 0.3s ease;">▼</span>
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #dcd5c2; border-radius: 50%; margin-right: 8px;"></span>
+                        BUILDING SUPPORT
+                    </td>
+                </tr>
+            
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Materials Managament" data-search-function="Patient Transport">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Materials Managament</td>
+                        <td class="col-function"><strong>Patient Transport</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">792</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 792 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Building & Staff Support" data-search-function="Hospitality Offices, Lockers and Break Rooms">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Building & Staff Support</td>
+                        <td class="col-function"><strong>Hospitality Offices, Lockers and Break Rooms</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">7,920</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 7,920 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Materials Managament" data-search-function="Waste Management">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Materials Managament</td>
+                        <td class="col-function"><strong>Waste Management</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">5,500</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 5,500 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Building & Staff Support" data-search-function="Buildings & Grounds">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Building & Staff Support</td>
+                        <td class="col-function"><strong>Buildings & Grounds</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">1,650</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 1,650 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Materials Managament" data-search-function="Material Automation (AGV/AMR)">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Materials Managament</td>
+                        <td class="col-function"><strong>Material Automation (AGV/AMR)</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">2,200</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 2,200 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Materials Managament" data-search-function="Patient Care Equipment">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Materials Managament</td>
+                        <td class="col-function"><strong>Patient Care Equipment</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">2,970</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 2,970 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Materials Managament" data-search-function="Supply Chain (Supply Sto & Dist, Staff/Admin, Mail Room)">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Materials Managament</td>
+                        <td class="col-function"><strong>Supply Chain (Supply Sto & Dist, Staff/Admin, Mail Room)</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">13,200</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 13,200 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Building & Staff Support" data-search-function="Security & Emergency Preparedness">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Building & Staff Support</td>
+                        <td class="col-function"><strong>Security & Emergency Preparedness</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">2,750</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 2,750 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Building & Staff Support" data-search-function="Engineering & Shops">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Building & Staff Support</td>
+                        <td class="col-function"><strong>Engineering & Shops</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">16,500</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 16,500 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Materials Managament" data-search-function="Soiled Dock">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Materials Managament</td>
+                        <td class="col-function"><strong>Soiled Dock</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">2,640</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 2,640 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Materials Managament" data-search-function="Clean Dock + Receiving">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Materials Managament</td>
+                        <td class="col-function"><strong>Clean Dock + Receiving</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">7,150</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 7,150 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Materials Managament" data-search-function="   P Tube (addressed as Mechanical)">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Materials Managament</td>
+                        <td class="col-function"><strong>   P Tube (addressed as Mechanical)</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Building & Staff Support" data-search-function="MCIT  Storage and Support">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Building & Staff Support</td>
+                        <td class="col-function"><strong>MCIT  Storage and Support</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">3,850</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 3,850 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Building & Staff Support" data-search-function="Dietary Kitchen">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Building & Staff Support</td>
+                        <td class="col-function"><strong>Dietary Kitchen</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">19,800</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 19,800 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Building & Staff Support" data-search-function="   Clinical Engineering (Refer to D7 - Biomed above)">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Building & Staff Support</td>
+                        <td class="col-function"><strong>   Clinical Engineering (Refer to D7 - Biomed above)</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Materials Managament" data-search-function="EVS">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Materials Managament</td>
+                        <td class="col-function"><strong>EVS</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">6,600</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 6,600 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Materials Managament" data-search-function="Medical Gas Cylinder Storage">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Materials Managament</td>
+                        <td class="col-function"><strong>Medical Gas Cylinder Storage</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">1,100</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 1,100 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_3" data-search-dept="BUILDING SUPPORT" data-search-division="Materials Managament" data-search-function="Linen Services">
+                        <td class="col-dept">BUILDING SUPPORT</td>
+                        <td class="col-division">Materials Managament</td>
+                        <td class="col-function"><strong>Linen Services</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">3,850</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 3,850 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                <tr class="department-header" data-dept-id="dept_4" onclick="toggleDepartment('dept_4')" style="background: linear-gradient(90deg, #e1e1e1 0%, rgba(17, 24, 39, 0.8) 100%); cursor: pointer;">
+                    <td colspan="13" style="padding: 12px 16px; font-weight: 600; font-size: 1.1em; color: white; border: 4px solid #e1e1e1;">
+                        <span class="collapse-icon" id="icon_dept_4" style="display: inline-block; margin-right: 8px; transition: transform 0.3s ease;">▼</span>
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #e1e1e1; border-radius: 50%; margin-right: 8px;"></span>
+                        BUILDING SUPPORT (Non Departmental)
+                    </td>
+                </tr>
+            
+                    <tr class="status-no requirement  dept-row" data-dept="dept_4" data-search-dept="BUILDING SUPPORT (Non Departmental)" data-search-division="Building Support (Non Departmental)" data-search-function="Shaftway">
+                        <td class="col-dept">BUILDING SUPPORT (Non Departmental)</td>
+                        <td class="col-division">Building Support (Non Departmental)</td>
+                        <td class="col-function"><strong>Shaftway</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_4" data-search-dept="BUILDING SUPPORT (Non Departmental)" data-search-division="Building Support (Non Departmental)" data-search-function="Service Elevator">
+                        <td class="col-dept">BUILDING SUPPORT (Non Departmental)</td>
+                        <td class="col-division">Building Support (Non Departmental)</td>
+                        <td class="col-function"><strong>Service Elevator</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_4" data-search-dept="BUILDING SUPPORT (Non Departmental)" data-search-division="Building Support (Non Departmental)" data-search-function="CUP">
+                        <td class="col-dept">BUILDING SUPPORT (Non Departmental)</td>
+                        <td class="col-division">Building Support (Non Departmental)</td>
+                        <td class="col-function"><strong>CUP</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_4" data-search-dept="BUILDING SUPPORT (Non Departmental)" data-search-division="Building Support (Non Departmental)" data-search-function="IT Closet">
+                        <td class="col-dept">BUILDING SUPPORT (Non Departmental)</td>
+                        <td class="col-division">Building Support (Non Departmental)</td>
+                        <td class="col-function"><strong>IT Closet</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_4" data-search-dept="BUILDING SUPPORT (Non Departmental)" data-search-division="Building Support (Non Departmental)" data-search-function="Public Circulation">
+                        <td class="col-dept">BUILDING SUPPORT (Non Departmental)</td>
+                        <td class="col-division">Building Support (Non Departmental)</td>
+                        <td class="col-function"><strong>Public Circulation</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_4" data-search-dept="BUILDING SUPPORT (Non Departmental)" data-search-division="Building Support (Non Departmental)" data-search-function="Egress Stair">
+                        <td class="col-dept">BUILDING SUPPORT (Non Departmental)</td>
+                        <td class="col-division">Building Support (Non Departmental)</td>
+                        <td class="col-function"><strong>Egress Stair</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_4" data-search-dept="BUILDING SUPPORT (Non Departmental)" data-search-division="Building Support (Non Departmental)" data-search-function="BOH Circulation">
+                        <td class="col-dept">BUILDING SUPPORT (Non Departmental)</td>
+                        <td class="col-division">Building Support (Non Departmental)</td>
+                        <td class="col-function"><strong>BOH Circulation</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_4" data-search-dept="BUILDING SUPPORT (Non Departmental)" data-search-division="Building Support (Non Departmental)" data-search-function="Patient Transport Elevator">
+                        <td class="col-dept">BUILDING SUPPORT (Non Departmental)</td>
+                        <td class="col-division">Building Support (Non Departmental)</td>
+                        <td class="col-function"><strong>Patient Transport Elevator</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_4" data-search-dept="BUILDING SUPPORT (Non Departmental)" data-search-division="Building Support (Non Departmental)" data-search-function="Electrical Room">
+                        <td class="col-dept">BUILDING SUPPORT (Non Departmental)</td>
+                        <td class="col-division">Building Support (Non Departmental)</td>
+                        <td class="col-function"><strong>Electrical Room</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_4" data-search-dept="BUILDING SUPPORT (Non Departmental)" data-search-division="Building Support (Non Departmental)" data-search-function="Public Elevator">
+                        <td class="col-dept">BUILDING SUPPORT (Non Departmental)</td>
+                        <td class="col-division">Building Support (Non Departmental)</td>
+                        <td class="col-function"><strong>Public Elevator</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                <tr class="department-header" data-dept-id="dept_5" onclick="toggleDepartment('dept_5')" style="background: linear-gradient(90deg, #f5c859 0%, rgba(17, 24, 39, 0.8) 100%); cursor: pointer;">
+                    <td colspan="13" style="padding: 12px 16px; font-weight: 600; font-size: 1.1em; color: white; border: 4px solid #f5c859;">
+                        <span class="collapse-icon" id="icon_dept_5" style="display: inline-block; margin-right: 8px; transition: transform 0.3s ease;">▼</span>
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #f5c859; border-radius: 50%; margin-right: 8px;"></span>
+                        ADMINISTRATION & STAFF SUPPORT
+                    </td>
+                </tr>
+            
+                    <tr class="status-missing  dept-row" data-dept="dept_5" data-search-dept="ADMINISTRATION & STAFF SUPPORT" data-search-division="Departmental Offices" data-search-function="Anesthesiology Offices">
+                        <td class="col-dept">ADMINISTRATION & STAFF SUPPORT</td>
+                        <td class="col-division">Departmental Offices</td>
+                        <td class="col-function"><strong>Anesthesiology Offices</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">3,080</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 3,080 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_5" data-search-dept="ADMINISTRATION & STAFF SUPPORT" data-search-division="Departmental Offices" data-search-function="Radiology Offices">
+                        <td class="col-dept">ADMINISTRATION & STAFF SUPPORT</td>
+                        <td class="col-division">Departmental Offices</td>
+                        <td class="col-function"><strong>Radiology Offices</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_5" data-search-dept="ADMINISTRATION & STAFF SUPPORT" data-search-division="Hospital Operations and Staff Support" data-search-function="Faculty and Staff Resouces">
+                        <td class="col-dept">ADMINISTRATION & STAFF SUPPORT</td>
+                        <td class="col-division">Hospital Operations and Staff Support</td>
+                        <td class="col-function"><strong>Faculty and Staff Resouces</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">3,300</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 3,300 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_5" data-search-dept="ADMINISTRATION & STAFF SUPPORT" data-search-division="Hospital Operations and Staff Support" data-search-function="Hospital Operations">
+                        <td class="col-dept">ADMINISTRATION & STAFF SUPPORT</td>
+                        <td class="col-division">Hospital Operations and Staff Support</td>
+                        <td class="col-function"><strong>Hospital Operations</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">5,500</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 5,500 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_5" data-search-dept="ADMINISTRATION & STAFF SUPPORT" data-search-division="Hospital Operations and Staff Support" data-search-function="Conference">
+                        <td class="col-dept">ADMINISTRATION & STAFF SUPPORT</td>
+                        <td class="col-division">Hospital Operations and Staff Support</td>
+                        <td class="col-function"><strong>Conference</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">11,000</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 11,000 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_5" data-search-dept="ADMINISTRATION & STAFF SUPPORT" data-search-division="Hospital Operations and Staff Support" data-search-function="Extended Clinical Team">
+                        <td class="col-dept">ADMINISTRATION & STAFF SUPPORT</td>
+                        <td class="col-division">Hospital Operations and Staff Support</td>
+                        <td class="col-function"><strong>Extended Clinical Team</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">6,237</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 6,237 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_5" data-search-dept="ADMINISTRATION & STAFF SUPPORT" data-search-division="Hospital Operations and Staff Support" data-search-function="Training and Simulation">
+                        <td class="col-dept">ADMINISTRATION & STAFF SUPPORT</td>
+                        <td class="col-division">Hospital Operations and Staff Support</td>
+                        <td class="col-function"><strong>Training and Simulation</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">3,630</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 3,630 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_5" data-search-dept="ADMINISTRATION & STAFF SUPPORT" data-search-division="Departmental Offices" data-search-function="Residents and Fellows">
+                        <td class="col-dept">ADMINISTRATION & STAFF SUPPORT</td>
+                        <td class="col-division">Departmental Offices</td>
+                        <td class="col-function"><strong>Residents and Fellows</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">2,200</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 2,200 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_5" data-search-dept="ADMINISTRATION & STAFF SUPPORT" data-search-division="Hospital Operations and Staff Support" data-search-function="Nursing Administration">
+                        <td class="col-dept">ADMINISTRATION & STAFF SUPPORT</td>
+                        <td class="col-division">Hospital Operations and Staff Support</td>
+                        <td class="col-function"><strong>Nursing Administration</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">3,850</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 3,850 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_5" data-search-dept="ADMINISTRATION & STAFF SUPPORT" data-search-division="Hospital Operations and Staff Support" data-search-function="Visitor Services Offices">
+                        <td class="col-dept">ADMINISTRATION & STAFF SUPPORT</td>
+                        <td class="col-division">Hospital Operations and Staff Support</td>
+                        <td class="col-function"><strong>Visitor Services Offices</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">3,300</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 3,300 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_5" data-search-dept="ADMINISTRATION & STAFF SUPPORT" data-search-division="Departmental Offices" data-search-function="Surgical, Interventional, and Perioperative Services">
+                        <td class="col-dept">ADMINISTRATION & STAFF SUPPORT</td>
+                        <td class="col-division">Departmental Offices</td>
+                        <td class="col-function"><strong>Surgical, Interventional, and Perioperative Services</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">2,530</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 2,530 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                <tr class="department-header" data-dept-id="dept_6" onclick="toggleDepartment('dept_6')" style="background: linear-gradient(90deg, #a9d4e9 0%, rgba(17, 24, 39, 0.8) 100%); cursor: pointer;">
+                    <td colspan="13" style="padding: 12px 16px; font-weight: 600; font-size: 1.1em; color: white; border: 4px solid #a9d4e9;">
+                        <span class="collapse-icon" id="icon_dept_6" style="display: inline-block; margin-right: 8px; transition: transform 0.3s ease;">▼</span>
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #a9d4e9; border-radius: 50%; margin-right: 8px;"></span>
+                        INPATIENT CARE UNIT
+                    </td>
+                </tr>
+            
+                    <tr class="status-missing  dept-row" data-dept="dept_6" data-search-dept="INPATIENT CARE UNIT" data-search-division="Licensed Beds - Mother/Baby + Peds" data-search-function="PICU">
+                        <td class="col-dept">INPATIENT CARE UNIT</td>
+                        <td class="col-division">Licensed Beds - Mother/Baby + Peds</td>
+                        <td class="col-function"><strong>PICU</strong></td>
+                        <td class="col-count">8</td>
+                        <td class="col-area">8,052</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta negative">Missing 8</td>
+                        <td class="col-delta negative">Missing 8,052 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_6" data-search-dept="INPATIENT CARE UNIT" data-search-division="Unlicensed Beds" data-search-function="Patient Units_Observation">
+                        <td class="col-dept">INPATIENT CARE UNIT</td>
+                        <td class="col-division">Unlicensed Beds</td>
+                        <td class="col-function"><strong>Patient Units_Observation</strong></td>
+                        <td class="col-count">16</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta alert-count-delta">Missing 16</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing alert-high-difference dept-row" data-dept="dept_6" data-search-dept="INPATIENT CARE UNIT" data-search-division="Licensed Beds - Mother/Baby + Peds" data-search-function="NICU">
+                        <td class="col-dept">INPATIENT CARE UNIT</td>
+                        <td class="col-division">Licensed Beds - Mother/Baby + Peds</td>
+                        <td class="col-function"><strong>NICU</strong></td>
+                        <td class="col-count">30</td>
+                        <td class="col-area">30,195</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta alert-count-delta">Missing 30</td>
+                        <td class="col-delta negative">Missing 30,195 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing alert-high-difference dept-row" data-dept="dept_6" data-search-dept="INPATIENT CARE UNIT" data-search-division="Licensed Beds - Mother/Baby + Peds" data-search-function="Ante partum / Post Partum">
+                        <td class="col-dept">INPATIENT CARE UNIT</td>
+                        <td class="col-division">Licensed Beds - Mother/Baby + Peds</td>
+                        <td class="col-function"><strong>Ante partum / Post Partum</strong></td>
+                        <td class="col-count">42</td>
+                        <td class="col-area">42,273</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta alert-count-delta">Missing 42</td>
+                        <td class="col-delta negative">Missing 42,273 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_6" data-search-dept="INPATIENT CARE UNIT" data-search-division="Licensed Beds" data-search-function="Patient Units_Acute Rehab">
+                        <td class="col-dept">INPATIENT CARE UNIT</td>
+                        <td class="col-division">Licensed Beds</td>
+                        <td class="col-function"><strong>Patient Units_Acute Rehab</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing alert-high-difference dept-row" data-dept="dept_6" data-search-dept="INPATIENT CARE UNIT" data-search-division="Licensed Beds" data-search-function="Patient Units_Med Surg">
+                        <td class="col-dept">INPATIENT CARE UNIT</td>
+                        <td class="col-division">Licensed Beds</td>
+                        <td class="col-function"><strong>Patient Units_Med Surg</strong></td>
+                        <td class="col-count">144</td>
+                        <td class="col-area">144,936</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta alert-count-delta">Missing 144</td>
+                        <td class="col-delta negative">Missing 144,936 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-partial  dept-row" data-dept="dept_6" data-search-dept="INPATIENT CARE UNIT" data-search-division="Licensed Beds" data-search-function="Patient Units_ICU">
+                        <td class="col-dept">INPATIENT CARE UNIT</td>
+                        <td class="col-division">Licensed Beds</td>
+                        <td class="col-function"><strong>Patient Units_ICU</strong></td>
+                        <td class="col-count">78</td>
+                        <td class="col-area">78,507</td>
+                        <td class="col-level">Level 12  Patient Rooms</td>
+                        <td class="col-count">1</td>
+                        <td class="col-area">91,847</td>
+                        <td class="col-delta alert-count-delta">Missing 77</td>
+                        <td class="col-delta positive">Exceeding 13,340 SF</td>
+                        <td class="col-delta positive">+17.0%</td>
+                        <td class="col-status"><span class="status-badge partial">△ Partial</span></td>
+                        <td class="col-quality"><span class="quality-badge high">High</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_6" data-search-dept="INPATIENT CARE UNIT" data-search-division="Unlicensed Beds" data-search-function="(Refer to A - EMERGENCY DEPARTMENT above)">
+                        <td class="col-dept">INPATIENT CARE UNIT</td>
+                        <td class="col-division">Unlicensed Beds</td>
+                        <td class="col-function"><strong>(Refer to A - EMERGENCY DEPARTMENT above)</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing alert-high-difference dept-row" data-dept="dept_6" data-search-dept="INPATIENT CARE UNIT" data-search-division="Licensed Beds - Mother/Baby + Peds" data-search-function="Pediatrics">
+                        <td class="col-dept">INPATIENT CARE UNIT</td>
+                        <td class="col-division">Licensed Beds - Mother/Baby + Peds</td>
+                        <td class="col-function"><strong>Pediatrics</strong></td>
+                        <td class="col-count">20</td>
+                        <td class="col-area">20,130</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta alert-count-delta">Missing 20</td>
+                        <td class="col-delta negative">Missing 20,130 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing alert-high-difference dept-row" data-dept="dept_6" data-search-dept="INPATIENT CARE UNIT" data-search-division="Licensed Beds" data-search-function="Patient Units_Universal Med Surg">
+                        <td class="col-dept">INPATIENT CARE UNIT</td>
+                        <td class="col-division">Licensed Beds</td>
+                        <td class="col-function"><strong>Patient Units_Universal Med Surg</strong></td>
+                        <td class="col-count">252</td>
+                        <td class="col-area">253,638</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta alert-count-delta">Missing 252</td>
+                        <td class="col-delta negative">Missing 253,638 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                <tr class="department-header" data-dept-id="dept_7" onclick="toggleDepartment('dept_7')" style="background: linear-gradient(90deg, #fcf19c 0%, rgba(17, 24, 39, 0.8) 100%); cursor: pointer;">
+                    <td colspan="13" style="padding: 12px 16px; font-weight: 600; font-size: 1.1em; color: white; border: 4px solid #fcf19c;">
+                        <span class="collapse-icon" id="icon_dept_7" style="display: inline-block; margin-right: 8px; transition: transform 0.3s ease;">▼</span>
+                        <span style="display: inline-block; width: 12px; height: 12px; background: #fcf19c; border-radius: 50%; margin-right: 8px;"></span>
+                        PUBLIC SUPPORT
+                    </td>
+                </tr>
+            
+                    <tr class="status-partial  dept-row" data-dept="dept_7" data-search-dept="PUBLIC SUPPORT" data-search-division="Café & Retail" data-search-function="Lobby Café">
+                        <td class="col-dept">PUBLIC SUPPORT</td>
+                        <td class="col-division">Café & Retail</td>
+                        <td class="col-function"><strong>Lobby Café</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">1,430</td>
+                        <td class="col-level">Level 1  Lobby / ED / Clinical / Support</td>
+                        <td class="col-count">1</td>
+                        <td class="col-area">1,611</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta positive">Exceeding 181 SF</td>
+                        <td class="col-delta positive">+12.7%</td>
+                        <td class="col-status"><span class="status-badge partial">△ Partial</span></td>
+                        <td class="col-quality"><span class="quality-badge high">High</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_7" data-search-dept="PUBLIC SUPPORT" data-search-division="Lobby" data-search-function="Staff Entry">
+                        <td class="col-dept">PUBLIC SUPPORT</td>
+                        <td class="col-division">Lobby</td>
+                        <td class="col-function"><strong>Staff Entry</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">3,850</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 3,850 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-no requirement  dept-row" data-dept="dept_7" data-search-dept="PUBLIC SUPPORT" data-search-division="Café & Retail" data-search-function="Micro Market">
+                        <td class="col-dept">PUBLIC SUPPORT</td>
+                        <td class="col-division">Café & Retail</td>
+                        <td class="col-function"><strong>Micro Market</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">N/A</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta neutral">N/A</td>
+                        <td class="col-status"><span class="status-badge no requirement">? No Requirement</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-partial  dept-row" data-dept="dept_7" data-search-dept="PUBLIC SUPPORT" data-search-division="Café & Retail" data-search-function="Cafeteria">
+                        <td class="col-dept">PUBLIC SUPPORT</td>
+                        <td class="col-division">Café & Retail</td>
+                        <td class="col-function"><strong>Cafeteria</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">16,500</td>
+                        <td class="col-level">Level 1  Lobby / ED / Clinical / Support</td>
+                        <td class="col-count">1</td>
+                        <td class="col-area">15,505</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 995 SF</td>
+                        <td class="col-delta negative">-6.0%</td>
+                        <td class="col-status"><span class="status-badge partial">△ Partial</span></td>
+                        <td class="col-quality"><span class="quality-badge high">High</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_7" data-search-dept="PUBLIC SUPPORT" data-search-division="Public Resources" data-search-function="Public Education">
+                        <td class="col-dept">PUBLIC SUPPORT</td>
+                        <td class="col-division">Public Resources</td>
+                        <td class="col-function"><strong>Public Education</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">3,025</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 3,025 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-partial  dept-row" data-dept="dept_7" data-search-dept="PUBLIC SUPPORT" data-search-division="Lobby" data-search-function="Main Lobby">
+                        <td class="col-dept">PUBLIC SUPPORT</td>
+                        <td class="col-division">Lobby</td>
+                        <td class="col-function"><strong>Main Lobby</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">16,500</td>
+                        <td class="col-level">Level 1  Lobby / ED / Clinical / Support</td>
+                        <td class="col-count">1</td>
+                        <td class="col-area">33,262</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta positive">Exceeding 16,762 SF</td>
+                        <td class="col-delta alert-area-delta">+101.6%</td>
+                        <td class="col-status"><span class="status-badge partial">△ Partial</span></td>
+                        <td class="col-quality"><span class="quality-badge high">High</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_7" data-search-dept="PUBLIC SUPPORT" data-search-division="Café & Retail" data-search-function="Gift Shop">
+                        <td class="col-dept">PUBLIC SUPPORT</td>
+                        <td class="col-division">Café & Retail</td>
+                        <td class="col-function"><strong>Gift Shop</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">858</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 858 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-missing  dept-row" data-dept="dept_7" data-search-dept="PUBLIC SUPPORT" data-search-division="Public Resources" data-search-function="Patient and Family Resources">
+                        <td class="col-dept">PUBLIC SUPPORT</td>
+                        <td class="col-division">Public Resources</td>
+                        <td class="col-function"><strong>Patient and Family Resources</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">2,486</td>
+                        <td class="col-level">No Areas</td>
+                        <td class="col-count">0</td>
+                        <td class="col-area">0</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 2,486 SF</td>
+                        <td class="col-delta alert-area-delta">-100.0%</td>
+                        <td class="col-status"><span class="status-badge missing">✕ Missing</span></td>
+                        <td class="col-quality"><span class="quality-badge no match">No Match</span></td>
+                    </tr>
+                
+                    <tr class="status-partial  dept-row" data-dept="dept_7" data-search-dept="PUBLIC SUPPORT" data-search-division="Lobby" data-search-function="Mother/Baby Lobby">
+                        <td class="col-dept">PUBLIC SUPPORT</td>
+                        <td class="col-division">Lobby</td>
+                        <td class="col-function"><strong>Mother/Baby Lobby</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">5,500</td>
+                        <td class="col-level">Level 1  Lobby / ED / Clinical / Support</td>
+                        <td class="col-count">1</td>
+                        <td class="col-area">1,267</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta negative">Missing 4,233 SF</td>
+                        <td class="col-delta alert-area-delta">-77.0%</td>
+                        <td class="col-status"><span class="status-badge partial">△ Partial</span></td>
+                        <td class="col-quality"><span class="quality-badge high">High</span></td>
+                    </tr>
+                
+                    <tr class="status-partial  dept-row" data-dept="dept_7" data-search-dept="PUBLIC SUPPORT" data-search-division="Public Resources" data-search-function="Meditation">
+                        <td class="col-dept">PUBLIC SUPPORT</td>
+                        <td class="col-division">Public Resources</td>
+                        <td class="col-function"><strong>Meditation</strong></td>
+                        <td class="col-count">Any</td>
+                        <td class="col-area">1,133</td>
+                        <td class="col-level">Level 1  Lobby / ED / Clinical / Support</td>
+                        <td class="col-count">1</td>
+                        <td class="col-area">2,488</td>
+                        <td class="col-delta neutral">N/A (No Req.)</td>
+                        <td class="col-delta positive">Exceeding 1,355 SF</td>
+                        <td class="col-delta alert-area-delta">+119.6%</td>
+                        <td class="col-status"><span class="status-badge partial">△ Partial</span></td>
+                        <td class="col-quality"><span class="quality-badge high">High</span></td>
+                    </tr>
+                
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
         
         <div class="unmatched-section">
             <h3>○ Unmatched Areas</h3>
@@ -4303,7 +5895,7 @@
         </div>
         
         <footer class="report-footer">
-            <p>Report generated by Monitor Area System | 2025-10-13 18:49:51</p>
+            <p>Report generated by Monitor Area System | 2025-10-13 18:13:23</p>
             <p style="margin-top: 10px; font-size: 0.9em; color: #9ca3af;">
                 🦆 Powered by <strong style="color: #60a5fa;">EnneadTab</strong> | 
                 For feature requests, contact <strong style="color: #60a5fa;">Sen Zhang</strong>
@@ -4345,6 +5937,10 @@
             <span class="minimap-icon">🌳</span>
             <span>TreeView</span>
         </div>
+        <div class="minimap-item" onclick="scrollToSection('comparison-section')" data-section="comparison-section">
+            <span class="minimap-icon">📋</span>
+            <span>TableView</span>
+        </div>
         <div class="minimap-item" onclick="scrollToSection('unmatched-section')" data-section="unmatched-section">
             <span class="minimap-icon">⚠️</span>
             <span>Unmatched Areas</span>
@@ -4359,6 +5955,7 @@
         </div>
     </nav>
     
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
     <script>
         
         // Load Chart.js and Three.js from CDN
@@ -4383,6 +5980,9 @@
         
         function initializeComponents() {
             console.log('Initializing components...');
+            
+            // Initialize fuzzy search
+            initializeFuzzySearch();
             
             // Initialize context menu
             initializeContextMenu();
@@ -5434,6 +7034,218 @@
             deptHeader.classList.toggle('collapsed');
         }
         
+        // Fuzzy search filter initialization
+        let fuseInstance = null;
+        let searchData = [];
+        
+        function initializeFuzzySearch() {
+            console.log('Initializing fuzzy search filter...');
+            
+            // Collect all searchable items from table rows
+            const rows = document.querySelectorAll('.dept-row');
+            const rowData = Array.from(rows).map(row => ({
+                element: row,
+                type: 'table',
+                department: row.getAttribute('data-search-dept') || '',
+                division: row.getAttribute('data-search-division') || '',
+                function: row.getAttribute('data-search-function') || ''
+            }));
+            
+            // Collect all searchable items from tree nodes
+            const treeNodes = document.querySelectorAll('.tree-node');
+            const treeData = Array.from(treeNodes).map(node => ({
+                element: node,
+                type: 'tree',
+                department: node.getAttribute('data-search-dept') || '',
+                division: node.getAttribute('data-search-division') || '',
+                function: node.getAttribute('data-search-function') || ''
+            }));
+            
+            // Combine both data sources
+            searchData = rowData.concat(treeData);
+            
+            console.log('Search data collected:', searchData.length, 'items (', rowData.length, 'table rows +', treeData.length, 'tree nodes)');
+            
+            // Initialize Fuse.js with fuzzy search options
+            const fuseOptions = {
+                keys: [
+                    { name: 'department', weight: 0.4 },
+                    { name: 'division', weight: 0.3 },
+                    { name: 'function', weight: 0.3 }
+                ],
+                threshold: 0.4, // More lenient matching (0.0 = exact, 1.0 = match anything)
+                distance: 100, // Maximum distance for matching
+                ignoreLocation: true, // Don't care about position of match
+                useExtendedSearch: false,
+                minMatchCharLength: 1
+            };
+            
+            fuseInstance = new Fuse(searchData, fuseOptions);
+            
+            // Setup search input event
+            const searchInput = document.getElementById('fuzzySearch');
+            const searchStatus = document.getElementById('searchStatus');
+            const clearBtn = document.getElementById('clearSearch');
+            
+            if (searchInput && searchStatus) {
+                searchInput.addEventListener('input', function(e) {
+                    const query = e.target.value.trim();
+                    
+                    if (query.length < 1) {
+                        // Clear filter when search is empty
+                        clearSearchFilter();
+                        return;
+                    }
+                    
+                    // Perform fuzzy search
+                    const results = fuseInstance.search(query);
+                    const matchingElements = new Set(results.map(r => r.item.element));
+                    
+                    // Filter rows - hide non-matching, show matching
+                    let visibleCount = 0;
+                    searchData.forEach(item => {
+                        if (matchingElements.has(item.element)) {
+                            item.element.classList.remove('search-hidden');
+                            visibleCount++;
+                        } else {
+                            item.element.classList.add('search-hidden');
+                        }
+                    });
+                    
+                    // Update department header visibility (for TableView)
+                    updateDepartmentHeadersVisibility();
+                    
+                    // Update tree node visibility (for TreeView)
+                    updateTreeNodeVisibility();
+                    
+                    // Show clear button
+                    clearBtn.style.display = 'flex';
+                    
+                    // Update status
+                    if (visibleCount === 0) {
+                        searchStatus.innerHTML = '<span class="count">No matches found</span> for "' + query + '"';
+                    } else {
+                        searchStatus.innerHTML = 'Showing <span class="count">' + visibleCount + '</span> matching item(s) for "' + query + '"';
+                    }
+                    searchStatus.classList.add('active');
+                });
+            }
+        }
+        
+        // Update department header visibility based on visible rows
+        function updateDepartmentHeadersVisibility() {
+            const allDeptHeaders = document.querySelectorAll('.department-header');
+            
+            allDeptHeaders.forEach(header => {
+                const deptId = header.getAttribute('data-dept-id');
+                const deptRows = document.querySelectorAll('.dept-row[data-dept="' + deptId + '"]');
+                
+                // Check if any rows in this department are visible (not search-hidden)
+                let hasVisibleRows = false;
+                deptRows.forEach(row => {
+                    if (!row.classList.contains('search-hidden')) {
+                        hasVisibleRows = true;
+                    }
+                });
+                
+                // Show/hide department header based on visible rows
+                if (hasVisibleRows) {
+                    header.classList.remove('search-hidden');
+                    // Auto-expand department to show filtered results
+                    if (header.classList.contains('collapsed')) {
+                        deptRows.forEach(row => row.classList.remove('collapsed'));
+                        header.classList.remove('collapsed');
+                    }
+                } else {
+                    header.classList.add('search-hidden');
+                }
+            });
+        }
+        
+        // Update tree node visibility based on search results
+        function updateTreeNodeVisibility() {
+            // Get all department-level tree nodes
+            const deptNodes = document.querySelectorAll('.tree-node-dept');
+            
+            deptNodes.forEach(deptNode => {
+                // Check if department node itself is visible or has any visible children
+                const allDescendants = deptNode.querySelectorAll('.tree-node-division, .tree-node-room');
+                let hasVisibleDescendants = false;
+                
+                // Check if any descendant is visible
+                allDescendants.forEach(desc => {
+                    if (!desc.classList.contains('search-hidden')) {
+                        hasVisibleDescendants = true;
+                    }
+                });
+                
+                // Show/hide department based on itself or visible descendants
+                if (!deptNode.classList.contains('search-hidden') || hasVisibleDescendants) {
+                    // Auto-expand department to show filtered results
+                    const childrenContainer = deptNode.querySelector('.tree-node-children');
+                    if (childrenContainer && childrenContainer.classList.contains('collapsed')) {
+                        const deptId = deptNode.getAttribute('data-node-id');
+                        toggleTreeNode(deptId);
+                    }
+                }
+                
+                // Handle division nodes - auto-expand if they have visible room children
+                const divNodes = deptNode.querySelectorAll('.tree-node-division');
+                divNodes.forEach(divNode => {
+                    const roomChildren = divNode.querySelectorAll('.tree-node-room');
+                    let hasVisibleRooms = false;
+                    
+                    roomChildren.forEach(room => {
+                        if (!room.classList.contains('search-hidden')) {
+                            hasVisibleRooms = true;
+                        }
+                    });
+                    
+                    // Auto-expand division if it has visible rooms
+                    if (hasVisibleRooms || !divNode.classList.contains('search-hidden')) {
+                        const childrenContainer = divNode.querySelector('.tree-node-children');
+                        if (childrenContainer && childrenContainer.classList.contains('collapsed')) {
+                            const divId = divNode.getAttribute('data-node-id');
+                            toggleTreeNode(divId);
+                        }
+                    }
+                });
+            });
+        }
+        
+        // Clear search filter
+        function clearSearchFilter() {
+            // Remove search-hidden class from all table rows
+            const allRows = document.querySelectorAll('.dept-row');
+            allRows.forEach(row => row.classList.remove('search-hidden'));
+            
+            // Remove search-hidden class from all table headers
+            const allHeaders = document.querySelectorAll('.department-header');
+            allHeaders.forEach(header => header.classList.remove('search-hidden'));
+            
+            // Remove search-hidden class from all tree nodes
+            const allTreeNodes = document.querySelectorAll('.tree-node');
+            allTreeNodes.forEach(node => node.classList.remove('search-hidden'));
+            
+            // Clear search input
+            const searchInput = document.getElementById('fuzzySearch');
+            if (searchInput) {
+                searchInput.value = '';
+            }
+            
+            // Hide clear button
+            const clearBtn = document.getElementById('clearSearch');
+            if (clearBtn) {
+                clearBtn.style.display = 'none';
+            }
+            
+            // Hide status
+            const searchStatus = document.getElementById('searchStatus');
+            if (searchStatus) {
+                searchStatus.classList.remove('active');
+            }
+        }
+        
         // Context Menu Functions
         function initializeContextMenu() {
             const contextMenu = document.getElementById('contextMenu');
@@ -5541,12 +7353,12 @@
             });
         }
         
-        // Unified functions to control TreeView
+        // Unified functions to control both TreeView and TableView
         function expandAllViews() {
             // Expand TreeView nodes
             expandAllTreeNodes();
             
-            // Also expand department sections (for backward compatibility)
+            // Expand TableView departments
             expandAllDepartments();
             
             // Hide context menu
@@ -5559,7 +7371,7 @@
             // Collapse TreeView nodes
             collapseAllTreeNodes();
             
-            // Also collapse department sections (for backward compatibility)
+            // Collapse TableView departments
             collapseAllDepartments();
             
             // Hide context menu
@@ -5647,30 +7459,22 @@
             }
             
             if (section) {
-                console.log('Section found:', section, 'offsetTop:', section.offsetTop);
+                console.log('Section found:', section);
                 var headerOffset = 80; // Offset for fixed elements
-                var targetPosition = section.offsetTop - headerOffset;
+                var elementPosition = section.getBoundingClientRect().top;
+                var offsetPosition = elementPosition + window.scrollY - headerOffset;
                 
-                console.log('Scrolling smoothly to position:', targetPosition);
+                console.log('Scrolling to position:', offsetPosition);
                 
-                // Use smooth scroll behavior
-                try {
-                    window.scrollTo({
-                        top: targetPosition,
-                        left: 0,
-                        behavior: 'smooth'
-                    });
-                } catch (e) {
-                    // Fallback for older browsers - instant scroll
-                    console.log('Smooth scroll not supported, using fallback');
-                    document.documentElement.scrollTop = targetPosition;
-                    document.body.scrollTop = targetPosition;
-                }
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
                 
-                // Update minimap state after animation completes
+                // Update minimap active state after scroll
                 setTimeout(function() {
                     updateMinimapActiveState();
-                }, 800);
+                }, 500);
             } else {
                 console.error('Section not found:', sectionClass);
             }
@@ -5682,6 +7486,7 @@
                 'report-header',
                 'department-summary-section',
                 'tree-view-section',
+                'comparison-section',
                 'unmatched-section',
                 'summary-section',
                 'status-summary'
@@ -5796,6 +7601,49 @@
             document.addEventListener('DOMContentLoaded', initializeLogoParallax);
         } else {
             initializeLogoParallax();
+        }
+        
+        // ========== Search Bar Smooth Follow Effect ==========
+        
+        function initializeSearchBarFollow() {
+            var searchBar = document.querySelector('.search-bar-container');
+            if (!searchBar) {
+                console.log('Search bar element not found');
+                return;
+            }
+            
+            var targetY = 0;
+            var currentY = 0;
+            var delay = 0.08; // Delay factor for parallax effect (0.08 = slower follow than logo)
+            
+            // Update target position on scroll
+            window.addEventListener('scroll', function() {
+                targetY = window.scrollY * delay;
+            });
+            
+            // Smooth animation loop
+            function animateSearchBar() {
+                // Lerp (linear interpolation) for smooth delayed movement
+                currentY += (targetY - currentY) * 0.12;
+                
+                // Apply transform - move upward as user scrolls down
+                searchBar.style.transform = 'translateY(-' + currentY + 'px)';
+                
+                // Continue animation
+                requestAnimationFrame(animateSearchBar);
+            }
+            
+            // Start animation
+            animateSearchBar();
+            
+            console.log('Search bar smooth follow effect initialized');
+        }
+        
+        // Initialize search bar follow after DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeSearchBarFollow);
+        } else {
+            initializeSearchBarFollow();
         }
         
         // Tree View Functions

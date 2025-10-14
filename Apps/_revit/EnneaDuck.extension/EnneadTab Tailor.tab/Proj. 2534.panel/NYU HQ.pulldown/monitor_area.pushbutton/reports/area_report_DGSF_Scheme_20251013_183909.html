@@ -40,18 +40,12 @@
         
         .container {
             max-width: 95vw;
-            width: 100%;
+            min-width: 1200px;
             margin: 0 auto;
             padding: 24px;
-            padding-bottom: 150px;
+            padding-bottom: 150px; /* Add space for fixed search bar */
             padding-right: 260px; /* Add space for minimap navigation */
             animation: fadeInUp 0.8s ease-out;
-        }
-        
-        @media (min-width: 1200px) {
-            .container {
-                min-width: 1200px;
-            }
         }
         
         @keyframes fadeInUp {
@@ -429,21 +423,9 @@
         
         .summary-cards, .scheme-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
             margin-bottom: 20px;
-        }
-        
-        @media (min-width: 1400px) {
-            .summary-cards, .scheme-cards {
-                grid-template-columns: repeat(5, 1fr);
-            }
-        }
-        
-        @media (min-width: 1024px) and (max-width: 1399px) {
-            .summary-cards, .scheme-cards {
-                grid-template-columns: repeat(4, 1fr);
-            }
         }
         
         .summary-cards .card:nth-child(1) { animation-delay: 0.1s; }
@@ -534,20 +516,8 @@
         
         .status-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 20px;
-        }
-        
-        @media (min-width: 1400px) {
-            .status-cards {
-                grid-template-columns: repeat(4, 1fr);
-            }
-        }
-        
-        @media (min-width: 1024px) and (max-width: 1399px) {
-            .status-cards {
-                grid-template-columns: repeat(3, 1fr);
-            }
         }
         
         .status-card {
@@ -1130,53 +1100,10 @@
             border: 1px solid #1f2937;
         }
         
-        @media (max-width: 1024px) {
-            /* Stack charts vertically on tablets and smaller */
-            .charts-section {
-                grid-template-columns: 1fr !important;
-            }
-            
-            .minimap-nav {
-                display: none !important;
-            }
-            
-            .container {
-                padding-right: 24px !important;
-            }
-        }
-        
         @media (max-width: 768px) {
             .container {
                 padding: 15px 10px;
-                padding-right: 10px !important; /* Remove minimap spacing on mobile */
-                padding-bottom: 100px !important;
-            }
-            
-            /* Make department summary more compact */
-            .department-summary-container {
-                padding: 0 !important;
-            }
-            
-            .chart-card {
-                padding: 16px !important;
-            }
-            
-            .chart-card h3 {
-                font-size: 14px !important;
-            }
-            
-            canvas {
-                max-height: 300px !important;
-            }
-            
-            /* Department by level table */
-            .level-dept-table {
-                font-size: 0.85rem !important;
-            }
-            
-            .dept-badge {
-                font-size: 0.75rem !important;
-                padding: 4px 8px !important;
+                padding-right: 10px; /* Remove minimap spacing on mobile */
             }
             
             .comparison-table, .unmatched-table {
@@ -1197,22 +1124,6 @@
             .col-area { width: 12%; }
             .col-delta { width: 15%; }
             .col-status { width: 6%; }
-            
-            /* Summary cards - stack vertically */
-            .summary-cards {
-                grid-template-columns: 1fr !important;
-            }
-            
-            /* Tree view adjustments */
-            .tree-node-header {
-                flex-direction: column;
-                align-items: flex-start !important;
-            }
-            
-            .tree-node-metrics {
-                width: 100%;
-                margin-top: 8px;
-            }
         }
         
         @media (max-width: 480px) {
@@ -1773,7 +1684,7 @@
         <header class="report-header">
             <h1>🏥 EnneadTab - Excel Area Requirements vs Revit Actual Areas Report</h1>
             <div class="report-info">
-                <p><strong>Generated:</strong> 2025-10-13 18:49:51</p>
+                <p><strong>Generated:</strong> 2025-10-13 18:39:09</p>
                 <p><strong>Project:</strong> NYU HQ - Monitor Area System</p>
                 <p><strong>Area Scheme:</strong> DGSF Scheme</p>
             </div>
@@ -4303,7 +4214,7 @@
         </div>
         
         <footer class="report-footer">
-            <p>Report generated by Monitor Area System | 2025-10-13 18:49:51</p>
+            <p>Report generated by Monitor Area System | 2025-10-13 18:39:09</p>
             <p style="margin-top: 10px; font-size: 0.9em; color: #9ca3af;">
                 🦆 Powered by <strong style="color: #60a5fa;">EnneadTab</strong> | 
                 For feature requests, contact <strong style="color: #60a5fa;">Sen Zhang</strong>

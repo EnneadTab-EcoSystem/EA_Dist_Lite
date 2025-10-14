@@ -447,15 +447,9 @@ class HTMLReportGenerator:
     </style>
 </head>
 <body>
-    <!-- Floating Search Bar - Fixed at Bottom of Viewport -->
-    <div class="search-bar-container">
-        <div class="search-bar-content">
-            <div style="position: relative;">
-                <input type="text" id="fuzzySearch" placeholder="🔍 Filter by department, division, or function... (fuzzy search enabled)" />
-                <button id="clearSearch" class="clear-search-btn" style="display: none;" onclick="clearSearchFilter()">✕</button>
-            </div>
-            <div id="searchStatus" class="search-status"></div>
-        </div>
+    <!-- EnneadTab Logo - Lower Left with Parallax -->
+    <div class="ennead-logo-container" id="enneadLogo">
+        <img src="../icon_logo_dark_background.png" alt="EnneadTab Logo" class="ennead-logo">
     </div>
     
     <div class="container">
@@ -467,7 +461,7 @@ class HTMLReportGenerator:
                 <p><strong>Area Scheme:</strong> {scheme_name}</p>
             </div>
             <div class="visualization-note">
-                <p><strong>📊 Multiple Visualization Modes:</strong> This report presents the same data from different angles. Use <strong>TreeView</strong> for hierarchical navigation (Department → Division → Room) or <strong>TableView</strong> for detailed tabular analysis. Both views contain identical information organized for different analysis needs.</p>
+                <p><strong>📊 TreeView Visualization:</strong> This report presents data in a hierarchical tree structure for easy navigation through <strong>Department → Division → Room</strong> relationships. Expand and collapse nodes to explore the organizational structure and metrics at each level.</p>
             </div>
             
             <div class="legend-section">
@@ -511,34 +505,6 @@ class HTMLReportGenerator:
             </div>
             <div class="tree-container">
                 {tree_view_html}
-            </div>
-        </div>
-        
-        <div class="comparison-section">
-            <h2>📋 TableView</h2>
-            <div class="table-container">
-                <table class="comparison-table">
-                    <thead>
-                        <tr>
-                            <th>{col_department}</th>
-                            <th>{col_program_type}</th>
-                            <th>{col_area_detail}</th>
-                            <th>{col_target_count}</th>
-                            <th>{col_target_dgsf}</th>
-                            <th>Level Summary</th>
-                            <th>{col_actual_count}</th>
-                            <th>{col_actual_dgsf}</th>
-                            <th>{col_count_delta}</th>
-                            <th>{col_dgsf_delta}</th>
-                            <th>{col_dgsf_percentage}</th>
-                            <th>{col_status}</th>
-                            <th>{col_match_quality}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {table_rows}
-                    </tbody>
-                </table>
             </div>
         </div>
         
@@ -656,10 +622,6 @@ class HTMLReportGenerator:
             <span class="minimap-icon">🌳</span>
             <span>TreeView</span>
         </div>
-        <div class="minimap-item" onclick="scrollToSection('comparison-section')" data-section="comparison-section">
-            <span class="minimap-icon">📋</span>
-            <span>TableView</span>
-        </div>
         <div class="minimap-item" onclick="scrollToSection('unmatched-section')" data-section="unmatched-section">
             <span class="minimap-icon">⚠️</span>
             <span>Unmatched Areas</span>
@@ -674,7 +636,6 @@ class HTMLReportGenerator:
         </div>
     </nav>
     
-    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
     <script>
         {javascript}
     </script>
@@ -1174,7 +1135,7 @@ class HTMLReportGenerator:
             
             # Department node
             html_parts.append("""
-            <div class="tree-node tree-node-dept" data-node-id="{dept_id}">
+            <div class="tree-node tree-node-dept" data-node-id="{dept_id}" data-search-dept="{dept_name}" data-search-division="" data-search-function="">
                 <div class="tree-node-header" onclick="toggleTreeNode('{dept_id}')" style="border: 4px solid {dept_color};">
                     <span class="tree-toggle-icon" id="tree_icon_{dept_id}">▼</span>
                     <span class="tree-color-dot" style="background: {dept_color};"></span>
@@ -1216,7 +1177,7 @@ class HTMLReportGenerator:
                 div_dgsf_percentage = (div_dgsf_delta / div_metrics['target_dgsf'] * 100) if div_metrics['target_dgsf'] > 0 else 0
                 
                 html_parts.append("""
-                <div class="tree-node tree-node-division" data-node-id="{div_id}">
+                <div class="tree-node tree-node-division" data-node-id="{div_id}" data-search-dept="{dept_name}" data-search-division="{division_name}" data-search-function="">
                     <div class="tree-node-header" onclick="toggleTreeNode('{div_id}')" style="border: 3px solid {div_color};">
                         <span class="tree-toggle-icon" id="tree_icon_{div_id}">▼</span>
                         <span class="tree-color-dot" style="background: {div_color};"></span>
@@ -1232,6 +1193,7 @@ class HTMLReportGenerator:
                     <div class="tree-node-children" id="tree_children_{div_id}">
                 """.format(
                     div_id=div_id,
+                    dept_name=dept_name,
                     div_color=div_color,
                     division_name=division_name,
                     target_count=int(div_metrics['target_count']),
@@ -1291,7 +1253,7 @@ class HTMLReportGenerator:
                     room_percentage_class = "positive" if room_dgsf_percentage >= 0 else "negative"
                     
                     html_parts.append("""
-                    <div class="tree-node tree-node-room">
+                    <div class="tree-node tree-node-room" data-search-dept="{dept_name}" data-search-division="{division_name}" data-search-function="{room_name}">
                         <div class="tree-node-header" style="border: 2px solid {room_color};">
                             <span class="tree-color-dot" style="background: {room_color};"></span>
                             <span class="tree-node-label">{room_name}</span>
@@ -1306,6 +1268,8 @@ class HTMLReportGenerator:
                         </div>
                     </div>
                     """.format(
+                        dept_name=dept_name,
+                        division_name=division_name,
                         room_color=room_color,
                         room_name=room_name,
                         status_icon=status_icon,
@@ -1436,11 +1400,20 @@ class HTMLReportGenerator:
                 # Explicitly cast to float for IronPython 2.7 compatibility
                 dgsf_str = "{0:,.0f}".format(float(dgsf_value))
                 
+                # Get department color from color hierarchy
+                dept_color = self.get_color('department', dept_name, '#374151')
+                
                 if is_approved:
-                    dept_badges.append('<span class="dept-badge dept-approved" title="Approved department: {0} DGSF">{1}<br><small>{2} SF</small></span>'.format(
+                    # Use department color for approved badges
+                    dept_badges.append('<span class="dept-badge dept-approved" style="border: 2px solid {0}; background: linear-gradient(135deg, rgba({1}, {2}, {3}, 0.2) 0%, rgba({1}, {2}, {3}, 0.35) 100%); color: #f8fafc;" title="Approved department: {4} DGSF">{5}<br><small style="color: #e5e7eb;">{6} SF</small></span>'.format(
+                        dept_color,
+                        int(dept_color[1:3], 16),  # R
+                        int(dept_color[3:5], 16),  # G
+                        int(dept_color[5:7], 16),  # B
                         dgsf_str, dept_name, dgsf_str))
                 else:
                     unapproved_count += 1
+                    # Keep red for unapproved with warning icon
                     dept_badges.append('<span class="dept-badge dept-unapproved" title="Unapproved department: {0} DGSF - Not in Excel program">⚠️ {1}<br><small>{2} SF</small></span>'.format(
                         dgsf_str, dept_name, dgsf_str))
             
@@ -1685,34 +1658,43 @@ class HTMLReportGenerator:
         
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Source+Code+Pro:wght@400;500;600&display=swap');
         
-        html, body {
+        html {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
             overflow-x: hidden;
-            position: relative;
+            overflow-y: scroll;
+            scroll-behavior: smooth;
         }
         
         body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100%;
             font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             line-height: 1.5;
             color: #f8fafc;
             background: #0a0e13;
-            min-height: 100vh;
             font-weight: 400;
             position: relative;
-            overflow-y: auto;
         }
         
         .container {
             max-width: 95vw;
-            min-width: 1200px;
+            width: 100%;
             margin: 0 auto;
             padding: 24px;
-            padding-bottom: 150px; /* Add space for fixed search bar */
+            padding-bottom: 150px;
             padding-right: 260px; /* Add space for minimap navigation */
             animation: fadeInUp 0.8s ease-out;
+        }
+        
+        @media (min-width: 1200px) {
+            .container {
+                min-width: 1200px;
+            }
         }
         
         @keyframes fadeInUp {
@@ -1986,9 +1968,9 @@ class HTMLReportGenerator:
         }
         
         .dept-badge.dept-approved {
-            background: rgba(16, 185, 129, 0.15);
-            color: #10b981;
-            border: 1px solid rgba(16, 185, 129, 0.3);
+            background: rgba(96, 165, 250, 0.15);
+            color: #f8fafc;
+            border: 2px solid #60a5fa;
         }
         
         .dept-badge.dept-unapproved {
@@ -2017,11 +1999,11 @@ class HTMLReportGenerator:
             }
         }
         
-        .summary-section, .status-summary, .comparison-section, .unmatched-section, .scheme-summary, .scheme-section {
+        .summary-section, .status-summary, .unmatched-section, .scheme-summary, .scheme-section {
             margin-bottom: 32px;
         }
         
-        .summary-section h2, .status-summary h2, .comparison-section h2, .unmatched-section h2, .scheme-summary h2, .scheme-section h2 {
+        .summary-section h2, .status-summary h2, .unmatched-section h2, .scheme-summary h2, .scheme-section h2 {
             color: #ffffff;
             margin-bottom: 24px;
             font-size: 1.5rem;
@@ -2092,7 +2074,19 @@ class HTMLReportGenerator:
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 16px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
+        }
+        
+        @media (min-width: 1400px) {
+            .summary-cards, .scheme-cards {
+                grid-template-columns: repeat(5, 1fr);
+            }
+        }
+        
+        @media (min-width: 1024px) and (max-width: 1399px) {
+            .summary-cards, .scheme-cards {
+                grid-template-columns: repeat(4, 1fr);
+            }
         }
         
         .summary-cards .card:nth-child(1) { animation-delay: 0.1s; }
@@ -2108,7 +2102,7 @@ class HTMLReportGenerator:
         .card, .scheme-card {
             background: #111827;
             border: 1px solid #1f2937;
-            padding: 24px;
+            padding: 16px 12px;
             border-radius: 6px;
             text-align: center;
             transition: all 0.3s ease;
@@ -2116,9 +2110,9 @@ class HTMLReportGenerator:
         }
         
         .card:hover, .scheme-card:hover {
-            transform: translateY(-3px);
+            transform: translateY(-2px);
             border-color: #4b5563;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
         }
         
         @keyframes fadeInScale {
@@ -2134,8 +2128,8 @@ class HTMLReportGenerator:
         
         
         .card h3, .scheme-card h3 {
-            font-size: 0.75rem;
-            margin-bottom: 8px;
+            font-size: 0.7rem;
+            margin-bottom: 6px;
             color: #9ca3af;
             text-transform: uppercase;
             letter-spacing: 0.05em;
@@ -2143,7 +2137,7 @@ class HTMLReportGenerator:
         }
         
         .card-value {
-            font-size: 1.875rem;
+            font-size: 1.5rem;
             font-weight: 600;
             margin-bottom: 4px;
             color: #ffffff;
@@ -2151,7 +2145,7 @@ class HTMLReportGenerator:
         }
         
         .card-label {
-            font-size: 0.75rem;
+            font-size: 0.7rem;
             color: #6b7280;
             font-weight: 400;
         }
@@ -2183,8 +2177,20 @@ class HTMLReportGenerator:
         
         .status-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
             gap: 20px;
+        }
+        
+        @media (min-width: 1400px) {
+            .status-cards {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        
+        @media (min-width: 1024px) and (max-width: 1399px) {
+            .status-cards {
+                grid-template-columns: repeat(3, 1fr);
+            }
         }
         
         .status-card {
@@ -2767,10 +2773,53 @@ class HTMLReportGenerator:
             border: 1px solid #1f2937;
         }
         
+        @media (max-width: 1024px) {
+            /* Stack charts vertically on tablets and smaller */
+            .charts-section {
+                grid-template-columns: 1fr !important;
+            }
+            
+            .minimap-nav {
+                display: none !important;
+            }
+            
+            .container {
+                padding-right: 24px !important;
+            }
+        }
+        
         @media (max-width: 768px) {
             .container {
                 padding: 15px 10px;
-                padding-right: 10px; /* Remove minimap spacing on mobile */
+                padding-right: 10px !important; /* Remove minimap spacing on mobile */
+                padding-bottom: 100px !important;
+            }
+            
+            /* Make department summary more compact */
+            .department-summary-container {
+                padding: 0 !important;
+            }
+            
+            .chart-card {
+                padding: 16px !important;
+            }
+            
+            .chart-card h3 {
+                font-size: 14px !important;
+            }
+            
+            canvas {
+                max-height: 300px !important;
+            }
+            
+            /* Department by level table */
+            .level-dept-table {
+                font-size: 0.85rem !important;
+            }
+            
+            .dept-badge {
+                font-size: 0.75rem !important;
+                padding: 4px 8px !important;
             }
             
             .comparison-table, .unmatched-table {
@@ -2791,6 +2840,22 @@ class HTMLReportGenerator:
             .col-area { width: 12%; }
             .col-delta { width: 15%; }
             .col-status { width: 6%; }
+            
+            /* Summary cards - stack vertically */
+            .summary-cards {
+                grid-template-columns: 1fr !important;
+            }
+            
+            /* Tree view adjustments */
+            .tree-node-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+            }
+            
+            .tree-node-metrics {
+                width: 100%;
+                margin-top: 8px;
+            }
         }
         
         @media (max-width: 480px) {
@@ -2831,103 +2896,6 @@ class HTMLReportGenerator:
             }
         }
         
-        /* Sticky Search Bar at Bottom - Floating Element */
-        .search-bar-container {
-            position: fixed !important;
-            bottom: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            width: 100vw !important;
-            background: linear-gradient(180deg, rgba(10, 14, 19, 0) 0%, rgba(10, 14, 19, 0.8) 15%, #0a0e13 30%);
-            padding: 24px 0 16px 0;
-            z-index: 999999 !important;
-            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(8px);
-            pointer-events: auto;
-            transform: translateZ(0);
-            -webkit-transform: translateZ(0);
-            margin: 0 !important;
-        }
-        
-        .search-bar-content {
-            max-width: 95vw;
-            margin: 0 auto;
-            padding: 0 24px 16px 24px;
-            position: relative;
-        }
-        
-        #fuzzySearch {
-            width: 100%;
-            padding: 14px 20px;
-            background: #111827;
-            border: 2px solid #1f2937;
-            border-radius: 8px;
-            color: #f8fafc;
-            font-size: 1rem;
-            font-family: 'Roboto', sans-serif;
-            outline: none;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        }
-        
-        #fuzzySearch:focus {
-            border-color: #60a5fa;
-            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.2);
-        }
-        
-        #fuzzySearch::placeholder {
-            color: #6b7280;
-        }
-        
-        .clear-search-btn {
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #374151;
-            border: none;
-            color: #f8fafc;
-            width: 32px;
-            height: 32px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 1.2rem;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .clear-search-btn:hover {
-            background: #60a5fa;
-            transform: translateY(-50%) scale(1.1);
-        }
-        
-        .search-status {
-            position: absolute;
-            bottom: 100%;
-            left: 0;
-            right: 0;
-            margin-bottom: 8px;
-            padding: 8px 12px;
-            background: #1f2937;
-            border: 1px solid #374151;
-            border-radius: 6px;
-            color: #9ca3af;
-            font-size: 0.875rem;
-            display: none;
-            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.3);
-        }
-        
-        .search-status.active {
-            display: block;
-        }
-        
-        .search-status .count {
-            color: #60a5fa;
-            font-weight: 600;
-        }
-        
         /* Department collapse styles */
         .dept-row.collapsed {
             display: none;
@@ -2935,15 +2903,6 @@ class HTMLReportGenerator:
         
         .department-header.collapsed .collapse-icon {
             transform: rotate(-90deg);
-        }
-        
-        /* Search filter styles */
-        .dept-row.search-hidden {
-            display: none !important;
-        }
-        
-        .department-header.search-hidden {
-            display: none !important;
         }
         
         /* Suggestion column styles */
@@ -3414,6 +3373,36 @@ class HTMLReportGenerator:
                 gap: 4px;
             }
         }
+        
+        /* EnneadTab Logo - Lower Left with Parallax */
+        .ennead-logo-container {
+            position: fixed;
+            left: 35px;
+            bottom: 80px;
+            z-index: 100;
+            pointer-events: none;
+            transform-origin: left center;
+            transition: transform 0.3s ease-out;
+        }
+        
+        .ennead-logo {
+            height: 45px;
+            width: auto;
+            transform: rotate(-90deg);
+            transform-origin: left center;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+        
+        .ennead-logo:hover {
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            .ennead-logo-container {
+                display: none;
+            }
+        }
         """
     
     def _get_javascript(self):
@@ -3426,19 +3415,6 @@ class HTMLReportGenerator:
             initializeChart();
         };
         document.head.appendChild(chartScript);
-        
-        // Load Three.js
-        const threeScript = document.createElement('script');
-        threeScript.src = 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js';
-        threeScript.onload = function() {
-            const controlsScript = document.createElement('script');
-            controlsScript.src = 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js';
-            controlsScript.onload = function() {
-                initialize3DViewer();
-            };
-            document.head.appendChild(controlsScript);
-        };
-        document.head.appendChild(threeScript);
         
         function initializeChart() {
             console.log('initializeChart called');
@@ -3454,9 +3430,6 @@ class HTMLReportGenerator:
         
         function initializeComponents() {
             console.log('Initializing components...');
-            
-            // Initialize fuzzy search
-            initializeFuzzySearch();
             
             // Initialize context menu
             initializeContextMenu();
@@ -3730,16 +3703,81 @@ class HTMLReportGenerator:
             });
         }
         
-        function initialize3DViewer() {
-            console.log('initialize3DViewer called');
-            // Wait for DOM to be ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function() {
-                    initialize3DComponents();
-                });
-            } else {
-                initialize3DComponents();
+        // Context Menu Functions
+        function initializeContextMenu() {
+            const contextMenu = document.getElementById('contextMenu');
+            
+            if (!contextMenu) {
+                console.error('Context menu element not found');
+                return;
             }
+            
+            // Show context menu on right-click anywhere on the page
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Get mouse position
+                var mouseX = e.clientX;
+                var mouseY = e.clientY;
+                
+                // Show menu first to get its dimensions
+                contextMenu.style.display = 'block';
+                contextMenu.classList.add('active');
+                
+                var menuWidth = contextMenu.offsetWidth;
+                var menuHeight = contextMenu.offsetHeight;
+                var windowWidth = window.innerWidth;
+                var windowHeight = window.innerHeight;
+                
+                // Calculate position - ensure menu stays within viewport
+                var left = mouseX;
+                var top = mouseY;
+                
+                // Adjust if menu would go off right edge
+                if (mouseX + menuWidth > windowWidth) {
+                    left = windowWidth - menuWidth - 10;
+                }
+                
+                // Adjust if menu would go off bottom edge
+                if (mouseY + menuHeight > windowHeight) {
+                    top = windowHeight - menuHeight - 10;
+                }
+                
+                // Ensure menu doesn't go off left or top edge
+                if (left < 10) left = 10;
+                if (top < 10) top = 10;
+                
+                // Position the context menu
+                contextMenu.style.left = left + 'px';
+                contextMenu.style.top = top + 'px';
+                
+                console.log('Context menu shown at:', left, top);
+            });
+            
+            // Hide context menu on regular click
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.context-menu')) {
+                    contextMenu.classList.remove('active');
+                    contextMenu.style.display = 'none';
+                }
+            });
+            
+            // Hide context menu on scroll
+            document.addEventListener('scroll', function() {
+                contextMenu.classList.remove('active');
+                contextMenu.style.display = 'none';
+            });
+            
+            // Hide context menu on escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    contextMenu.classList.remove('active');
+                    contextMenu.style.display = 'none';
+                }
+            });
+            
+            console.log('Context menu initialized');
         }
         
         function initialize3DComponents() {
@@ -4443,144 +4481,6 @@ class HTMLReportGenerator:
             deptHeader.classList.toggle('collapsed');
         }
         
-        // Fuzzy search filter initialization
-        let fuseInstance = null;
-        let searchData = [];
-        
-        function initializeFuzzySearch() {
-            console.log('Initializing fuzzy search filter...');
-            
-            // Collect all searchable items from table
-            const rows = document.querySelectorAll('.dept-row');
-            searchData = Array.from(rows).map(row => ({
-                element: row,
-                department: row.getAttribute('data-search-dept') || '',
-                division: row.getAttribute('data-search-division') || '',
-                function: row.getAttribute('data-search-function') || ''
-            }));
-            
-            // Initialize Fuse.js with fuzzy search options
-            const fuseOptions = {
-                keys: [
-                    { name: 'department', weight: 0.4 },
-                    { name: 'division', weight: 0.3 },
-                    { name: 'function', weight: 0.3 }
-                ],
-                threshold: 0.4, // More lenient matching (0.0 = exact, 1.0 = match anything)
-                distance: 100, // Maximum distance for matching
-                ignoreLocation: true, // Don't care about position of match
-                useExtendedSearch: false,
-                minMatchCharLength: 1
-            };
-            
-            fuseInstance = new Fuse(searchData, fuseOptions);
-            
-            // Setup search input event
-            const searchInput = document.getElementById('fuzzySearch');
-            const searchStatus = document.getElementById('searchStatus');
-            const clearBtn = document.getElementById('clearSearch');
-            
-            if (searchInput && searchStatus) {
-                searchInput.addEventListener('input', function(e) {
-                    const query = e.target.value.trim();
-                    
-                    if (query.length < 1) {
-                        // Clear filter when search is empty
-                        clearSearchFilter();
-                        return;
-                    }
-                    
-                    // Perform fuzzy search
-                    const results = fuseInstance.search(query);
-                    const matchingElements = new Set(results.map(r => r.item.element));
-                    
-                    // Filter rows - hide non-matching, show matching
-                    let visibleCount = 0;
-                    searchData.forEach(item => {
-                        if (matchingElements.has(item.element)) {
-                            item.element.classList.remove('search-hidden');
-                            visibleCount++;
-                        } else {
-                            item.element.classList.add('search-hidden');
-                        }
-                    });
-                    
-                    // Update department header visibility
-                    updateDepartmentHeadersVisibility();
-                    
-                    // Show clear button
-                    clearBtn.style.display = 'flex';
-                    
-                    // Update status
-                    if (visibleCount === 0) {
-                        searchStatus.innerHTML = '<span class="count">No matches found</span> for "' + query + '"';
-                    } else {
-                        searchStatus.innerHTML = 'Showing <span class="count">' + visibleCount + '</span> matching item(s) for "' + query + '"';
-                    }
-                    searchStatus.classList.add('active');
-                });
-            }
-        }
-        
-        // Update department header visibility based on visible rows
-        function updateDepartmentHeadersVisibility() {
-            const allDeptHeaders = document.querySelectorAll('.department-header');
-            
-            allDeptHeaders.forEach(header => {
-                const deptId = header.getAttribute('data-dept-id');
-                const deptRows = document.querySelectorAll('.dept-row[data-dept="' + deptId + '"]');
-                
-                // Check if any rows in this department are visible (not search-hidden)
-                let hasVisibleRows = false;
-                deptRows.forEach(row => {
-                    if (!row.classList.contains('search-hidden')) {
-                        hasVisibleRows = true;
-                    }
-                });
-                
-                // Show/hide department header based on visible rows
-                if (hasVisibleRows) {
-                    header.classList.remove('search-hidden');
-                    // Auto-expand department to show filtered results
-                    if (header.classList.contains('collapsed')) {
-                        deptRows.forEach(row => row.classList.remove('collapsed'));
-                        header.classList.remove('collapsed');
-                    }
-                } else {
-                    header.classList.add('search-hidden');
-                }
-            });
-        }
-        
-        // Clear search filter
-        function clearSearchFilter() {
-            // Remove search-hidden class from all rows
-            const allRows = document.querySelectorAll('.dept-row');
-            allRows.forEach(row => row.classList.remove('search-hidden'));
-            
-            // Remove search-hidden class from all headers
-            const allHeaders = document.querySelectorAll('.department-header');
-            allHeaders.forEach(header => header.classList.remove('search-hidden'));
-            
-            // Clear search input
-            const searchInput = document.getElementById('fuzzySearch');
-            if (searchInput) {
-                searchInput.value = '';
-            }
-            
-            // Hide clear button
-            const clearBtn = document.getElementById('clearSearch');
-            if (clearBtn) {
-                clearBtn.style.display = 'none';
-            }
-            
-            // Hide status
-            const searchStatus = document.getElementById('searchStatus');
-            if (searchStatus) {
-                searchStatus.classList.remove('active');
-            }
-        }
-        
         // Context Menu Functions
         function initializeContextMenu() {
             const contextMenu = document.getElementById('contextMenu');
@@ -4688,12 +4588,12 @@ class HTMLReportGenerator:
             });
         }
         
-        // Unified functions to control both TreeView and TableView
+        // Unified functions to control TreeView
         function expandAllViews() {
             // Expand TreeView nodes
             expandAllTreeNodes();
             
-            // Expand TableView departments
+            // Also expand department sections (for backward compatibility)
             expandAllDepartments();
             
             // Hide context menu
@@ -4706,7 +4606,7 @@ class HTMLReportGenerator:
             // Collapse TreeView nodes
             collapseAllTreeNodes();
             
-            // Collapse TableView departments
+            // Also collapse department sections (for backward compatibility)
             collapseAllDepartments();
             
             // Hide context menu
@@ -4717,15 +4617,32 @@ class HTMLReportGenerator:
         
         // Return to top of page
         function returnToTop() {
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
+            console.log('Return to top clicked');
+            
+            // Try smooth scroll first, fallback to instant scroll
+            try {
+                window.scrollTo({
+                    top: 0,
+                    left: 0,
+                    behavior: 'smooth'
+                });
+            } catch (e) {
+                // Fallback for older browsers
+                window.scrollTo(0, 0);
+            }
+            
+            // Also scroll body and html elements (for compatibility)
+            document.documentElement.scrollTop = 0;
+            document.body.scrollTop = 0;
             
             // Hide context menu
             var menu = document.getElementById('contextMenu');
-            menu.classList.remove('active');
-            menu.style.display = 'none';
+            if (menu) {
+                menu.classList.remove('active');
+                menu.style.display = 'none';
+            }
+            
+            console.log('Scrolled to top, current position:', window.scrollY);
         }
         
         function sortTable(table, columnIndex) {
@@ -4761,8 +4678,10 @@ class HTMLReportGenerator:
         
         // Scroll to a specific section
         function scrollToSection(sectionClass) {
+            console.log('Scrolling to section:', sectionClass);
+            
             // Try to find element by class first
-            let section = document.querySelector('.' + sectionClass);
+            var section = document.querySelector('.' + sectionClass);
             
             // If not found by class, try by ID
             if (!section) {
@@ -4775,35 +4694,53 @@ class HTMLReportGenerator:
             }
             
             if (section) {
-                const headerOffset = 80; // Offset for fixed elements
-                const elementPosition = section.getBoundingClientRect().top;
-                const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                console.log('Section found:', section, 'offsetTop:', section.offsetTop);
+                var headerOffset = 80; // Offset for fixed elements
+                var targetPosition = section.offsetTop - headerOffset;
                 
-                window.scrollTo({
-                    top: offsetPosition,
-                    behavior: 'smooth'
-                });
+                console.log('Scrolling smoothly to position:', targetPosition);
+                
+                // Use smooth scroll behavior
+                try {
+                    window.scrollTo({
+                        top: targetPosition,
+                        left: 0,
+                        behavior: 'smooth'
+                    });
+                } catch (e) {
+                    // Fallback for older browsers - instant scroll
+                    console.log('Smooth scroll not supported, using fallback');
+                    document.documentElement.scrollTop = targetPosition;
+                    document.body.scrollTop = targetPosition;
+                }
+                
+                // Update minimap state after animation completes
+                setTimeout(function() {
+                    updateMinimapActiveState();
+                }, 800);
+            } else {
+                console.error('Section not found:', sectionClass);
             }
         }
         
         // Update active state of minimap items based on scroll position
         function updateMinimapActiveState() {
-            const sections = [
+            var sections = [
                 'report-header',
                 'department-summary-section',
-                'comparison-section',
+                'tree-view-section',
                 'unmatched-section',
                 'summary-section',
                 'status-summary'
             ];
             
-            const scrollPosition = window.scrollY + 200; // Offset for detection
-            
-            let activeSection = null;
+            var scrollPosition = window.scrollY + 200; // Offset for detection
+            var activeSection = null;
             
             // Find which section is currently in view
-            for (const sectionClass of sections) {
-                let section = document.querySelector('.' + sectionClass);
+            for (var i = 0; i < sections.length; i++) {
+                var sectionClass = sections[i];
+                var section = document.querySelector('.' + sectionClass);
                 
                 if (!section) {
                     section = document.getElementById(sectionClass);
@@ -4814,8 +4751,8 @@ class HTMLReportGenerator:
                 }
                 
                 if (section) {
-                    const sectionTop = section.offsetTop;
-                    const sectionBottom = sectionTop + section.offsetHeight;
+                    var sectionTop = section.offsetTop;
+                    var sectionBottom = sectionTop + section.offsetHeight;
                     
                     if (scrollPosition >= sectionTop && scrollPosition < sectionBottom) {
                         activeSection = sectionClass;
@@ -4825,20 +4762,27 @@ class HTMLReportGenerator:
             }
             
             // Update active class on minimap items
-            const minimapItems = document.querySelectorAll('.minimap-item');
-            minimapItems.forEach(item => {
-                const itemSection = item.getAttribute('data-section');
+            var minimapItems = document.querySelectorAll('.minimap-item');
+            for (var j = 0; j < minimapItems.length; j++) {
+                var item = minimapItems[j];
+                var itemSection = item.getAttribute('data-section');
                 if (itemSection === activeSection) {
                     item.classList.add('active');
                 } else {
                     item.classList.remove('active');
                 }
-            });
+            }
         }
         
         // Initialize minimap functionality
         function initializeMinimap() {
             console.log('Initializing minimap navigation...');
+            
+            const minimap = document.getElementById('minimapNav');
+            const minimapItems = document.querySelectorAll('.minimap-item');
+            
+            console.log('Minimap found:', minimap);
+            console.log('Minimap items found:', minimapItems.length);
             
             // Update active state on scroll
             window.addEventListener('scroll', function() {
@@ -4848,7 +4792,7 @@ class HTMLReportGenerator:
             // Set initial active state
             updateMinimapActiveState();
             
-            console.log('Minimap navigation initialized');
+            console.log('Minimap navigation initialized successfully');
         }
         
         // Call minimap initialization after DOM is ready
@@ -4856,6 +4800,49 @@ class HTMLReportGenerator:
             document.addEventListener('DOMContentLoaded', initializeMinimap);
         } else {
             initializeMinimap();
+        }
+        
+        // ========== EnneadTab Logo Parallax Effect ==========
+        
+        function initializeLogoParallax() {
+            const logo = document.getElementById('enneadLogo');
+            if (!logo) {
+                console.log('Logo element not found');
+                return;
+            }
+            
+            let targetY = 0;
+            let currentY = 0;
+            const delay = 0.1; // Delay factor for parallax effect (0.1 = slower follow)
+            
+            // Update target position on scroll
+            window.addEventListener('scroll', function() {
+                targetY = window.scrollY * delay;
+            });
+            
+            // Smooth animation loop
+            function animateLogo() {
+                // Lerp (linear interpolation) for smooth delayed movement
+                currentY += (targetY - currentY) * 0.1;
+                
+                // Apply transform
+                logo.style.transform = 'translateY(-' + currentY + 'px)';
+                
+                // Continue animation
+                requestAnimationFrame(animateLogo);
+            }
+            
+            // Start animation
+            animateLogo();
+            
+            console.log('Logo parallax effect initialized');
+        }
+        
+        // Initialize logo parallax after DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeLogoParallax);
+        } else {
+            initializeLogoParallax();
         }
         
         // Tree View Functions
