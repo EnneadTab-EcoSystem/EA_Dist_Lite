@@ -3294,6 +3294,7 @@ class HTMLReportGenerator:
         .tree-node {
             margin-bottom: 4px;
             position: relative;
+            overflow: visible;
         }
         
         .tree-node-dept {
@@ -3367,11 +3368,13 @@ class HTMLReportGenerator:
             gap: 8px;
             border-width: 4px;
             border-style: solid;
+            margin-right: 8px;
         }
         
         .tree-node-header:hover {
-            background: rgba(55, 65, 81, 0.8);
-            transform: translateX(2px);
+            background: rgba(75, 85, 99, 0.95);
+            transform: translateX(-2px) scale(1.01);
+            box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.5), 0 4px 12px rgba(0, 0, 0, 0.3);
         }
         
         .tree-node-dept .tree-node-header {
