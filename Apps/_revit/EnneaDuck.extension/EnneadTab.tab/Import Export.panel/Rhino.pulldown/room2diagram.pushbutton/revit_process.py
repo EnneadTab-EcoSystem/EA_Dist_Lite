@@ -117,32 +117,32 @@ class RevitProcess(BaseProcessor):
                 return False, None
             
             # Create filled region within transaction
-            with DB.Transaction(self.revit_doc, "Create Bubble Diagram Filled Region") as t:
-                t.Start()
-                try:
-                    # Create a list of curve loops - DB.FilledRegion.Create expects a collection
-                    curve_loops = System.Collections.Generic.List[DB.CurveLoop]()
-                    curve_loops.Add(curve_loop)
-                    
-                    # Create filled region
-                    filled_region = DB.FilledRegion.Create(
-                        self.revit_doc,
-                        filled_region_type.Id,
-                        floor_plan_view.Id,
-                        curve_loops
-                    )
-                    
-                    if filled_region:
-                        t.Commit()
-                        return True, filled_region
-                    else:
-                        t.RollBack()
-                        return False, None
-                        
-                except Exception as e:
-                    print("Error in transaction creating filled region: {}".format(str(e)))
+            t = DB.Transaction(self.revit_doc, "Create Bubble Diagram Filled Region")
+            t.Start()
+            try:
+                # Create a list of curve loops - DB.FilledRegion.Create expects a collection
+                curve_loops = System.Collections.Generic.List[DB.CurveLoop]()
+                curve_loops.Add(curve_loop)
+                
+                # Create filled region
+                filled_region = DB.FilledRegion.Create(
+                    self.revit_doc,
+                    filled_region_type.Id,
+                    floor_plan_view.Id,
+                    curve_loops
+                )
+                
+                if filled_region:
+                    t.Commit()
+                    return True, filled_region
+                else:
                     t.RollBack()
                     return False, None
+                    
+            except Exception as e:
+                print("Error in transaction creating filled region: {}".format(str(e)))
+                t.RollBack()
+                return False, None
                 
         except Exception as e:
             print("Error creating filled region: {}".format(str(e)))
@@ -182,23 +182,23 @@ class RevitProcess(BaseProcessor):
             comment_content = "{} - {:,} SF".format(space_identifier, original_area_rounded)
             
             # Add comment to filled region within transaction
-            with DB.Transaction(self.revit_doc, "Add Comment to Filled Region") as t:
-                t.Start()
-                try:
-                    # Use only the "Comments" parameter per preference
-                    comment_param = filled_region.LookupParameter("Comments")
-                    if comment_param and not comment_param.IsReadOnly:
-                        comment_param.Set(comment_content)
-                        t.Commit()
-                        return True
-                    
-                    print("Warning: 'Comments' parameter not found or read-only on filled region")
-                    t.RollBack()
-                    return False
-                except Exception as e:
-                    print("Error in transaction adding comment: {}".format(str(e)))
-                    t.RollBack()
-                    return False
+            t = DB.Transaction(self.revit_doc, "Add Comment to Filled Region")
+            t.Start()
+            try:
+                # Use only the "Comments" parameter per preference
+                comment_param = filled_region.LookupParameter("Comments")
+                if comment_param and not comment_param.IsReadOnly:
+                    comment_param.Set(comment_content)
+                    t.Commit()
+                    return True
+                
+                print("Warning: 'Comments' parameter not found or read-only on filled region")
+                t.RollBack()
+                return False
+            except Exception as e:
+                print("Error in transaction adding comment: {}".format(str(e)))
+                t.RollBack()
+                return False
                 
         except Exception as e:
             print("Error adding comment to filled region: {}".format(str(e)))
@@ -278,51 +278,51 @@ class RevitProcess(BaseProcessor):
                 tag_type = None
             
             # Create tag within transaction
-            with DB.Transaction(self.revit_doc, "Create Bubble Diagram Tag") as t:
-                t.Start()
-                try:
-                    # Create tag for the filled region using the tag type
-                    # Determine a placement point from the filled region's bounding box (in view coordinates)
-                    bbox = filled_region.get_BoundingBox(floor_plan_view)
-                    if bbox and bbox.Min and bbox.Max:
-                        center = DB.XYZ(
-                            (bbox.Min.X + bbox.Max.X) / 2.0,
-                            (bbox.Min.Y + bbox.Max.Y) / 2.0,
-                            (bbox.Min.Z + bbox.Max.Z) / 2.0,
-                        )
-                    else:
-                        center = DB.XYZ(0, 0, 0)
+            t = DB.Transaction(self.revit_doc, "Create Bubble Diagram Tag")
+            t.Start()
+            try:
+                # Create tag for the filled region using the tag type
+                # Determine a placement point from the filled region's bounding box (in view coordinates)
+                bbox = filled_region.get_BoundingBox(floor_plan_view)
+                if bbox and bbox.Min and bbox.Max:
+                    center = DB.XYZ(
+                        (bbox.Min.X + bbox.Max.X) / 2.0,
+                        (bbox.Min.Y + bbox.Max.Y) / 2.0,
+                        (bbox.Min.Z + bbox.Max.Z) / 2.0,
+                    )
+                else:
+                    center = DB.XYZ(0, 0, 0)
 
-                    # Try to create an IndependentTag first (may not be supported for FilledRegion)
+                # Try to create an IndependentTag first (may not be supported for FilledRegion)
+                tag = None
+                try:
+                    tag = DB.IndependentTag.Create(
+                        self.revit_doc,
+                        floor_plan_view.Id,
+                        DB.Reference(filled_region),
+                        False,
+                        DB.TagMode.TM_ADDBY_CATEGORY,
+                        DB.TagOrientation.Horizontal,
+                        center,
+                    )
+                    if tag and tag_type:
+                        try:
+                            tag.ChangeTypeId(tag_type.Id)
+                        except Exception as change_type_err:
+                            print("Warning: Could not change tag type: {}".format(str(change_type_err)))
+                except Exception:
                     tag = None
-                    try:
-                        tag = DB.IndependentTag.Create(
-                            self.revit_doc,
-                            floor_plan_view.Id,
-                            DB.Reference(filled_region),
-                            False,
-                            DB.TagMode.TM_ADDBY_CATEGORY,
-                            DB.TagOrientation.Horizontal,
-                            center,
-                        )
-                        if tag and tag_type:
-                            try:
-                                tag.ChangeTypeId(tag_type.Id)
-                            except Exception as change_type_err:
-                                print("Warning: Could not change tag type: {}".format(str(change_type_err)))
-                    except Exception:
-                        tag = None
-                    
-                    if tag:
-                        t.Commit()
-                        return True
-                    
-   
-                    
-                except Exception as e:
-                    print("Error in transaction creating tag: {}".format(str(e)))
-                    t.RollBack()
-                    return False
+                
+                if tag:
+                    t.Commit()
+                    return True
+                
+
+                
+            except Exception as e:
+                print("Error in transaction creating tag: {}".format(str(e)))
+                t.RollBack()
+                return False
                 
         except Exception as e:
             print("Error creating tag for filled region {}: {}".format(space_identifier, str(e)))
@@ -362,91 +362,91 @@ class RevitProcess(BaseProcessor):
             
             # Create new floor plan view within transaction
             floor_plan_view = None
-            with DB.Transaction(self.revit_doc, "Create Bubble Diagram Floor Plan View") as t:
-                t.Start()
-                try:
-                    # Get the floor plan view type
-                    view_types = DB.FilteredElementCollector(self.revit_doc).OfClass(DB.ViewFamilyType).ToElements()
-                    floor_plan_type = None
-                    for view_type in view_types:
-                        if view_type.FamilyName == "Floor Plan":
-                            floor_plan_type = view_type
-                            break
+            t = DB.Transaction(self.revit_doc, "Create Bubble Diagram Floor Plan View")
+            t.Start()
+            try:
+                # Get the floor plan view type
+                view_types = DB.FilteredElementCollector(self.revit_doc).OfClass(DB.ViewFamilyType).ToElements()
+                floor_plan_type = None
+                for view_type in view_types:
+                    if view_type.FamilyName == "Floor Plan":
+                        floor_plan_type = view_type
+                        break
+                
+                if not floor_plan_type:
+                    print("Warning: Could not find Floor Plan view type, using first available")
+                    if view_types:
+                        floor_plan_type = view_types[0]
+                    else:
+                        print("Error: No view plan types found in document")
+                        t.RollBack()
+                        return None
+                
+                # Create floor plan view
+                floor_plan_view = DB.ViewPlan.Create(self.revit_doc, 
+                                                    floor_plan_type.Id, 
+                                                    level.Id)
+                
+                if floor_plan_view:
+                    # Set view name
+                    floor_plan_view.Name = view_name
                     
-                    if not floor_plan_type:
-                        print("Warning: Could not find Floor Plan view type, using first available")
-                        if view_types:
-                            floor_plan_type = view_types[0]
-                        else:
-                            print("Error: No view plan types found in document")
-                            t.RollBack()
-                            return None
+                    # Set ViewGroup and ViewSeries properties
+                    view_group_param = floor_plan_view.LookupParameter("Views_$Group")
+                    if view_group_param and not view_group_param.IsReadOnly:
+                        view_group_param.Set("EnneadTab")
                     
-                    # Create floor plan view
-                    floor_plan_view = DB.ViewPlan.Create(self.revit_doc, 
-                                                        floor_plan_type.Id, 
-                                                        level.Id)
+                    view_series_param = floor_plan_view.LookupParameter("Views_$Series")
+                    if view_series_param and not view_series_param.IsReadOnly:
+                        view_series_param.Set("BubbleDiagram")
                     
-                    if floor_plan_view:
-                        # Set view name
-                        floor_plan_view.Name = view_name
-                        
-                        # Set ViewGroup and ViewSeries properties
-                        view_group_param = floor_plan_view.LookupParameter("Views_$Group")
-                        if view_group_param and not view_group_param.IsReadOnly:
-                            view_group_param.Set("EnneadTab")
-                        
-                        view_series_param = floor_plan_view.LookupParameter("Views_$Series")
-                        if view_series_param and not view_series_param.IsReadOnly:
-                            view_series_param.Set("BubbleDiagram")
-                        
-                        # print("Set Views_$Group to 'EnneadTab' and Views_$Series to 'BubbleDiagram'")
-                        
-                        # Set view scale to match the original source view
-                        try:
-                            scale_param = floor_plan_view.LookupParameter("View Scale")
-                            if scale_param and not scale_param.IsReadOnly:
-                                # Get scale from source view if available
-                                if hasattr(self, 'source_view') and self.source_view:
-                                    try:
-                                        source_scale_param = self.source_view.LookupParameter("View Scale")
-                                        if source_scale_param:
-                                            source_scale = source_scale_param.AsInteger()
-                                            scale_param.Set(source_scale)
-                                            # print("Set view scale to match source view: 1:{}".format(source_scale))
-                                        else:
-                                            # Fallback to 1/8" = 1'-0" scale (1:96)
-                                            scale_param.Set(96)
-                                            print("Set view scale to default 1/8\" = 1'-0\" (source view scale not available)")
-                                    except Exception as e:
-                                        print("Warning: Could not get scale from source view: {}. Using default scale.".format(str(e)))
+                    # print("Set Views_$Group to 'EnneadTab' and Views_$Series to 'BubbleDiagram'")
+                    
+                    # Set view scale to match the original source view
+                    try:
+                        scale_param = floor_plan_view.LookupParameter("View Scale")
+                        if scale_param and not scale_param.IsReadOnly:
+                            # Get scale from source view if available
+                            if hasattr(self, 'source_view') and self.source_view:
+                                try:
+                                    source_scale_param = self.source_view.LookupParameter("View Scale")
+                                    if source_scale_param:
+                                        source_scale = source_scale_param.AsInteger()
+                                        scale_param.Set(source_scale)
+                                        # print("Set view scale to match source view: 1:{}".format(source_scale))
+                                    else:
+                                        # Fallback to 1/8" = 1'-0" scale (1:96)
                                         scale_param.Set(96)
-                                        print("Set view scale to default 1/8\" = 1'-0\"")
-                                else:
-                                    # No source view available, use default scale
+                                        print("Set view scale to default 1/8\" = 1'-0\" (source view scale not available)")
+                                except Exception as e:
+                                    print("Warning: Could not get scale from source view: {}. Using default scale.".format(str(e)))
                                     scale_param.Set(96)
-                                    print("Set view scale to default 1/8\" = 1'-0\" (no source view)")
-                        except Exception as e:
-                            print("Warning: Could not set view scale: {}".format(str(e)))
-                        
-                        # Set view discipline to Coordination for better category control
-                        try:
-                            discipline_param = floor_plan_view.LookupParameter("Discipline")
-                            if discipline_param and not discipline_param.IsReadOnly:
-                                discipline_param.Set(1)  # 1 = Coordination
-                                # print("Set view discipline to Coordination")
-                        except Exception as e:
-                            print("Warning: Could not set view discipline: {}".format(str(e)))
-                        
-                        # Configure view categories for bubble diagram
-                        self._configure_bubble_diagram_view_categories(floor_plan_view)
+                                    print("Set view scale to default 1/8\" = 1'-0\"")
+                            else:
+                                # No source view available, use default scale
+                                scale_param.Set(96)
+                                print("Set view scale to default 1/8\" = 1'-0\" (no source view)")
+                    except Exception as e:
+                        print("Warning: Could not set view scale: {}".format(str(e)))
                     
-                    t.Commit()
+                    # Set view discipline to Coordination for better category control
+                    try:
+                        discipline_param = floor_plan_view.LookupParameter("Discipline")
+                        if discipline_param and not discipline_param.IsReadOnly:
+                            discipline_param.Set(1)  # 1 = Coordination
+                            # print("Set view discipline to Coordination")
+                    except Exception as e:
+                        print("Warning: Could not set view discipline: {}".format(str(e)))
                     
-                except Exception as e:
-                    print("Error in transaction creating floor plan view: {}".format(str(e)))
-                    t.RollBack()
-                    return None
+                    # Configure view categories for bubble diagram
+                    self._configure_bubble_diagram_view_categories(floor_plan_view)
+                
+                t.Commit()
+                
+            except Exception as e:
+                print("Error in transaction creating floor plan view: {}".format(str(e)))
+                t.RollBack()
+                return None
             
             return floor_plan_view
             
@@ -486,38 +486,39 @@ class RevitProcess(BaseProcessor):
                 return
             
             # Delete the filtered filled regions within a transaction
-            with DB.Transaction(self.revit_doc, "Delete Existing Color Scheme Filled Regions") as t:
-                t.Start()
-                try:
-                    for region in regions_to_delete:
-                        try:
-                            self.revit_doc.Delete(region.Id)
-                        except Exception as e:
-                            print("Warning: Could not delete filled region: {}".format(str(e)))
-                            continue
-                    
-                    t.Commit()
-                    
-                except Exception as e:
-                    print("Error in transaction deleting filled regions: {}".format(str(e)))
-                    t.RollBack()
+            t = DB.Transaction(self.revit_doc, "Delete Existing Color Scheme Filled Regions")
+            t.Start()
+            try:
+                for region in regions_to_delete:
+                    try:
+                        self.revit_doc.Delete(region.Id)
+                    except Exception as e:
+                        print("Warning: Could not delete filled region: {}".format(str(e)))
+                        continue
+                
+                t.Commit()
+                
+            except Exception as e:
+                print("Error in transaction deleting filled regions: {}".format(str(e)))
+                t.RollBack()
                     
         except Exception as e:
             print("Error deleting existing color scheme filled regions: {}".format(str(e)))
     
     def _configure_bubble_diagram_view_categories(self, view):
-        """Configure view categories for bubble diagram - hide all except detail items, tags, grids, and dimensions."""
+        """Configure view categories for bubble diagram - hide all except detail items, detail item tags, and grids."""
         try:
             # Define categories to keep visible
             visible_categories = [
-                DB.BuiltInCategory.OST_DetailComponents,  # Detail items
-                DB.BuiltInCategory.OST_DetailComponentTags,   
-                DB.BuiltInCategory.OST_Grids,             # Grids
-                DB.BuiltInCategory.OST_Dimensions         # Dimensions
+                DB.BuiltInCategory.OST_DetailComponents,     # Detail items (detail components)
+                DB.BuiltInCategory.OST_DetailComponentTags,  # Detail item tags
+                DB.BuiltInCategory.OST_Grids                 # Grids
             ]
             
             print("Starting category configuration for bubble diagram view...")
             
+            # Note: This method is called from within an active transaction in _create_get_floor_plan_view
+            # so we don't need to create a new transaction here
             # Method 1: Use document settings categories (more reliable approach)
             for category in self.revit_doc.Settings.Categories:
                 try:
@@ -581,13 +582,31 @@ class RevitProcess(BaseProcessor):
                 print("No color found, skipping space")
                 return False
             
-            # Get or create filled region type
+            # Get or create filled region type (wrapped in transaction for type creation)
             region_type_name = "_ColorScheme_{}".format(space_identifier)
+            
+            # First check if type exists
             filled_region_type = REVIT_SELECTION.get_filledregion_type(
                 self.revit_doc,
                 region_type_name,
-                color_if_not_exist=(revit_color.Red, revit_color.Green, revit_color.Blue)
+                color_if_not_exist=None
             )
+            
+            # If type doesn't exist, create it within a transaction
+            if not filled_region_type:
+                t = DB.Transaction(self.revit_doc, "Create Filled Region Type")
+                t.Start()
+                try:
+                    filled_region_type = REVIT_SELECTION.get_filledregion_type(
+                        self.revit_doc,
+                        region_type_name,
+                        color_if_not_exist=(revit_color.Red, revit_color.Green, revit_color.Blue)
+                    )
+                    t.Commit()
+                except Exception as e:
+                    print("Error creating filled region type: {}".format(str(e)))
+                    t.RollBack()
+                    filled_region_type = None
             
             if not filled_region_type:
                 print("Could not get or create filled region type")

@@ -969,7 +969,7 @@ class BaseProcessor:
             return rhino_curve
     
     def _apply_offset_to_rhino_curve(self, rhino_curve):
-        """Apply offset to a single Rhino curve using pure RhinoCommon.
+        """Apply offset to a single Rhino curve using pure RhinoCommon with recursive retry.
         
         Args:
             rhino_curve: Rhino curve to apply offset to
@@ -980,16 +980,39 @@ class BaseProcessor:
         if not rhino_curve or not RHINO_IMPORT_OK:
             return rhino_curve
         
+        # Use recursive retry mechanism starting with full offset distance
+        result = self._try_offset_with_retry(rhino_curve, self.offset_distance)
+        return result if result else rhino_curve
+    
+    def _try_offset_with_retry(self, rhino_curve, offset_distance, min_distance=0.05):
+        """Recursively try offset with progressively smaller distances.
+        
+        Args:
+            rhino_curve: Rhino curve to apply offset to
+            offset_distance: Current offset distance to try (in feet)
+            min_distance: Minimum offset distance threshold (in feet)
+            
+        Returns:
+            Rhino.Geometry.Curve: Offset curve or None if all attempts failed
+        """
+        if not rhino_curve or not RHINO_IMPORT_OK:
+            return None
+        
+        # Check if we've reached minimum threshold
+        if offset_distance < min_distance:
+            print("Offset distance {} feet is below minimum threshold {} feet - giving up".format(offset_distance, min_distance))
+            return None
+        
         try:
             # Convert offset distance to Revit units
-            offset_distance_revit = REVIT_UNIT.unit_to_internal(self.offset_distance, "feet")
+            offset_distance_revit = REVIT_UNIT.unit_to_internal(offset_distance, "feet")
             
             # Get a point inside the curve for direction (like slab offseter)
             direction_point = self._get_point_inside_curve(rhino_curve)
             
             if not direction_point:
-                print("Could not determine offset direction - using original curve")
-                return rhino_curve
+                print("Could not determine offset direction for distance {} feet".format(offset_distance))
+                return None
             
             # Get the normal vector for the curve plane (Z-axis for 2D curves)
             normal_vector = Rhino.Geometry.Vector3d.ZAxis
@@ -1005,19 +1028,23 @@ class BaseProcessor:
                 # Find the closed curve (like slab offseter does)
                 for offset_curve in offset_curves:
                     if offset_curve.IsClosed:
-                        # print("Applied offset with distance {} feet using pure RhinoCommon".format(self.offset_distance))
+                        print("Applied offset with distance {} feet (successfully)".format(offset_distance))
                         return offset_curve
                 
                 # If no closed curve found, use the first one
-                print("Applied offset with distance {} feet (using first result)".format(self.offset_distance))
+                print("Applied offset with distance {} feet (using first result)".format(offset_distance))
                 return offset_curves[0]
             else:
-                print("Offset failed - using original curve")
-                return rhino_curve
+                # Offset failed - try with half the distance
+                half_distance = offset_distance / 2.0
+                print("Offset failed with distance {} feet - retrying with {} feet".format(offset_distance, half_distance))
+                return self._try_offset_with_retry(rhino_curve, half_distance, min_distance)
             
         except Exception as e:
-            print("Error applying offset: {}. Using original curve.".format(str(e)))
-            return rhino_curve
+            # Error occurred - try with half the distance
+            half_distance = offset_distance / 2.0
+            print("Error applying offset with distance {} feet: {}. Retrying with {} feet".format(offset_distance, str(e), half_distance))
+            return self._try_offset_with_retry(rhino_curve, half_distance, min_distance)
     
     # ============================================================================
     # INTERNAL UTILITY METHODS

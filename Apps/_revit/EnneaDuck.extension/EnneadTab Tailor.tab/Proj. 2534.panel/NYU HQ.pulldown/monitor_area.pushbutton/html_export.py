@@ -515,8 +515,30 @@ class HTMLReportGenerator:
                 <p><strong>Area Scheme:</strong> {scheme_name}</p>
             </div>
             <div class="online-dashboard-note">
-                <p><strong>🌐 Online Dashboard:</strong> To view this dashboard anywhere, visit <a href="https://ennead-architects-llp.github.io/NYU-HQ/" target="_blank">https://ennead-architects-llp.github.io/NYU-HQ/</a></p>
-                <p><strong>🔄 Data Flow Diagram:</strong> To see how data flows between Excel, Revit, and the web report, visit <a href="https://ennead-architects-llp.github.io/NYU-HQ/diagram" target="_blank">https://ennead-architects-llp.github.io/NYU-HQ/diagram</a></p>
+                <div class="dashboard-link-container">
+                    <div class="dashboard-link-item">
+                        <div class="link-icon">🌐</div>
+                        <div class="link-content">
+                            <div class="link-title">Online Dashboard</div>
+                            <div class="link-description">View this dashboard anywhere</div>
+                            <a href="https://ennead-architects-llp.github.io/NYU-HQ/" target="_blank" class="dashboard-link">
+                                <span class="link-text">🚀 Live Dashboard</span>
+                                <span class="link-arrow">↗</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="dashboard-link-item">
+                        <div class="link-icon">🔄</div>
+                        <div class="link-content">
+                            <div class="link-title">Data Flow Diagram</div>
+                            <div class="link-description">See how data flows between Excel, Revit, and the web report</div>
+                            <a href="https://ennead-architects-llp.github.io/NYU-HQ/diagram" target="_blank" class="dashboard-link">
+                                <span class="link-text">📊 Flow Chart</span>
+                                <span class="link-arrow">↗</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             
@@ -1831,42 +1853,150 @@ class HTMLReportGenerator:
         
         .online-dashboard-note {
             margin-top: 20px;
-            padding: 14px 18px;
+            padding: 20px 24px;
             background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%);
             border: 1px solid rgba(16, 185, 129, 0.3);
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 0.9rem;
             color: #d1d5db;
             line-height: 1.6;
         }
         
-        .online-dashboard-note strong {
-            color: #34d399;
+        .dashboard-link-container {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            align-items: stretch;
+        }
+        
+        .dashboard-link-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 16px 20px;
+            background: rgba(31, 41, 55, 0.6);
+            border: 1px solid rgba(75, 85, 99, 0.4);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .dashboard-link-item:hover {
+            background: rgba(31, 41, 55, 0.8);
+            border-color: rgba(96, 165, 250, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .link-icon {
+            font-size: 1.5rem;
+            line-height: 1;
+            flex-shrink: 0;
+            margin-top: 4px;
+        }
+        
+        .link-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .link-title {
+            color: #ffffff;
+            font-size: 1.1rem;
             font-weight: 600;
+            margin-bottom: 4px;
         }
         
-        .online-dashboard-note p {
-            margin: 0;
+        .link-description {
+            color: #9ca3af;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            line-height: 1.4;
         }
         
-        .online-dashboard-note a {
-            color: #60a5fa;
-            text-decoration: none;
-            transition: color 0.2s ease;
+        .dashboard-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: #ffffff !important;
+            text-decoration: none !important;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+            border: 1px solid rgba(59, 130, 246, 0.5);
+        }
+        
+        .dashboard-link:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+            border-color: rgba(59, 130, 246, 0.8);
+        }
+        
+        .dashboard-link:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+        }
+        
+        .link-text {
+            flex: 1;
+            min-width: 0;
             word-break: break-all;
+            font-family: 'Source Code Pro', 'Monaco', 'Consolas', monospace;
+            font-size: 0.85rem;
         }
         
-        .online-dashboard-note a:hover {
-            color: #93c5fd;
-            text-decoration: underline;
+        .link-arrow {
+            font-size: 1rem;
+            font-weight: bold;
+            opacity: 0.8;
+            transition: opacity 0.2s ease;
         }
         
-        .online-dashboard-note p {
-            margin-bottom: 8px;
+        .dashboard-link:hover .link-arrow {
+            opacity: 1;
         }
         
-        .online-dashboard-note p:last-child {
-            margin-bottom: 0;
+        @media (max-width: 768px) {
+            .dashboard-link-container {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .dashboard-link-item {
+                flex-direction: column;
+                gap: 12px;
+                padding: 16px;
+            }
+            
+            .link-icon {
+                align-self: center;
+                margin-top: 0;
+            }
+            
+            .dashboard-link {
+                justify-content: center;
+                text-align: center;
+            }
+        }
+        
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .dashboard-link-container {
+                gap: 16px;
+            }
+            
+            .dashboard-link-item {
+                padding: 14px 16px;
+            }
+            
+            .link-description {
+                font-size: 0.85rem;
+            }
         }
         
         .visualization-note {
