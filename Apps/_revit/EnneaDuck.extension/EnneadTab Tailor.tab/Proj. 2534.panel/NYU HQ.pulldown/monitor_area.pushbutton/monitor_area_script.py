@@ -24,6 +24,8 @@ from revit_data import get_revit_area_data_by_scheme
 from html_export import HTMLReportGenerator
 from color_scheme_updater import update_all_color_schemes
 from parameter_updater import update_area_parameters
+from excel_writeback import write_design_values_to_test_excel
+import config
 
 
 @ERROR_HANDLE.try_catch_error()
@@ -48,6 +50,14 @@ def monitor_area(doc):
     # Update Revit area parameters with suggestions
     param_stats = update_area_parameters(doc, all_matches, all_unmatched)
     
+    # Write Revit area data to TEST Excel copy (original Excel is NOT changed)
+    writeback_stats = write_design_values_to_test_excel(
+        excel_data, 
+        all_matches, 
+        config.EXCEL_FILENAME, 
+        config.EXCEL_WORKSHEET
+    )
+    
     # Open all generated reports
     for filepath in filepaths:
         generator.open_report_in_browser(filepath)
@@ -70,13 +80,26 @@ def monitor_area(doc):
     if param_stats['errors']:
         param_summary += "\n  Errors: {}".format(len(param_stats['errors']))
     
+    # Add Excel writeback summary
+    writeback_summary = "\n\nExcel Writeback (TEST file only):\n  Total cells updated: {}\n  DESIGN Column: {}".format(
+        writeback_stats['total_updates'],
+        writeback_stats.get('design_column', 'N/A')
+    )
+    
+    test_file = writeback_stats.get('test_file_path', None)
+    if test_file:
+        writeback_summary += "\n  Test file: {}".format(os.path.basename(test_file))
+    
+    if writeback_stats.get('error'):
+        writeback_summary += "\n  Error: {}".format(writeback_stats['error'])
+    
     if len(filepaths) == 1:
-        msg = "HTML Report Generated and Opened!\nFile: {}\nScheme: {}\nFulfilled: {}/{}{}".format(
-            os.path.basename(filepaths[0]), list(all_matches.keys())[0], total_fulfilled, total_requirements, param_summary)
+        msg = "HTML Report Generated and Opened!\nFile: {}\nScheme: {}\nFulfilled: {}/{}{}{}".format(
+            os.path.basename(filepaths[0]), list(all_matches.keys())[0], total_fulfilled, total_requirements, param_summary, writeback_summary)
     else:
         filenames = "\n  - ".join([os.path.basename(f) for f in filepaths])
-        msg = "HTML Reports Generated and Opened!\nFiles:\n  - {}\nSchemes: {}\nFulfilled: {}/{}{}".format(
-            filenames, len(all_matches), total_fulfilled, total_requirements, param_summary)
+        msg = "HTML Reports Generated and Opened!\nFiles:\n  - {}\nSchemes: {}\nFulfilled: {}/{}{}{}".format(
+            filenames, len(all_matches), total_fulfilled, total_requirements, param_summary, writeback_summary)
     
     NOTIFICATION.messenger(main_text=msg)
 
