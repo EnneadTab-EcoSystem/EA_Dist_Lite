@@ -518,9 +518,7 @@ class HTMLReportGenerator:
                 <p><strong>🌐 Online Dashboard:</strong> To view this dashboard anywhere, visit <a href="https://ennead-architects-llp.github.io/NYU-HQ/" target="_blank">https://ennead-architects-llp.github.io/NYU-HQ/</a></p>
                 <p><strong>🔄 Data Flow Diagram:</strong> To see how data flows between Excel, Revit, and the web report, visit <a href="https://ennead-architects-llp.github.io/NYU-HQ/diagram" target="_blank">https://ennead-architects-llp.github.io/NYU-HQ/diagram</a></p>
             </div>
-            <div class="visualization-note">
-                <p><strong>📊 TreeView Visualization:</strong> This report presents data in a hierarchical tree structure for easy navigation through <strong>Department → Division → Room</strong> relationships. Expand and collapse nodes to explore the organizational structure and metrics at each level.</p>
-            </div>
+            
             
             <div class="legend-section">
                 <h4>📌 Symbol Legend</h4>
