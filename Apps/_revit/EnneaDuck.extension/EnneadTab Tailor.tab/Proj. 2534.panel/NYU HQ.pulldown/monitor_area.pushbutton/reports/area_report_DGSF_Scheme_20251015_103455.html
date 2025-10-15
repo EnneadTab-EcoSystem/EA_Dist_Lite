@@ -143,14 +143,6 @@
             text-decoration: underline;
         }
         
-        .online-dashboard-note p {
-            margin-bottom: 8px;
-        }
-        
-        .online-dashboard-note p:last-child {
-            margin-bottom: 0;
-        }
-        
         .visualization-note {
             margin-top: 24px;
             padding: 16px 20px;
@@ -1915,13 +1907,12 @@
         <header class="report-header">
             <h1>🏥 EnneadTab - Excel Area Requirements vs Revit Actual Areas Report</h1>
             <div class="report-info">
-                <p><strong>Generated:</strong> 2025-10-15 11:27:27</p>
+                <p><strong>Generated:</strong> 2025-10-15 10:34:55</p>
                 <p><strong>Project:</strong> NYU HQ - Monitor Area System</p>
                 <p><strong>Area Scheme:</strong> DGSF Scheme</p>
             </div>
             <div class="online-dashboard-note">
                 <p><strong>🌐 Online Dashboard:</strong> To view this dashboard anywhere, visit <a href="https://ennead-architects-llp.github.io/NYU-HQ/" target="_blank">https://ennead-architects-llp.github.io/NYU-HQ/</a></p>
-                <p><strong>🔄 Data Flow Diagram:</strong> To see how data flows between Excel, Revit, and the web report, visit <a href="https://ennead-architects-llp.github.io/NYU-HQ/diagram" target="_blank">https://ennead-architects-llp.github.io/NYU-HQ/diagram</a></p>
             </div>
             <div class="visualization-note">
                 <p><strong>📊 TreeView Visualization:</strong> This report presents data in a hierarchical tree structure for easy navigation through <strong>Department → Division → Room</strong> relationships. Expand and collapse nodes to explore the organizational structure and metrics at each level.</p>
@@ -2201,9 +2192,9 @@
             
             <tr>
                 <td class="level-name-col"><strong>Level 2 Clinical Support</strong><br><small class="level-elevation">Elev: 15.00 ft</small></td>
-                <td class="dept-count-col">4 departments<br><small class="level-total-dgsf">117,362 SF Total</small></td>
-                <td class="unapproved-count-col no-unapproved">All Approved</td>
-                <td class="dept-badges-col"><span class="dept-badge dept-approved" style="border: 2px solid #f5c859; background: linear-gradient(135deg, rgba(245, 200, 89, 0.2) 0%, rgba(245, 200, 89, 0.35) 100%); color: #f8fafc;" title="Approved department: 10,805 DGSF">ADMINISTRATION & STAFF SUPPORT<br><small style="color: #e5e7eb;">10,805 SF</small></span> <span class="dept-badge dept-approved" style="border: 2px solid #dcd5c2; background: linear-gradient(135deg, rgba(220, 213, 194, 0.2) 0%, rgba(220, 213, 194, 0.35) 100%); color: #f8fafc;" title="Approved department: 6,719 DGSF">BUILDING SUPPORT<br><small style="color: #e5e7eb;">6,719 SF</small></span> <span class="dept-badge dept-approved" style="border: 2px solid #fce4d6; background: linear-gradient(135deg, rgba(252, 228, 214, 0.2) 0%, rgba(252, 228, 214, 0.35) 100%); color: #f8fafc;" title="Approved department: 96,484 DGSF">CLINICAL SUPPORT<br><small style="color: #e5e7eb;">96,484 SF</small></span> <span class="dept-badge dept-approved" style="border: 2px solid #fcf19c; background: linear-gradient(135deg, rgba(252, 241, 156, 0.2) 0%, rgba(252, 241, 156, 0.35) 100%); color: #f8fafc;" title="Approved department: 3,354 DGSF">PUBLIC SUPPORT<br><small style="color: #e5e7eb;">3,354 SF</small></span></td>
+                <td class="dept-count-col">5 departments<br><small class="level-total-dgsf">117,362 SF Total</small></td>
+                <td class="unapproved-count-col has-unapproved">1 UNAPPROVED</td>
+                <td class="dept-badges-col"><span class="dept-badge dept-approved" style="border: 2px solid #f5c859; background: linear-gradient(135deg, rgba(245, 200, 89, 0.2) 0%, rgba(245, 200, 89, 0.35) 100%); color: #f8fafc;" title="Approved department: 10,805 DGSF">ADMINISTRATION & STAFF SUPPORT<br><small style="color: #e5e7eb;">10,805 SF</small></span> <span class="dept-badge dept-approved" style="border: 2px solid #dcd5c2; background: linear-gradient(135deg, rgba(220, 213, 194, 0.2) 0%, rgba(220, 213, 194, 0.35) 100%); color: #f8fafc;" title="Approved department: 6,719 DGSF">BUILDING SUPPORT<br><small style="color: #e5e7eb;">6,719 SF</small></span> <span class="dept-badge dept-approved" style="border: 2px solid #fce4d6; background: linear-gradient(135deg, rgba(252, 228, 214, 0.2) 0%, rgba(252, 228, 214, 0.35) 100%); color: #f8fafc;" title="Approved department: 96,484 DGSF">CLINICAL SUPPORT<br><small style="color: #e5e7eb;">96,484 SF</small></span> <span class="dept-badge dept-unapproved" title="Unapproved department: 0 DGSF - Not in Excel program">⚠️ INPATIENT CARE<br><small>0 SF</small></span> <span class="dept-badge dept-approved" style="border: 2px solid #fcf19c; background: linear-gradient(135deg, rgba(252, 241, 156, 0.2) 0%, rgba(252, 241, 156, 0.35) 100%); color: #f8fafc;" title="Approved department: 3,354 DGSF">PUBLIC SUPPORT<br><small style="color: #e5e7eb;">3,354 SF</small></span></td>
             </tr>
             
             <tr>
@@ -4178,6 +4169,40 @@
             <p>The following Revit areas were not matched to any Excel requirements, grouped by level. <span class="zero-area-hint">Note: entries showing <strong>0 SF</strong> are often <em>not placed</em> in the model yet or the boundary is <em>not enclosed</em> (room/area not bounding) in Revit.</span></p>
             
             <div class="level-section">
+                <h4>📍 Level 2 Clinical Support (1 areas, 0 SF)</h4>
+            <div class="table-container">
+                <table class="unmatched-table">
+                    <thead>
+                        <tr>
+                                <th class="col-dept">Department</th>
+                                <th class="col-division">Division</th>
+                                <th class="col-function">Function</th>
+                                <th class="col-area">Area (SF)</th>
+                                <th class="col-level">Created By</th>
+                                <th class="col-level">Last Edited By</th>
+                                <th class="col-status">Status</th>
+                                <th class="col-suggestion">Suggested Match</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                            
+                    <tr>
+                        <td class="col-dept">INPATIENT CARE</td>
+                        <td class="col-division"></td>
+                        <td class="col-function"></td>
+                        <td class="col-area">0 SF</td>
+                        <td class="col-level">szhangGOODLOOKING</td>
+                        <td class="col-level">Unknown</td>
+                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
+                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>INPATIENT CARE UNIT | Licensed Beds | Patient Units_Universal Med Surg</strong>?</span></td>
+                </tr>
+            
+                    </tbody>
+                </table>
+            </div>
+            </div>
+            
+            <div class="level-section">
                 <h4>📍 Level 3  D+T  /  Patient Rooms (1 areas, 703 SF)</h4>
             <div class="table-container">
                 <table class="unmatched-table">
@@ -4195,17 +4220,17 @@
                     </thead>
                     <tbody>
                             
-                    <tr class="">
+                    <tr>
                         <td class="col-dept">ADMINISTRATION & STAFF SUPPORT</td>
                         <td class="col-division"></td>
                         <td class="col-function"></td>
-                        <td class="col-area">703 SF </td>
+                        <td class="col-area">703 SF</td>
                         <td class="col-level">amielkeKREU3</td>
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
                         <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>ADMINISTRATION & STAFF SUPPORT | Hospital Operations and Staff Support | Extended Clinical Team</strong>?</span></td>
                 </tr>
-             
+            
                     </tbody>
                 </table>
             </div>
@@ -4284,7 +4309,7 @@
         </div>
         
         <footer class="report-footer">
-            <p>Report generated by Monitor Area System | 2025-10-15 11:27:27</p>
+            <p>Report generated by Monitor Area System | 2025-10-15 10:34:55</p>
             <p style="margin-top: 10px; font-size: 0.9em; color: #9ca3af;">
                 🦆 Powered by <strong style="color: #60a5fa;">EnneadTab</strong> | 
                 For feature requests, contact <strong style="color: #60a5fa;">Sen Zhang</strong>

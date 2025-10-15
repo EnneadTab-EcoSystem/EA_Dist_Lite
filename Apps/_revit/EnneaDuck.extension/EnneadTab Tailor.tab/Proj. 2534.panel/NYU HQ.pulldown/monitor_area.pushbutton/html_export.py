@@ -358,10 +358,10 @@ class HTMLReportGenerator:
                 if filename == config.LATEST_REPORT_FILENAME:
                     continue
                 
-                # Only process HTML files
-                if not filename.endswith('.html'):
+                # Only remove generated report files, e.g., area_report_*.html
+                if not (filename.startswith('area_report_') and filename.endswith('.html')):
                     continue
-                
+
                 filepath = os.path.join(self.reports_dir, filename)
                 
                 # Check if file is older than max_days
@@ -503,7 +503,7 @@ class HTMLReportGenerator:
 <body>
     <!-- EnneadTab Logo - Lower Left with Parallax -->
     <div class="ennead-logo-container" id="enneadLogo">
-        <img src="../icon_logo_dark_background.png" alt="EnneadTab Logo" class="ennead-logo">
+        <img src="icon_logo_dark_background.png" alt="EnneadTab Logo" class="ennead-logo" onerror="this.onerror=null; this.src='../icon_logo_dark_background.png';">
     </div>
     
     <div class="container">
@@ -513,6 +513,10 @@ class HTMLReportGenerator:
                 <p><strong>Generated:</strong> {current_time}</p>
                 <p><strong>Project:</strong> {project_name}</p>
                 <p><strong>Area Scheme:</strong> {scheme_name}</p>
+            </div>
+            <div class="online-dashboard-note">
+                <p><strong>🌐 Online Dashboard:</strong> To view this dashboard anywhere, visit <a href="https://ennead-architects-llp.github.io/NYU-HQ/" target="_blank">https://ennead-architects-llp.github.io/NYU-HQ/</a></p>
+                <p><strong>🔄 Data Flow Diagram:</strong> To see how data flows between Excel, Revit, and the web report, visit <a href="https://ennead-architects-llp.github.io/NYU-HQ/diagram" target="_blank">https://ennead-architects-llp.github.io/NYU-HQ/diagram</a></p>
             </div>
             <div class="visualization-note">
                 <p><strong>📊 TreeView Visualization:</strong> This report presents data in a hierarchical tree structure for easy navigation through <strong>Department → Division → Room</strong> relationships. Expand and collapse nodes to explore the organizational structure and metrics at each level.</p>
@@ -1635,26 +1639,29 @@ class HTMLReportGenerator:
                     area_object['suggestion_text'] = ''  # No suggestion
                     suggestion_text = '<span style="color: #6b7280;">No suggestion available</span>'
                 
+                revit_element = area_object.get('revit_element')
+                is_zero = float(self._safe_float(area_sf)) == 0
+                zero_reason = ''
+                if is_zero:
+                    try:
+                        zero_reason = 'Not Placed' if (revit_element is not None and getattr(revit_element, 'Location', None) is None) else 'Not Enclosed'
+                    except Exception:
+                        zero_reason = 'Not Enclosed'
+                zero_area_badge = '' if not is_zero else '<span class=\"zero-area-badge\" title=\"{}\">{}</span>'.format('Likely {}'.format(zero_reason), zero_reason)
+                display_area_sf = "{:,.0f}".format(float(self._safe_float(area_sf))) if not is_zero else "0"
                 level_rows.append("""
-                    <tr>
-                        <td class="col-dept">{area_dept}</td>
-                        <td class="col-division">{area_type}</td>
-                        <td class="col-function">{area_detail}</td>
-                        <td class="col-area">{area_sf} SF</td>
-                        <td class="col-level">{creator}</td>
-                        <td class="col-level">{last_editor}</td>
-                        <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion">{suggestion}</td>
-                </tr>
-            """.format(
-                area_dept=area_dept,
-                area_type=area_type,
-                    area_detail=area_detail,
-                    area_sf="{:,.0f}".format(float(self._safe_float(area_sf))),
-                    creator=creator,
-                    last_editor=last_editor,
-                    suggestion=suggestion_text
-                ))
+                    <tr class=\"{zero_row_class}\">\n                        <td class=\"col-dept\">{area_dept}</td>\n                        <td class=\"col-division\">{area_type}</td>\n                        <td class=\"col-function\">{area_detail}</td>\n                        <td class=\"col-area\">{area_sf} SF {zero_area_badge}</td>\n                        <td class=\"col-level\">{creator}</td>\n                        <td class=\"col-level\">{last_editor}</td>\n                        <td class=\"col-status\"><span class=\"status-badge unmatched\">○ Unmatched</span></td>\n                        <td class=\"col-suggestion\">{suggestion}</td>\n                </tr>
+             """.format(
+                    area_dept=area_dept,
+                    area_type=area_type,
+                        area_detail=area_detail,
+                        area_sf=display_area_sf,
+                        zero_area_badge=zero_area_badge,
+                        zero_row_class=('zero-area-row' if is_zero else ''),
+                        creator=creator,
+                        last_editor=last_editor,
+                        suggestion=suggestion_text
+                    ))
             
             level_sections.append("""
             <div class="level-section">
@@ -1699,7 +1706,7 @@ class HTMLReportGenerator:
                     <strong>Action Required:</strong> These areas are not approved in the Excel program requirements. Please review and update the area parameters in Revit to match approved program entries, or add them to the Excel requirements if they are valid new spaces.
                 </div>
             </div>
-            <p>The following Revit areas were not matched to any Excel requirements, grouped by level:</p>
+            <p>The following Revit areas were not matched to any Excel requirements, grouped by level. <span class="zero-area-hint">Note: entries showing <strong>0 SF</strong> are often <em>not placed</em> in the model yet or the boundary is <em>not enclosed</em> (room/area not bounding) in Revit.</span></p>
             {level_sections}
         </div>
         """.format(
@@ -1824,11 +1831,51 @@ class HTMLReportGenerator:
             font-weight: 500;
         }
         
+        .online-dashboard-note {
+            margin-top: 20px;
+            padding: 14px 18px;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            color: #d1d5db;
+            line-height: 1.6;
+        }
+        
+        .online-dashboard-note strong {
+            color: #34d399;
+            font-weight: 600;
+        }
+        
+        .online-dashboard-note p {
+            margin: 0;
+        }
+        
+        .online-dashboard-note a {
+            color: #60a5fa;
+            text-decoration: none;
+            transition: color 0.2s ease;
+            word-break: break-all;
+        }
+        
+        .online-dashboard-note a:hover {
+            color: #93c5fd;
+            text-decoration: underline;
+        }
+        
+        .online-dashboard-note p {
+            margin-bottom: 8px;
+        }
+        
+        .online-dashboard-note p:last-child {
+            margin-bottom: 0;
+        }
+        
         .visualization-note {
             margin-top: 24px;
             padding: 16px 20px;
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
-            border-left: 4px solid #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.3);
             border-radius: 6px;
             font-size: 0.9rem;
             color: #d1d5db;
@@ -3557,6 +3604,23 @@ class HTMLReportGenerator:
             .ennead-logo-container {
                 display: none;
             }
+        }
+        
+        /* Zero-area clarifications */
+        .zero-area-hint {
+            color: #d1fae5;
+        }
+        .zero-area-badge {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 2px 6px;
+            font-size: 0.75rem;
+            color: #065f46;
+            background: #a7f3d0;
+            border-radius: 4px;
+        }
+        .zero-area-row .col-area {
+            color: #fbbf24;
         }
         """
     

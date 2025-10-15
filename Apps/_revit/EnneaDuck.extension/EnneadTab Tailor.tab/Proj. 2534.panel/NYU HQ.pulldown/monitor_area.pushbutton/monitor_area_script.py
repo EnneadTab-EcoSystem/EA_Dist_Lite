@@ -10,7 +10,7 @@ import os
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 
-from EnneadTab import ERROR_HANDLE, EXCEL, NOTIFICATION, EXE
+from EnneadTab import ERROR_HANDLE, EXCEL, NOTIFICATION, EXE, USER
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FORMS
 from Autodesk.Revit import DB # pyright: ignore 
 
@@ -91,7 +91,8 @@ def monitor_area(doc):
         writeback_summary += "\n  Test file: {}".format(os.path.basename(test_file))
     
     if writeback_stats.get('error'):
-        writeback_summary += "\n  Error: {}".format(writeback_stats['error'])
+        writeback_summary += "\n  ERROR: Excel file cannot be writen becasue you have it open in another program. Please close it and try again."
+        # writeback_summary += "\n  Error: {}".format(writeback_stats['error'])
     
     if len(filepaths) == 1:
         msg = "HTML Report Generated and Opened!\nFile: {}\nScheme: {}\nFulfilled: {}/{}{}{}".format(
@@ -103,6 +104,33 @@ def monitor_area(doc):
     
     NOTIFICATION.messenger(main_text=msg)
     
+
+
+    if os.path.exists(r"C:\Users\szhang"):
+        try:
+            dist_reports_dir = r"C:\Users\szhang\Documents\EnneadTab Ecosystem\EA_Dist\Apps\_revit\EnneaDuck.extension\EnneadTab Tailor.tab\Proj. 2534.panel\NYU HQ.pulldown\monitor_area.pushbutton\reports"
+            if not os.path.exists(dist_reports_dir):
+                os.makedirs(dist_reports_dir)
+
+            # Copy generated HTML reports
+            import shutil
+            for filepath in filepaths:
+                if not filepath.lower().endswith('.html'):
+                    continue
+                dst_path = os.path.join(dist_reports_dir, os.path.basename(filepath))
+                shutil.copy2(filepath, dst_path)
+
+            # Copy icon asset if present in the source reports folder
+            if filepaths:
+                src_reports_dir = os.path.dirname(filepaths[0])
+                icon_name = 'icon_logo_dark_background.png'
+                src_icon = os.path.join(src_reports_dir, icon_name)
+                if os.path.exists(src_icon):
+                    shutil.copy2(src_icon, os.path.join(dist_reports_dir, icon_name))
+        except Exception:
+            print ("Failed to copy reports to dist folder due to error: {}".format(traceback.format_exc()))
+
+
     # Open NYU_HQ executable
     EXE.try_open_app("NYU_HQ")
 
