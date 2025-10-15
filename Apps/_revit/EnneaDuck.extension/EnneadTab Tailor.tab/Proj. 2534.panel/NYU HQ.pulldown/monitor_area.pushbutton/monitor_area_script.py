@@ -10,7 +10,7 @@ import os
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 
-from EnneadTab import ERROR_HANDLE, EXCEL, NOTIFICATION
+from EnneadTab import ERROR_HANDLE, EXCEL, NOTIFICATION, EXE
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FORMS
 from Autodesk.Revit import DB # pyright: ignore 
 
@@ -102,6 +102,9 @@ def monitor_area(doc):
             filenames, len(all_matches), total_fulfilled, total_requirements, param_summary, writeback_summary)
     
     NOTIFICATION.messenger(main_text=msg)
+    
+    # Open NYU_HQ executable
+    EXE.try_open_app("NYU_HQ")
 
 
 
