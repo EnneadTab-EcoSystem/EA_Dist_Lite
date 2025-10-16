@@ -187,24 +187,46 @@ def _log_unique_error(error_type, error_msg, tb_text, module_path, paths=None):
         # Never crash due to logging failure
         pass
 
-def _write_heartbeat(stage, paths=None):
+# Global start time for heartbeat timing
+_HEARTBEAT_START_TIME = None
+
+def _write_heartbeat(stage, paths=None, progress_pct=None):
     """
-    Write heartbeat file to indicate progress.
-    This prevents timeout during long-running operations.
+    Write heartbeat file to indicate progress with timing information.
+    This prevents timeout during long-running operations and helps debug failures.
+    
+    Format: [time] [elapsed] [progress%] stage_description
+    Example: [14:30:15] [  12.3s] [ 25%] Running health metrics...
     
     Args:
         stage: Current stage description
         paths: Optional dictionary of paths from job file
+        progress_pct: Optional progress percentage (0-100)
     """
+    global _HEARTBEAT_START_TIME
     try:
+        # Initialize start time on first call
+        if _HEARTBEAT_START_TIME is None:
+            _HEARTBEAT_START_TIME = time.time()
+        
+        # Calculate elapsed time
+        elapsed = time.time() - _HEARTBEAT_START_TIME
+        elapsed_str = "{:.1f}s".format(elapsed)
+        
+        # Format progress if provided
+        progress_str = "[{:3.0f}%]".format(progress_pct) if progress_pct is not None else "      "
+        
         if paths:
             dbg_dir = _ensure_debug_dir(paths)
         else:
             # Fallback to script directory if paths not available
             dbg_dir = _script_dir()
         heartbeat_file = _join(dbg_dir, "_heartbeat.txt")
+        
+        # Write heartbeat with timing and progress info
         with open(heartbeat_file, 'a') as f:
-            f.write("[{}] {}\n".format(datetime.now().isoformat(), stage))
+            timestamp = datetime.now().strftime("%H:%M:%S")
+            f.write("[{}] [{:>6}] {} {}\n".format(timestamp, elapsed_str, progress_str, stage))
     except Exception as e:
         # Non-critical: Don't fail job if heartbeat write fails
         print("Failed to write heartbeat: {}".format(traceback.format_exc()))
@@ -247,81 +269,15 @@ def _get_app():
         return _HOST_APP.app
     raise Exception("pyRevit HOST_APP.app not available")
 
-def _validate_file_before_open(model_path, paths=None):
-    """
-    Validate file exists and is accessible before attempting to open with Revit.
-    Provides detailed diagnostics for local files, ACC, and BIM360 files.
-    Returns detailed error message if validation fails, None if valid.
-    """
-    try:
-        # Detect file type (local, ACC, BIM360)
-        is_acc = "ACCDocs" in model_path or "ACC" in model_path.upper()
-        is_bim360 = "BIM360" in model_path or "DC:" in model_path
-        is_cloud = is_acc or is_bim360
-        
-        file_type = "ACC" if is_acc else ("BIM360" if is_bim360 else "Local")
-        _append_debug("File type detected: {} - {}".format(file_type, model_path), paths)
-        
-        # Check if file exists
-        if not os.path.exists(model_path):
-            if is_cloud:
-                return "Cloud file not accessible (may not be synced): {} - Try: 1) Check Autodesk Desktop Connector is running, 2) Verify file is synced locally, 3) Check network connection".format(model_path)
-            else:
-                return "File does not exist: {} - Verify the file path is correct".format(model_path)
-        
-        # Check if file is accessible (not locked)
-        try:
-            with open(model_path, 'rb') as f:
-                f.read(1024)  # Try to read 1KB to better detect issues
-                _append_debug("File read test successful (1KB)", paths)
-        except IOError as e:
-            error_code = getattr(e, 'errno', None)
-            if error_code == 13 or "Permission" in str(e):
-                return "File is locked or permission denied: {} - Possible causes: 1) Another user has file open, 2) Insufficient permissions, 3) Antivirus blocking access".format(model_path)
-            else:
-                return "File I/O error (code {}): {} - {}".format(error_code, model_path, str(e))
-        except Exception as e:
-            return "File access error: {} - {}".format(model_path, str(e))
-        
-        # Check file size (very small files might be corrupted)
-        file_size = os.path.getsize(model_path)
-        if file_size < 1024:  # Less than 1KB
-            return "File too small ({} bytes), likely corrupted or placeholder: {}".format(file_size, model_path)
-        
-        # For cloud files, add additional diagnostics using BasicFileInfo
-        if is_cloud:
-            try:
-                bfi = DB.BasicFileInfo.Extract(model_path)
-                _append_debug("BasicFileInfo extraction successful for cloud file", paths)
-                
-                # Check if file is workshared and central available
-                if hasattr(bfi, 'IsWorkshared') and bfi.IsWorkshared:
-                    _append_debug("Cloud file is workshared", paths)
-                    if hasattr(bfi, 'CentralPath'):
-                        _append_debug("Central path: {}".format(bfi.CentralPath), paths)
-                
-                # Log format and version for diagnostics
-                if hasattr(bfi, 'Format'):
-                    _append_debug("File format: {}".format(bfi.Format), paths)
-                if hasattr(bfi, 'SavedInVersion'):
-                    _append_debug("Saved in Revit version: {}".format(bfi.SavedInVersion), paths)
-                    
-            except Exception as bfi_ex:
-                # BasicFileInfo extraction failed - this is a red flag for cloud files
-                return "Cloud file validation failed - BasicFileInfo cannot be extracted: {} - Error: {} - Possible causes: 1) File not fully synced from cloud, 2) File corruption, 3) Network interruption during sync, 4) Autodesk services unavailable".format(model_path, str(bfi_ex))
-        
-        _append_debug("File validation passed: {} ({} bytes, {})".format(model_path, file_size, file_type), paths)
-        return None  # Validation passed
-        
-    except Exception as e:
-        return "File validation error: {} - {} - Unexpected error during validation".format(model_path, str(e))
-
 def get_doc(job_payload, paths=None):
     """
     Obtain a Revit Document by opening the model_path specified in the job payload.
     Returns (doc, must_close):
       - doc: the active document reference (or None on failure)
       - must_close (bool): True if this function opened the document and caller should close it
+    
+    NOTE: File validation (exists, accessible, synced, etc.) is now handled by RevitSlave2
+    orchestrator BEFORE launching Revit. This function assumes the file is already validated.
     
     Args:
         job_payload: Job dictionary with model_path
@@ -333,10 +289,8 @@ def get_doc(job_payload, paths=None):
         if not model_path:
             raise Exception("Missing model_path in job payload")
         
-        # Validate file before attempting to open
-        validation_error = _validate_file_before_open(model_path, paths)
-        if validation_error:
-            raise Exception("File validation failed: {}".format(validation_error))
+        _append_debug("NOTE: File validation completed by RevitSlave2 before launching Revit", paths)
+        _append_debug("Proceeding directly to file open", paths)
         
         app = _get_app()
         _append_debug("Attempting to open file: {}".format(model_path), paths)
@@ -672,13 +626,14 @@ def revit_remote_server():
         logs.append("  Log dir: {}".format(paths.get('log_dir', 'None')))
         
         # Heartbeat: prove script started and can write to debug directory
-        _write_heartbeat("Script started", paths)
+        _write_heartbeat("==== REMOTE SERVER STARTED ====", paths, 0)
+        _write_heartbeat("Script initialized and ready", paths, 5)
         _append_debug("=== JOB STATUS TRANSITION: job_created -> pending ===", paths)
         print("STATUS: Changing job status from 'job_created' to 'pending'")
 
         # 1) pending (taken)
         _update_job_status(job, "pending")
-        _write_heartbeat("Job status: pending", paths)
+        _write_heartbeat("Job status: pending (Revit has taken the job)", paths, 10)
         logs.append("Job set to pending")
         print("STATUS: Job is now 'pending' - Revit has taken the job")
         _append_debug("=== JOB STATUS TRANSITION: pending -> running ===", paths)
@@ -686,12 +641,12 @@ def revit_remote_server():
 
         # 2) running
         _update_job_status(job, "running")
-        _write_heartbeat("Job status: running", paths)
+        _write_heartbeat("Job status: running (Beginning document processing)", paths, 15)
         logs.append("Job set to running")
         print("STATUS: Job is now 'running' - Beginning document processing")
 
         # 3) get document and execute metric with timing
-        _write_heartbeat("Opening document...", paths)
+        _write_heartbeat("Opening document: {}".format(job.get('file_name', 'unknown')), paths, 20)
         _append_debug("About to open document: {}".format(job.get('model_path', 'None')), paths)
         
         # Try to open document - if it fails, doc will be None and run_metric will use mock data
@@ -699,7 +654,7 @@ def revit_remote_server():
         must_close = False
         try:
             doc, must_close = get_doc(job, paths)
-            _write_heartbeat("Document opened successfully", paths)
+            _write_heartbeat("Document opened successfully", paths, 30)
         except Exception as doc_ex:
             _write_heartbeat("Document open failed - will use mock data", paths)
             tb_text = traceback.format_exc()
@@ -723,14 +678,14 @@ def revit_remote_server():
         error_msg = None
         
         try:
-            _write_heartbeat("Running health metrics...", paths)
+            _write_heartbeat("Running health metrics (analyzing model)...", paths, 35)
             result, error_msg = run_metric(doc, job, paths)
             if result is None:
-                _write_heartbeat("Health metrics completed with error", paths)
+                _write_heartbeat("Health metrics completed with error", paths, 60)
                 _append_debug("Health metrics completed with error: {}".format(error_msg), paths)
                 print("STATUS: Health metrics completed with error: {}".format(error_msg))
             else:
-                _write_heartbeat("Health metrics completed", paths)
+                _write_heartbeat("Health metrics completed successfully", paths, 60)
         except Exception as e:
             tb_text = traceback.format_exc()
             _append_debug("Health metrics exception: {}".format(tb_text), paths)
@@ -771,7 +726,7 @@ def revit_remote_server():
                 }
                 _append_debug("Exporter skipped - document is null", paths)
             else:
-                _write_heartbeat("Starting model exports...", paths)
+                _write_heartbeat("Starting model exports (generating PDFs/images)...", paths, 65)
                 print("STATUS: Running model exporter (computer configured for both health metric + exporter)")
                 try:
                     from model_exporter import ModelExporter
@@ -790,7 +745,9 @@ def revit_remote_server():
                         export_data["summary"]["successful_sheets"],
                         export_data["summary"]["total_sheets"]
                     ))
-                    _write_heartbeat("Model exports completed", paths)
+                    _write_heartbeat("Model exports completed ({}/{} sheets)".format(
+                        export_data["summary"]["successful_sheets"],
+                        export_data["summary"]["total_sheets"]), paths, 85)
                 except Exception as e:
                     # Export failure does NOT affect health metrics
                     export_error = str(e)
@@ -820,9 +777,9 @@ def revit_remote_server():
         # Close document AFTER both health metrics and exports complete
         try:
             if must_close and doc is not None:
-                _write_heartbeat("Closing document...", paths)
+                _write_heartbeat("Closing document...", paths, 90)
                 doc.Close(False)
-                _write_heartbeat("Document closed", paths)
+                _write_heartbeat("Document closed", paths, 92)
         except Exception as e:
             _append_debug("Failed to close document: {}".format(traceback.format_exc()), paths)
 
@@ -830,7 +787,7 @@ def revit_remote_server():
         execution_time = time.time() - begin_time
 
         # 4) write output file
-        _write_heartbeat("Writing output file...", paths)
+        _write_heartbeat("Writing output file (.sexyDuck)...", paths, 95)
         out_name = _format_output_filename(job)
         
         # task_output_dir now points to model-specific directory: task_output/{project}/{model}/
@@ -856,19 +813,21 @@ def revit_remote_server():
         }
         _save_json(out_path, output_payload)
         logs.append("Output saved: " + out_path)
-        _write_heartbeat("Output file written", paths)
+        _write_heartbeat("Output file written to: {}".format(out_name), paths, 97)
 
         # 5) mark completed (success)
         _append_debug("=== JOB STATUS TRANSITION: running -> completed ===", paths)
         print("STATUS: Changing job status from 'running' to 'completed'")
         _update_job_status(job, "completed", {"result_data": result})
-        _write_heartbeat("Job completed successfully", paths)
+        _write_heartbeat("==== JOB COMPLETED SUCCESSFULLY ==== (Total time: {:.1f}s)".format(execution_time), paths, 100)
         logs.append("Job completed")
         print("STATUS: Job is now 'completed' - Remote server finished successfully")
     except Exception as e:
         tb = traceback.format_exc()
         _append_debug("EXCEPTION: {}".format(str(e)), paths)
         _append_debug("TRACEBACK: {}".format(tb), paths)
+        # Write failure heartbeat
+        _write_heartbeat("!!!! JOB FAILED !!!! Error: {}".format(str(e)[:100]), paths)
         # Log to structured error registry
         error_type = "Pipeline_" + type(e).__name__
         _log_unique_error(
