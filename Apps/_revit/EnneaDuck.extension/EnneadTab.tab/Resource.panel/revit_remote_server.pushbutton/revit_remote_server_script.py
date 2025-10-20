@@ -93,6 +93,41 @@ def _ensure_debug_dir(paths):
             print("Failed to create debug directory: {}".format(traceback.format_exc()))
     return dbg_dir
 
+def _rotate_debug_log(debug_file_path, max_lines=50000):
+    """
+    Rotate debug.txt if it gets too large.
+    Keeps only the last max_lines entries.
+    
+    Args:
+        debug_file_path: Path to debug.txt
+        max_lines: Maximum number of lines to keep (default 50000 = ~2-3 days)
+    """
+    try:
+        if not os.path.exists(debug_file_path):
+            return
+        
+        # Check file size first (quick check)
+        file_size = os.path.getsize(debug_file_path)
+        if file_size < 10 * 1024 * 1024:  # Skip if < 10MB
+            return
+        
+        # Count lines (only if file is large)
+        with open(debug_file_path, 'r') as f:
+            lines = f.readlines()
+        
+        if len(lines) > max_lines:
+            # Keep only last max_lines
+            kept_lines = lines[-max_lines:]
+            
+            # Write back
+            with open(debug_file_path, 'w') as f:
+                f.write("=== LOG ROTATED: Keeping last {} lines (removed {} old lines) ===\n".format(
+                    max_lines, len(lines) - max_lines))
+                f.writelines(kept_lines)
+    except Exception:
+        # Never crash on log rotation failure
+        pass
+
 def _append_debug(message, paths=None):
     """
     Write debug message to debug.txt with multiple fallback locations.
@@ -109,7 +144,14 @@ def _append_debug(message, paths=None):
     if paths:
         try:
             dbg_dir = _ensure_debug_dir(paths)
-            with open(_join(dbg_dir, "debug.txt"), 'a') as f:
+            debug_file = _join(dbg_dir, "debug.txt")
+            
+            # Rotate log if needed (check every 100th write for performance)
+            import random
+            if random.randint(1, 100) == 1:  # 1% chance = ~every 100 writes
+                _rotate_debug_log(debug_file, max_lines=50000)
+            
+            with open(debug_file, 'a') as f:
                 f.write(formatted_msg)
             return  # Success
         except Exception:
