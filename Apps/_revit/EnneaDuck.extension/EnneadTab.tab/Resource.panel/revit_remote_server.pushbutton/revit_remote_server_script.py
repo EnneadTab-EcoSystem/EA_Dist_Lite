@@ -248,12 +248,12 @@ def _get_monday_date_prefix():
     return monday_of_week.strftime("%Y-%m-%d")
 
 def _format_output_filename(job_payload):
-    # {yyyy-mm-dd}_hub_project_model.sexyDuck (Monday = start of week)
-    ts = _get_monday_date_prefix()
-    hub = (job_payload.get("hub_name") or "hub")
-    proj = (job_payload.get("project_name") or "project")
-    model = (job_payload.get("model_name") or "model")
-    return "{}_{}_{}_{}.sexyDuck".format(ts, hub, proj, model)
+    # Use job_id as filename - all metadata (hub, project, model, timestamp) is in JSON
+    # This significantly reduces path length (from ~118 chars to ~30 chars)
+    # Old format: 2025-10-20_Ennead Architects LLP_2306_Universal Hydrogen_2306_A-Universal Hydrogen.rvt.sexyDuck
+    # New format: job_20251020_113427_10.sexyDuck
+    job_id = job_payload.get("job_id", "unknown_job")
+    return "{}.sexyDuck".format(job_id)
 
 def _update_job_status(job, new_status, extra_fields=None):
     job["status"] = new_status
