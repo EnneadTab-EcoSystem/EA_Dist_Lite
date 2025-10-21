@@ -40,6 +40,8 @@ Export Summary:
 Export Location:
 {export_path}
 
+Click the folder link below to open the export location.
+
 Files Exported:
 {pdf_files}
 {dwg_files}
@@ -83,6 +85,13 @@ def send_export_email(export_results, pim_number, project_name, heartbeat_callba
         dwg_list = "\n".join(["- " + os.path.basename(f) for f in export_results["dwg_files"]])
         jpg_list = "\n".join(["- " + os.path.basename(f) for f in export_results["jpg_files"]])
         
+        # Simplify export path to show only important part (after DC\)
+        full_path = export_results["folder_paths"]["weekly"]
+        if "\\DC\\" in full_path:
+            simple_path = full_path.split("\\DC\\")[1]  # Get everything after DC\
+        else:
+            simple_path = full_path
+        
         # Create email body
         body = EMAIL_BODY_TEMPLATE.format(
             date=current_date,
@@ -91,7 +100,7 @@ def send_export_email(export_results, pim_number, project_name, heartbeat_callba
             pdf_count=len(export_results["pdf_files"]),
             dwg_count=len(export_results["dwg_files"]),
             jpg_count=len(export_results["jpg_files"]),
-            export_path=export_results["folder_paths"]["weekly"],
+            export_path=simple_path,
             pdf_files=pdf_list or "No PDF files exported",
             dwg_files=dwg_list or "No DWG files exported", 
             jpg_files=jpg_list or "No JPG files exported"
@@ -104,20 +113,16 @@ def send_export_email(export_results, pim_number, project_name, heartbeat_callba
         # Send email using EnneadTab email service
         try:
             log("Sending email using EnneadTab email service...")
+            
             EMAIL.email(
                 receiver_email_list=EMAIL_RECIPIENTS,
                 body=body,
-                subject=subject,
-                attachment_list=[]
+                subject=subject
             )
             log("Email sent successfully to: {}".format(", ".join(EMAIL_RECIPIENTS)))
             return True
         except Exception as email_error:
             log("Email sending failed: {}".format(str(email_error)), is_error=True)
-            log("Email body preview:")
-            print("="*50)
-            print(body)
-            print("="*50)
             return False
         
     except Exception as e:

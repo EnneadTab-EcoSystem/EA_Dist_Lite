@@ -41,7 +41,7 @@ def get_revit_area_data_by_scheme():
         scheme_name = scheme.Name
         
         # Filter schemes based on configuration
-        if config.AREA_SCHEMES_TO_PROCESS and scheme_name not in config.AREA_SCHEMES_TO_PROCESS:
+        if config.AREA_SCHEMES_TO_PROCESS_PREFIX_KEYWORD and not scheme_name.startswith(config.AREA_SCHEMES_TO_PROCESS_PREFIX_KEYWORD):
             continue
         
         # Get all areas in the document
@@ -202,7 +202,7 @@ def _get_all_areas_as_list(doc):
             scheme_name = "Default Scheme"
         
         # Filter schemes based on configuration
-        if config.AREA_SCHEMES_TO_PROCESS and scheme_name not in config.AREA_SCHEMES_TO_PROCESS:
+        if config.AREA_SCHEMES_TO_PROCESS_PREFIX_KEYWORD and not scheme_name.startswith(config.AREA_SCHEMES_TO_PROCESS_PREFIX_KEYWORD):
             continue
         
         # Get the 3 key parameters for proper matching

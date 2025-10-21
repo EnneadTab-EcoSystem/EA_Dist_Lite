@@ -98,101 +98,53 @@ def get_sheets_to_export(doc, heartbeat_callback=None):
     sheet_collector = DB.FilteredElementCollector(doc).OfClass(DB.ViewSheet)
     all_sheets = list(sheet_collector)
     
-    print("Found {} total sheets in document".format(len(all_sheets)))
-    
-    # Debug document info
-    print("Document info:")
-    print("  Title: '{}'".format(doc.Title))
-    print("  IsWorkshared: {}".format(doc.IsWorkshared))
-    
-    # List all sheets for debugging
-    print("All sheets in document:")
-    for i, sheet in enumerate(all_sheets[:10]):  # Show first 10 sheets
-        print("  {}. Sheet: '{}' (Number: '{}')".format(i+1, sheet.Name, sheet.SheetNumber))
-    
-    # Log to heartbeat for debugging
     if heartbeat_callback:
-        heartbeat_callback("DEBUG", "Found {} total sheets in document".format(len(all_sheets)))
-        heartbeat_callback("DEBUG", "Document title: {}".format(doc.Title))
-        for i, sheet in enumerate(all_sheets[:5]):  # Show first 5 sheets in heartbeat
-            heartbeat_callback("DEBUG", "Sheet {}: '{}' (Number: '{}')".format(i+1, sheet.Name, sheet.SheetNumber))
+        heartbeat_callback("EXPORT", "Found {} total sheets in document".format(len(all_sheets)))
     
-    # Filter sheets by parameter
-    print("Checking sheets for parameter '{}':".format(SHEET_FILTER_PARAMETER))
-    
-    # TEMPORARY: Export all sheets for testing (remove this when parameter values are set)
-    print("TEMPORARY: Exporting all sheets for testing purposes")
-    sheets_to_export = all_sheets[:5]  # Export first 5 sheets for testing
-    print("Found {} sheets to export (testing mode)".format(len(sheets_to_export)))
-    return sheets_to_export
-    
-    # Original filtering logic (commented out for testing)
+    # Production filtering logic - filter sheets by parameter value
     for sheet in all_sheets:
         try:
-            # Get the parameter value
             param = sheet.LookupParameter(SHEET_FILTER_PARAMETER)
             if param:
-                # Debug parameter info
-                print("  Sheet '{}': parameter exists".format(sheet.Name))
-                print("    Parameter type: {}".format(param.StorageType))
-                print("    Parameter definition: {}".format(param.Definition.Name))
-                
-                # Try different ways to read the value
+                # Get parameter value based on storage type
                 if param.StorageType == DB.StorageType.String:
                     param_value = param.AsString()
-                    print("    String value: '{}'".format(param_value))
                 elif param.StorageType == DB.StorageType.Integer:
                     param_value = param.AsInteger()
-                    print("    Integer value: {}".format(param_value))
                 elif param.StorageType == DB.StorageType.Double:
                     param_value = param.AsDouble()
-                    print("    Double value: {}".format(param_value))
                 elif param.StorageType == DB.StorageType.ElementId:
                     param_value = param.AsElementId()
-                    print("    ElementId value: {}".format(param_value))
                 else:
                     param_value = param.AsString()
-                    print("    Default string value: '{}'".format(param_value))
                 
-                # Check if parameter has any meaningful value
-                # Any non-empty value should be treated as True for export
+                # Check if parameter has meaningful value (any non-empty, non-"None" value)
                 has_value = False
                 if param.StorageType == DB.StorageType.String:
-                    # String: any non-empty string (including spaces, symbols, etc.)
-                    # But exclude 'None' string which represents empty values
                     has_value = (param_value and 
                                param_value.strip() != "" and 
                                param_value.strip().lower() != "none")
                 elif param.StorageType == DB.StorageType.Integer:
-                    # Integer: any non-zero value
                     has_value = param_value != 0
                 elif param.StorageType == DB.StorageType.Double:
-                    # Double: any non-zero value
                     has_value = param_value != 0.0
                 elif param.StorageType == DB.StorageType.ElementId:
-                    # ElementId: any valid element ID
                     has_value = param_value and param_value.IntegerValue != -1
                 else:
-                    # Default: any non-empty value, but exclude 'None'
                     has_value = (param_value and 
                                str(param_value).strip() != "" and 
                                str(param_value).strip().lower() != "none")
                 
                 if has_value:
                     sheets_to_export.append(sheet)
-                    print("    -> MARKED FOR EXPORT (has value: '{}')".format(param_value))
                     if heartbeat_callback:
-                        heartbeat_callback("DEBUG", "Sheet '{}' MARKED FOR EXPORT (value: '{}')".format(sheet.Name, param_value))
-                else:
-                    print("    -> SKIPPED (no meaningful value)")
-                    if heartbeat_callback:
-                        heartbeat_callback("DEBUG", "Sheet '{}' SKIPPED (no meaningful value: '{}')".format(sheet.Name, param_value))
-            else:
-                print("  Sheet '{}': parameter '{}' not found".format(sheet.Name, SHEET_FILTER_PARAMETER))
+                        heartbeat_callback("EXPORT", "Sheet '{}' marked for export".format(sheet.Name))
         except Exception as e:
-            print("  Sheet '{}': ERROR - {}".format(sheet.Name, e))
+            pass  # Skip sheets with errors
     
-    print("Found {} sheets to export".format(len(sheets_to_export)))
+    if heartbeat_callback:
+        heartbeat_callback("EXPORT", "Found {} sheets to export (out of {} total)".format(len(sheets_to_export), len(all_sheets)))
+    
     return sheets_to_export
 
 
@@ -211,9 +163,6 @@ def create_export_folders():
     # Create weekly folder if it doesn't exist
     if not os.path.exists(weekly_folder):
         os.makedirs(weekly_folder)
-        print("Created weekly folder: {}".format(weekly_folder))
-    else:
-        print("Weekly folder already exists: {}".format(weekly_folder))
     
     # Create subfolders
     folder_paths = {"weekly": weekly_folder}
@@ -221,9 +170,6 @@ def create_export_folders():
         subfolder_path = os.path.join(weekly_folder, subfolder)
         if not os.path.exists(subfolder_path):
             os.makedirs(subfolder_path)
-            print("Created subfolder: {}".format(subfolder))
-        else:
-            print("Subfolder already exists: {}".format(subfolder))
         folder_paths[subfolder] = subfolder_path
     
     return folder_paths
@@ -255,47 +201,75 @@ def export_pdf(doc, folder_paths, heartbeat_callback=None):
         return exported_files
     
     # Export each sheet as PDF
+    from System.Collections.Generic import List
+    
     for sheet in sheets_to_export:
         try:
-            # Create filename in format: {pim}_{sheetnum}_{sheetname}.pdf
+            # Create filename in format: {pim}-{sheetnum}_{sheetname}
             sheet_number = sheet.SheetNumber
             safe_name = "".join(c for c in sheet.Name if c.isalnum() or c in (' ', '-', '_')).rstrip()
             
             if pim_number:
-                pdf_filename = "{}-{}_{}.pdf".format(pim_number, sheet_number, safe_name)
+                filename_base = "{}-{}_{}".format(pim_number, sheet_number, safe_name)
             else:
-                pdf_filename = "{}_{}.pdf".format(sheet_number, safe_name)
+                filename_base = "{}_{}".format(sheet_number, safe_name)
             
-            pdf_path = os.path.join(pdf_folder, pdf_filename)
+            pdf_path = os.path.join(pdf_folder, filename_base + ".pdf")
             
-            # Export sheet as PDF
-            print("Exporting sheet '{}' to PDF...".format(sheet.Name))
+            # Delete existing file to allow overwrite (Revit won't overwrite by default)
+            if os.path.exists(pdf_path):
+                try:
+                    os.remove(pdf_path)
+                except:
+                    pass
             
             # Create export options
             export_options = DB.PDFExportOptions()
             export_options.HideCropBoundaries = True
             export_options.HideScopeBoxes = True
             export_options.HideReferencePlane = True
+            export_options.Combine = False
+            export_options.StopOnError = False
             
-            # Check sheet's color parameter
+            # Set custom naming rule to match our filename format
+            from EnneadTab import DATA_CONVERSION
+            sheet_num_data = DB.TableCellCombinedParameterData.Create()
+            sheet_num_data.ParamId = DB.ElementId(DB.BuiltInParameter.SHEET_NUMBER)
+            if pim_number:
+                sheet_num_data.Prefix = pim_number + "-"
+            sheet_num_data.Separator = "_"
+            
+            sheet_name_data = DB.TableCellCombinedParameterData.Create()
+            sheet_name_data.ParamId = DB.ElementId(DB.BuiltInParameter.SHEET_NAME)
+            
+            naming_rule = DATA_CONVERSION.list_to_system_list(
+                [sheet_num_data, sheet_name_data], 
+                type="TableCellCombinedParameterData", 
+                use_IList=False
+            )
+            export_options.SetNamingRule(naming_rule)
+            
+            # Set color based on Print_In_Color parameter (boolean: 1=color, 0=grayscale)
             color_param = sheet.LookupParameter(PDF_COLOR_PARAMETER)
-            if color_param and color_param.AsString():
-                # Use color if parameter is set
-                export_options.ColorDepth = DB.ColorDepth.Color
-                print("  Using color export for sheet '{}'".format(sheet.Name))
+            if color_param and color_param.AsInteger() == 1:
+                export_options.ColorDepth = DB.ColorDepthType.Color
             else:
-                # Use grayscale if no color parameter
-                export_options.ColorDepth = DB.ColorDepth.Grayscale
-                print("  Using grayscale export for sheet '{}'".format(sheet.Name))
+                export_options.ColorDepth = DB.ColorDepthType.GrayScale
+            
+            # Create .NET List for view IDs
+            view_ids = List[DB.ElementId]()
+            view_ids.Add(sheet.Id)
             
             # Export the sheet
-            doc.Export(pdf_folder, pdf_filename, [sheet.Id], export_options)
+            doc.Export(pdf_folder, view_ids, export_options)
             
-            exported_files.append(pdf_path)
-            print("Exported: {}".format(pdf_filename))
+            # Verify export succeeded
+            if os.path.exists(pdf_path):
+                exported_files.append(pdf_path)
             
         except Exception as e:
-            print("Error exporting sheet '{}': {}".format(sheet.Name, e))
+            if heartbeat_callback:
+                heartbeat_callback("EXPORT", "PDF export error for '{}': {}".format(sheet.Name, str(e)))
     
     return exported_files
 
@@ -322,53 +296,57 @@ def export_dwg(doc, folder_paths, heartbeat_callback=None):
     exported_files = []
     
     if not sheets_to_export:
-        print("No sheets found with parameter '{}' - skipping DWG export".format(SHEET_FILTER_PARAMETER))
         return exported_files
     
     # Export each sheet as DWG
+    from System.Collections.Generic import List
+    
     for sheet in sheets_to_export:
         try:
-            # Create filename in format: {pim}_{sheetnum}_{sheetname}.dwg
+            # Create filename in format: {pim}-{sheetnum}_{sheetname}
             sheet_number = sheet.SheetNumber
             safe_name = "".join(c for c in sheet.Name if c.isalnum() or c in (' ', '-', '_')).rstrip()
             
             if pim_number:
-                dwg_filename = "{}-{}_{}.dwg".format(pim_number, sheet_number, safe_name)
+                filename_base = "{}-{}_{}".format(pim_number, sheet_number, safe_name)
             else:
-                dwg_filename = "{}_{}.dwg".format(sheet_number, safe_name)
+                filename_base = "{}_{}".format(sheet_number, safe_name)
             
-            dwg_path = os.path.join(dwg_folder, dwg_filename)
+            dwg_path = os.path.join(dwg_folder, filename_base + ".dwg")
             
-            # Export sheet as DWG
-            print("Exporting sheet '{}' to DWG...".format(sheet.Name))
+            # Delete existing file to allow overwrite
+            if os.path.exists(dwg_path):
+                try:
+                    os.remove(dwg_path)
+                except:
+                    pass
             
-            # Create DWG export options
-            export_options = DB.DWGExportOptions()
-            export_options.MergedViews = False
-            export_options.ExportingAreas = False
-            
-            # Use the specified DWG setting
+            # Get DWG export options
             try:
-                # Get the DWG export setting by name
-                dwg_settings = DB.DWGExportOptions.GetPredefinedOptions(doc)
-                for setting in dwg_settings:
-                    if setting.Name == DWG_SETTING_NAME:
-                        export_options = setting
-                        print("  Using DWG setting '{}' for sheet '{}'".format(DWG_SETTING_NAME, sheet.Name))
-                        break
-                else:
-                    print("  DWG setting '{}' not found, using default for sheet '{}'".format(DWG_SETTING_NAME, sheet.Name))
-            except Exception as e:
-                print("  Error loading DWG setting '{}': {}, using default for sheet '{}'".format(DWG_SETTING_NAME, e, sheet.Name))
+                export_options = DB.DWGExportOptions.GetPredefinedOptions(doc, DWG_SETTING_NAME)
+                if not export_options:
+                    export_options = DB.DWGExportOptions()
+                    export_options.MergedViews = False
+                    export_options.ExportingAreas = False
+            except:
+                export_options = DB.DWGExportOptions()
+                export_options.MergedViews = False
+                export_options.ExportingAreas = False
             
-            # Export the sheet
-            doc.Export(dwg_folder, dwg_filename, [sheet.Id], export_options)
+            # Create .NET List for view IDs
+            view_ids = List[DB.ElementId]()
+            view_ids.Add(sheet.Id)
             
-            exported_files.append(dwg_path)
-            print("Exported: {}".format(dwg_filename))
+            # Export the sheet (filename without extension)
+            doc.Export(dwg_folder, filename_base, view_ids, export_options)
+            
+            # Verify export succeeded
+            if os.path.exists(dwg_path):
+                exported_files.append(dwg_path)
             
         except Exception as e:
-            print("Error exporting sheet '{}': {}".format(sheet.Name, e))
+            if heartbeat_callback:
+                heartbeat_callback("EXPORT", "DWG export error for '{}': {}".format(sheet.Name, str(e)))
     
     return exported_files
 
@@ -395,41 +373,54 @@ def export_jpg(doc, folder_paths, heartbeat_callback=None):
     exported_files = []
     
     if not sheets_to_export:
-        print("No sheets found with parameter '{}' - skipping JPG export".format(SHEET_FILTER_PARAMETER))
         return exported_files
     
     # Export each sheet as JPG
+    from System.Collections.Generic import List
+    
     for sheet in sheets_to_export:
         try:
-            # Create filename in format: {pim}_{sheetnum}_{sheetname}.jpg
+            # Create filename in format: {pim}-{sheetnum}_{sheetname}
             sheet_number = sheet.SheetNumber
             safe_name = "".join(c for c in sheet.Name if c.isalnum() or c in (' ', '-', '_')).rstrip()
             
             if pim_number:
-                jpg_filename = "{}-{}_{}.jpg".format(pim_number, sheet_number, safe_name)
+                filename_base = "{}-{}_{}".format(pim_number, sheet_number, safe_name)
             else:
-                jpg_filename = "{}_{}.jpg".format(sheet_number, safe_name)
+                filename_base = "{}_{}".format(sheet_number, safe_name)
             
-            jpg_path = os.path.join(jpg_folder, jpg_filename)
+            jpg_path = os.path.join(jpg_folder, filename_base + ".jpg")
             
-            # Export sheet as JPG
-            print("Exporting sheet '{}' to JPG...".format(sheet.Name))
+            # Delete existing file to allow overwrite
+            if os.path.exists(jpg_path):
+                try:
+                    os.remove(jpg_path)
+                except:
+                    pass
             
             # Create image export options
             export_options = DB.ImageExportOptions()
-            export_options.FilePath = jpg_path
+            export_options.FilePath = filename_base  # Path without extension
             export_options.ImageResolution = DB.ImageResolution.DPI_150
-            export_options.ZoomType = DB.ZoomType.FitToPage
-            export_options.PixelType = DB.PixelType.RGB
+            export_options.ZoomType = DB.ZoomFitType.FitToPage
+            export_options.PixelSize = 1920
+            export_options.ExportRange = DB.ExportRange.SetOfViews
+            
+            # Set the views/sheets to export
+            view_ids = List[DB.ElementId]()
+            view_ids.Add(sheet.Id)
+            export_options.SetViewsAndSheets(view_ids)
             
             # Export the sheet
             doc.ExportImage(export_options)
             
-            exported_files.append(jpg_path)
-            print("Exported: {}".format(jpg_filename))
+            # Verify export succeeded
+            if os.path.exists(jpg_path):
+                exported_files.append(jpg_path)
             
         except Exception as e:
-            print("Error exporting sheet '{}': {}".format(sheet.Name, e))
+            if heartbeat_callback:
+                heartbeat_callback("EXPORT", "JPG export error for '{}': {}".format(sheet.Name, str(e)))
     
     return exported_files
 

@@ -12,7 +12,21 @@ import sys
 from datetime import datetime
 
 # Ensure EnneadTab lib is in sys.path
-lib_path = r"C:\Users\szhang\github\EnneadTab-OS\Apps\lib"
+# Get username dynamically and check both developer and distribution paths
+import os
+USERNAME = os.environ.get("USERNAME", "szhang")
+
+# Try developer path first, then distribution path
+lib_path_dev = r"C:\Users\{}\github\EnneadTab-OS\Apps\lib".format(USERNAME)
+lib_path_dist = r"C:\Users\{}\Documents\EnneadTab Ecosystem\EA_Dist\Apps\lib".format(USERNAME)
+
+if os.path.exists(lib_path_dev):
+    lib_path = lib_path_dev
+elif os.path.exists(lib_path_dist):
+    lib_path = lib_path_dist
+else:
+    lib_path = lib_path_dev  # Default to dev path
+
 if lib_path not in sys.path:
     sys.path.insert(0, lib_path)
 

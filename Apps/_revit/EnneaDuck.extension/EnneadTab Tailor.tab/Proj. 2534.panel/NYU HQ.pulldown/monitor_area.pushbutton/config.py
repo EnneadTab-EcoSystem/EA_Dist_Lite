@@ -67,7 +67,8 @@ COMPOSITE_KEY_COLUMN_NAME = "COMPOSITE_KEY"  # Name of the synthetic column
 #   ["DGSF Scheme"] - process only DGSF Scheme
 #   ["DGSF Scheme", "GFA Scheme"] - process multiple schemes
 #   [] - process all schemes found in document
-AREA_SCHEMES_TO_PROCESS = ["DGSF Scheme"]
+AREA_SCHEMES_TO_PROCESS_PREFIX_KEYWORD = "DGSF Scheme" # any area scheme anme that begin with thos keywords will be processed
+# example: "DGSF Scheme" will process "DGSF Scheme", "DGSF Scheme_opt1", "DGSF Scheme_opt3", etc.
 
 # Color scheme names to update from Excel color hierarchy
 # Maps hierarchy level to Revit color scheme name

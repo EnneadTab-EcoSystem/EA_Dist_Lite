@@ -113,41 +113,157 @@
         
         .online-dashboard-note {
             margin-top: 20px;
-            padding: 14px 18px;
+            padding: 20px 24px;
             background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(59, 130, 246, 0.1) 100%);
-            border-left: 4px solid #10b981;
-            border-radius: 6px;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
             font-size: 0.9rem;
             color: #d1d5db;
             line-height: 1.6;
         }
         
-        .online-dashboard-note strong {
-            color: #34d399;
+        .dashboard-link-container {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            align-items: stretch;
+        }
+        
+        .dashboard-link-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 16px 20px;
+            background: rgba(31, 41, 55, 0.6);
+            border: 1px solid rgba(75, 85, 99, 0.4);
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .dashboard-link-item:hover {
+            background: rgba(31, 41, 55, 0.8);
+            border-color: rgba(96, 165, 250, 0.6);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+        
+        .link-icon {
+            font-size: 1.5rem;
+            line-height: 1;
+            flex-shrink: 0;
+            margin-top: 4px;
+        }
+        
+        .link-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .link-title {
+            color: #ffffff;
+            font-size: 1.1rem;
             font-weight: 600;
+            margin-bottom: 4px;
         }
         
-        .online-dashboard-note p {
-            margin: 0;
+        .link-description {
+            color: #9ca3af;
+            font-size: 0.9rem;
+            margin-bottom: 12px;
+            line-height: 1.4;
         }
         
-        .online-dashboard-note a {
-            color: #60a5fa;
-            text-decoration: none;
-            transition: color 0.2s ease;
+        .dashboard-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            color: #ffffff !important;
+            text-decoration: none !important;
+            border-radius: 6px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+            border: 1px solid rgba(59, 130, 246, 0.5);
+        }
+        
+        .dashboard-link:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.4);
+            border-color: rgba(59, 130, 246, 0.8);
+        }
+        
+        .dashboard-link:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+        }
+        
+        .link-text {
+            flex: 1;
+            min-width: 0;
             word-break: break-all;
+            font-family: 'Source Code Pro', 'Monaco', 'Consolas', monospace;
+            font-size: 0.85rem;
         }
         
-        .online-dashboard-note a:hover {
-            color: #93c5fd;
-            text-decoration: underline;
+        .link-arrow {
+            font-size: 1rem;
+            font-weight: bold;
+            opacity: 0.8;
+            transition: opacity 0.2s ease;
+        }
+        
+        .dashboard-link:hover .link-arrow {
+            opacity: 1;
+        }
+        
+        @media (max-width: 768px) {
+            .dashboard-link-container {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .dashboard-link-item {
+                flex-direction: column;
+                gap: 12px;
+                padding: 16px;
+            }
+            
+            .link-icon {
+                align-self: center;
+                margin-top: 0;
+            }
+            
+            .dashboard-link {
+                justify-content: center;
+                text-align: center;
+            }
+        }
+        
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .dashboard-link-container {
+                gap: 16px;
+            }
+            
+            .dashboard-link-item {
+                padding: 14px 16px;
+            }
+            
+            .link-description {
+                font-size: 0.85rem;
+            }
         }
         
         .visualization-note {
             margin-top: 24px;
             padding: 16px 20px;
             background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(16, 185, 129, 0.1) 100%);
-            border-left: 4px solid #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.3);
             border-radius: 6px;
             font-size: 0.9rem;
             color: #d1d5db;
@@ -1900,23 +2016,44 @@
 <body>
     <!-- EnneadTab Logo - Lower Left with Parallax -->
     <div class="ennead-logo-container" id="enneadLogo">
-        <img src="../icon_logo_dark_background.png" alt="EnneadTab Logo" class="ennead-logo">
+        <img src="icon_logo_dark_background.png" alt="EnneadTab Logo" class="ennead-logo" onerror="this.onerror=null; this.src='../icon_logo_dark_background.png';">
     </div>
     
     <div class="container">
         <header class="report-header">
             <h1>🏥 EnneadTab - Excel Area Requirements vs Revit Actual Areas Report</h1>
             <div class="report-info">
-                <p><strong>Generated:</strong> 2025-10-15 10:33:57</p>
+                <p><strong>Generated:</strong> 2025-10-21 16:19:18</p>
                 <p><strong>Project:</strong> NYU HQ - Monitor Area System</p>
-                <p><strong>Area Scheme:</strong> DGSF Scheme</p>
+                <p><strong>Area Scheme:</strong> DGSF Scheme_Opt2</p>
             </div>
             <div class="online-dashboard-note">
-                <p><strong>🌐 Online Dashboard:</strong> To view this dashboard anywhere, visit <a href="https://ennead-architects-llp.github.io/NYU-HQ/" target="_blank">https://ennead-architects-llp.github.io/NYU-HQ/</a></p>
+                <div class="dashboard-link-container">
+                    <div class="dashboard-link-item">
+                        <div class="link-icon">🌐</div>
+                        <div class="link-content">
+                            <div class="link-title">Online Dashboard</div>
+                            <div class="link-description">View this dashboard anywhere</div>
+                            <a href="https://ennead-architects-llp.github.io/NYU-HQ/" target="_blank" class="dashboard-link">
+                                <span class="link-text">🚀 Live Dashboard</span>
+                                <span class="link-arrow">↗</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="dashboard-link-item">
+                        <div class="link-icon">🔄</div>
+                        <div class="link-content">
+                            <div class="link-title">Data Flow Diagram</div>
+                            <div class="link-description">See how data flows between Excel, Revit, and the web report</div>
+                            <a href="https://ennead-architects-llp.github.io/NYU-HQ/diagram" target="_blank" class="dashboard-link">
+                                <span class="link-text">📊 Flow Chart</span>
+                                <span class="link-arrow">↗</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="visualization-note">
-                <p><strong>📊 TreeView Visualization:</strong> This report presents data in a hierarchical tree structure for easy navigation through <strong>Department → Division → Room</strong> relationships. Expand and collapse nodes to explore the organizational structure and metrics at each level.</p>
-            </div>
+            
             
             <div class="legend-section">
                 <h4>📌 Symbol Legend</h4>
@@ -1997,12 +2134,12 @@
                     </td>
                     <td class="col-count">97</td>
                     <td class="col-area">75,680</td>
-                    <td class="col-count">2</td>
-                    <td class="col-area">80,700</td>
-                    <td class="col-delta">-95</td>
-                    <td class="col-delta">+5,020 SF</td>
-                    <td class="col-delta">+6.6%</td>
-                    <td class="col-status"><span class="status-badge excessive">↑ Over</span></td>
+                    <td class="col-count">0</td>
+                    <td class="col-area">0</td>
+                    <td class="col-delta">-97</td>
+                    <td class="col-delta">-75,680 SF</td>
+                    <td class="col-delta">-100.0%</td>
+                    <td class="col-status"><span class="status-badge partial">△ Under</span></td>
                 </tr>
             
                 <tr style="border: 4px solid #beca8c;">
@@ -2012,11 +2149,11 @@
                     </td>
                     <td class="col-count">147</td>
                     <td class="col-area">335,940</td>
-                    <td class="col-count">2</td>
-                    <td class="col-area">99,572</td>
-                    <td class="col-delta">-145</td>
-                    <td class="col-delta">-236,368 SF</td>
-                    <td class="col-delta">-70.4%</td>
+                    <td class="col-count">0</td>
+                    <td class="col-area">0</td>
+                    <td class="col-delta">-147</td>
+                    <td class="col-delta">-335,940 SF</td>
+                    <td class="col-delta">-100.0%</td>
                     <td class="col-status"><span class="status-badge partial">△ Under</span></td>
                 </tr>
             
@@ -2027,11 +2164,11 @@
                     </td>
                     <td class="col-count">590</td>
                     <td class="col-area">577,731</td>
-                    <td class="col-count">2</td>
-                    <td class="col-area">175,499</td>
-                    <td class="col-delta">-588</td>
-                    <td class="col-delta">-402,232 SF</td>
-                    <td class="col-delta">-69.6%</td>
+                    <td class="col-count">0</td>
+                    <td class="col-area">0</td>
+                    <td class="col-delta">-590</td>
+                    <td class="col-delta">-577,731 SF</td>
+                    <td class="col-delta">-100.0%</td>
                     <td class="col-status"><span class="status-badge partial">△ Under</span></td>
                 </tr>
             
@@ -2042,12 +2179,12 @@
                     </td>
                     <td class="col-count">Any</td>
                     <td class="col-area">91,126</td>
-                    <td class="col-count">10</td>
-                    <td class="col-area">286,222</td>
+                    <td class="col-count">0</td>
+                    <td class="col-area">0</td>
                     <td class="col-delta">N/A</td>
-                    <td class="col-delta">+195,096 SF</td>
-                    <td class="col-delta">+214.1%</td>
-                    <td class="col-status"><span class="status-badge excessive">↑ Over</span></td>
+                    <td class="col-delta">-91,126 SF</td>
+                    <td class="col-delta">-100.0%</td>
+                    <td class="col-status"><span class="status-badge partial">△ Under</span></td>
                 </tr>
             
                 <tr style="border: 4px solid #fcf19c;">
@@ -2057,12 +2194,12 @@
                     </td>
                     <td class="col-count">Any</td>
                     <td class="col-area">51,282</td>
-                    <td class="col-count">6</td>
-                    <td class="col-area">57,777</td>
+                    <td class="col-count">0</td>
+                    <td class="col-area">0</td>
                     <td class="col-delta">N/A</td>
-                    <td class="col-delta">+6,495 SF</td>
-                    <td class="col-delta">+12.7%</td>
-                    <td class="col-status"><span class="status-badge excessive">↑ Over</span></td>
+                    <td class="col-delta">-51,282 SF</td>
+                    <td class="col-delta">-100.0%</td>
+                    <td class="col-status"><span class="status-badge partial">△ Under</span></td>
                 </tr>
             
                 <tr style="border: 4px solid #f5c859;">
@@ -2072,11 +2209,11 @@
                     </td>
                     <td class="col-count">Any</td>
                     <td class="col-area">44,627</td>
-                    <td class="col-count">5</td>
-                    <td class="col-area">33,183</td>
+                    <td class="col-count">0</td>
+                    <td class="col-area">0</td>
                     <td class="col-delta">N/A</td>
-                    <td class="col-delta">-11,444 SF</td>
-                    <td class="col-delta">-25.6%</td>
+                    <td class="col-delta">-44,627 SF</td>
+                    <td class="col-delta">-100.0%</td>
                     <td class="col-status"><span class="status-badge partial">△ Under</span></td>
                 </tr>
             
@@ -2087,23 +2224,23 @@
                     </td>
                     <td class="col-count">Any</td>
                     <td class="col-area">98,472</td>
-                    <td class="col-count">1</td>
-                    <td class="col-area">6,719</td>
+                    <td class="col-count">0</td>
+                    <td class="col-area">0</td>
                     <td class="col-delta">N/A</td>
-                    <td class="col-delta">-91,753 SF</td>
-                    <td class="col-delta">-93.2%</td>
+                    <td class="col-delta">-98,472 SF</td>
+                    <td class="col-delta">-100.0%</td>
                     <td class="col-status"><span class="status-badge partial">△ Under</span></td>
                 </tr>
             
-                <tr style="border: 4px solid #e1e1e1;">
+                <tr style="border: 4px solid None;">
                     <td style="font-weight: 600;">
-                        <span style="display: inline-block; width: 10px; height: 10px; background: #e1e1e1; border-radius: 50%; margin-right: 8px;"></span>
+                        <span style="display: inline-block; width: 10px; height: 10px; background: None; border-radius: 50%; margin-right: 8px;"></span>
                         BUILDING SUPPORT (Non Departmental)
                     </td>
                     <td class="col-count">Any</td>
                     <td class="col-area">N/A</td>
-                    <td class="col-count">1</td>
-                    <td class="col-area">34,012</td>
+                    <td class="col-count">0</td>
+                    <td class="col-area">0</td>
                     <td class="col-delta">N/A</td>
                     <td class="col-delta">N/A</td>
                     <td class="col-delta">N/A</td>
@@ -2116,7 +2253,7 @@
             </div>
             
             <script id="departmentChartData" type="application/json">
-            {"departments": ["EMERGENCY CARE SERVICES", "DIAGNOSTIC AND TREATMENT", "INPATIENT CARE UNIT", "CLINICAL SUPPORT", "PUBLIC SUPPORT", "ADMINISTRATION & STAFF SUPPORT", "BUILDING SUPPORT", "BUILDING SUPPORT (Non Departmental)"], "target_dgsf": [75680.000000000015, 335940.0, 577731.0, 91125.979999999996, 51282.0, 44627.0, 98472.0, 0], "colors": ["#f1b3ad", "#beca8c", "#a9d4e9", "#fce4d6", "#fcf19c", "#f5c859", "#dcd5c2", "#e1e1e1"], "actual_dgsf": [80700.0, 99571.713670401747, 175498.86047008925, 286221.86763366556, 57777.179137771491, 33183.326869019584, 6719.4171883388699, 34012.203907027688], "percentages": [6.6331923890063216, -70.360268598439674, -69.622737836451705, 214.09469355903289, 12.665611984266393, -25.642936184328807, -93.176316934419049, 0]}
+            {"percentages": [-100.0, -100.0, -100.0, -100.0, -100.0, -100.0, -100.0, 0], "target_dgsf": [75680.000000000015, 335940.0, 577731.0, 91125.979999999996, 51282.0, 44627.0, 98472.0, 0], "departments": ["EMERGENCY CARE SERVICES", "DIAGNOSTIC AND TREATMENT", "INPATIENT CARE UNIT", "CLINICAL SUPPORT", "PUBLIC SUPPORT", "ADMINISTRATION & STAFF SUPPORT", "BUILDING SUPPORT", "BUILDING SUPPORT (Non Departmental)"], "actual_dgsf": [0, 0, 0, 0, 0, 0, 0, 0], "colors": ["#f1b3ad", "#beca8c", "#a9d4e9", "#fce4d6", "#fcf19c", "#f5c859", "#dcd5c2", null]}
             </script>
             
             <script>
@@ -2156,52 +2293,10 @@
                     <tbody>
                         
             <tr>
-                <td class="level-name-col"><strong>Level 12  Patient Rooms</strong><br><small class="level-elevation">Elev: 171.00 ft</small></td>
-                <td class="dept-count-col">1 departments<br><small class="level-total-dgsf">91,847 SF Total</small></td>
+                <td class="level-name-col"><strong>Level 8  Patient Rooms</strong><br><small class="level-elevation">Elev: 111.00 ft</small></td>
+                <td class="dept-count-col">1 departments<br><small class="level-total-dgsf">79,073 SF Total</small></td>
                 <td class="unapproved-count-col no-unapproved">All Approved</td>
-                <td class="dept-badges-col"><span class="dept-badge dept-approved" style="border: 2px solid #a9d4e9; background: linear-gradient(135deg, rgba(169, 212, 233, 0.2) 0%, rgba(169, 212, 233, 0.35) 100%); color: #f8fafc;" title="Approved department: 91,847 DGSF">INPATIENT CARE UNIT<br><small style="color: #e5e7eb;">91,847 SF</small></span></td>
-            </tr>
-            
-            <tr>
-                <td class="level-name-col"><strong>Level 11  Patient Rooms</strong><br><small class="level-elevation">Elev: 156.00 ft</small></td>
-                <td class="dept-count-col">1 departments<br><small class="level-total-dgsf">85,183 SF Total</small></td>
-                <td class="unapproved-count-col no-unapproved">All Approved</td>
-                <td class="dept-badges-col"><span class="dept-badge dept-approved" style="border: 2px solid #beca8c; background: linear-gradient(135deg, rgba(190, 202, 140, 0.2) 0%, rgba(190, 202, 140, 0.35) 100%); color: #f8fafc;" title="Approved department: 85,183 DGSF">DIAGNOSTIC AND TREATMENT<br><small style="color: #e5e7eb;">85,183 SF</small></span></td>
-            </tr>
-            
-            <tr>
-                <td class="level-name-col"><strong>Level 7  Patient Rooms</strong><br><small class="level-elevation">Elev: 96.00 ft</small></td>
-                <td class="dept-count-col">1 departments<br><small class="level-total-dgsf">83,652 SF Total</small></td>
-                <td class="unapproved-count-col no-unapproved">All Approved</td>
-                <td class="dept-badges-col"><span class="dept-badge dept-approved" style="border: 2px solid #a9d4e9; background: linear-gradient(135deg, rgba(169, 212, 233, 0.2) 0%, rgba(169, 212, 233, 0.35) 100%); color: #f8fafc;" title="Approved department: 83,652 DGSF">INPATIENT CARE UNIT<br><small style="color: #e5e7eb;">83,652 SF</small></span></td>
-            </tr>
-            
-            <tr>
-                <td class="level-name-col"><strong>Level 6  Patient Rooms</strong><br><small class="level-elevation">Elev: 81.00 ft</small></td>
-                <td class="dept-count-col">1 departments<br><small class="level-total-dgsf">164,098 SF Total</small></td>
-                <td class="unapproved-count-col no-unapproved">All Approved</td>
-                <td class="dept-badges-col"><span class="dept-badge dept-approved" style="border: 2px solid #fce4d6; background: linear-gradient(135deg, rgba(252, 228, 214, 0.2) 0%, rgba(252, 228, 214, 0.35) 100%); color: #f8fafc;" title="Approved department: 164,098 DGSF">CLINICAL SUPPORT<br><small style="color: #e5e7eb;">164,098 SF</small></span></td>
-            </tr>
-            
-            <tr>
-                <td class="level-name-col"><strong>Level 3  D+T / Patient Rooms</strong><br><small class="level-elevation">Elev: 30.00 ft</small></td>
-                <td class="dept-count-col">1 departments<br><small class="level-total-dgsf">23,082 SF Total</small></td>
-                <td class="unapproved-count-col no-unapproved">All Approved</td>
-                <td class="dept-badges-col"><span class="dept-badge dept-approved" style="border: 2px solid #f5c859; background: linear-gradient(135deg, rgba(245, 200, 89, 0.2) 0%, rgba(245, 200, 89, 0.35) 100%); color: #f8fafc;" title="Approved department: 23,082 DGSF">ADMINISTRATION & STAFF SUPPORT<br><small style="color: #e5e7eb;">23,082 SF</small></span></td>
-            </tr>
-            
-            <tr>
-                <td class="level-name-col"><strong>Level 2 Clinical Support</strong><br><small class="level-elevation">Elev: 15.00 ft</small></td>
-                <td class="dept-count-col">4 departments<br><small class="level-total-dgsf">117,362 SF Total</small></td>
-                <td class="unapproved-count-col no-unapproved">All Approved</td>
-                <td class="dept-badges-col"><span class="dept-badge dept-approved" style="border: 2px solid #f5c859; background: linear-gradient(135deg, rgba(245, 200, 89, 0.2) 0%, rgba(245, 200, 89, 0.35) 100%); color: #f8fafc;" title="Approved department: 10,805 DGSF">ADMINISTRATION & STAFF SUPPORT<br><small style="color: #e5e7eb;">10,805 SF</small></span> <span class="dept-badge dept-approved" style="border: 2px solid #dcd5c2; background: linear-gradient(135deg, rgba(220, 213, 194, 0.2) 0%, rgba(220, 213, 194, 0.35) 100%); color: #f8fafc;" title="Approved department: 6,719 DGSF">BUILDING SUPPORT<br><small style="color: #e5e7eb;">6,719 SF</small></span> <span class="dept-badge dept-approved" style="border: 2px solid #fce4d6; background: linear-gradient(135deg, rgba(252, 228, 214, 0.2) 0%, rgba(252, 228, 214, 0.35) 100%); color: #f8fafc;" title="Approved department: 96,484 DGSF">CLINICAL SUPPORT<br><small style="color: #e5e7eb;">96,484 SF</small></span> <span class="dept-badge dept-approved" style="border: 2px solid #fcf19c; background: linear-gradient(135deg, rgba(252, 241, 156, 0.2) 0%, rgba(252, 241, 156, 0.35) 100%); color: #f8fafc;" title="Approved department: 3,354 DGSF">PUBLIC SUPPORT<br><small style="color: #e5e7eb;">3,354 SF</small></span></td>
-            </tr>
-            
-            <tr>
-                <td class="level-name-col"><strong>Level 1  Lobby / ED / Clinical / Support</strong><br><small class="level-elevation">Elev: 0.00 ft</small></td>
-                <td class="dept-count-col">5 departments<br><small class="level-total-dgsf">209,164 SF Total</small></td>
-                <td class="unapproved-count-col no-unapproved">All Approved</td>
-                <td class="dept-badges-col"><span class="dept-badge dept-approved" style="border: 2px solid #374151; background: linear-gradient(135deg, rgba(55, 65, 81, 0.2) 0%, rgba(55, 65, 81, 0.35) 100%); color: #f8fafc;" title="Approved department: 34,012 DGSF">BUILDING SUPPORT (Non Departmental)<br><small style="color: #e5e7eb;">34,012 SF</small></span> <span class="dept-badge dept-approved" style="border: 2px solid #fce4d6; background: linear-gradient(135deg, rgba(252, 228, 214, 0.2) 0%, rgba(252, 228, 214, 0.35) 100%); color: #f8fafc;" title="Approved department: 25,640 DGSF">CLINICAL SUPPORT<br><small style="color: #e5e7eb;">25,640 SF</small></span> <span class="dept-badge dept-approved" style="border: 2px solid #beca8c; background: linear-gradient(135deg, rgba(190, 202, 140, 0.2) 0%, rgba(190, 202, 140, 0.35) 100%); color: #f8fafc;" title="Approved department: 14,389 DGSF">DIAGNOSTIC AND TREATMENT<br><small style="color: #e5e7eb;">14,389 SF</small></span> <span class="dept-badge dept-approved" style="border: 2px solid #f1b3ad; background: linear-gradient(135deg, rgba(241, 179, 173, 0.2) 0%, rgba(241, 179, 173, 0.35) 100%); color: #f8fafc;" title="Approved department: 80,700 DGSF">EMERGENCY CARE SERVICES<br><small style="color: #e5e7eb;">80,700 SF</small></span> <span class="dept-badge dept-approved" style="border: 2px solid #fcf19c; background: linear-gradient(135deg, rgba(252, 241, 156, 0.2) 0%, rgba(252, 241, 156, 0.35) 100%); color: #f8fafc;" title="Approved department: 54,423 DGSF">PUBLIC SUPPORT<br><small style="color: #e5e7eb;">54,423 SF</small></span></td>
+                <td class="dept-badges-col"><span class="dept-badge dept-approved" style="border: 2px solid #a9d4e9; background: linear-gradient(135deg, rgba(169, 212, 233, 0.2) 0%, rgba(169, 212, 233, 0.35) 100%); color: #f8fafc;" title="Approved department: 79,073 DGSF">INPATIENT CARE UNIT<br><small style="color: #e5e7eb;">79,073 SF</small></span></td>
             </tr>
             
                     </tbody>
@@ -2225,11 +2320,11 @@
                     <span class="tree-color-dot" style="background: #f1b3ad;"></span>
                     <span class="tree-node-label">EMERGENCY CARE SERVICES</span>
                     <div class="tree-node-metrics">
-                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>2</strong>/97 Count</span>
-                        <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-95</span>
-                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>80,700</strong>/75,680 DGSF</span>
-                        <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">+5,020 SF</span>
-                        <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+6.6%</span>
+                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/97 Count</span>
+                        <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-97</span>
+                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/75,680 DGSF</span>
+                        <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-75,680 SF</span>
+                        <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                     </div>
                 </div>
                 <div class="tree-node-children" id="tree_children_tree_dept_0">
@@ -2240,11 +2335,11 @@
                         <span class="tree-color-dot" style="background: #de5446;"></span>
                         <span class="tree-node-label">Emergency Department</span>
                         <div class="tree-node-metrics">
-                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/81 Count</span>
-                            <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-80</span>
-                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>68,200</strong>/64,240 DGSF</span>
-                            <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">+3,960 SF</span>
-                            <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+6.2%</span>
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/81 Count</span>
+                            <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-81</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/64,240 DGSF</span>
+                            <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-64,240 SF</span>
+                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                         </div>
                     </div>
                     <div class="tree-node-children" id="tree_children_tree_dept_0_div_0">
@@ -2253,13 +2348,13 @@
                         <div class="tree-node-header" style="border: 2px solid #de5446;">
                             <span class="tree-color-dot" style="background: #de5446;"></span>
                             <span class="tree-node-label">Treatment positions</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/73 Count</span>
-                                <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-72</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>68,200</strong>/64,240 DGSF</span>
-                                <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">+3,960 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+6.2%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/73 Count</span>
+                                <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-73</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/64,240 DGSF</span>
+                                <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-64,240 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -2288,11 +2383,11 @@
                         <span class="tree-color-dot" style="background: #9e94d3;"></span>
                         <span class="tree-node-label">Observation</span>
                         <div class="tree-node-metrics">
-                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/16 Count</span>
-                            <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-15</span>
-                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>12,500</strong>/11,440 DGSF</span>
-                            <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">+1,060 SF</span>
-                            <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+9.3%</span>
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/16 Count</span>
+                            <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-16</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/11,440 DGSF</span>
+                            <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-11,440 SF</span>
+                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                         </div>
                     </div>
                     <div class="tree-node-children" id="tree_children_tree_dept_0_div_1">
@@ -2301,13 +2396,13 @@
                         <div class="tree-node-header" style="border: 2px solid #9e94d3;">
                             <span class="tree-color-dot" style="background: #9e94d3;"></span>
                             <span class="tree-node-label">Patient Units_Observation</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/16 Count</span>
-                                <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-15</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>12,500</strong>/11,440 DGSF</span>
-                                <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">+1,060 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+9.3%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/16 Count</span>
+                                <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-16</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/11,440 DGSF</span>
+                                <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-11,440 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -2324,11 +2419,11 @@
                     <span class="tree-color-dot" style="background: #beca8c;"></span>
                     <span class="tree-node-label">DIAGNOSTIC AND TREATMENT</span>
                     <div class="tree-node-metrics">
-                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>2</strong>/147 Count</span>
-                        <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-145</span>
-                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>99,572</strong>/335,940 DGSF</span>
-                        <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-236,368 SF</span>
-                        <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-70.4%</span>
+                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/147 Count</span>
+                        <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-147</span>
+                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/335,940 DGSF</span>
+                        <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-335,940 SF</span>
+                        <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                     </div>
                 </div>
                 <div class="tree-node-children" id="tree_children_tree_dept_1">
@@ -2651,11 +2746,11 @@
                         <span class="tree-color-dot" style="background: #6599c6;"></span>
                         <span class="tree-node-label">Labor & Delivery</span>
                         <div class="tree-node-metrics">
-                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/31 Count</span>
-                            <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-30</span>
-                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>85,183</strong>/44,000 DGSF</span>
-                            <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">+41,183 SF</span>
-                            <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+93.6%</span>
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/31 Count</span>
+                            <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-31</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/44,000 DGSF</span>
+                            <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-44,000 SF</span>
+                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                         </div>
                     </div>
                     <div class="tree-node-children" id="tree_children_tree_dept_1_div_4">
@@ -2664,13 +2759,13 @@
                         <div class="tree-node-header" style="border: 2px solid #6599c6;">
                             <span class="tree-color-dot" style="background: #6599c6;"></span>
                             <span class="tree-node-label">Labor and Delivery</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/16 Count</span>
-                                <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-15</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>85,183</strong>/34,320 DGSF</span>
-                                <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">+50,863 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+148.2%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/16 Count</span>
+                                <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-16</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/34,320 DGSF</span>
+                                <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-34,320 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -2747,11 +2842,11 @@
                         <span class="tree-color-dot" style="background: #93a63f;"></span>
                         <span class="tree-node-label">Radiation Oncology</span>
                         <div class="tree-node-metrics">
-                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/2 Count</span>
-                            <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-1</span>
-                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>14,389</strong>/13,200 DGSF</span>
-                            <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">+1,189 SF</span>
-                            <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+9.0%</span>
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/2 Count</span>
+                            <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-2</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/13,200 DGSF</span>
+                            <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-13,200 SF</span>
+                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                         </div>
                     </div>
                     <div class="tree-node-children" id="tree_children_tree_dept_1_div_6">
@@ -2760,13 +2855,13 @@
                         <div class="tree-node-header" style="border: 2px solid #93a63f;">
                             <span class="tree-color-dot" style="background: #93a63f;"></span>
                             <span class="tree-node-label">Radiation Oncology</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/2 Count</span>
-                                <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>14,389</strong>/13,200 DGSF</span>
-                                <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">+1,189 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+9.0%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/2 Count</span>
+                                <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-2</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/13,200 DGSF</span>
+                                <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-13,200 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -2783,11 +2878,11 @@
                     <span class="tree-color-dot" style="background: #a9d4e9;"></span>
                     <span class="tree-node-label">INPATIENT CARE UNIT</span>
                     <div class="tree-node-metrics">
-                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>2</strong>/590 Count</span>
-                        <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-588</span>
-                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>175,499</strong>/577,731 DGSF</span>
-                        <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-402,232 SF</span>
-                        <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-69.6%</span>
+                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/590 Count</span>
+                        <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-590</span>
+                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/577,731 DGSF</span>
+                        <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-577,731 SF</span>
+                        <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                     </div>
                 </div>
                 <div class="tree-node-children" id="tree_children_tree_dept_2">
@@ -2798,11 +2893,11 @@
                         <span class="tree-color-dot" style="background: #6fb8db;"></span>
                         <span class="tree-node-label">Licensed Beds</span>
                         <div class="tree-node-metrics">
-                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/474 Count</span>
-                            <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-473</span>
-                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>91,847</strong>/477,081 DGSF</span>
-                            <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-385,234 SF</span>
-                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-80.7%</span>
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/474 Count</span>
+                            <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-474</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/477,081 DGSF</span>
+                            <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-477,081 SF</span>
+                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                         </div>
                     </div>
                     <div class="tree-node-children" id="tree_children_tree_dept_2_div_0">
@@ -2828,10 +2923,10 @@
                             <span class="tree-node-label">Patient Units_Med Surg</span>
                             <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/144 Count</span>
-                                <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-144</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/144,936 DGSF</span>
-                                <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-144,936 SF</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/150 Count</span>
+                                <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-150</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/150,975 DGSF</span>
+                                <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-150,975 SF</span>
                                 <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
@@ -2841,13 +2936,13 @@
                         <div class="tree-node-header" style="border: 2px solid #6fb8db;">
                             <span class="tree-color-dot" style="background: #6fb8db;"></span>
                             <span class="tree-node-label">Patient Units_ICU</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/78 Count</span>
-                                <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-77</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>91,847</strong>/78,507 DGSF</span>
-                                <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">+13,340 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+17.0%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/72 Count</span>
+                                <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-72</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/72,468 DGSF</span>
+                                <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-72,468 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -2876,11 +2971,11 @@
                         <span class="tree-color-dot" style="background: #6fb8db;"></span>
                         <span class="tree-node-label">Licensed Beds - Mother/Baby + Peds</span>
                         <div class="tree-node-metrics">
-                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/100 Count</span>
-                            <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-99</span>
-                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>83,652</strong>/100,650 DGSF</span>
-                            <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-16,998 SF</span>
-                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-16.9%</span>
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/100 Count</span>
+                            <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-100</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/100,650 DGSF</span>
+                            <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-100,650 SF</span>
+                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                         </div>
                     </div>
                     <div class="tree-node-children" id="tree_children_tree_dept_2_div_1">
@@ -2934,13 +3029,13 @@
                         <div class="tree-node-header" style="border: 2px solid #389ea3;">
                             <span class="tree-color-dot" style="background: #389ea3;"></span>
                             <span class="tree-node-label">PICU</span>
-                            <span class="tree-status-icon" title="Status: Excessive">!</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/8 Count</span>
-                                <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-7</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>83,652</strong>/8,052 DGSF</span>
-                                <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">+75,600 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+938.9%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/8 Count</span>
+                                <span class="tree-metric-delta negative" title="Count difference: Actual minus Target">-8</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/8,052 DGSF</span>
+                                <span class="tree-metric-delta negative" title="DGSF difference: Actual minus Target">-8,052 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3005,11 +3100,11 @@
                     <span class="tree-color-dot" style="background: #fce4d6;"></span>
                     <span class="tree-node-label">CLINICAL SUPPORT</span>
                     <div class="tree-node-metrics">
-                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>10</strong>/0 Count</span>
-                        <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+10</span>
-                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>286,222</strong>/91,126 DGSF</span>
-                        <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+195,096 SF</span>
-                        <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+214.1%</span>
+                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                        <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/91,126 DGSF</span>
+                        <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-91,126 SF</span>
+                        <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                     </div>
                 </div>
                 <div class="tree-node-children" id="tree_children_tree_dept_3">
@@ -3020,11 +3115,11 @@
                         <span class="tree-color-dot" style="background: #fae1d2;"></span>
                         <span class="tree-node-label">Laboratory Services</span>
                         <div class="tree-node-metrics">
-                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>3</strong>/0 Count</span>
-                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+3</span>
-                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>51,031</strong>/46,026 DGSF</span>
-                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+5,005 SF</span>
-                            <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+10.9%</span>
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/46,026 DGSF</span>
+                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-46,026 SF</span>
+                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                         </div>
                     </div>
                     <div class="tree-node-children" id="tree_children_tree_dept_3_div_0">
@@ -3033,13 +3128,13 @@
                         <div class="tree-node-header" style="border: 2px solid #fae1d2;">
                             <span class="tree-color-dot" style="background: #fae1d2;"></span>
                             <span class="tree-node-label">Clinical Labs & Lab Support</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>24,742</strong>/20,773 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+3,968 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+19.1%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/20,773 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-20,773 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3048,13 +3143,13 @@
                         <div class="tree-node-header" style="border: 2px solid #fae1d2;">
                             <span class="tree-color-dot" style="background: #fae1d2;"></span>
                             <span class="tree-node-label">Pathology Office and Laboratory Admin</span>
-                            <span class="tree-status-icon" title="Status: Fulfilled">✓</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>18,305</strong>/17,553 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+752 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+4.3%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/17,553 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-17,553 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3093,13 +3188,13 @@
                         <div class="tree-node-header" style="border: 2px solid #fae1d2;">
                             <span class="tree-color-dot" style="background: #fae1d2;"></span>
                             <span class="tree-node-label">Blood Bank</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>7,984</strong>/5,500 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+2,484 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+45.2%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/5,500 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-5,500 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3113,11 +3208,11 @@
                         <span class="tree-color-dot" style="background: #fae1d2;"></span>
                         <span class="tree-node-label">CSPD & Pharmacy</span>
                         <div class="tree-node-metrics">
-                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>7</strong>/0 Count</span>
-                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+7</span>
-                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>235,191</strong>/45,100 DGSF</span>
-                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+190,091 SF</span>
-                            <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+421.5%</span>
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/45,100 DGSF</span>
+                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-45,100 SF</span>
+                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                         </div>
                     </div>
                     <div class="tree-node-children" id="tree_children_tree_dept_3_div_1">
@@ -3126,13 +3221,13 @@
                         <div class="tree-node-header" style="border: 2px solid #fae1d2;">
                             <span class="tree-color-dot" style="background: #fae1d2;"></span>
                             <span class="tree-node-label">Main Pharmacy</span>
-                            <span class="tree-status-icon" title="Status: Fulfilled">✓</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>12,100</strong>/12,100 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-0 SF</span>
-                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-0.0%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/12,100 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-12,100 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3141,13 +3236,13 @@
                         <div class="tree-node-header" style="border: 2px solid #fae1d2;">
                             <span class="tree-color-dot" style="background: #fae1d2;"></span>
                             <span class="tree-node-label">Respiratory Therapy</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>5,192</strong>/2,200 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+2,992 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+136.0%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/2,200 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-2,200 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3156,13 +3251,13 @@
                         <div class="tree-node-header" style="border: 2px solid #fae1d2;">
                             <span class="tree-color-dot" style="background: #fae1d2;"></span>
                             <span class="tree-node-label">Central Sterile</span>
-                            <span class="tree-status-icon" title="Status: Fulfilled">✓</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>22,849</strong>/22,000 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+849 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+3.9%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/22,000 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-22,000 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3171,13 +3266,13 @@
                         <div class="tree-node-header" style="border: 2px solid #fae1d2;">
                             <span class="tree-color-dot" style="background: #fae1d2;"></span>
                             <span class="tree-node-label">Biomed ( Clinical Engineering)</span>
-                            <span class="tree-status-icon" title="Status: Fulfilled">✓</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>5,312</strong>/5,500 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-188 SF</span>
-                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-3.4%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/5,500 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-5,500 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3186,13 +3281,13 @@
                         <div class="tree-node-header" style="border: 2px solid #fae1d2;">
                             <span class="tree-color-dot" style="background: #fae1d2;"></span>
                             <span class="tree-node-label">Retail Pharmacy</span>
-                            <span class="tree-status-icon" title="Status: Excessive">!</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>3</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+3</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>189,738</strong>/3,300 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+186,438 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+5649.6%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/3,300 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-3,300 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3209,11 +3304,11 @@
                     <span class="tree-color-dot" style="background: #fcf19c;"></span>
                     <span class="tree-node-label">PUBLIC SUPPORT</span>
                     <div class="tree-node-metrics">
-                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>6</strong>/0 Count</span>
-                        <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+6</span>
-                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>57,777</strong>/51,282 DGSF</span>
-                        <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+6,495 SF</span>
-                        <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+12.7%</span>
+                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                        <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/51,282 DGSF</span>
+                        <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-51,282 SF</span>
+                        <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                     </div>
                 </div>
                 <div class="tree-node-children" id="tree_children_tree_dept_4">
@@ -3224,11 +3319,11 @@
                         <span class="tree-color-dot" style="background: #fcf19c;"></span>
                         <span class="tree-node-label">Lobby</span>
                         <div class="tree-node-metrics">
-                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>2</strong>/0 Count</span>
-                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+2</span>
-                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>35,034</strong>/25,850 DGSF</span>
-                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+9,184 SF</span>
-                            <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+35.5%</span>
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/25,850 DGSF</span>
+                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-25,850 SF</span>
+                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                         </div>
                     </div>
                     <div class="tree-node-children" id="tree_children_tree_dept_4_div_0">
@@ -3237,13 +3332,13 @@
                         <div class="tree-node-header" style="border: 2px solid #fcf19c;">
                             <span class="tree-color-dot" style="background: #fcf19c;"></span>
                             <span class="tree-node-label">Main Lobby</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>33,767</strong>/16,500 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+17,267 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+104.6%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/16,500 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-16,500 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3252,13 +3347,13 @@
                         <div class="tree-node-header" style="border: 2px solid #fcf19c;">
                             <span class="tree-color-dot" style="background: #fcf19c;"></span>
                             <span class="tree-node-label">Mother/Baby Lobby</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>1,267</strong>/5,500 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-4,233 SF</span>
-                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-77.0%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/5,500 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-5,500 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3287,11 +3382,11 @@
                         <span class="tree-color-dot" style="background: #f8df24;"></span>
                         <span class="tree-node-label">Public Resources</span>
                         <div class="tree-node-metrics">
-                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>2</strong>/0 Count</span>
-                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+2</span>
-                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>5,842</strong>/6,644 DGSF</span>
-                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-802 SF</span>
-                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-12.1%</span>
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/6,644 DGSF</span>
+                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-6,644 SF</span>
+                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                         </div>
                     </div>
                     <div class="tree-node-children" id="tree_children_tree_dept_4_div_1">
@@ -3315,13 +3410,13 @@
                         <div class="tree-node-header" style="border: 2px solid #f8df24;">
                             <span class="tree-color-dot" style="background: #f8df24;"></span>
                             <span class="tree-node-label">Meditation</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>2,488</strong>/1,133 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+1,355 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+119.6%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/1,133 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-1,133 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3330,13 +3425,13 @@
                         <div class="tree-node-header" style="border: 2px solid #f8df24;">
                             <span class="tree-color-dot" style="background: #f8df24;"></span>
                             <span class="tree-node-label">Public Education</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>3,354</strong>/3,025 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+329 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+10.9%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/3,025 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-3,025 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3350,11 +3445,11 @@
                         <span class="tree-color-dot" style="background: #f8df24;"></span>
                         <span class="tree-node-label">Café & Retail</span>
                         <div class="tree-node-metrics">
-                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>2</strong>/0 Count</span>
-                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+2</span>
-                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>16,902</strong>/18,788 DGSF</span>
-                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-1,886 SF</span>
-                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-10.0%</span>
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/18,788 DGSF</span>
+                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-18,788 SF</span>
+                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                         </div>
                     </div>
                     <div class="tree-node-children" id="tree_children_tree_dept_4_div_2">
@@ -3378,13 +3473,13 @@
                         <div class="tree-node-header" style="border: 2px solid #f8df24;">
                             <span class="tree-color-dot" style="background: #f8df24;"></span>
                             <span class="tree-node-label">Cafeteria</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>15,505</strong>/16,500 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-995 SF</span>
-                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-6.0%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/16,500 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-16,500 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3393,13 +3488,13 @@
                         <div class="tree-node-header" style="border: 2px solid #f8df24;">
                             <span class="tree-color-dot" style="background: #f8df24;"></span>
                             <span class="tree-node-label">Lobby Café</span>
-                            <span class="tree-status-icon" title="Status: Fulfilled">✓</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>1,397</strong>/1,430 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-33 SF</span>
-                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-2.3%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/1,430 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-1,430 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3431,11 +3526,11 @@
                     <span class="tree-color-dot" style="background: #f5c859;"></span>
                     <span class="tree-node-label">ADMINISTRATION & STAFF SUPPORT</span>
                     <div class="tree-node-metrics">
-                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>5</strong>/0 Count</span>
-                        <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+5</span>
-                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>33,183</strong>/44,627 DGSF</span>
-                        <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-11,444 SF</span>
-                        <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-25.6%</span>
+                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                        <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/44,627 DGSF</span>
+                        <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-44,627 SF</span>
+                        <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                     </div>
                 </div>
                 <div class="tree-node-children" id="tree_children_tree_dept_5">
@@ -3446,11 +3541,11 @@
                         <span class="tree-color-dot" style="background: #e0a40e;"></span>
                         <span class="tree-node-label">Hospital Operations and Staff Support</span>
                         <div class="tree-node-metrics">
-                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>5</strong>/0 Count</span>
-                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+5</span>
-                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>33,183</strong>/36,817 DGSF</span>
-                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-3,634 SF</span>
-                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-9.9%</span>
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/36,817 DGSF</span>
+                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-36,817 SF</span>
+                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                         </div>
                     </div>
                     <div class="tree-node-children" id="tree_children_tree_dept_5_div_0">
@@ -3459,13 +3554,13 @@
                         <div class="tree-node-header" style="border: 2px solid #e0a40e;">
                             <span class="tree-color-dot" style="background: #e0a40e;"></span>
                             <span class="tree-node-label">Hospital Operations</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>6,081</strong>/5,500 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+581 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+10.6%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/5,500 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-5,500 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3489,13 +3584,13 @@
                         <div class="tree-node-header" style="border: 2px solid #e0a40e;">
                             <span class="tree-color-dot" style="background: #e0a40e;"></span>
                             <span class="tree-node-label">Extended Clinical Team</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>10,137</strong>/6,237 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+3,900 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+62.5%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/6,237 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-6,237 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3504,13 +3599,13 @@
                         <div class="tree-node-header" style="border: 2px solid #e0a40e;">
                             <span class="tree-color-dot" style="background: #e0a40e;"></span>
                             <span class="tree-node-label">Visitor Services Offices</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>4,053</strong>/3,300 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+753 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+22.8%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/3,300 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-3,300 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3519,13 +3614,13 @@
                         <div class="tree-node-header" style="border: 2px solid #e0a40e;">
                             <span class="tree-color-dot" style="background: #e0a40e;"></span>
                             <span class="tree-node-label">Conference</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>12,245</strong>/11,000 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+1,245 SF</span>
-                                <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+11.3%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/11,000 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-11,000 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3534,13 +3629,13 @@
                         <div class="tree-node-header" style="border: 2px solid #e0a40e;">
                             <span class="tree-color-dot" style="background: #e0a40e;"></span>
                             <span class="tree-node-label">Training and Simulation</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>668</strong>/3,630 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-2,962 SF</span>
-                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-81.6%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/3,630 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-3,630 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3650,11 +3745,11 @@
                     <span class="tree-color-dot" style="background: #dcd5c2;"></span>
                     <span class="tree-node-label">BUILDING SUPPORT</span>
                     <div class="tree-node-metrics">
-                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                        <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>6,719</strong>/98,472 DGSF</span>
-                        <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-91,753 SF</span>
-                        <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-93.2%</span>
+                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                        <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/98,472 DGSF</span>
+                        <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-98,472 SF</span>
+                        <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                     </div>
                 </div>
                 <div class="tree-node-children" id="tree_children_tree_dept_6">
@@ -3848,11 +3943,11 @@
                         <span class="tree-color-dot" style="background: #c1b493;"></span>
                         <span class="tree-node-label">Building & Staff Support</span>
                         <div class="tree-node-metrics">
-                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>6,719</strong>/52,470 DGSF</span>
-                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-45,751 SF</span>
-                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-87.2%</span>
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/52,470 DGSF</span>
+                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-52,470 SF</span>
+                            <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                         </div>
                     </div>
                     <div class="tree-node-children" id="tree_children_tree_dept_6_div_1">
@@ -3861,13 +3956,13 @@
                         <div class="tree-node-header" style="border: 2px solid #c1b493;">
                             <span class="tree-color-dot" style="background: #c1b493;"></span>
                             <span class="tree-node-label">Hospitality Offices, Lockers and Break Rooms</span>
-                            <span class="tree-status-icon" title="Status: Partial">△</span>
+                            <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>6,719</strong>/7,920 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-1,201 SF</span>
-                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-15.2%</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/7,920 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">-7,920 SF</span>
+                                <span class="tree-metric-percentage negative" title="Percentage of target DGSF achieved">-100.0%</span>
                             </div>
                         </div>
                     </div>
@@ -3974,10 +4069,10 @@
                     <span class="tree-color-dot" style="background: #6b7280;"></span>
                     <span class="tree-node-label">BUILDING SUPPORT (Non Departmental)</span>
                     <div class="tree-node-metrics">
-                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                        <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>34,012</strong>/0 DGSF</span>
-                        <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+34,012 SF</span>
+                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                        <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/0 DGSF</span>
+                        <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+0 SF</span>
                         <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+0.0%</span>
                     </div>
                 </div>
@@ -3989,10 +4084,10 @@
                         <span class="tree-color-dot" style="background: #000000;"></span>
                         <span class="tree-node-label">Building Support (Non Departmental)</span>
                         <div class="tree-node-metrics">
-                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>34,012</strong>/0 DGSF</span>
-                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+34,012 SF</span>
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/0 DGSF</span>
+                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+0 SF</span>
                             <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+0.0%</span>
                         </div>
                     </div>
@@ -4139,10 +4234,10 @@
                             <span class="tree-node-label">CUP</span>
                             <span class="tree-status-icon" title="Status: No Requirement">?</span>
                             <div class="tree-node-metrics">
-                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>1</strong>/0 Count</span>
-                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+1</span>
-                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>34,012</strong>/0 DGSF</span>
-                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+34,012 SF</span>
+                                <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                                <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                                <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/0 DGSF</span>
+                                <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+0 SF</span>
                                 <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+0.0%</span>
                             </div>
                         </div>
@@ -4169,7 +4264,7 @@
             <p>The following Revit areas were not matched to any Excel requirements, grouped by level. <span class="zero-area-hint">Note: entries showing <strong>0 SF</strong> are often <em>not placed</em> in the model yet or the boundary is <em>not enclosed</em> (room/area not bounding) in Revit.</span></p>
             
             <div class="level-section">
-                <h4>📍 Level 3  D+T  /  Patient Rooms (1 areas, 703 SF)</h4>
+                <h4>📍 Level 8  Patient Rooms (1 areas, 79,073 SF)</h4>
             <div class="table-container">
                 <table class="unmatched-table">
                     <thead>
@@ -4186,17 +4281,17 @@
                     </thead>
                     <tbody>
                             
-                    <tr>
-                        <td class="col-dept">ADMINISTRATION & STAFF SUPPORT</td>
+                    <tr class="">
+                        <td class="col-dept">INPATIENT CARE UNIT</td>
                         <td class="col-division"></td>
                         <td class="col-function"></td>
-                        <td class="col-area">703 SF</td>
-                        <td class="col-level">amielkeKREU3</td>
+                        <td class="col-area">79,073 SF </td>
+                        <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>ADMINISTRATION & STAFF SUPPORT | Hospital Operations and Staff Support | Extended Clinical Team</strong>?</span></td>
+                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>INPATIENT CARE UNIT | Licensed Beds | Patient Units_Med Surg</strong>?</span></td>
                 </tr>
-            
+             
                     </tbody>
                 </table>
             </div>
@@ -4220,7 +4315,7 @@
                 </div>
                 <div class="card">
                     <h3>Actual Count</h3>
-                    <div class="card-value" title="Total number of areas found in the Revit model">29</div>
+                    <div class="card-value" title="Total number of areas found in the Revit model">0</div>
                     <div class="card-label">Areas Found</div>
                 </div>
                 <div class="card">
@@ -4230,12 +4325,12 @@
                 </div>
                 <div class="card">
                     <h3>Actual DGSF</h3>
-                    <div class="card-value" title="Actual Department Gross Square Feet measured in the Revit model">773,685</div>
+                    <div class="card-value" title="Actual Department Gross Square Feet measured in the Revit model">0</div>
                     <div class="card-label">Square Feet</div>
                 </div>
                 <div class="card">
                     <h3>Compliance</h3>
-                    <div class="card-value" title="Number of room types that have at least one instance in Revit out of total requirements">5/93</div>
+                    <div class="card-value" title="Number of room types that have at least one instance in Revit out of total requirements">0/93</div>
                     <div class="card-label">Fulfilled</div>
                 </div>
                 <div class="card">
@@ -4245,12 +4340,12 @@
                 </div>
                 <div class="card">
                     <h3>Area Alerts</h3>
-                    <div class="card-value" title="Room types with significant difference between target and actual DGSF">57</div>
+                    <div class="card-value" title="Room types with significant difference between target and actual DGSF">74</div>
                     <div class="card-label">High Area Differences</div>
                 </div>
                 <div class="card">
                     <h3>Extreme Alerts</h3>
-                    <div class="card-value" title="Room types with both high count difference AND high area difference">10</div>
+                    <div class="card-value" title="Room types with both high count difference AND high area difference">13</div>
                     <div class="card-label">Both High Differences</div>
                 </div>
             </div>
@@ -4261,21 +4356,21 @@
             <div class="status-cards">
                 <div class="status-card fulfilled">
                     <h3>✓ Fulfilled</h3>
-                    <div class="status-count">5</div>
+                    <div class="status-count">0</div>
                 </div>
                 <div class="status-card partial">
                     <h3>△ Partial</h3>
-                    <div class="status-count">19</div>
+                    <div class="status-count">0</div>
                 </div>
                 <div class="status-card missing">
                     <h3>✕ Missing</h3>
-                    <div class="status-count">50</div>
+                    <div class="status-count">76</div>
                 </div>
             </div>
         </div>
         
         <footer class="report-footer">
-            <p>Report generated by Monitor Area System | 2025-10-15 10:33:57</p>
+            <p>Report generated by Monitor Area System | 2025-10-21 16:19:18</p>
             <p style="margin-top: 10px; font-size: 0.9em; color: #9ca3af;">
                 🦆 Powered by <strong style="color: #60a5fa;">EnneadTab</strong> | 
                 For feature requests, contact <strong style="color: #60a5fa;">Sen Zhang</strong>
