@@ -38,7 +38,7 @@ def create_color_setting_to_sheet(doc):
         if shared_para_file is None:
             NOTIFICATION.messenger('Cannot open shared parameter file. Please check if the shared parameter file is properly configured.')
             return
-        if len(shared_para_file.Groups) == 0:
+        if len(list(shared_para_file.Groups)) == 0:
             NOTIFICATION.messenger('No groups found in shared parameter file.')
             return
         definition_group = list(shared_para_file.Groups)[0]
@@ -101,7 +101,7 @@ def create_issue_para_to_sheet(doc, issue_name):
         if shared_para_file is None:
             NOTIFICATION.messenger('Cannot open shared parameter file. Please check if the shared parameter file is properly configured.')
             return
-        if len(shared_para_file.Groups) == 0:
+        if len(list(shared_para_file.Groups)) == 0:
             NOTIFICATION.messenger('No groups found in shared parameter file.')
             return
         definition_group = list(shared_para_file.Groups)[0]

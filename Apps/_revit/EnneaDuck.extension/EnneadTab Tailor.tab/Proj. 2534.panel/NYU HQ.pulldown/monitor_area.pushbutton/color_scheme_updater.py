@@ -53,57 +53,57 @@ def update_color_scheme_from_dict(doc, color_scheme_name, color_dict):
         print("Color scheme '{}' not found in document".format(color_scheme_name))
         return False
     
-    color_scheme = list(color_schemes)[0]
+    for color_scheme in color_schemes:
     
-    # Get storage type from existing entry (must have at least one placeholder)
-    try:
-        sample_entry = list(color_scheme.GetEntries())[0]
-        storage_type = sample_entry.StorageType
-    except:
-        print("Color scheme '{}' has no entries. Please add at least one placeholder entry.".format(color_scheme_name))
-        return False
-    
-    # Get current entry names
-    current_entries = {x.GetStringValue(): x for x in color_scheme.GetEntries()}
-    
-    entries_added = 0
-    entries_updated = 0
-    
-    # Add or update entries
-    for entry_name, hex_color in color_dict.items():
-        if not hex_color or not hex_color.startswith('#'):
-            continue
+        # Get storage type from existing entry (must have at least one placeholder)
+        try:
+            sample_entry = list(color_scheme.GetEntries())[0]
+            storage_type = sample_entry.StorageType
+        except:
+            print("Color scheme '{}' has no entries. Please add at least one placeholder entry.".format(color_scheme_name))
+            return False
         
-        revit_color = hex_to_revit_color(hex_color)
+        # Get current entry names
+        current_entries = {x.GetStringValue(): x for x in color_scheme.GetEntries()}
         
-        if entry_name in current_entries:
-            # Update existing entry
-            existing_entry = current_entries[entry_name]
-            old_color = existing_entry.Color
+        entries_added = 0
+        entries_updated = 0
+        
+        # Add or update entries
+        for entry_name, hex_color in color_dict.items():
+            if not hex_color or not hex_color.startswith('#'):
+                continue
             
-            # Check if color needs updating
-            if not COLOR.is_same_color(old_color, revit_color):
-                existing_entry.Color = revit_color
-                color_scheme.UpdateEntry(existing_entry)
-                entries_updated += 1
-                print("  Updated '{}': {} -> {}".format(
-                    entry_name,
-                    COLOR.rgb_to_hex((old_color.Red, old_color.Green, old_color.Blue)),
-                    hex_color
-                ))
-        else:
-            # Add new entry
-            entry = DB.ColorFillSchemeEntry(storage_type)
-            entry.Color = revit_color
-            entry.SetStringValue(entry_name)
-            entry.FillPatternId = REVIT_SELECTION.get_solid_fill_pattern_id(doc)
-            color_scheme.AddEntry(entry)
-            entries_added += 1
-            print("  Added '{}': {}".format(entry_name, hex_color))
-    
-    print("Color scheme '{}': {} added, {} updated".format(
-        color_scheme_name, entries_added, entries_updated
-    ))
+            revit_color = hex_to_revit_color(hex_color)
+            
+            if entry_name in current_entries:
+                # Update existing entry
+                existing_entry = current_entries[entry_name]
+                old_color = existing_entry.Color
+                
+                # Check if color needs updating
+                if not COLOR.is_same_color(old_color, revit_color):
+                    existing_entry.Color = revit_color
+                    color_scheme.UpdateEntry(existing_entry)
+                    entries_updated += 1
+                    print("  Updated '{}': {} -> {}".format(
+                        entry_name,
+                        COLOR.rgb_to_hex((old_color.Red, old_color.Green, old_color.Blue)),
+                        hex_color
+                    ))
+            else:
+                # Add new entry
+                entry = DB.ColorFillSchemeEntry(storage_type)
+                entry.Color = revit_color
+                entry.SetStringValue(entry_name)
+                entry.FillPatternId = REVIT_SELECTION.get_solid_fill_pattern_id(doc)
+                color_scheme.AddEntry(entry)
+                entries_added += 1
+                print("  Added '{}': {}".format(entry_name, hex_color))
+        
+        print("Color scheme '{}': {} added, {} updated".format(
+            color_scheme_name, entries_added, entries_updated
+        ))
     
     return True
 

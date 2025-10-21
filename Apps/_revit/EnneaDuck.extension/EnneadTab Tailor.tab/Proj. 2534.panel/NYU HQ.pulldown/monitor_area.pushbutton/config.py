@@ -72,9 +72,9 @@ AREA_SCHEMES_TO_PROCESS = ["DGSF Scheme"]
 # Color scheme names to update from Excel color hierarchy
 # Maps hierarchy level to Revit color scheme name
 COLOR_SCHEME_NAMES = {
-    'department': 'Department Category_Primary',
-    'division': 'Division_Primary',
-    'room_name': 'RoomName_Primary'
+    'department': '#Department Category',
+    'division': '#Division',
+    'room_name': '#RoomName'
 }
 
 
