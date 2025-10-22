@@ -335,6 +335,74 @@ def get_doc(job_payload, paths=None):
         _append_debug("Proceeding directly to file open", paths)
         
         app = _get_app()
+        
+        # Check if ACC data is available for cloud opening (more stable than ACC Desktop Connector paths)
+        acc_data = job_payload.get('acc_data') if isinstance(job_payload, dict) else None
+        cloud_open_attempted = False
+        
+        if acc_data and acc_data.get('model_guid') and acc_data.get('project_guid'):
+            # Try cloud opening with GUIDs (more stable than ACC streamed paths)
+            model_guid = acc_data.get('model_guid')
+            project_guid = acc_data.get('project_guid')
+            
+            _append_debug("ACC data available - attempting cloud opening with GUIDs", paths)
+            _append_debug("Model GUID: {}".format(model_guid), paths)
+            _append_debug("Project GUID: {}".format(project_guid), paths)
+            
+            # Try multiple regions (US, EMEA) for cloud path
+            import System
+            candidate_regions = [
+                DB.ModelPathUtils.CloudRegionUS,
+                DB.ModelPathUtils.CloudRegionEMEA
+            ]
+            
+            cloud_open_success = False
+            for region in candidate_regions:
+                try:
+                    region_name = "US" if region == DB.ModelPathUtils.CloudRegionUS else "EMEA"
+                    _append_debug("Trying region: {}".format(region_name), paths)
+                    
+                    cloud_path = DB.ModelPathUtils.ConvertCloudGUIDsToCloudPath(
+                        region,
+                        System.Guid(project_guid),
+                        System.Guid(model_guid)
+                    )
+                    
+                    opts = DB.OpenOptions()
+                    
+                    # Configure for detach and worksets
+                    opts.DetachFromCentralOption = DB.DetachFromCentralOption.DetachAndPreserveWorksets
+                    
+                    run_exporter = job_payload.get("run_exporter", False)
+                    if run_exporter:
+                        wsconfig = DB.WorksetConfiguration(DB.WorksetConfigurationOption.OpenAllWorksets)
+                        _append_debug("Exporter enabled - opening ALL worksets", paths)
+                    else:
+                        wsconfig = DB.WorksetConfiguration(DB.WorksetConfigurationOption.CloseAllWorksets)
+                        _append_debug("Health metrics only - closing all worksets", paths)
+                    opts.SetOpenWorksetsConfiguration(wsconfig)
+                    
+                    _append_debug("Opening cloud document with Revit API...", paths)
+                    opened_doc = app.OpenDocumentFile(cloud_path, opts)
+                    
+                    if opened_doc:
+                        _append_debug("Cloud document opened successfully in region {}".format(region_name), paths)
+                        cloud_open_success = True
+                        cloud_open_attempted = True
+                        return opened_doc, True
+                        
+                except Exception as region_ex:
+                    _append_debug("Region {} failed: {}".format(region_name, str(region_ex)), paths)
+                    continue
+            
+            if not cloud_open_success:
+                _append_debug("Cloud opening failed in all regions, falling back to model_path", paths)
+                cloud_open_attempted = True
+        
+        # Fall back to traditional path-based opening (or if no ACC data available)
+        if not cloud_open_attempted:
+            _append_debug("No ACC data available, using model_path", paths)
+        
         _append_debug("Attempting to open file: {}".format(model_path), paths)
         
         # Best-effort version/worksharing probe; do not block open on mismatch here
