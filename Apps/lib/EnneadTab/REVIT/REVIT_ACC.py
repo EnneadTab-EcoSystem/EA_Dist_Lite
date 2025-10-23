@@ -43,6 +43,7 @@ REGENERATION TRIGGERS:
 # GLOBAL FILE NAMING CONSTANTS
 # ============================================================================
 # Cache file naming templates - explicitly named as cache files
+# Note: These will automatically get .sexyDuck extension from FOLDER module
 CACHE_ACC_PROJECTS_DETAILS = "ACC_PROJECTS_CACHED_DETAILS"
 CACHE_ACC_PROJECTS_SUMMARY = "ACC_PROJECTS_CACHED_SUMMARY" 
 CACHE_ACC_PROJECTS_BY_YEAR = "ACC_PROJECTS_CACHED_BY_YEAR"
@@ -1249,6 +1250,7 @@ def get_ACC_summary_data(show_progress = False):
         
     all_projects_data = get_acc_projects_data()
     if not all_projects_data:
+        logging.error("Failed to get basic project data")
         return None
 
     count = 0
@@ -1261,10 +1263,17 @@ def get_ACC_summary_data(show_progress = False):
 
     summary = {}
     project_by_year = {}
+    processed_count = 0
+    
+    logging.info("Starting ACC summary processing for {} hubs".format(len(all_projects_data)))
+    
     for hub_name, hub_data in all_projects_data.items():
         if not hub_data or "data" not in hub_data:
+            logging.warning("Skipping hub {} - no data".format(hub_name))
             continue
             
+        logging.info("Processing hub {} with {} projects".format(hub_name, len(hub_data["data"])))
+        
         for project in hub_data["data"]:
             project_version_year = set()
             project_name = project["attributes"]["name"]
@@ -1337,7 +1346,7 @@ def get_ACC_summary_data(show_progress = False):
                 "project_type": project_type,
                 "revit_files": processed_files
             }
-
+            processed_count += 1
 
             key_project_version_year = str(sorted(list(project_version_year)))
             if key_project_version_year not in project_by_year:
@@ -1368,6 +1377,12 @@ def get_ACC_summary_data(show_progress = False):
     print("=" * 50)
     
     logging.info("API cost summary: {}".format(api_summary))
+    
+    # Log final results
+    logging.info("ACC summary completed: {} projects processed, {} projects in summary".format(processed_count, len(summary)))
+    if show_progress:
+        print("📊 ACC summary completed: {} projects processed".format(processed_count))
+        print("📊 Summary contains {} projects".format(len(summary)))
 
     return summary
 

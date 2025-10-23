@@ -195,12 +195,14 @@ def _read_json_as_dict_in_shared_dump_folder(
 
 
 def _save_dict_to_json(data_dict, filepath, use_encode=True):
-    """Save dictionary to JSON file with proper encoding.
+    """Save dictionary to JSON file with proper encoding and file access conflict handling.
     
     Handles both IronPython and CPython environments, ensuring proper UTF-8
     encoding without BOM (Byte Order Mark). Includes automatic handling for
     non-serializable objects by converting them through a cascade of types:
     boolean -> integer -> float -> string.
+    
+    Uses temporary file approach to avoid file access conflicts.
 
     Args:
         data_dict (dict): Dictionary to save
@@ -211,6 +213,9 @@ def _save_dict_to_json(data_dict, filepath, use_encode=True):
     Returns:
         bool: True if save successful, False otherwise
     """
+    import time
+    import shutil
+    
     try:
         # Create a custom JSON encoder to handle non-serializable objects
         class AmazingJSONEncoder(json.JSONEncoder):
@@ -239,27 +244,57 @@ def _save_dict_to_json(data_dict, filepath, use_encode=True):
             print("Failed to convert data_dict to json_str because of {}".format(str(e)))
             json_str = json.dumps(data_dict, ensure_ascii=True, indent=4, sort_keys=True, cls=AmazingJSONEncoder)
         
-        if sys.platform == "cli":  # IronPython
-            from System.IO import File, StreamWriter
-            from System.Text import Encoding, UTF8Encoding
-            
-            if use_encode:
-                # Use UTF8Encoding(False) to prevent BOM
-                utf8_no_bom = UTF8Encoding(False)
-                writer = StreamWriter(filepath, False, utf8_no_bom)
-                writer.Write(json_str)
-                writer.Close()
-            else:
-                # Use basic file writing for non-encoded files
-                File.WriteAllText(filepath, json_str)
-        else:  # CPython
-            if use_encode:
-                with io.open(filepath, "w", encoding="utf-8") as f:
-                    f.write(json_str)
-            else:
-                with open(filepath, "w") as f:
-                    f.write(json_str)
-        return True
+        # Use temporary file approach to avoid file access conflicts
+        temp_filepath = filepath + ".tmp"
+        max_retries = 3
+        retry_delay = 1.0
+        
+        for attempt in range(max_retries):
+            try:
+                if sys.platform == "cli":  # IronPython
+                    from System.IO import File, StreamWriter
+                    from System.Text import Encoding, UTF8Encoding
+                    
+                    if use_encode:
+                        # Use UTF8Encoding(False) to prevent BOM
+                        utf8_no_bom = UTF8Encoding(False)
+                        writer = StreamWriter(temp_filepath, False, utf8_no_bom)
+                        writer.Write(json_str)
+                        writer.Close()
+                    else:
+                        # Use basic file writing for non-encoded files
+                        File.WriteAllText(temp_filepath, json_str)
+                else:  # CPython
+                    if use_encode:
+                        with io.open(temp_filepath, "w", encoding="utf-8") as f:
+                            f.write(json_str)
+                    else:
+                        with open(temp_filepath, "w") as f:
+                            f.write(json_str)
+                
+                # Atomic move: temp file -> target file
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                shutil.move(temp_filepath, filepath)
+                return True
+                
+            except (OSError, IOError) as e:
+                if "being used by another process" in str(e) or "WinError 32" in str(e):
+                    print("File access conflict (attempt {}/{}): {}. Retrying in {}s...".format(
+                        attempt + 1, max_retries, str(e), retry_delay))
+                    time.sleep(retry_delay)
+                    retry_delay *= 2  # Exponential backoff
+                    continue
+                else:
+                    raise e
+            except Exception as e:
+                print("Unexpected error saving JSON file {}: {}".format(filepath, str(e)))
+                return False
+        
+        # If all retries failed
+        print("Failed to save JSON file {} after {} attempts due to file access conflicts".format(filepath, max_retries))
+        return False
+        
     except Exception as e:
         print("Error saving JSON file {}: {}".format(filepath, str(e)))
         return False

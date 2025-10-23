@@ -1,0 +1,713 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+"""
+AutoExporter Orchestrator
+
+A flexible orchestration system for automated Revit model exports.
+Discovers and processes multiple export configuration files sequentially,
+launching Revit for each config to perform exports and notifications.
+
+Features:
+- Auto-discovers all AutoExportConfig_*.json files in configs/ folder
+- Sequential job processing with comprehensive logging
+- Timeout protection (default 30 min per job, configurable)
+- Process cleanup between jobs (kills lingering Revit processes)
+- Pre-flight checks (disk space, pyRevit availability, config validation)
+- Continues processing on failure (logs errors, proceeds to next config)
+- Status tracking via JSON files for monitoring
+- Lock file prevents multiple concurrent instances
+- Exit codes for task scheduler integration
+
+Architecture:
+- Runs OUTSIDE Revit using CPython 3.9 (.venv environment)
+- Launches pyRevit to run scripts INSIDE Revit (IronPython 2.7)
+- Uses JSON files for inter-process communication (payload, status)
+
+Usage:
+1. Add config files to configs/ folder (AutoExportConfig_*.json)
+2. Run this script directly or via run_orchestrator.bat
+3. Monitor orchestrator_logs/ for execution details
+4. Check heartbeat/ logs for Revit script execution details
+
+Author: EnneadTab Development Team
+Version: 1.0
+"""
+
+import os
+import sys
+import json
+import time
+import subprocess
+import glob
+from datetime import datetime
+
+
+# =============================================================================
+# CONSTANTS
+# =============================================================================
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+CONFIGS_DIR = os.path.join(SCRIPT_DIR, "configs")
+PAYLOAD_FILE = os.path.join(SCRIPT_DIR, "current_job_payload.json")
+STATUS_FILE = os.path.join(SCRIPT_DIR, "current_job_status.json")
+LOCK_FILE = os.path.join(SCRIPT_DIR, "orchestrator.lock")
+
+DEFAULT_TIMEOUT_MINUTES = 30
+DEFAULT_COOLDOWN_SECONDS = 10
+LOCK_FILE_MAX_AGE_HOURS = 24
+MIN_DISK_SPACE_GB = 5
+
+# Determine environment (dev vs dist)
+DEV_ROOT = os.path.join(os.environ.get('USERPROFILE', ''), 'github', 'EnneadTab-OS')
+DIST_ROOT = os.path.join(os.environ.get('USERPROFILE', ''), 'Documents', 'EnneadTab Ecosystem', 'EA_Dist')
+
+if os.path.exists(os.path.join(DEV_ROOT, 'Apps', '_revit', 'KingDuck.lib')):
+    ROOT_PATH = DEV_ROOT
+else:
+    ROOT_PATH = DIST_ROOT
+
+IMPORT_PATH = os.path.join(ROOT_PATH, 'Apps', '_revit', 'KingDuck.lib')
+EMPTY_DOC_DIR = os.path.join(ROOT_PATH, 'Apps', '_revit', 'DuckMaker.extension', 
+                              'EnneadTab.tab', 'Magic.panel', 'misc.pulldown', 
+                              'auto_upgrade.pushbutton')
+
+
+# =============================================================================
+# LOGGING
+# =============================================================================
+
+class OrchestratorLogger:
+    """Logger for orchestrator events"""
+    
+    def __init__(self):
+        self.log_dir = os.path.join(SCRIPT_DIR, "orchestrator_logs")
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
+        
+        self.log_file = os.path.join(
+            self.log_dir, 
+            "orchestrator_{}.log".format(datetime.now().strftime("%Y%m%d_%H%M%S"))
+        )
+        
+        self._log("="*80)
+        self._log("AUTOEXPORTER ORCHESTRATOR LOG")
+        self._log("="*80)
+    
+    def _log(self, message, level="INFO"):
+        """Write log entry"""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        log_line = "[{}] [{}] {}".format(timestamp, level, message)
+        print(log_line)
+        
+        with open(self.log_file, 'a') as f:
+            f.write(log_line + "\n")
+    
+    def info(self, message):
+        self._log(message, "INFO")
+    
+    def warning(self, message):
+        self._log(message, "WARNING")
+    
+    def error(self, message):
+        self._log(message, "ERROR")
+    
+    def success(self, message):
+        self._log(message, "SUCCESS")
+    
+    def get_log_file(self):
+        return self.log_file
+
+
+# =============================================================================
+# UTILITY FUNCTIONS
+# =============================================================================
+
+def check_lock_file():
+    """Check if orchestrator is already running"""
+    if os.path.exists(LOCK_FILE):
+        # Check if lock file is stale
+        try:
+            age_seconds = time.time() - os.path.getmtime(LOCK_FILE)
+            age_hours = age_seconds / 3600.0
+            
+            if age_hours > LOCK_FILE_MAX_AGE_HOURS:
+                print("Lock file is stale ({:.1f} hours old), removing...".format(age_hours))
+                os.remove(LOCK_FILE)
+                return False
+            else:
+                return True
+        except:
+            return True
+    return False
+
+
+def create_lock_file():
+    """Create lock file"""
+    with open(LOCK_FILE, 'w') as f:
+        f.write("{}\n".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+
+
+def remove_lock_file():
+    """Remove lock file"""
+    if os.path.exists(LOCK_FILE):
+        try:
+            os.remove(LOCK_FILE)
+        except:
+            pass
+
+
+def cleanup_stale_files():
+    """Remove stale payload and status files"""
+    for filepath in [PAYLOAD_FILE, STATUS_FILE]:
+        if os.path.exists(filepath):
+            try:
+                os.remove(filepath)
+                print("Removed stale file: {}".format(os.path.basename(filepath)))
+            except Exception as e:
+                print("Warning: Could not remove {}: {}".format(filepath, e))
+
+
+def check_disk_space():
+    """Check available disk space"""
+    try:
+        if sys.platform == 'win32':
+            import ctypes
+            free_bytes = ctypes.c_ulonglong(0)
+            ctypes.windll.kernel32.GetDiskFreeSpaceExW(
+                ctypes.c_wchar_p(SCRIPT_DIR), None, None, ctypes.pointer(free_bytes)
+            )
+            free_gb = free_bytes.value / (1024.0 ** 3)
+            return free_gb
+        return 999  # Unknown, assume OK
+    except:
+        return 999  # Unknown, assume OK
+
+
+def check_pyrevit_available():
+    """Check if pyrevit command is available"""
+    try:
+        result = subprocess.call(
+            ['pyrevit', '--help'],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True
+        )
+        return result == 0
+    except:
+        return False
+
+
+def kill_revit_processes(logger):
+    """Kill any lingering Revit processes"""
+    try:
+        import subprocess
+        
+        # Only kill Revit.exe and RevitWorker.exe, never pyrevit or python processes
+        processes_to_kill = ['Revit.exe', 'RevitWorker.exe']
+        
+        for proc_name in processes_to_kill:
+            try:
+                # Check if process exists
+                check_cmd = 'tasklist /FI "IMAGENAME eq {}" 2>NUL | find /I /N "{}"'.format(
+                    proc_name, proc_name
+                )
+                result = subprocess.call(check_cmd, shell=True, stdout=subprocess.PIPE)
+                
+                if result == 0:  # Process found
+                    logger.warning("Found lingering {}, killing...".format(proc_name))
+                    kill_cmd = 'taskkill /F /IM "{}" >NUL 2>&1'.format(proc_name)
+                    subprocess.call(kill_cmd, shell=True)
+                    time.sleep(2)  # Wait for cleanup
+            except Exception as e:
+                logger.warning("Error checking/killing {}: {}".format(proc_name, e))
+    except Exception as e:
+        logger.error("Process cleanup error: {}".format(e))
+
+
+# =============================================================================
+# CONFIG DISCOVERY & VALIDATION
+# =============================================================================
+
+def discover_configs():
+    """Discover all AutoExportConfig_*.json files in configs folder"""
+    if not os.path.exists(CONFIGS_DIR):
+        return []
+    
+    pattern = os.path.join(CONFIGS_DIR, "AutoExportConfig_*.json")
+    config_files = glob.glob(pattern)
+    
+    # Sort alphabetically for consistent order
+    config_files.sort()
+    
+    return config_files
+
+
+def validate_config(config_path):
+    """Validate a config file has required structure
+    
+    Returns:
+        (is_valid, errors_list)
+    """
+    errors = []
+    
+    try:
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+    except Exception as e:
+        return (False, ["Failed to parse JSON: {}".format(str(e))])
+    
+    # Check required sections
+    required_sections = ['project', 'models', 'export', 'email']
+    for section in required_sections:
+        if section not in config:
+            errors.append("Missing required section: {}".format(section))
+    
+    # Check project section
+    if 'project' in config:
+        if 'project_name' not in config['project']:
+            errors.append("Missing project.project_name")
+    
+    # Check models section
+    if 'models' in config:
+        if not config['models']:
+            errors.append("No models defined")
+        else:
+            for model_name, model_data in config['models'].items():
+                required_keys = ['model_guid', 'project_guid', 'region', 'revit_version']
+                for key in required_keys:
+                    if key not in model_data:
+                        errors.append("Model '{}' missing: {}".format(model_name, key))
+    
+    # Check export section
+    if 'export' in config:
+        if 'output_base_path' not in config['export']:
+            errors.append("Missing export.output_base_path")
+    
+    # Check email section
+    if 'email' in config:
+        if 'recipients' not in config['email'] or not config['email']['recipients']:
+            errors.append("Missing or empty email.recipients")
+    
+    is_valid = len(errors) == 0
+    return (is_valid, errors)
+
+
+def validate_all_configs(config_paths, logger):
+    """Validate all configs before processing
+    
+    Returns:
+        (all_valid, validation_results)
+    """
+    logger.info("Validating {} config files...".format(len(config_paths)))
+    
+    validation_results = {}
+    all_valid = True
+    
+    for config_path in config_paths:
+        config_name = os.path.basename(config_path)
+        is_valid, errors = validate_config(config_path)
+        
+        validation_results[config_name] = {
+            'valid': is_valid,
+            'errors': errors
+        }
+        
+        if is_valid:
+            logger.info("  [OK] {}".format(config_name))
+        else:
+            logger.error("  [FAIL] {}".format(config_name))
+            for error in errors:
+                logger.error("    - {}".format(error))
+            all_valid = False
+    
+    return (all_valid, validation_results)
+
+
+# =============================================================================
+# JOB EXECUTION
+# =============================================================================
+
+def write_payload(config_path, job_id, logger):
+    """Write job payload file atomically"""
+    payload = {
+        "config_file": os.path.basename(config_path),
+        "config_path": config_path,
+        "job_id": job_id,
+        "started_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    
+    # Write to temp file first
+    temp_file = PAYLOAD_FILE + ".tmp"
+    try:
+        with open(temp_file, 'w') as f:
+            json.dump(payload, f, indent=2)
+        
+        # Atomic rename
+        if os.path.exists(PAYLOAD_FILE):
+            os.remove(PAYLOAD_FILE)
+        os.rename(temp_file, PAYLOAD_FILE)
+        
+        logger.info("Payload written: {}".format(job_id))
+        return True
+    except Exception as e:
+        logger.error("Failed to write payload: {}".format(e))
+        if os.path.exists(temp_file):
+            os.remove(temp_file)
+        return False
+
+
+def get_revit_version_from_config(config_path):
+    """Extract Revit version from config"""
+    try:
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        
+        # Get first model's Revit version
+        models = config.get('models', {})
+        if models:
+            first_model = list(models.values())[0]
+            return first_model.get('revit_version', '2026')
+        return '2026'
+    except:
+        return '2026'
+
+
+def get_timeout_from_config(config_path):
+    """Extract timeout setting from config"""
+    try:
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        
+        orchestrator_settings = config.get('orchestrator', {})
+        return orchestrator_settings.get('timeout_minutes', DEFAULT_TIMEOUT_MINUTES)
+    except:
+        return DEFAULT_TIMEOUT_MINUTES
+
+
+def get_empty_doc_path(revit_version):
+    """Get path to empty doc for given Revit version"""
+    empty_doc = os.path.join(EMPTY_DOC_DIR, "empty_doc_{}.rvt".format(revit_version))
+    
+    if not os.path.exists(empty_doc):
+        # Fallback to 2026
+        empty_doc = os.path.join(EMPTY_DOC_DIR, "empty_doc_2026.rvt")
+    
+    return empty_doc
+
+
+def launch_revit_job(config_path, job_id, logger):
+    """Launch Revit with pyrevit to process the job
+    
+    Returns:
+        (success, error_message, process) - process is None if failed
+    """
+    # Get Revit version from config
+    revit_version = get_revit_version_from_config(config_path)
+    logger.info("Revit version: {}".format(revit_version))
+    
+    # Get empty doc
+    empty_doc = get_empty_doc_path(revit_version)
+    if not os.path.exists(empty_doc):
+        return (False, "Empty doc not found: {}".format(empty_doc), None)
+    
+    logger.info("Empty doc: {}".format(empty_doc))
+    
+    # Build pyrevit command
+    script_path = os.path.join(SCRIPT_DIR, "revit_server_entry_script.py")
+    
+    cmd = [
+        'pyrevit', 'run',
+        script_path,
+        empty_doc,
+        '--revit={}'.format(revit_version),
+        '--purge',
+        '--import={}'.format(IMPORT_PATH)
+    ]
+    
+    logger.info("Launching Revit: {}".format(' '.join(cmd)))
+    
+    try:
+        # Launch process
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            shell=True
+        )
+        
+        return (True, None, process)
+    except Exception as e:
+        return (False, "Failed to launch pyrevit: {}".format(e), None)
+
+
+def wait_for_completion(process, config_path, job_id, logger):
+    """Wait for job to complete with timeout
+    
+    Returns:
+        (success, error_message, status_data)
+    """
+    timeout_minutes = get_timeout_from_config(config_path)
+    timeout_seconds = timeout_minutes * 60
+    start_time = time.time()
+    
+    logger.info("Waiting for completion (timeout: {} min)...".format(timeout_minutes))
+    
+    check_interval = 5  # Check every 5 seconds
+    
+    while True:
+        elapsed = time.time() - start_time
+        
+        # Check timeout
+        if elapsed > timeout_seconds:
+            logger.error("Job timed out after {} minutes".format(timeout_minutes))
+            try:
+                process.kill()
+            except:
+                pass
+            return (False, "Timeout after {} minutes".format(timeout_minutes), None)
+        
+        # Check if process finished
+        poll_result = process.poll()
+        if poll_result is not None:
+            # Process finished
+            logger.info("Process exited with code: {}".format(poll_result))
+            
+            # Read status file
+            if os.path.exists(STATUS_FILE):
+                try:
+                    with open(STATUS_FILE, 'r') as f:
+                        status_data = json.load(f)
+                    
+                    if status_data.get('status') == 'completed':
+                        return (True, None, status_data)
+                    else:
+                        error = status_data.get('error', 'Unknown error')
+                        return (False, error, status_data)
+                except Exception as e:
+                    logger.error("Failed to read status file: {}".format(e))
+                    return (False, "Failed to read status file", None)
+            else:
+                # No status file, check exit code
+                if poll_result == 0:
+                    return (True, None, None)
+                else:
+                    return (False, "Process failed with exit code {}".format(poll_result), None)
+        
+        # Still running, wait and check again
+        time.sleep(check_interval)
+
+
+def process_job(config_path, logger):
+    """Process a single config job
+    
+    Returns:
+        (success, job_result_dict)
+    """
+    config_name = os.path.basename(config_path)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    
+    # Extract project name from config
+    try:
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+        project_name = config.get('project', {}).get('project_name', 'Unknown')
+    except:
+        project_name = 'Unknown'
+    
+    job_id = "{}_{}".format(timestamp, project_name.replace(' ', '_'))
+    
+    logger.info("")
+    logger.info("="*80)
+    logger.info("Starting Job: {}".format(config_name))
+    logger.info("Job ID: {}".format(job_id))
+    logger.info("="*80)
+    
+    start_time = time.time()
+    
+    # Write payload
+    if not write_payload(config_path, job_id, logger):
+        return (False, {
+            'config': config_name,
+            'job_id': job_id,
+            'success': False,
+            'error': 'Failed to write payload',
+            'duration': 0
+        })
+    
+    # Launch Revit job
+    success, error, process = launch_revit_job(config_path, job_id, logger)
+    if not success:
+        return (False, {
+            'config': config_name,
+            'job_id': job_id,
+            'success': False,
+            'error': error,
+            'duration': 0
+        })
+    
+    # Wait for completion
+    success, error, status_data = wait_for_completion(process, config_path, job_id, logger)
+    
+    duration = time.time() - start_time
+    
+    job_result = {
+        'config': config_name,
+        'job_id': job_id,
+        'success': success,
+        'error': error,
+        'duration': duration,
+        'status_data': status_data
+    }
+    
+    if success:
+        logger.success("Job completed successfully in {:.1f} seconds".format(duration))
+        if status_data:
+            exports = status_data.get('exports', {})
+            logger.info("Exports: PDF={}, DWG={}, JPG={}".format(
+                exports.get('pdf', 0),
+                exports.get('dwg', 0),
+                exports.get('jpg', 0)
+            ))
+    else:
+        logger.error("Job failed: {}".format(error))
+    
+    return (success, job_result)
+
+
+# =============================================================================
+# MAIN ORCHESTRATOR
+# =============================================================================
+
+def run_orchestrator():
+    """Main orchestrator function"""
+    logger = OrchestratorLogger()
+    
+    logger.info("AutoExporter Orchestrator Starting...")
+    logger.info("Script directory: {}".format(SCRIPT_DIR))
+    logger.info("Root path: {}".format(ROOT_PATH))
+    
+    # Check lock file
+    if check_lock_file():
+        logger.error("Another orchestrator instance is already running!")
+        logger.error("If this is incorrect, delete: {}".format(LOCK_FILE))
+        return 1
+    
+    create_lock_file()
+    
+    try:
+        # Cleanup stale files
+        logger.info("Cleaning up stale files...")
+        cleanup_stale_files()
+        
+        # Pre-flight checks
+        logger.info("Running pre-flight checks...")
+        
+        # Check disk space
+        free_gb = check_disk_space()
+        logger.info("Available disk space: {:.1f} GB".format(free_gb))
+        if free_gb < MIN_DISK_SPACE_GB:
+            logger.warning("Low disk space! ({:.1f} GB available)".format(free_gb))
+        
+        # Check pyrevit
+        if not check_pyrevit_available():
+            logger.error("pyrevit command not found in PATH!")
+            logger.error("Please ensure pyrevit CLI is installed and in PATH")
+            return 1
+        logger.info("pyrevit command available")
+        
+        # Discover configs
+        logger.info("Discovering config files...")
+        config_paths = discover_configs()
+        
+        if not config_paths:
+            logger.error("No config files found in: {}".format(CONFIGS_DIR))
+            return 1
+        
+        logger.info("Found {} config file(s)".format(len(config_paths)))
+        for config_path in config_paths:
+            logger.info("  - {}".format(os.path.basename(config_path)))
+        
+        # Validate all configs
+        all_valid, _ = validate_all_configs(config_paths, logger)
+        if not all_valid:
+            logger.error("Config validation failed! Fix errors before running.")
+            return 1
+        
+        logger.success("All configs validated successfully")
+        
+        # Process each config
+        logger.info("")
+        logger.info("="*80)
+        logger.info("Starting Job Processing")
+        logger.info("="*80)
+        
+        job_results = []
+        
+        for i, config_path in enumerate(config_paths):
+            # Process job
+            _, job_result = process_job(config_path, logger)
+            job_results.append(job_result)
+            
+            # Cleanup between jobs
+            if i < len(config_paths) - 1:  # Not the last job
+                logger.info("Cleaning up before next job...")
+                kill_revit_processes(logger)
+                cleanup_stale_files()
+                
+                logger.info("Cooldown period ({} seconds)...".format(DEFAULT_COOLDOWN_SECONDS))
+                time.sleep(DEFAULT_COOLDOWN_SECONDS)
+        
+        # Generate summary
+        logger.info("")
+        logger.info("="*80)
+        logger.info("ORCHESTRATOR SUMMARY")
+        logger.info("="*80)
+        
+        total_jobs = len(job_results)
+        successful_jobs = sum(1 for r in job_results if r['success'])
+        failed_jobs = total_jobs - successful_jobs
+        
+        logger.info("Total Jobs: {}".format(total_jobs))
+        logger.info("Successful: {}".format(successful_jobs))
+        logger.info("Failed: {}".format(failed_jobs))
+        logger.info("")
+        
+        for result in job_results:
+            status = "SUCCESS" if result['success'] else "FAILED"
+            logger.info("[{}] {} ({:.1f}s)".format(
+                status,
+                result['config'],
+                result['duration']
+            ))
+            if not result['success']:
+                logger.info("  Error: {}".format(result['error']))
+        
+        logger.info("="*80)
+        logger.info("Log file: {}".format(logger.get_log_file()))
+        
+        # Open log file
+        try:
+            os.startfile(logger.get_log_file())
+        except:
+            pass
+        
+        # Return exit code
+        if failed_jobs > 0:
+            return 1
+        else:
+            return 0
+    
+    finally:
+        # Always remove lock file
+        remove_lock_file()
+
+
+# =============================================================================
+# ENTRY POINT
+# =============================================================================
+
+if __name__ == "__main__":
+    exit_code = run_orchestrator()
+    sys.exit(exit_code)
+

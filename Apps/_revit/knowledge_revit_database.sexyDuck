@@ -1916,6 +1916,24 @@
         "tab": "No Tab",
         "tab_icon": null
     },
+    "EnneadTab.tab\\ACE.panel\\AutoExporter.pushbutton\\revit_auto_export_script.py": {
+        "alias": "Amazing Auto Export",
+        "doc": "AutoExporter - Opens cloud model, exports files, sends notifications, closes Revit",
+        "icon": "EnneadTab.tab\\ACE.panel\\AutoExporter.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\ACE.panel\\AutoExporter.pushbutton\\revit_auto_export_script.py",
+        "tab": "ACE",
+        "tab_icon": null
+    },
+    "EnneadTab.tab\\ACE.panel\\AutoExporter.pushbutton\\revit_server_entry_script.py": {
+        "alias": "Amazing Auto Export",
+        "doc": "AutoExporter - Opens cloud model, exports files, sends notifications, closes Revit",
+        "icon": "EnneadTab.tab\\ACE.panel\\AutoExporter.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\ACE.panel\\AutoExporter.pushbutton\\revit_server_entry_script.py",
+        "tab": "ACE",
+        "tab_icon": null
+    },
     "EnneadTab.tab\\ACE.panel\\CollectTextures.pushbutton\\collect textures_script.py": {
         "alias": "Collect Textures",
         "doc": "Choose a new destination for texture images. Then Collect Textures copies all material texture images to this new location, and updates texture image path.\n",
