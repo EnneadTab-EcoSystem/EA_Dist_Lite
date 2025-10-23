@@ -115,47 +115,29 @@ def fake_write_design_values(excel_data, all_matches, excel_path, worksheet):
     }
 
 
-def write_design_values_to_test_excel(excel_data, all_matches, excel_path, worksheet):
+def write_design_values_to_excel(excel_data, all_matches, excel_path, worksheet):
     """
-    Write actual Revit DGSF values to the DESIGN column in a TEST copy of the Excel file.
-    Creates a test copy with "_TEST" suffix before making any changes.
+    Write actual Revit DGSF values to the DESIGN column in the Excel file.
+    Writes directly to the original Excel file.
     
     Args:
         excel_data (dict): Dictionary of Excel data with RowData objects
         all_matches (dict): Dictionary of matches by scheme {scheme_name: {'matches': [...]}}
-        excel_path (str): Path to original Excel file
+        excel_path (str): Path to Excel file
         worksheet (str): Worksheet name
         
     Returns:
-        dict: Statistics about the write operation including test file path
+        dict: Statistics about the write operation
     """
     print("\n" + "=" * 80)
-    print("=== REAL EXCEL WRITEBACK TO TEST FILE ===")
+    print("=== REAL EXCEL WRITEBACK TO ORIGINAL FILE ===")
     print("=" * 80)
-    
-    # Create test file path
-    base_path, ext = os.path.splitext(excel_path)
-    test_excel_path = base_path + "_TEST" + ext
-    
-    # Copy original to test path
-    try:
-        print("Copying original Excel to test location...")
-        print("  From: {}".format(excel_path))
-        print("  To:   {}".format(test_excel_path))
-        shutil.copy2(excel_path, test_excel_path)
-        print("  Copy successful!")
-    except Exception as e:
-        error_msg = "Failed to copy Excel file: {}".format(str(e))
-        print("ERROR: {}".format(error_msg))
-        return {
-            'total_updates': 0,
-            'test_file_path': None,
-            'error': error_msg
-        }
+    print("Target file: {}".format(excel_path))
+    print("")
     
     # Read Excel to find DESIGN column index
     raw_data = EXCEL.read_data_from_excel(
-        test_excel_path, 
+        excel_path, 
         worksheet=worksheet, 
         return_dict=True
     )
@@ -175,7 +157,6 @@ def write_design_values_to_test_excel(excel_data, all_matches, excel_path, works
         print("Available columns: {}".format(", ".join(header_map.values())))
         return {
             'total_updates': 0,
-            'test_file_path': test_excel_path,
             'error': error_msg
         }
     
@@ -234,7 +215,7 @@ def write_design_values_to_test_excel(excel_data, all_matches, excel_path, works
     # Prepare job data for ExcelHandler
     job_data = {
         "mode": "update",
-        "filepath": test_excel_path,
+        "filepath": excel_path,
         "worksheet": worksheet,
         "data": {
             "update_data": update_data_dict, 
@@ -269,22 +250,21 @@ def write_design_values_to_test_excel(excel_data, all_matches, excel_path, works
     print("  Total cells updated: {}".format(total_updates))
     for scheme_name, count in updates_by_scheme.items():
         print("    {}: {} cells".format(scheme_name, count))
-    print("  Test file: {}".format(test_excel_path))
+    print("  Original file: {}".format(excel_path))
     print("=" * 80)
     print("")
     
-    # Open the test Excel file
-    if os.path.exists(test_excel_path):
-        print("Opening test Excel file...")
-        os.startfile(test_excel_path)
+    # Open the Excel file
+    if os.path.exists(excel_path):
+        print("Opening Excel file...")
+        os.startfile(excel_path)
     else:
-        print("WARNING: Test Excel file not found at: {}".format(test_excel_path))
+        print("WARNING: Excel file not found at: {}".format(excel_path))
     
     return {
         'total_updates': total_updates,
         'updates_by_scheme': updates_by_scheme,
         'design_column': design_col_letter,
-        'test_file_path': test_excel_path,
         'error': None
     }
 

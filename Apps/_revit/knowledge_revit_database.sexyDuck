@@ -989,15 +989,6 @@
         "tab": "Proj. 2526",
         "tab_icon": null
     },
-    "EnneadTab Tailor.tab\\Proj. 2534.panel\\NYU HQ.pulldown\\auto_export.pushbutton\\auto_export_script.py": {
-        "alias": "Auto Export",
-        "doc": "Auto export script for NYU HQ project. Opens cloud model, exports files, closes Revit.",
-        "icon": "EnneadTab Tailor.tab\\Proj. 2534.panel\\NYU HQ.pulldown\\auto_export.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab Tailor.tab\\Proj. 2534.panel\\NYU HQ.pulldown\\auto_export.pushbutton\\auto_export_script.py",
-        "tab": "Proj. 2534",
-        "tab_icon": null
-    },
     "EnneadTab Tailor.tab\\Proj. 2534.panel\\NYU HQ.pulldown\\monitor_area.pushbutton\\monitor_area_script.py": {
         "alias": "Monitor Area",
         "doc": "PlaceHolder Documentation, To Be Updated.",

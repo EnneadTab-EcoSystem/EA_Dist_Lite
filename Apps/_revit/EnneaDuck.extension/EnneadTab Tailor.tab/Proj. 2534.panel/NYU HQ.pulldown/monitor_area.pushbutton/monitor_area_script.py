@@ -24,7 +24,7 @@ from revit_data import get_revit_area_data_by_scheme
 from html_export import HTMLReportGenerator
 from color_scheme_updater import update_all_color_schemes
 from parameter_updater import update_area_parameters
-from excel_writeback import write_design_values_to_test_excel
+from excel_writeback import write_design_values_to_excel
 import config
 
 
@@ -50,8 +50,8 @@ def monitor_area(doc):
     # Update Revit area parameters with suggestions
     param_stats = update_area_parameters(doc, all_matches, all_unmatched)
     
-    # Write Revit area data to TEST Excel copy (original Excel is NOT changed)
-    writeback_stats = write_design_values_to_test_excel(
+    # Write Revit area data back to original Excel file
+    writeback_stats = write_design_values_to_excel(
         excel_data, 
         all_matches, 
         config.EXCEL_FILENAME, 
@@ -81,17 +81,13 @@ def monitor_area(doc):
         param_summary += "\n  Errors: {}".format(len(param_stats['errors']))
     
     # Add Excel writeback summary
-    writeback_summary = "\n\nExcel Writeback (TEST file only):\n  Total cells updated: {}\n  DESIGN Column: {}".format(
+    writeback_summary = "\n\nExcel Writeback:\n  Total cells updated: {}\n  DESIGN Column: {}".format(
         writeback_stats['total_updates'],
         writeback_stats.get('design_column', 'N/A')
     )
     
-    test_file = writeback_stats.get('test_file_path', None)
-    if test_file:
-        writeback_summary += "\n  Test file: {}".format(os.path.basename(test_file))
-    
     if writeback_stats.get('error'):
-        writeback_summary += "\n  ERROR: Excel file cannot be writen becasue you have it open in another program. Please close it and try again."
+        writeback_summary += "\n  ERROR: Excel file cannot be written because you have it open in another program. Please close it and try again."
         # writeback_summary += "\n  Error: {}".format(writeback_stats['error'])
     
     if len(filepaths) == 1:
