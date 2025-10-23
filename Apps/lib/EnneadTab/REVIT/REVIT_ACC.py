@@ -50,12 +50,7 @@ ACC_PROJECTS_BY_YEAR = "ACC_PROJECTS_BY_YEAR"
 ACC_PROJECT_REVIT_FILES_TEMPLATE = "ACC_PROJECT_REVIT_FILES_{project_name}_{hub_name}"
 ACC_PROJECT_REVIT_FILES_ID_TEMPLATE = "ACC_PROJECT_REVIT_FILES_{project_id}_{hub_id}"
 
-# Legacy cached names (deprecated - use above instead)
-CACHE_ACC_PROJECTS_DETAILS = ACC_PROJECTS_DETAILS
-CACHE_ACC_PROJECTS_SUMMARY = ACC_PROJECTS_SUMMARY
-CACHE_ACC_PROJECTS_BY_YEAR = ACC_PROJECTS_BY_YEAR
-CACHE_ACC_PROJECT_REVIT_FILES_TEMPLATE = ACC_PROJECT_REVIT_FILES_TEMPLATE
-CACHE_ACC_PROJECT_REVIT_FILES_ID_TEMPLATE = ACC_PROJECT_REVIT_FILES_ID_TEMPLATE
+
 
 # Job and task file naming templates
 JOB_FILE_TEMPLATE = "ACC_JOB_{job_id}"
@@ -1010,13 +1005,13 @@ def get_project_revit_files_data(project_id, hub_id, project_name=None, hub_name
         # Clean names for use in filenames (remove special characters)
         safe_project_name = "".join(c for c in project_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
         safe_hub_name = "".join(c for c in hub_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
-        cache_key = CACHE_ACC_PROJECT_REVIT_FILES_TEMPLATE.format(
+        cache_key = ACC_PROJECT_REVIT_FILES_TEMPLATE.format(
             project_name=safe_project_name.replace(' ', '_'), 
             hub_name=safe_hub_name.replace(' ', '_')
         )
         logging.info("Using readable cache key: {}".format(cache_key))
     else:
-        cache_key = CACHE_ACC_PROJECT_REVIT_FILES_ID_TEMPLATE.format(
+        cache_key = ACC_PROJECT_REVIT_FILES_ID_TEMPLATE.format(
             project_id=project_id, 
             hub_id=hub_id
         )

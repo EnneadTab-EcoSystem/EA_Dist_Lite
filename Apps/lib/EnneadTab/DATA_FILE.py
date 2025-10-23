@@ -62,12 +62,22 @@ if FOLDER is None:
     # Provide fallback functions that use ENVIRONMENT directly
     class FOLDER_FALLBACK:
         @staticmethod
+        def _add_extension_if_needed(file_name):
+            """Add .sexyDuck extension if file doesn't have an extension."""
+            _, ext = os.path.splitext(file_name)
+            if not ext:
+                return file_name + ".sexyDuck"
+            return file_name
+        
+        @staticmethod
         def get_local_dump_folder_file(file_name):
-            return os.path.join(ENVIRONMENT.DUMP_FOLDER, file_name)
+            secured_name = FOLDER_FALLBACK._add_extension_if_needed(file_name)
+            return os.path.join(ENVIRONMENT.DUMP_FOLDER, secured_name)
         
         @staticmethod
         def get_shared_dump_folder_file(file_name):
-            return os.path.join(ENVIRONMENT.SHARED_DUMP_FOLDER, file_name)
+            secured_name = FOLDER_FALLBACK._add_extension_if_needed(file_name)
+            return os.path.join(ENVIRONMENT.SHARED_DUMP_FOLDER, secured_name)
     
     FOLDER = FOLDER_FALLBACK()
 
@@ -440,7 +450,10 @@ def set_data(data_dict, file_name_or_full_path, is_local=True):
     Returns:
         bool: True if save successful
     """
-    if os.path.exists(file_name_or_full_path):
+    # Only use direct path if it's actually a full/absolute path, not just a filename
+    is_full_path = os.path.isabs(file_name_or_full_path) or os.path.dirname(file_name_or_full_path)
+    
+    if is_full_path and os.path.exists(file_name_or_full_path):
         return _save_dict_to_json(data_dict, file_name_or_full_path, use_encode=True)
     
     if is_local:
