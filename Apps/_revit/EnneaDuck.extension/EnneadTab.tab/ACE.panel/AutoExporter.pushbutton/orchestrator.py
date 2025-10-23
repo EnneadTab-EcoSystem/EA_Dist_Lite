@@ -115,8 +115,37 @@ class OrchestratorLogger:
     def success(self, message):
         self._log(message, "SUCCESS")
     
+    def debug(self, message):
+        self._log(message, "DEBUG")
+    
     def get_log_file(self):
         return self.log_file
+
+
+def write_orchestrator_heartbeat(job_id, step, message, is_error=False):
+    """Write orchestrator-level heartbeat to track job progress from outside Revit
+    
+    This is critical for debugging jobs that hang before the Revit script runs.
+    """
+    try:
+        heartbeat_dir = os.path.join(SCRIPT_DIR, "heartbeat")
+        if not os.path.exists(heartbeat_dir):
+            os.makedirs(heartbeat_dir)
+        
+        date_stamp = datetime.now().strftime("%Y%m%d")
+        heartbeat_file = os.path.join(heartbeat_dir, "orchestrator_heartbeat_{}.log".format(date_stamp))
+        
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        status = "ERROR" if is_error else "OK"
+        
+        with open(heartbeat_file, 'a') as f:
+            f.write("[{}] [JOB: {}] [ORCH-STEP {}] [{}] {}\n".format(
+                timestamp, job_id, step, status, message))
+        
+        return heartbeat_file
+    except Exception as e:
+        print("Orchestrator heartbeat error: {}".format(e))
+        return None
 
 
 # =============================================================================
@@ -405,11 +434,14 @@ def launch_revit_job(config_path, job_id, logger):
     # Get Revit version from config
     revit_version = get_revit_version_from_config(config_path)
     logger.info("Revit version: {}".format(revit_version))
+    write_orchestrator_heartbeat(job_id, "PREP", "Preparing to launch Revit {}".format(revit_version))
     
     # Get empty doc
     empty_doc = get_empty_doc_path(revit_version)
     if not os.path.exists(empty_doc):
-        return (False, "Empty doc not found: {}".format(empty_doc), None)
+        error_msg = "Empty doc not found: {}".format(empty_doc)
+        write_orchestrator_heartbeat(job_id, "PREP_ERROR", error_msg, is_error=True)
+        return (False, error_msg, None)
     
     logger.info("Empty doc: {}".format(empty_doc))
     
@@ -426,6 +458,7 @@ def launch_revit_job(config_path, job_id, logger):
     ]
     
     logger.info("Launching Revit: {}".format(' '.join(cmd)))
+    write_orchestrator_heartbeat(job_id, "LAUNCH", "Launching Revit {} via pyrevit CLI".format(revit_version))
     
     try:
         # Launch process
@@ -436,13 +469,53 @@ def launch_revit_job(config_path, job_id, logger):
             shell=True
         )
         
+        write_orchestrator_heartbeat(job_id, "LAUNCHED", "Revit process started (PID: {}), waiting for script to run...".format(process.pid if hasattr(process, 'pid') else 'unknown'))
+        logger.debug("Revit process PID: {}".format(process.pid if hasattr(process, 'pid') else 'unknown'))
+        
         return (True, None, process)
     except Exception as e:
-        return (False, "Failed to launch pyrevit: {}".format(e), None)
+        error_msg = "Failed to launch pyrevit: {}".format(e)
+        write_orchestrator_heartbeat(job_id, "LAUNCH_ERROR", error_msg, is_error=True)
+        return (False, error_msg, None)
+
+
+def get_latest_activity_time():
+    """Get the most recent activity timestamp from status file or heartbeat logs
+    
+    Returns the latest modification time across monitored files, or None if no files exist
+    """
+    latest_time = None
+    
+    # Check status file
+    if os.path.exists(STATUS_FILE):
+        try:
+            mtime = os.path.getmtime(STATUS_FILE)
+            if latest_time is None or mtime > latest_time:
+                latest_time = mtime
+        except:
+            pass
+    
+    # Check heartbeat log (today's file)
+    heartbeat_dir = os.path.join(SCRIPT_DIR, "heartbeat")
+    if os.path.exists(heartbeat_dir):
+        try:
+            date_stamp = datetime.now().strftime("%Y%m%d")
+            heartbeat_file = os.path.join(heartbeat_dir, "heartbeat_{}.log".format(date_stamp))
+            if os.path.exists(heartbeat_file):
+                mtime = os.path.getmtime(heartbeat_file)
+                if latest_time is None or mtime > latest_time:
+                    latest_time = mtime
+        except:
+            pass
+    
+    return latest_time
 
 
 def wait_for_completion(process, config_path, job_id, logger):
-    """Wait for job to complete with timeout
+    """Wait for job to complete with ACTIVITY-BASED timeout
+    
+    Timeout only triggers if there's NO progress (status/heartbeat updates) for the timeout duration.
+    This allows long-running jobs to continue as long as they're making progress.
     
     Returns:
         (success, error_message, status_data)
@@ -451,27 +524,108 @@ def wait_for_completion(process, config_path, job_id, logger):
     timeout_seconds = timeout_minutes * 60
     start_time = time.time()
     
-    logger.info("Waiting for completion (timeout: {} min)...".format(timeout_minutes))
+    logger.info("Waiting for completion (activity timeout: {} min)...".format(timeout_minutes))
+    logger.info("Note: Timeout resets whenever progress is detected (status/heartbeat updates)")
+    write_orchestrator_heartbeat(job_id, "WAIT_START", "Waiting for Revit process to complete (activity-based timeout: {} min idle)".format(timeout_minutes))
     
     check_interval = 5  # Check every 5 seconds
+    heartbeat_interval = 30  # Write heartbeat every 30 seconds
+    last_orchestrator_heartbeat_time = start_time
+    
+    # Track last activity time for intelligent timeout
+    last_activity_time = get_latest_activity_time()
+    if last_activity_time is None:
+        last_activity_time = start_time
+    
+    last_reported_activity = last_activity_time
     
     while True:
-        elapsed = time.time() - start_time
+        current_time = time.time()
+        total_elapsed = current_time - start_time
         
-        # Check timeout
-        if elapsed > timeout_seconds:
-            logger.error("Job timed out after {} minutes".format(timeout_minutes))
+        # Check for new activity (status or heartbeat updates)
+        latest_activity = get_latest_activity_time()
+        if latest_activity is not None and latest_activity > last_activity_time:
+            # Activity detected! Reset timeout
+            idle_before = current_time - last_activity_time
+            last_activity_time = latest_activity
+            
+            # Only log significant activity updates (more than 10 seconds since last report)
+            if latest_activity > last_reported_activity + 10:
+                logger.info("Progress detected - timeout timer reset (was idle for {:.0f}s)".format(idle_before))
+                write_orchestrator_heartbeat(
+                    job_id, 
+                    "ACTIVITY", 
+                    "Progress detected (status/heartbeat update) - timeout timer reset"
+                )
+                last_reported_activity = latest_activity
+        
+        # Calculate time since last activity
+        idle_time = current_time - last_activity_time
+        idle_minutes = idle_time / 60.0
+        
+        # Write periodic orchestrator heartbeat
+        if current_time - last_orchestrator_heartbeat_time >= heartbeat_interval:
+            total_minutes = total_elapsed / 60.0
+            write_orchestrator_heartbeat(
+                job_id, 
+                "WAIT_PROGRESS", 
+                "Still waiting... Total: {:.1f} min | Idle: {:.1f} min / {} min timeout".format(
+                    total_minutes, idle_minutes, timeout_minutes)
+            )
+            logger.debug("Waiting... Total: {:.1f} min | Idle: {:.1f} min".format(total_minutes, idle_minutes))
+            last_orchestrator_heartbeat_time = current_time
+        
+        # Check status file for terminal states (completed/failed) - allows moving to next job immediately
+        if os.path.exists(STATUS_FILE):
+            try:
+                with open(STATUS_FILE, 'r') as f:
+                    status_data = json.load(f)
+                
+                status = status_data.get('status')
+                
+                # Terminal states - return immediately without waiting for process exit
+                if status in ['completed', 'failed']:
+                    logger.info("Status '{}' detected in status file - proceeding to next job".format(status))
+                    logger.info("Revit process will continue closing in background")
+                    write_orchestrator_heartbeat(
+                        job_id, 
+                        "STATUS_COMPLETE", 
+                        "Job marked '{}' in status file (Revit still closing) - moving to next job".format(status)
+                    )
+                    return (
+                        status == 'completed', 
+                        status_data.get('error') if status == 'failed' else None, 
+                        status_data
+                    )
+            except Exception as e:
+                # Ignore errors reading status file - will be caught by timeout or process check
+                logger.debug("Could not read status file: {}".format(e))
+                pass
+        
+        # Check ACTIVITY-BASED timeout (idle time, not total time)
+        if idle_time > timeout_seconds:
+            logger.error("Job timed out: No progress for {} minutes (total runtime: {:.1f} min)".format(
+                timeout_minutes, total_elapsed / 60.0))
+            write_orchestrator_heartbeat(
+                job_id, 
+                "TIMEOUT", 
+                "Job timed out: No activity (status/heartbeat updates) for {} minutes - process appears stuck".format(timeout_minutes), 
+                is_error=True
+            )
             try:
                 process.kill()
             except:
                 pass
-            return (False, "Timeout after {} minutes".format(timeout_minutes), None)
+            return (False, "Timeout: No progress for {} minutes".format(timeout_minutes), None)
         
         # Check if process finished
         poll_result = process.poll()
         if poll_result is not None:
             # Process finished
-            logger.info("Process exited with code: {}".format(poll_result))
+            logger.info("Process exited with code: {} (total runtime: {:.1f} min)".format(
+                poll_result, total_elapsed / 60.0))
+            write_orchestrator_heartbeat(job_id, "PROCESS_EXIT", "Revit process exited with code: {}".format(poll_result))
             
             # Read status file
             if os.path.exists(STATUS_FILE):
@@ -480,18 +634,23 @@ def wait_for_completion(process, config_path, job_id, logger):
                         status_data = json.load(f)
                     
                     if status_data.get('status') == 'completed':
+                        write_orchestrator_heartbeat(job_id, "COMPLETED", "Job completed successfully")
                         return (True, None, status_data)
                     else:
                         error = status_data.get('error', 'Unknown error')
+                        write_orchestrator_heartbeat(job_id, "FAILED", "Job failed: {}".format(error), is_error=True)
                         return (False, error, status_data)
                 except Exception as e:
                     logger.error("Failed to read status file: {}".format(e))
+                    write_orchestrator_heartbeat(job_id, "STATUS_ERROR", "Failed to read status file: {}".format(e), is_error=True)
                     return (False, "Failed to read status file", None)
             else:
                 # No status file, check exit code
                 if poll_result == 0:
+                    write_orchestrator_heartbeat(job_id, "COMPLETED", "Process exited successfully (no status file)")
                     return (True, None, None)
                 else:
+                    write_orchestrator_heartbeat(job_id, "FAILED", "Process failed with exit code {}".format(poll_result), is_error=True)
                     return (False, "Process failed with exit code {}".format(poll_result), None)
         
         # Still running, wait and check again
@@ -512,8 +671,12 @@ def process_job(config_path, logger):
         with open(config_path, 'r') as f:
             config = json.load(f)
         project_name = config.get('project', {}).get('project_name', 'Unknown')
+        # Also get model info for better debugging
+        models = config.get('models', {})
+        model_names = list(models.keys())
     except:
         project_name = 'Unknown'
+        model_names = []
     
     job_id = "{}_{}".format(timestamp, project_name.replace(' ', '_'))
     
@@ -523,10 +686,16 @@ def process_job(config_path, logger):
     logger.info("Job ID: {}".format(job_id))
     logger.info("="*80)
     
+    # Write initial orchestrator heartbeat
+    write_orchestrator_heartbeat(job_id, "JOB_START", "Starting job: {} | Project: {} | Models: {}".format(
+        config_name, project_name, ', '.join(model_names) if model_names else 'None'))
+    
     start_time = time.time()
     
     # Write payload
+    write_orchestrator_heartbeat(job_id, "PAYLOAD", "Writing job payload file")
     if not write_payload(config_path, job_id, logger):
+        write_orchestrator_heartbeat(job_id, "PAYLOAD_ERROR", "Failed to write payload file", is_error=True)
         return (False, {
             'config': config_name,
             'job_id': job_id,

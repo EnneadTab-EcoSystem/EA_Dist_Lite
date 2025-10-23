@@ -23,7 +23,9 @@ AutoExporter.pushbutton/
 ├── revit_export_logic.py                 # Export operations (runs inside Revit - IronPython)
 ├── revit_post_export_logic.py            # Post-export tasks (runs inside Revit - IronPython)
 ├── config_loader.py                      # Configuration loader (Python 2/3 compatible)
-├── heartbeat/                            # Heartbeat logs from Revit script execution
+├── heartbeat/                            # Heartbeat logs (both orchestrator and Revit)
+│   ├── orchestrator_heartbeat_*.log     # Orchestrator-level progress tracking
+│   └── heartbeat_*.log                  # Revit script execution progress
 ├── orchestrator_logs/                    # Orchestrator execution logs (runtime)
 ├── current_job_payload.json             # Runtime: Current job info
 └── current_job_status.json              # Runtime: Job status tracking
@@ -108,7 +110,24 @@ The orchestrator creates detailed logs in `orchestrator_logs/` with:
 - Error messages and stack traces
 - Summary report with all job results
 
-Each Revit script execution also creates heartbeat logs in `heartbeat/` with step-by-step progress.
+Each Revit script execution also creates heartbeat logs in `heartbeat/` with step-by-step progress:
+
+**Two Types of Heartbeat Logs:**
+
+1. **`orchestrator_heartbeat_YYYYMMDD.log`** - Written by orchestrator (CPython)
+   - Tracks job launch, process monitoring, timeout tracking
+   - Shows WHEN Revit process started and idle time
+   - Critical for debugging jobs that timeout before Revit script runs
+   - Includes periodic "still waiting" updates with idle time vs total time
+
+2. **`heartbeat_YYYYMMDD.log`** - Written by Revit script (IronPython)
+   - Tracks detailed progress INSIDE Revit
+   - Shows model opening stages, export progress, email sending
+   - Only appears AFTER Revit launches and script begins execution
+   - If missing, job failed before Revit script could start
+
+**Activity-Based Monitoring:**
+The orchestrator monitors both heartbeat logs and status files. As long as either is being updated (indicating progress), the job continues. Only if BOTH are idle for 30+ minutes does timeout occur.
 
 ## Job Flow
 
@@ -128,7 +147,10 @@ For each config file:
 ## Error Handling
 
 - **Config validation**: All configs validated before any processing starts
-- **Timeout**: Each job has a timeout (default 30 min, configurable)
+- **Activity-based timeout**: Jobs timeout only if NO progress for 30 min (configurable)
+  - Timeout resets whenever exports happen or heartbeat updates
+  - Large jobs can run indefinitely as long as they're making progress
+  - Only truly stuck processes (idle for 30+ min) are killed
 - **Process cleanup**: Kills lingering Revit.exe/RevitWorker.exe between jobs
 - **Continue on failure**: Failed jobs are logged, but processing continues
 - **Status tracking**: Each job writes status file for orchestrator monitoring
@@ -194,9 +216,14 @@ If you see "ALREADY RUNNING" but know nothing is running, either:
 - Or wait 24 hours for auto-expiry
 
 **Job times out:**
-- Increase `orchestrator.timeout_minutes` in config
-- Check network connectivity to cloud models
-- Verify export paths are accessible
+- Check orchestrator heartbeat logs to see where it got stuck
+- Review last heartbeat timestamp - if idle for 30+ min, process was truly stuck
+- If job is making progress but still timing out, increase `orchestrator.timeout_minutes` in config
+- Common causes:
+  - Network connectivity issues downloading cloud models
+  - Export paths not accessible
+  - Model corruption or opening issues
+  - Large models taking >30 min to download/open with no progress updates
 
 **Config not discovered:**
 - Ensure filename matches `AutoExportConfig_*.json` pattern

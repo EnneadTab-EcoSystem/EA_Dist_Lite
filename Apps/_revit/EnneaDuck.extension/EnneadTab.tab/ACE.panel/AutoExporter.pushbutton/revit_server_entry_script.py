@@ -204,17 +204,39 @@ def tuple_to_model_path(data_dict):
     return None
 
 
-def open_and_activate_doc(doc_name, model_data):
-    """Open and activate a document by name"""
+def open_and_activate_doc(doc_name, model_data, heartbeat_callback=None):
+    """Open and activate a document by name with detailed progress tracking"""
     if doc_name not in model_data:
-        print("[{}] not found in model data".format(doc_name))
+        error_msg = "[{}] not found in model data".format(doc_name)
+        print(error_msg)
+        if heartbeat_callback:
+            heartbeat_callback("2.1", error_msg, is_error=True)
         return None
+    
+    # Build cloud path with detailed logging
+    if heartbeat_callback:
+        heartbeat_callback("2.1", "Building cloud path for model [{}]".format(doc_name))
+    
+    print("Building cloud path for model: {}".format(doc_name))
+    model_info = model_data[doc_name]
+    print("  Project GUID: {}".format(model_info.get('project_guid', 'N/A')))
+    print("  Model GUID: {}".format(model_info.get('model_guid', 'N/A')))
+    print("  Region: {}".format(model_info.get('region', 'N/A')))
     
     cloud_path = tuple_to_model_path(model_data[doc_name])
     if not cloud_path:
+        error_msg = "Failed to build cloud path"
+        if heartbeat_callback:
+            heartbeat_callback("2.2", error_msg, is_error=True)
         return None
     
+    if heartbeat_callback:
+        heartbeat_callback("2.2", "Cloud path created successfully")
+    
     # Setup open options - detach and preserve worksets
+    if heartbeat_callback:
+        heartbeat_callback("2.3", "Configuring open options (detached, audit, all worksets)")
+    
     open_options = DB.OpenOptions()
     open_options.DetachFromCentralOption = DB.DetachFromCentralOption.DetachAndPreserveWorksets
     open_options.SetOpenWorksetsConfiguration(
@@ -223,17 +245,58 @@ def open_and_activate_doc(doc_name, model_data):
     open_options.Audit = True
     
     print("Opening document (detached, audit, all worksets)...")
+    print("  This may take several minutes for large cloud models...")
     
+    if heartbeat_callback:
+        heartbeat_callback("2.4", "Initiating document download and open from ACC (this may take 3-10 min for large models)")
+    
+    # Try primary method
     try:
-        return REVIT_APPLICATION.get_uiapp().OpenAndActivateDocument(cloud_path, open_options, False)
-    except:
+        if heartbeat_callback:
+            heartbeat_callback("2.5", "Attempting OpenAndActivateDocument...")
+        print("  Attempting OpenAndActivateDocument...")
+        
+        doc = REVIT_APPLICATION.get_uiapp().OpenAndActivateDocument(cloud_path, open_options, False)
+        
+        if heartbeat_callback:
+            heartbeat_callback("2.6", "Document opened successfully via OpenAndActivateDocument")
+        print("  Document opened successfully!")
+        return doc
+    except Exception as e:
+        error_msg = "OpenAndActivateDocument failed: {}".format(str(e))
+        print("  {}".format(error_msg))
+        if heartbeat_callback:
+            heartbeat_callback("2.5", "{}, trying alternative method...".format(error_msg))
+        
+        # Try fallback method
         try:
+            if heartbeat_callback:
+                heartbeat_callback("2.6", "Attempting OpenDocumentFile...")
+            print("  Attempting OpenDocumentFile (fallback)...")
+            
             doc = REVIT_APPLICATION.get_app().OpenDocumentFile(cloud_path, open_options)
+            
             if doc:
+                if heartbeat_callback:
+                    heartbeat_callback("2.7", "Document opened via OpenDocumentFile, activating...")
+                print("  Document opened via fallback, activating...")
                 REVIT_APPLICATION.open_and_active_project(cloud_path)
-            return doc
-        except Exception as e:
-            print("Failed to open: {}".format(e))
+                
+                if heartbeat_callback:
+                    heartbeat_callback("2.8", "Document opened and activated successfully via fallback method")
+                print("  Document activated successfully!")
+                return doc
+            else:
+                error_msg = "OpenDocumentFile returned None"
+                print("  {}".format(error_msg))
+                if heartbeat_callback:
+                    heartbeat_callback("2.7", error_msg, is_error=True)
+                return None
+        except Exception as e2:
+            error_msg = "All open methods failed. Final error: {}".format(str(e2))
+            print("  {}".format(error_msg))
+            if heartbeat_callback:
+                heartbeat_callback("2.7", error_msg, is_error=True)
             return None
 
 
@@ -282,16 +345,16 @@ def auto_export():
             print("ERROR: {}".format(error_msg))
             return
     
-        # Open document
+        # Open document with detailed progress tracking
         write_heartbeat("2", "Opening document [{}]".format(doc_name))
         print("Opening [{}]...".format(doc_name))
         
         with ErrorSwallower():
-            target_doc = open_and_activate_doc(doc_name, model_data)
+            target_doc = open_and_activate_doc(doc_name, model_data, heartbeat_callback=write_heartbeat)
         
         if not target_doc:
-            error_msg = "Failed to open document [{}]".format(doc_name)
-            write_heartbeat("2", error_msg, is_error=True)
+            error_msg = "Failed to open document [{}] - Check orchestrator heartbeat log for detailed progress".format(doc_name)
+            write_heartbeat("2.9", error_msg, is_error=True)
             write_job_status("failed", error=error_msg, traceback_info="Document open failed (no exception)")
             return
     
