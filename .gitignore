@@ -16,6 +16,10 @@ aps_credentials.json
 # C extensions
 *.so
 
+# DOM capture folder
+DarkSide/ei_pdf_uploader/DOM capture/
+
+
 # Distribution / packaging
 .Python
 build/
@@ -178,6 +182,7 @@ cython_debug/
 Website/docs/
 
 Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Resource.panel/revit_remote_server.pushbutton/current_job.sexyDuck
+DarkSide/exes/source code/RevitSlave-3.0/revit_logic/current_job.sexyDuck
 
 # Debug and temporary files
 /DEBUG/
