@@ -883,7 +883,7 @@
     },
     "EnneadTab Tailor.tab\\Proj. 2317.panel\\Kimmel.pulldown\\transfer_door_location.pushbutton\\transfer_door_location_script.py": {
         "alias": "Transfer Door Location",
-        "doc": "Transfer door location based on room analysis across phases. \nAutomatically sets door location parameter based on connected rooms, \nprioritizing non-corridor rooms and smaller rooms when both sides are valid.",
+        "doc": "Transfer door location and mark based on room analysis across phases. \n\nLOCATION PARAMETER:\n- Analyzes all phases to find connected rooms\n- Prioritizes non-corridor rooms over corridors\n- For two valid rooms, selects the smaller one\n- Sets location to room name\n\nMARK PARAMETER:\n- Single door to a room: Mark = Room Number (e.g., \"101\")\n- Multiple doors to same room: Mark = Room Number + A/B/C (e.g., \"101A\", \"101B\")\n- Doors sorted by Element ID for consistent suffix assignment\n\nSPECIAL CASES:\n- Normal room: Location=Room Name, Mark=Room Number\n- Corridor: Location=\"CORRIDOR\", Mark=Corridor Room Number\n- No room around door: Location=\"no room\", Mark=\"no room\"\n- Room exists but no name: Location=\"missing room name\", Mark=Room Number\n- Room exists but no number: Location=Room Name, Mark=\"missing room number\"\n\nPHASES:\n- Skips doors created in \"Existing\" phase\n- Processes all other phases until a valid room is found",
         "icon": "EnneadTab Tailor.tab\\Proj. 2317.panel\\Kimmel.pulldown\\transfer_door_location.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab Tailor.tab\\Proj. 2317.panel\\Kimmel.pulldown\\transfer_door_location.pushbutton\\transfer_door_location_script.py",

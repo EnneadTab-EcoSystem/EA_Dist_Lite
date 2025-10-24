@@ -8,6 +8,7 @@ __pycache__/
 
 # credential files
 credential.json
+aps_credentials.json
 
 # InDesign lock files
 *.idlk
@@ -177,3 +178,11 @@ cython_debug/
 Website/docs/
 
 Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Resource.panel/revit_remote_server.pushbutton/current_job.sexyDuck
+
+# Debug and temporary files
+/DEBUG/
+*.tmp
+temp_*.py
+test_*.py
+*_temp.*
+*_test.*
