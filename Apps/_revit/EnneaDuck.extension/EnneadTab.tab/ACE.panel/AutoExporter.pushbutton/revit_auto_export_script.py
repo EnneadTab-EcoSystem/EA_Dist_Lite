@@ -309,7 +309,19 @@ def auto_export():
         write_heartbeat("4", "Starting exports")
         write_job_status("exporting")
         
-        export_results = revit_export_logic.run_all_exports(actual_doc, heartbeat_callback=write_heartbeat)
+        # Get job_id for staging (if available)
+        job_id = None
+        try:
+            job_id = config_loader.get_current_job_id()
+        except:
+            pass
+        
+        export_results = revit_export_logic.run_all_exports(
+            actual_doc,
+            job_id=job_id,
+            use_staging=True,
+            heartbeat_callback=write_heartbeat
+        )
         
         export_counts = {
             "pdf": len(export_results["pdf_files"]),

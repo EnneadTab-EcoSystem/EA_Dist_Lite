@@ -197,6 +197,27 @@ def cleanup_stale_files():
                 print("Warning: Could not remove {}: {}".format(filepath, e))
 
 
+def cleanup_heartbeat_files():
+    """Remove today's heartbeat files to prevent timestamp pollution between jobs
+    
+    This prevents the next job from inheriting old timestamps that trigger immediate timeouts.
+    """
+    heartbeat_dir = os.path.join(SCRIPT_DIR, "heartbeat")
+    if os.path.exists(heartbeat_dir):
+        try:
+            date_stamp = datetime.now().strftime("%Y%m%d")
+            heartbeat_file = os.path.join(heartbeat_dir, "heartbeat_{}.log".format(date_stamp))
+            
+            if os.path.exists(heartbeat_file):
+                try:
+                    os.remove(heartbeat_file)
+                    print("Removed heartbeat file to reset activity tracking")
+                except Exception as e:
+                    print("Warning: Could not remove heartbeat file: {}".format(e))
+        except Exception as e:
+            print("Warning: Heartbeat cleanup error: {}".format(e))
+
+
 def check_disk_space():
     """Check available disk space"""
     try:
@@ -511,6 +532,30 @@ def get_latest_activity_time():
     return latest_time
 
 
+def get_last_heartbeat_message():
+    """Get the last heartbeat message from today's log file for debugging
+    
+    Returns the last line from the heartbeat log, or None if unavailable
+    """
+    heartbeat_dir = os.path.join(SCRIPT_DIR, "heartbeat")
+    if not os.path.exists(heartbeat_dir):
+        return None
+    
+    try:
+        date_stamp = datetime.now().strftime("%Y%m%d")
+        heartbeat_file = os.path.join(heartbeat_dir, "heartbeat_{}.log".format(date_stamp))
+        
+        if os.path.exists(heartbeat_file):
+            with open(heartbeat_file, 'r') as f:
+                lines = f.readlines()
+                if lines:
+                    return lines[-1].strip()
+    except Exception as e:
+        return "Error reading heartbeat: {}".format(e)
+    
+    return None
+
+
 def wait_for_completion(process, config_path, job_id, logger):
     """Wait for job to complete with ACTIVITY-BASED timeout
     
@@ -533,11 +578,12 @@ def wait_for_completion(process, config_path, job_id, logger):
     last_orchestrator_heartbeat_time = start_time
     
     # Track last activity time for intelligent timeout
-    last_activity_time = get_latest_activity_time()
-    if last_activity_time is None:
-        last_activity_time = start_time
+    # IMPORTANT: Always start from job start time, NOT from old heartbeat files
+    # This prevents inheriting stale timestamps from previous jobs
+    last_activity_time = start_time
+    last_reported_activity = start_time
     
-    last_reported_activity = last_activity_time
+    logger.debug("Activity tracking initialized to job start time (prevents stale timestamp bugs)")
     
     while True:
         current_time = time.time()
@@ -567,13 +613,21 @@ def wait_for_completion(process, config_path, job_id, logger):
         # Write periodic orchestrator heartbeat
         if current_time - last_orchestrator_heartbeat_time >= heartbeat_interval:
             total_minutes = total_elapsed / 60.0
+            
+            # Get last heartbeat message for better debugging
+            last_msg = get_last_heartbeat_message()
+            if last_msg and idle_minutes > 5:  # Show last activity if idle > 5 min
+                logger.debug("Waiting... Total: {:.1f} min | Idle: {:.1f} min | Last: {}".format(
+                    total_minutes, idle_minutes, last_msg[:80]))  # Truncate to 80 chars
+            else:
+                logger.debug("Waiting... Total: {:.1f} min | Idle: {:.1f} min".format(total_minutes, idle_minutes))
+            
             write_orchestrator_heartbeat(
                 job_id, 
                 "WAIT_PROGRESS", 
                 "Still waiting... Total: {:.1f} min | Idle: {:.1f} min / {} min timeout".format(
                     total_minutes, idle_minutes, timeout_minutes)
             )
-            logger.debug("Waiting... Total: {:.1f} min | Idle: {:.1f} min".format(total_minutes, idle_minutes))
             last_orchestrator_heartbeat_time = current_time
         
         # Check status file for terminal states (completed/failed) - allows moving to next job immediately
@@ -605,14 +659,28 @@ def wait_for_completion(process, config_path, job_id, logger):
         
         # Check ACTIVITY-BASED timeout (idle time, not total time)
         if idle_time > timeout_seconds:
+            # Get last heartbeat for debugging
+            last_msg = get_last_heartbeat_message()
+            
             logger.error("Job timed out: No progress for {} minutes (total runtime: {:.1f} min)".format(
                 timeout_minutes, total_elapsed / 60.0))
-            write_orchestrator_heartbeat(
-                job_id, 
-                "TIMEOUT", 
-                "Job timed out: No activity (status/heartbeat updates) for {} minutes - process appears stuck".format(timeout_minutes), 
-                is_error=True
-            )
+            
+            if last_msg:
+                logger.error("Last activity: {}".format(last_msg))
+                write_orchestrator_heartbeat(
+                    job_id, 
+                    "TIMEOUT", 
+                    "Job timed out after {} min idle - Last activity: {}".format(timeout_minutes, last_msg[:100]), 
+                    is_error=True
+                )
+            else:
+                write_orchestrator_heartbeat(
+                    job_id, 
+                    "TIMEOUT", 
+                    "Job timed out: No activity (status/heartbeat updates) for {} minutes - process appears stuck".format(timeout_minutes), 
+                    is_error=True
+                )
+            
             try:
                 process.kill()
             except:
@@ -823,6 +891,7 @@ def run_orchestrator():
                 logger.info("Cleaning up before next job...")
                 kill_revit_processes(logger)
                 cleanup_stale_files()
+                cleanup_heartbeat_files()  # Remove heartbeat files to prevent timestamp pollution
                 
                 logger.info("Cooldown period ({} seconds)...".format(DEFAULT_COOLDOWN_SECONDS))
                 time.sleep(DEFAULT_COOLDOWN_SECONDS)

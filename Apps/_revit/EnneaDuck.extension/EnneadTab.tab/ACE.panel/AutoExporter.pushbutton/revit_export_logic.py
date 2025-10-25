@@ -7,6 +7,7 @@ Handles folder structure creation and export operations
 """
 
 import os
+import shutil
 from datetime import datetime
 from Autodesk.Revit import DB # pyright: ignore
 import System # pyright: ignore
@@ -31,6 +32,32 @@ PDF_OPTIONS = EXPORT_SETTINGS.get('pdf_options', {})
 JPG_OPTIONS = EXPORT_SETTINGS.get('jpg_options', {})
 
 
+def get_staging_root():
+    """Get the root staging directory for ACC-safe local operations
+    
+    Returns:
+        str: Path to DEBUG/temp/autoexport_staging
+    """
+    # Get the workspace root (go up from script location)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    root_path = os.path.abspath(os.path.join(script_dir, "..", "..", "..", "..", ".."))
+    staging_root = os.path.join(root_path, "DEBUG", "temp", "autoexport_staging")
+    return staging_root
+
+
+def get_staging_path(job_id):
+    """Get the staging path for a specific job
+    
+    Args:
+        job_id: Unique job identifier
+    
+    Returns:
+        str: Path to staging folder for this job
+    """
+    staging_root = get_staging_root()
+    return os.path.join(staging_root, job_id)
+
+
 def get_weekly_folder_path():
     """Get the path for this week's export folder (yyyy-mm-dd {model_name} format)
     
@@ -44,6 +71,24 @@ def get_weekly_folder_path():
     folder_name = "{} {}".format(date_stamp, model_name)
     weekly_folder = os.path.join(OUTPUT_BASE_PATH, folder_name)
     return weekly_folder
+
+
+def sanitize_filename(name):
+    """Sanitize sheet name for use as Windows filename
+    
+    Args:
+        name: Sheet name string
+    
+    Returns:
+        str: Sanitized filename-safe string
+    """
+    # Replace illegal Windows filename characters with underscore
+    safe_name = name
+    for char in ['/', '\\', ':', '*', '?', '"', '<', '>', '|']:
+        safe_name = safe_name.replace(char, '_')
+    # Keep only alphanumeric, spaces, hyphens, and underscores
+    safe_name = "".join(c for c in safe_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+    return safe_name
 
 
 def get_pim_number(doc):
@@ -153,25 +198,48 @@ def get_sheets_to_export(doc, heartbeat_callback=None):
     return sheets_to_export
 
 
-def create_export_folders():
+def create_export_folders(use_staging=False, job_id=None):
     """Create the weekly folder structure with pdf, dwg, jpg subfolders
+    
+    Args:
+        use_staging: If True, create folders in local staging area (ACC-safe)
+        job_id: Job identifier for staging path (required if use_staging=True)
     
     Returns:
         dict: Dictionary with paths for each export type
             {"weekly": "path/to/2025-10-21",
              "pdf": "path/to/2025-10-21/PDF",
              "dwg": "path/to/2025-10-21/DWG",
-             "jpg": "path/to/2025-10-21/JPG"}
+             "jpg": "path/to/2025-10-21/JPG",
+             "staging": True/False,
+             "acc_path": "path/to/ACC/folder" (only if staging=True)}
         Note: Keys are lowercase for consistent access, values preserve config case
     """
-    weekly_folder = get_weekly_folder_path()
+    if use_staging and job_id:
+        # Use local staging folder to avoid ACC Desktop Connector warnings
+        staging_base = get_staging_path(job_id)
+        date_stamp = datetime.now().strftime(DATE_FORMAT)
+        model_name = config_loader.get_model_name()
+        folder_name = "{} {}".format(date_stamp, model_name)
+        weekly_folder = os.path.join(staging_base, folder_name)
+        
+        # Store ACC destination for later sync
+        acc_weekly_folder = get_weekly_folder_path()
+    else:
+        # Direct to ACC (legacy behavior)
+        weekly_folder = get_weekly_folder_path()
+        acc_weekly_folder = None
     
     # Create weekly folder if it doesn't exist
     if not os.path.exists(weekly_folder):
         os.makedirs(weekly_folder)
     
     # Create subfolders
-    folder_paths = {"weekly": weekly_folder}
+    folder_paths = {
+        "weekly": weekly_folder,
+        "staging": use_staging,
+        "acc_path": acc_weekly_folder
+    }
     for subfolder in SUBFOLDERS:
         subfolder_path = os.path.join(weekly_folder, subfolder)
         if not os.path.exists(subfolder_path):
@@ -210,16 +278,22 @@ def export_pdf(doc, folder_paths, heartbeat_callback=None):
     # Export each sheet as PDF
     from System.Collections.Generic import List
     
-    for sheet in sheets_to_export:
+    total_sheets = len(sheets_to_export)
+    for idx, sheet in enumerate(sheets_to_export, 1):
         try:
             # Create filename in format: {pim}-{sheetnum}_{sheetname}
             sheet_number = sheet.SheetNumber
-            safe_name = "".join(c for c in sheet.Name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            safe_name = sanitize_filename(sheet.Name)
             
             if pim_number:
                 filename_base = "{}-{}_{}".format(pim_number, sheet_number, safe_name)
             else:
                 filename_base = "{}_{}".format(sheet_number, safe_name)
+            
+            # Log progress for debugging stuck exports
+            if heartbeat_callback:
+                heartbeat_callback("EXPORT", "Exporting PDF {}/{}: {} - {}".format(
+                    idx, total_sheets, sheet_number, sheet.Name[:50]))
             
             pdf_path = os.path.join(pdf_folder, filename_base + ".pdf")
             
@@ -273,10 +347,18 @@ def export_pdf(doc, folder_paths, heartbeat_callback=None):
             # Verify export succeeded
             if os.path.exists(pdf_path):
                 exported_files.append(pdf_path)
+                if heartbeat_callback:
+                    heartbeat_callback("EXPORT", "PDF {}/{} complete: {}".format(
+                        idx, total_sheets, sheet_number))
+            else:
+                if heartbeat_callback:
+                    heartbeat_callback("EXPORT", "PDF {}/{} WARNING: File not created: {}".format(
+                        idx, total_sheets, pdf_path), is_error=True)
             
         except Exception as e:
             if heartbeat_callback:
-                heartbeat_callback("EXPORT", "PDF export error for '{}': {}".format(sheet.Name, str(e)))
+                heartbeat_callback("EXPORT", "PDF export error for sheet {}/{} '{}': {}".format(
+                    idx, total_sheets, sheet.Name, str(e)))
     
     return exported_files
 
@@ -308,16 +390,22 @@ def export_dwg(doc, folder_paths, heartbeat_callback=None):
     # Export each sheet as DWG
     from System.Collections.Generic import List
     
-    for sheet in sheets_to_export:
+    total_sheets = len(sheets_to_export)
+    for idx, sheet in enumerate(sheets_to_export, 1):
         try:
             # Create filename in format: {pim}-{sheetnum}_{sheetname}
             sheet_number = sheet.SheetNumber
-            safe_name = "".join(c for c in sheet.Name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            safe_name = sanitize_filename(sheet.Name)
             
             if pim_number:
                 filename_base = "{}-{}_{}".format(pim_number, sheet_number, safe_name)
             else:
                 filename_base = "{}_{}".format(sheet_number, safe_name)
+            
+            # Log progress for debugging stuck exports
+            if heartbeat_callback:
+                heartbeat_callback("EXPORT", "Exporting DWG {}/{}: {} - {}".format(
+                    idx, total_sheets, sheet_number, sheet.Name[:50]))
             
             dwg_path = os.path.join(dwg_folder, filename_base + ".dwg")
             
@@ -350,10 +438,18 @@ def export_dwg(doc, folder_paths, heartbeat_callback=None):
             # Verify export succeeded
             if os.path.exists(dwg_path):
                 exported_files.append(dwg_path)
+                if heartbeat_callback:
+                    heartbeat_callback("EXPORT", "DWG {}/{} complete: {}".format(
+                        idx, total_sheets, sheet_number))
+            else:
+                if heartbeat_callback:
+                    heartbeat_callback("EXPORT", "DWG {}/{} WARNING: File not created: {}".format(
+                        idx, total_sheets, dwg_path), is_error=True)
             
         except Exception as e:
             if heartbeat_callback:
-                heartbeat_callback("EXPORT", "DWG export error for '{}': {}".format(sheet.Name, str(e)))
+                heartbeat_callback("EXPORT", "DWG export error for sheet {}/{} '{}': {}".format(
+                    idx, total_sheets, sheet.Name, str(e)))
     
     return exported_files
 
@@ -385,16 +481,22 @@ def export_jpg(doc, folder_paths, heartbeat_callback=None):
     # Export each sheet as JPG
     from System.Collections.Generic import List
     
-    for sheet in sheets_to_export:
+    total_sheets = len(sheets_to_export)
+    for idx, sheet in enumerate(sheets_to_export, 1):
         try:
             # Create filename in format: {pim}-{sheetnum}_{sheetname}
             sheet_number = sheet.SheetNumber
-            safe_name = "".join(c for c in sheet.Name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+            safe_name = sanitize_filename(sheet.Name)
             
             if pim_number:
                 filename_base = "{}-{}_{}".format(pim_number, sheet_number, safe_name)
             else:
                 filename_base = "{}_{}".format(sheet_number, safe_name)
+            
+            # Log progress for debugging stuck exports
+            if heartbeat_callback:
+                heartbeat_callback("EXPORT", "Exporting JPG {}/{}: {} - {}".format(
+                    idx, total_sheets, sheet_number, sheet.Name[:50]))
             
             jpg_path = os.path.join(jpg_folder, filename_base + ".jpg")
             
@@ -474,23 +576,76 @@ def export_jpg(doc, folder_paths, heartbeat_callback=None):
             
             if found_file:
                 exported_files.append(found_file)
+                if heartbeat_callback:
+                    heartbeat_callback("EXPORT", "JPG {}/{} complete: {}".format(
+                        idx, total_sheets, sheet_number))
             elif heartbeat_callback:
-                heartbeat_callback("EXPORT", "JPG not found for '{}' after export (searched for: {})".format(
-                    sheet.Name, filename_base)
-                )
+                heartbeat_callback("EXPORT", "JPG {}/{} WARNING: Not found after export '{}' (searched for: {})".format(
+                    idx, total_sheets, sheet.Name, filename_base), is_error=True)
             
         except Exception as e:
             if heartbeat_callback:
-                heartbeat_callback("EXPORT", "JPG export error for '{}': {}".format(sheet.Name, str(e)))
+                heartbeat_callback("EXPORT", "JPG export error for sheet {}/{} '{}': {}".format(
+                    idx, total_sheets, sheet.Name, str(e)))
     
     return exported_files
 
 
-def run_all_exports(doc, heartbeat_callback=None):
-    """Run all export operations
+def sync_to_acc(staging_path, acc_path, heartbeat_callback=None):
+    """Sync files from local staging to ACC destination with overwrite
+    
+    This performs a single batch copy operation to avoid triggering ACC Desktop
+    Connector deletion warnings.
+    
+    Args:
+        staging_path: Source path (local staging folder)
+        acc_path: Destination path (ACC folder)
+        heartbeat_callback: Optional logging callback
+    
+    Returns:
+        int: Number of files synced
+    """
+    def log(message):
+        print(message)
+        if heartbeat_callback:
+            heartbeat_callback("SYNC", message)
+    
+    try:
+        log("Syncing files from staging to ACC...")
+        log("  Source: {}".format(staging_path))
+        log("  Destination: {}".format(acc_path))
+        
+        # Ensure destination parent exists
+        if not os.path.exists(os.path.dirname(acc_path)):
+            os.makedirs(os.path.dirname(acc_path))
+        
+        # Copy entire tree with overwrite (dirs_exist_ok=True)
+        # This performs ONE operation per file, no deletions
+        file_count = 0
+        for root, dirs, files in os.walk(staging_path):
+            for file in files:
+                file_count += 1
+        
+        log("Copying {} files to ACC (single operation, no deletions)...".format(file_count))
+        shutil.copytree(staging_path, acc_path, dirs_exist_ok=True)
+        log("Sync completed successfully: {} files".format(file_count))
+        
+        return file_count
+    except Exception as e:
+        error_msg = "Sync to ACC failed: {}".format(str(e))
+        log(error_msg)
+        if heartbeat_callback:
+            heartbeat_callback("SYNC", error_msg, is_error=True)
+        raise
+
+
+def run_all_exports(doc, job_id=None, use_staging=True, heartbeat_callback=None):
+    """Run all export operations with ACC-safe staging
     
     Args:
         doc: Revit Document object
+        job_id: Job identifier for staging (required if use_staging=True)
+        use_staging: If True, export to local staging then sync to ACC
         heartbeat_callback: Optional function to call for logging progress
             Should accept (step, message, is_error=False)
     
@@ -499,7 +654,8 @@ def run_all_exports(doc, heartbeat_callback=None):
             {"folder_paths": {...},
              "pdf_files": [...],
              "dwg_files": [...],
-             "jpg_files": [...]}
+             "jpg_files": [...],
+             "synced": True/False}
     """
     def log(message, is_error=False):
         """Helper to log messages"""
@@ -508,10 +664,19 @@ def run_all_exports(doc, heartbeat_callback=None):
             heartbeat_callback("EXPORT", message, is_error=is_error)
     
     try:
-        # Create folder structure
+        # Create folder structure (staging or direct)
         log("Creating export folder structure...")
-        folder_paths = create_export_folders()
-        log("Folders created: {}".format(folder_paths["weekly"]))
+        if use_staging and not job_id:
+            log("WARNING: Staging requested but no job_id provided, using direct ACC export")
+            use_staging = False
+        
+        folder_paths = create_export_folders(use_staging=use_staging, job_id=job_id)
+        
+        if use_staging:
+            log("Using LOCAL STAGING (ACC-safe): {}".format(folder_paths["weekly"]))
+            log("Will sync to ACC after exports: {}".format(folder_paths["acc_path"]))
+        else:
+            log("Folders created: {}".format(folder_paths["weekly"]))
         
         # Export PDFs
         log("Starting PDF export...")
@@ -528,11 +693,28 @@ def run_all_exports(doc, heartbeat_callback=None):
         jpg_files = export_jpg(doc, folder_paths, heartbeat_callback)
         log("JPG export completed: {} files".format(len(jpg_files)))
         
+        # Sync to ACC if using staging
+        synced = False
+        if use_staging and folder_paths.get("acc_path"):
+            log("All exports complete, syncing to ACC...")
+            try:
+                sync_to_acc(
+                    folder_paths["weekly"],
+                    folder_paths["acc_path"],
+                    heartbeat_callback
+                )
+                synced = True
+                log("ACC sync successful - no deletion warnings!")
+            except Exception as e:
+                log("ACC sync failed: {}".format(str(e)), is_error=True)
+                # Don't fail the whole export if sync fails
+        
         export_results = {
             "folder_paths": folder_paths,
             "pdf_files": pdf_files,
             "dwg_files": dwg_files,
-            "jpg_files": jpg_files
+            "jpg_files": jpg_files,
+            "synced": synced
         }
         
         return export_results
