@@ -111,6 +111,34 @@
             font-weight: 500;
         }
         
+        /* Area Scheme Badge - Prominent Display */
+        .area-scheme-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(147, 51, 234, 0.15));
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .area-scheme-badge .badge-label {
+            color: #93c5fd;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .area-scheme-badge .badge-value {
+            color: #ffffff;
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+        
         .online-dashboard-note {
             margin-top: 20px;
             padding: 20px 24px;
@@ -2023,9 +2051,12 @@
         <header class="report-header">
             <h1>🏥 EnneadTab - Excel Area Requirements vs Revit Actual Areas Report</h1>
             <div class="report-info">
-                <p><strong>Generated:</strong> 2025-10-21 16:22:12</p>
+                <p><strong>Generated:</strong> 2025-10-27 11:41:22</p>
                 <p><strong>Project:</strong> NYU HQ - Monitor Area System</p>
-                <p><strong>Area Scheme:</strong> DGSF Scheme_Opt2</p>
+            </div>
+            <div class="area-scheme-badge">
+                <span class="badge-label">Area Scheme</span>
+                <span class="badge-value">DGSF Scheme_Opt2</span>
             </div>
             <div class="online-dashboard-note">
                 <div class="dashboard-link-container">
@@ -2232,10 +2263,25 @@
                     <td class="col-status"><span class="status-badge partial">△ Under</span></td>
                 </tr>
             
-                <tr style="border: 4px solid None;">
+                <tr style="border: 4px solid #f2f2f2;">
                     <td style="font-weight: 600;">
-                        <span style="display: inline-block; width: 10px; height: 10px; background: None; border-radius: 50%; margin-right: 8px;"></span>
+                        <span style="display: inline-block; width: 10px; height: 10px; background: #f2f2f2; border-radius: 50%; margin-right: 8px;"></span>
                         BUILDING SUPPORT (Non Departmental)
+                    </td>
+                    <td class="col-count">Any</td>
+                    <td class="col-area">N/A</td>
+                    <td class="col-count">0</td>
+                    <td class="col-area">0</td>
+                    <td class="col-delta">N/A</td>
+                    <td class="col-delta">N/A</td>
+                    <td class="col-delta">N/A</td>
+                    <td class="col-status"><span class="status-badge no_requirement">— N/A</span></td>
+                </tr>
+            
+                <tr style="border: 4px solid #f2f2f2;">
+                    <td style="font-weight: 600;">
+                        <span style="display: inline-block; width: 10px; height: 10px; background: #f2f2f2; border-radius: 50%; margin-right: 8px;"></span>
+                        BUILDING SUPPORT (Central Utility Plant)
                     </td>
                     <td class="col-count">Any</td>
                     <td class="col-area">N/A</td>
@@ -2253,7 +2299,7 @@
             </div>
             
             <script id="departmentChartData" type="application/json">
-            {"percentages": [-100.0, -100.0, -100.0, -100.0, -100.0, -100.0, -100.0, 0], "target_dgsf": [75680.000000000015, 335940.0, 577731.0, 91125.979999999996, 51282.0, 44627.0, 98472.0, 0], "departments": ["EMERGENCY CARE SERVICES", "DIAGNOSTIC AND TREATMENT", "INPATIENT CARE UNIT", "CLINICAL SUPPORT", "PUBLIC SUPPORT", "ADMINISTRATION & STAFF SUPPORT", "BUILDING SUPPORT", "BUILDING SUPPORT (Non Departmental)"], "actual_dgsf": [0, 0, 0, 0, 0, 0, 0, 0], "colors": ["#f1b3ad", "#beca8c", "#a9d4e9", "#fce4d6", "#fcf19c", "#f5c859", "#dcd5c2", null]}
+            {"target_dgsf": [75680.000000000015, 335940.0, 577731.0, 91125.979999999996, 51282.0, 44627.0, 98472.0, 0, 0], "actual_dgsf": [0, 0, 0, 0, 0, 0, 0, 0, 0], "departments": ["EMERGENCY CARE SERVICES", "DIAGNOSTIC AND TREATMENT", "INPATIENT CARE UNIT", "CLINICAL SUPPORT", "PUBLIC SUPPORT", "ADMINISTRATION & STAFF SUPPORT", "BUILDING SUPPORT", "BUILDING SUPPORT (Non Departmental)", "BUILDING SUPPORT (Central Utility Plant)"], "colors": ["#f1b3ad", "#beca8c", "#a9d4e9", "#fce4d6", "#fcf19c", "#f5c859", "#dcd5c2", "#f2f2f2", "#f2f2f2"], "percentages": [-100.0, -100.0, -100.0, -100.0, -100.0, -100.0, -100.0, 0, 0]}
             </script>
             
             <script>
@@ -2293,7 +2339,7 @@
                     <tbody>
                         
             <tr>
-                <td class="level-name-col"><strong>Level 8  Patient Rooms</strong><br><small class="level-elevation">Elev: 111.00 ft</small></td>
+                <td class="level-name-col"><strong>L8 Area Plan_DGSF</strong><br><small class="level-elevation">Elev: 111.00 ft</small></td>
                 <td class="dept-count-col">1 departments<br><small class="level-total-dgsf">79,073 SF Total</small></td>
                 <td class="unapproved-count-col no-unapproved">All Approved</td>
                 <td class="dept-badges-col"><span class="dept-badge dept-approved" style="border: 2px solid #a9d4e9; background: linear-gradient(135deg, rgba(169, 212, 233, 0.2) 0%, rgba(169, 212, 233, 0.35) 100%); color: #f8fafc;" title="Approved department: 79,073 DGSF">INPATIENT CARE UNIT<br><small style="color: #e5e7eb;">79,073 SF</small></span></td>
@@ -2597,8 +2643,8 @@
                     </div>
                     
                     <div class="tree-node tree-node-room" data-search-dept="DIAGNOSTIC AND TREATMENT" data-search-division="Imaging & Diagnostic Services" data-search-function="Non-Invasive Cardiology">
-                        <div class="tree-node-header" style="border: 2px solid #6b7280;">
-                            <span class="tree-color-dot" style="background: #6b7280;"></span>
+                        <div class="tree-node-header" style="border: 2px solid #000000;">
+                            <span class="tree-color-dot" style="background: #000000;"></span>
                             <span class="tree-node-label">Non-Invasive Cardiology</span>
                             <span class="tree-status-icon" title="Status: Missing">✕</span>
                             <div class="tree-node-metrics">
@@ -3074,8 +3120,8 @@
                     </div>
                     
                     <div class="tree-node tree-node-room" data-search-dept="INPATIENT CARE UNIT" data-search-division="Unlicensed Beds" data-search-function="(Refer to A - EMERGENCY DEPARTMENT above)">
-                        <div class="tree-node-header" style="border: 2px solid #6b7280;">
-                            <span class="tree-color-dot" style="background: #6b7280;"></span>
+                        <div class="tree-node-header" style="border: 2px solid #000000;">
+                            <span class="tree-color-dot" style="background: #000000;"></span>
                             <span class="tree-node-label">(Refer to A - EMERGENCY DEPARTMENT above)</span>
                             <span class="tree-status-icon" title="Status: No Requirement">?</span>
                             <div class="tree-node-metrics">
@@ -4064,9 +4110,9 @@
             </div>
             
             <div class="tree-node tree-node-dept" data-node-id="tree_dept_7" data-search-dept="BUILDING SUPPORT (Non Departmental)" data-search-division="" data-search-function="">
-                <div class="tree-node-header" onclick="toggleTreeNode('tree_dept_7')" style="border: 4px solid #6b7280;">
+                <div class="tree-node-header" onclick="toggleTreeNode('tree_dept_7')" style="border: 4px solid #f2f2f2;">
                     <span class="tree-toggle-icon" id="tree_icon_tree_dept_7">▼</span>
-                    <span class="tree-color-dot" style="background: #6b7280;"></span>
+                    <span class="tree-color-dot" style="background: #f2f2f2;"></span>
                     <span class="tree-node-label">BUILDING SUPPORT (Non Departmental)</span>
                     <div class="tree-node-metrics">
                         <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
@@ -4079,9 +4125,9 @@
                 <div class="tree-node-children" id="tree_children_tree_dept_7">
             
                 <div class="tree-node tree-node-division" data-node-id="tree_dept_7_div_0" data-search-dept="BUILDING SUPPORT (Non Departmental)" data-search-division="Building Support (Non Departmental)" data-search-function="">
-                    <div class="tree-node-header" onclick="toggleTreeNode('tree_dept_7_div_0')" style="border: 3px solid #000000;">
+                    <div class="tree-node-header" onclick="toggleTreeNode('tree_dept_7_div_0')" style="border: 3px solid #f2f2f2;">
                         <span class="tree-toggle-icon" id="tree_icon_tree_dept_7_div_0">▼</span>
-                        <span class="tree-color-dot" style="background: #000000;"></span>
+                        <span class="tree-color-dot" style="background: #f2f2f2;"></span>
                         <span class="tree-node-label">Building Support (Non Departmental)</span>
                         <div class="tree-node-metrics">
                             <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
@@ -4109,8 +4155,8 @@
                     </div>
                     
                     <div class="tree-node tree-node-room" data-search-dept="BUILDING SUPPORT (Non Departmental)" data-search-division="Building Support (Non Departmental)" data-search-function="BOH Circulation">
-                        <div class="tree-node-header" style="border: 2px solid #6b7280;">
-                            <span class="tree-color-dot" style="background: #6b7280;"></span>
+                        <div class="tree-node-header" style="border: 2px solid #f2f2f2;">
+                            <span class="tree-color-dot" style="background: #f2f2f2;"></span>
                             <span class="tree-node-label">BOH Circulation</span>
                             <span class="tree-status-icon" title="Status: No Requirement">?</span>
                             <div class="tree-node-metrics">
@@ -4228,7 +4274,43 @@
                         </div>
                     </div>
                     
-                    <div class="tree-node tree-node-room" data-search-dept="BUILDING SUPPORT (Non Departmental)" data-search-division="Building Support (Non Departmental)" data-search-function="CUP">
+                    </div>
+                </div>
+                
+                </div>
+            </div>
+            
+            <div class="tree-node tree-node-dept" data-node-id="tree_dept_8" data-search-dept="BUILDING SUPPORT (Central Utility Plant)" data-search-division="" data-search-function="">
+                <div class="tree-node-header" onclick="toggleTreeNode('tree_dept_8')" style="border: 4px solid #f2f2f2;">
+                    <span class="tree-toggle-icon" id="tree_icon_tree_dept_8">▼</span>
+                    <span class="tree-color-dot" style="background: #f2f2f2;"></span>
+                    <span class="tree-node-label">BUILDING SUPPORT (Central Utility Plant)</span>
+                    <div class="tree-node-metrics">
+                        <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                        <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                        <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/0 DGSF</span>
+                        <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+0 SF</span>
+                        <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+0.0%</span>
+                    </div>
+                </div>
+                <div class="tree-node-children" id="tree_children_tree_dept_8">
+            
+                <div class="tree-node tree-node-division" data-node-id="tree_dept_8_div_0" data-search-dept="BUILDING SUPPORT (Central Utility Plant)" data-search-division="Building Support (Central Utility Plant)" data-search-function="">
+                    <div class="tree-node-header" onclick="toggleTreeNode('tree_dept_8_div_0')" style="border: 3px solid #c7c7c7;">
+                        <span class="tree-toggle-icon" id="tree_icon_tree_dept_8_div_0">▼</span>
+                        <span class="tree-color-dot" style="background: #c7c7c7;"></span>
+                        <span class="tree-node-label">Building Support (Central Utility Plant)</span>
+                        <div class="tree-node-metrics">
+                            <span class="tree-metric" title="Actual Count / Target Count - Number of areas found vs required"><strong>0</strong>/0 Count</span>
+                            <span class="tree-metric-delta positive" title="Count difference: Actual minus Target">+0</span>
+                            <span class="tree-metric" title="Actual DGSF / Target DGSF - Department Gross Square Feet found vs required"><strong>0</strong>/0 DGSF</span>
+                            <span class="tree-metric-delta positive" title="DGSF difference: Actual minus Target">+0 SF</span>
+                            <span class="tree-metric-percentage positive" title="Percentage of target DGSF achieved">+0.0%</span>
+                        </div>
+                    </div>
+                    <div class="tree-node-children" id="tree_children_tree_dept_8_div_0">
+                
+                    <div class="tree-node tree-node-room" data-search-dept="BUILDING SUPPORT (Central Utility Plant)" data-search-division="Building Support (Central Utility Plant)" data-search-function="CUP">
                         <div class="tree-node-header" style="border: 2px solid #c7c7c7;">
                             <span class="tree-color-dot" style="background: #c7c7c7;"></span>
                             <span class="tree-node-label">CUP</span>
@@ -4264,7 +4346,7 @@
             <p>The following Revit areas were not matched to any Excel requirements, grouped by level. <span class="zero-area-hint">Note: entries showing <strong>0 SF</strong> are often <em>not placed</em> in the model yet or the boundary is <em>not enclosed</em> (room/area not bounding) in Revit.</span></p>
             
             <div class="level-section">
-                <h4>📍 Level 8  Patient Rooms (1 areas, 79,073 SF)</h4>
+                <h4>📍 L8 Area Plan_DGSF (1 areas, 79,073 SF)</h4>
             <div class="table-container">
                 <table class="unmatched-table">
                     <thead>
@@ -4289,7 +4371,7 @@
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-level">szhangGOODLOOKING</td>
                         <td class="col-status"><span class="status-badge unmatched">○ Unmatched</span></td>
-                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>INPATIENT CARE UNIT | Licensed Beds | Patient Units_Med Surg</strong>?</span></td>
+                        <td class="col-suggestion"><span class="suggestion-text">Do you mean <strong>INPATIENT CARE UNIT | Unlicensed Beds | (Refer to A - EMERGENCY DEPARTMENT above)</strong>?</span></td>
                 </tr>
              
                     </tbody>
@@ -4370,7 +4452,7 @@
         </div>
         
         <footer class="report-footer">
-            <p>Report generated by Monitor Area System | 2025-10-21 16:22:12</p>
+            <p>Report generated by Monitor Area System | 2025-10-27 11:41:22</p>
             <p style="margin-top: 10px; font-size: 0.9em; color: #9ca3af;">
                 🦆 Powered by <strong style="color: #60a5fa;">EnneadTab</strong> | 
                 For feature requests, contact <strong style="color: #60a5fa;">Sen Zhang</strong>

@@ -50,13 +50,30 @@ def monitor_area(doc):
     # Update Revit area parameters with suggestions
     param_stats = update_area_parameters(doc, all_matches, all_unmatched)
     
-    # Write Revit area data back to original Excel file
-    writeback_stats = write_design_values_to_excel(
-        excel_data, 
-        all_matches, 
-        config.EXCEL_FILENAME, 
-        config.EXCEL_WORKSHEET
+    # Ask user if they want to write back to Excel
+    write_to_excel = REVIT_FORMS.dialogue(
+        title="Excel Writeback",
+        main_text="Write Revit area data back to Excel?",
+        sub_text="This will update the DESIGN column in the Excel file with actual Revit area values.\n\nFile: {}\n\nNote: Skipping writeback will process faster (just view the report).".format(config.EXCEL_FILENAME),
+        options=["Yes, write to Excel", "No, skip writeback (faster)"],
+        icon="info"
     )
+    
+    # Write Revit area data back to original Excel file (only if user agrees)
+    if write_to_excel == "Yes, write to Excel":
+        writeback_stats = write_design_values_to_excel(
+            excel_data, 
+            all_matches, 
+            config.EXCEL_FILENAME, 
+            config.EXCEL_WORKSHEET
+        )
+    else:
+        writeback_stats = {
+            'total_updates': 0,
+            'design_column': 'N/A',
+            'skipped': True
+        }
+        print("Excel writeback skipped by user")
     
     # Open all generated reports
     for filepath in filepaths:
@@ -71,8 +88,9 @@ def monitor_area(doc):
         total_fulfilled += sum(1 for m in matches if m['status'] == 'Fulfilled')
     
     # Create notification message with parameter update stats
-    param_summary = "\n\nParameter Updates:\n  Matched areas cleared: {}\n  Unmatched areas updated: {}\n  Skipped: {}".format(
+    param_summary = "\n\nParameter Updates:\n  Matched areas cleared: {}\n  Target DGSF set: {}\n  Unmatched areas updated: {}\n  Skipped: {}".format(
         param_stats['matched_cleared'],
+        param_stats.get('target_dgsf_updated', 0),
         param_stats['unmatched_updated'],
         param_stats['matched_skipped'] + param_stats['unmatched_skipped']
     )
@@ -81,14 +99,17 @@ def monitor_area(doc):
         param_summary += "\n  Errors: {}".format(len(param_stats['errors']))
     
     # Add Excel writeback summary
-    writeback_summary = "\n\nExcel Writeback:\n  Total cells updated: {}\n  DESIGN Column: {}".format(
-        writeback_stats['total_updates'],
-        writeback_stats.get('design_column', 'N/A')
-    )
-    
-    if writeback_stats.get('error'):
-        writeback_summary += "\n  ERROR: Excel file cannot be written because you have it open in another program. Please close it and try again."
-        # writeback_summary += "\n  Error: {}".format(writeback_stats['error'])
+    if writeback_stats.get('skipped'):
+        writeback_summary = "\n\nExcel Writeback:\n  Status: Skipped by user"
+    else:
+        writeback_summary = "\n\nExcel Writeback:\n  Total cells updated: {}\n  DESIGN Column: {}".format(
+            writeback_stats['total_updates'],
+            writeback_stats.get('design_column', 'N/A')
+        )
+        
+        if writeback_stats.get('error'):
+            writeback_summary += "\n  ERROR: Excel file cannot be written because you have it open in another program. Please close it and try again."
+            # writeback_summary += "\n  Error: {}".format(writeback_stats['error'])
     
     if len(filepaths) == 1:
         msg = "HTML Report Generated and Opened!\nFile: {}\nScheme: {}\nFulfilled: {}/{}{}{}".format(

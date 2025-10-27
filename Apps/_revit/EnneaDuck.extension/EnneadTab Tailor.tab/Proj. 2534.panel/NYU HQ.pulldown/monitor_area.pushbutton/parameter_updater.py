@@ -13,9 +13,9 @@ import config
 
 def update_area_parameters(doc, matches_by_scheme, unmatched_by_scheme):
     """
-    Update UnMatchedSuggestion parameter for all areas
-    - Matched areas: Clear the parameter
-    - Unmatched areas: Set suggestion text
+    Update parameters for all areas:
+    - Matched areas: Clear UnMatchedSuggestion, set RoomDataTarget to target DGSF
+    - Unmatched areas: Set UnMatchedSuggestion text, clear RoomDataTarget
     
     Args:
         doc: Revit document
@@ -34,6 +34,7 @@ def update_area_parameters(doc, matches_by_scheme, unmatched_by_scheme):
         'matched_skipped': 0,
         'unmatched_updated': 0,
         'unmatched_skipped': 0,
+        'target_dgsf_updated': 0,
         'errors': []
     }
     
@@ -42,15 +43,23 @@ def update_area_parameters(doc, matches_by_scheme, unmatched_by_scheme):
     transaction.Start()
     
     try:
-        # Process matched areas - clear the suggestion parameter
+        # Process matched areas - clear suggestion, set target DGSF (only if valid area)
         for scheme_name, scheme_data in matches_by_scheme.items():
             matches = scheme_data.get('matches', [])
             for match in matches:
                 matching_areas = match.get('matching_areas', [])
+                target_dgsf_excel = match.get('target_dgsf', 0)
+                
                 for area_object in matching_areas:
-                    result = _clear_suggestion_parameter(area_object)
+                    # Only set target DGSF if area is valid (not "Not Placed" or "Not Enclosed")
+                    area_status = area_object.get('area_status', 'Good')
+                    target_dgsf = target_dgsf_excel if area_status == 'Good' else 0
+                    
+                    result = _update_matched_area_parameters(area_object, target_dgsf)
                     if result['success']:
                         stats['matched_cleared'] += 1
+                        if result.get('target_dgsf_set') and target_dgsf > 0:
+                            stats['target_dgsf_updated'] += 1
                     else:
                         stats['matched_skipped'] += 1
                         if result.get('error'):
@@ -79,6 +88,7 @@ def update_area_parameters(doc, matches_by_scheme, unmatched_by_scheme):
     
     print("\n=== PARAMETER UPDATE STATS ===")
     print("Matched cleared: {}".format(stats['matched_cleared']))
+    print("Target DGSF set: {}".format(stats['target_dgsf_updated']))
     print("Matched skipped: {}".format(stats['matched_skipped']))
     print("Unmatched updated: {}".format(stats['unmatched_updated']))
     print("Unmatched skipped: {}".format(stats['unmatched_skipped']))
@@ -92,17 +102,20 @@ def update_area_parameters(doc, matches_by_scheme, unmatched_by_scheme):
     return stats
 
 
-def _clear_suggestion_parameter(area_object):
+def _update_matched_area_parameters(area_object, target_dgsf):
     """
-    Clear the UnMatchedSuggestion parameter for a matched area
+    Update parameters for a matched area:
+    - Clear UnMatchedSuggestion (no longer needed)
+    - Set RoomDataTarget to target DGSF from Excel
     
     Args:
         area_object: Dictionary containing area data including 'revit_element'
+        target_dgsf: Target DGSF value from Excel requirements
         
     Returns:
-        dict: Result with 'success' boolean and optional 'error' message
+        dict: Result with 'success' boolean, 'target_dgsf_set', and optional 'error' message
     """
-    result = {'success': False}
+    result = {'success': False, 'target_dgsf_set': False}
     
     try:
         area = area_object.get('revit_element')
@@ -115,31 +128,34 @@ def _clear_suggestion_parameter(area_object):
             result['error'] = "Element not editable (checked out by another user)"
             return result
         
-        # Get the parameter
-        param = area.LookupParameter(config.UNMATCHED_SUGGESTION_PARAM)
+        # Clear UnMatchedSuggestion parameter
+        suggestion_param = area.LookupParameter(config.UNMATCHED_SUGGESTION_PARAM)
+        if suggestion_param and not suggestion_param.IsReadOnly:
+            suggestion_param.Set("")
         
-        if not param:
-            # Parameter doesn't exist - that's okay, nothing to clear
+        # Set RoomDataTarget parameter
+        target_param = area.LookupParameter(config.TARGET_DGSF_PARAM)
+        if target_param:
+            if target_param.IsReadOnly:
+                result['error'] = "RoomDataTarget parameter is read-only"
+            else:
+                # Set the target DGSF value
+                target_param.Set(target_dgsf)
+                result['target_dgsf_set'] = True
+                result['success'] = True
+        else:
+            # Parameter doesn't exist - still mark as success since suggestion was cleared
             result['success'] = True
-            return result
-        
-        if param.IsReadOnly:
-            result['error'] = "Parameter is read-only"
-            return result
-        
-        # Clear the parameter (set to empty string)
-        param.Set("")
-        result['success'] = True
         
     except Exception as e:
-        result['error'] = "Error clearing parameter: {}".format(str(e))
+        result['error'] = "Error updating parameters: {}".format(str(e))
     
     return result
 
 
 def _set_suggestion_parameter(area_object):
     """
-    Set the UnMatchedSuggestion parameter for an unmatched area
+    Set the UnMatchedSuggestion parameter and clear RoomDataTarget for an unmatched area
     
     Args:
         area_object: Dictionary containing area data including suggestion info
@@ -160,28 +176,25 @@ def _set_suggestion_parameter(area_object):
             result['error'] = "Element not editable (checked out by another user)"
             return result
         
-        # Get the parameter
+        # Set UnMatchedSuggestion parameter
         param = area.LookupParameter(config.UNMATCHED_SUGGESTION_PARAM)
         
-        if not param:
-            result['error'] = "Parameter '{}' not found in area".format(config.UNMATCHED_SUGGESTION_PARAM)
-            return result
+        if param and not param.IsReadOnly:
+            # Get suggestion from area_object or generate it
+            suggestion_text = area_object.get('suggestion_text', '')
+            
+            # If no suggestion text is stored, create it from area data
+            if not suggestion_text:
+                suggestion_text = _generate_no_suggestion_text()
+            
+            print("    Setting suggestion: '{}'".format(suggestion_text))
+            param.Set(suggestion_text)
         
-        if param.IsReadOnly:
-            result['error'] = "Parameter is read-only"
-            return result
+        # Clear RoomDataTarget parameter (unmatched areas have no target)
+        target_param = area.LookupParameter(config.TARGET_DGSF_PARAM)
+        if target_param and not target_param.IsReadOnly:
+            target_param.Set(0.0)  # Clear to zero
         
-        # Get suggestion from area_object or generate it
-        suggestion_text = area_object.get('suggestion_text', '')
-        
-        # If no suggestion text is stored, create it from area data
-        if not suggestion_text:
-            suggestion_text = _generate_no_suggestion_text()
-        
-        print("    Setting suggestion: '{}'".format(suggestion_text))
-        
-        # Set the parameter
-        param.Set(suggestion_text)
         result['success'] = True
         
     except Exception as e:

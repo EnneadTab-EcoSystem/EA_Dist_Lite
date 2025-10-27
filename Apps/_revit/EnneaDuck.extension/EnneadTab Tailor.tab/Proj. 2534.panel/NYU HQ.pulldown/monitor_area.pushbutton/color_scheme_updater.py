@@ -49,19 +49,30 @@ def update_color_scheme_from_dict(doc, color_scheme_name, color_dict):
     
     # Get the color scheme
     color_schemes = REVIT_COLOR_SCHEME.get_color_schemes_by_name(color_scheme_name, doc)
+    # Convert to list to allow multiple iterations and length check
+    color_schemes = list(color_schemes) if color_schemes else []
+    
     if not color_schemes:
         print("Color scheme '{}' not found in document".format(color_scheme_name))
         return False
     
-    for color_scheme in color_schemes:
+    # Log how many color schemes were found
+    print("Found {} color scheme(s) with name '{}'".format(len(color_schemes), color_scheme_name))
+    
+    for idx, color_scheme in enumerate(color_schemes, 1):
+        print("  Processing color scheme #{}/{}: '{}' (ID: {})".format(
+            idx, len(color_schemes), color_scheme_name, color_scheme.Id
+        ))
     
         # Get storage type from existing entry (must have at least one placeholder)
         try:
             sample_entry = list(color_scheme.GetEntries())[0]
             storage_type = sample_entry.StorageType
         except:
-            print("Color scheme '{}' has no entries. Please add at least one placeholder entry.".format(color_scheme_name))
-            return False
+            print("  ERROR: Color scheme '{}' (instance {}/{}) has no entries. Please add at least one placeholder entry.".format(
+                color_scheme_name, idx, len(color_schemes)
+            ))
+            continue  # Skip this instance instead of failing completely
         
         # Get current entry names
         current_entries = {x.GetStringValue(): x for x in color_scheme.GetEntries()}
@@ -71,7 +82,14 @@ def update_color_scheme_from_dict(doc, color_scheme_name, color_dict):
         
         # Add or update entries
         for entry_name, hex_color in color_dict.items():
+            # Skip entries with invalid names
+            if not entry_name or not entry_name.strip() or entry_name == "None":
+                print("    Skipping invalid entry name: '{}'".format(entry_name))
+                continue
+            
+            # Skip entries with invalid colors
             if not hex_color or not hex_color.startswith('#'):
+                print("    Skipping entry '{}' with invalid color: '{}'".format(entry_name, hex_color))
                 continue
             
             revit_color = hex_to_revit_color(hex_color)
@@ -86,25 +104,31 @@ def update_color_scheme_from_dict(doc, color_scheme_name, color_dict):
                     existing_entry.Color = revit_color
                     color_scheme.UpdateEntry(existing_entry)
                     entries_updated += 1
-                    print("  Updated '{}': {} -> {}".format(
+                    print("    Updated '{}': {} -> {}".format(
                         entry_name,
                         COLOR.rgb_to_hex((old_color.Red, old_color.Green, old_color.Blue)),
                         hex_color
                     ))
             else:
                 # Add new entry
-                entry = DB.ColorFillSchemeEntry(storage_type)
-                entry.Color = revit_color
-                entry.SetStringValue(entry_name)
-                entry.FillPatternId = REVIT_SELECTION.get_solid_fill_pattern_id(doc)
-                color_scheme.AddEntry(entry)
-                entries_added += 1
-                print("  Added '{}': {}".format(entry_name, hex_color))
+                try:
+                    entry = DB.ColorFillSchemeEntry(storage_type)
+                    entry.Color = revit_color
+                    entry.SetStringValue(entry_name)
+                    entry.FillPatternId = REVIT_SELECTION.get_solid_fill_pattern_id(doc)
+                    color_scheme.AddEntry(entry)
+                    entries_added += 1
+                    print("    Added '{}': {}".format(entry_name, hex_color))
+                except Exception as e:
+                    print("    ERROR adding entry '{}': {}".format(entry_name, str(e)))
         
-        print("Color scheme '{}': {} added, {} updated".format(
-            color_scheme_name, entries_added, entries_updated
+        print("  Completed color scheme #{}/{} '{}': {} added, {} updated".format(
+            idx, len(color_schemes), color_scheme_name, entries_added, entries_updated
         ))
     
+    print("Successfully updated all {} instance(s) of color scheme '{}'".format(
+        len(color_schemes), color_scheme_name
+    ))
     return True
 
 

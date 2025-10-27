@@ -8,10 +8,101 @@ Handles folder structure creation and export operations
 
 import os
 import shutil
+import time
+import threading
 from datetime import datetime
 from Autodesk.Revit import DB # pyright: ignore
 import System # pyright: ignore
 import config_loader
+
+# =============================================================================
+# ERROR LOOP DETECTION AND TIMEOUT PROTECTION
+# =============================================================================
+
+class ErrorLoopDetector:
+    """Detect and prevent infinite error loops in Revit automation."""
+    
+    def __init__(self, max_same_error=10, time_window=60):
+        self.error_history = []
+        self.max_same_error = max_same_error
+        self.time_window = time_window
+    
+    def record_error(self, error_message):
+        """Record an error and check for loops."""
+        now = time.time()
+        
+        # Clean old errors outside time window
+        self.error_history = [
+            (msg, ts) for msg, ts in self.error_history 
+            if now - ts < self.time_window
+        ]
+        
+        # Add new error
+        self.error_history.append((error_message, now))
+        
+        # Check for repeated error
+        recent_errors = [msg for msg, _ in self.error_history]
+        if recent_errors.count(error_message) >= self.max_same_error:
+            raise RuntimeError(
+                "Error loop detected: '{}' occurred {} times in {}s".format(
+                    error_message, recent_errors.count(error_message), self.time_window
+                )
+            )
+    
+    def reset(self):
+        """Reset error tracking."""
+        self.error_history.clear()
+
+
+class OperationTimeout:
+    """Enforce timeouts on Revit operations to prevent hangs."""
+    
+    def __init__(self, timeout_seconds):
+        self.timeout_seconds = timeout_seconds
+        self.timer = None
+        self.timed_out = False
+    
+    def __enter__(self):
+        def timeout_handler():
+            self.timed_out = True
+            print("Operation timed out after {}s".format(self.timeout_seconds))
+        
+        self.timer = threading.Timer(self.timeout_seconds, timeout_handler)
+        self.timer.start()
+        return self
+    
+    def __exit__(self, *args):
+        if self.timer:
+            self.timer.cancel()
+        
+        if self.timed_out:
+            raise TimeoutError(
+                "Operation exceeded {}s timeout. Possible infinite loop or hung dialog.".format(
+                    self.timeout_seconds
+                )
+            )
+
+
+def safe_export_with_timeout(export_func, sheet, sheet_index, total_sheets, timeout_minutes=5):
+    """Safely export a single sheet with timeout protection and error handling."""
+    error_detector = ErrorLoopDetector(max_same_error=5, time_window=30)
+    
+    try:
+        with OperationTimeout(timeout_minutes * 60):
+            return export_func(sheet, sheet_index, total_sheets)
+    except TimeoutError as e:
+        error_msg = "Sheet '{}' export timed out after {} minutes".format(
+            sheet.Name, timeout_minutes
+        )
+        error_detector.record_error(error_msg)
+        print("TIMEOUT: {}".format(error_msg))
+        return None
+    except Exception as e:
+        error_msg = "Sheet '{}' export error: {}".format(sheet.Name, str(e))
+        error_detector.record_error(error_msg)
+        print("ERROR: {}".format(error_msg))
+        return None
+
 
 # =============================================================================
 # LOAD CONFIGURATION
@@ -275,12 +366,13 @@ def export_pdf(doc, folder_paths, heartbeat_callback=None):
         print("No sheets found with parameter '{}' - skipping PDF export".format(SHEET_FILTER_PARAMETER))
         return exported_files
     
-    # Export each sheet as PDF
+    # Export each sheet as PDF with timeout protection
     from System.Collections.Generic import List
     
     total_sheets = len(sheets_to_export)
     for idx, sheet in enumerate(sheets_to_export, 1):
-        try:
+        def export_single_pdf(sheet, sheet_index, total_sheets):
+            """Export a single PDF sheet with timeout protection."""
             # Create filename in format: {pim}-{sheetnum}_{sheetname}
             sheet_number = sheet.SheetNumber
             safe_name = sanitize_filename(sheet.Name)
@@ -293,7 +385,7 @@ def export_pdf(doc, folder_paths, heartbeat_callback=None):
             # Log progress for debugging stuck exports
             if heartbeat_callback:
                 heartbeat_callback("EXPORT", "Exporting PDF {}/{}: {} - {}".format(
-                    idx, total_sheets, sheet_number, sheet.Name[:50]))
+                    sheet_index, total_sheets, sheet_number, sheet.Name[:50]))
             
             pdf_path = os.path.join(pdf_folder, filename_base + ".pdf")
             
@@ -346,19 +438,20 @@ def export_pdf(doc, folder_paths, heartbeat_callback=None):
             
             # Verify export succeeded
             if os.path.exists(pdf_path):
-                exported_files.append(pdf_path)
                 if heartbeat_callback:
                     heartbeat_callback("EXPORT", "PDF {}/{} complete: {}".format(
-                        idx, total_sheets, sheet_number))
+                        sheet_index, total_sheets, sheet_number))
+                return pdf_path
             else:
                 if heartbeat_callback:
                     heartbeat_callback("EXPORT", "PDF {}/{} WARNING: File not created: {}".format(
-                        idx, total_sheets, pdf_path), is_error=True)
-            
-        except Exception as e:
-            if heartbeat_callback:
-                heartbeat_callback("EXPORT", "PDF export error for sheet {}/{} '{}': {}".format(
-                    idx, total_sheets, sheet.Name, str(e)))
+                        sheet_index, total_sheets, pdf_path), is_error=True)
+                return None
+        
+        # Use safe export with timeout (5 minutes per PDF)
+        result = safe_export_with_timeout(export_single_pdf, sheet, idx, total_sheets, timeout_minutes=5)
+        if result:
+            exported_files.append(result)
     
     return exported_files
 
@@ -387,12 +480,13 @@ def export_dwg(doc, folder_paths, heartbeat_callback=None):
     if not sheets_to_export:
         return exported_files
     
-    # Export each sheet as DWG
+    # Export each sheet as DWG with timeout protection
     from System.Collections.Generic import List
     
     total_sheets = len(sheets_to_export)
     for idx, sheet in enumerate(sheets_to_export, 1):
-        try:
+        def export_single_dwg(sheet, sheet_index, total_sheets):
+            """Export a single DWG sheet with timeout protection."""
             # Create filename in format: {pim}-{sheetnum}_{sheetname}
             sheet_number = sheet.SheetNumber
             safe_name = sanitize_filename(sheet.Name)
@@ -405,7 +499,7 @@ def export_dwg(doc, folder_paths, heartbeat_callback=None):
             # Log progress for debugging stuck exports
             if heartbeat_callback:
                 heartbeat_callback("EXPORT", "Exporting DWG {}/{}: {} - {}".format(
-                    idx, total_sheets, sheet_number, sheet.Name[:50]))
+                    sheet_index, total_sheets, sheet_number, sheet.Name[:50]))
             
             dwg_path = os.path.join(dwg_folder, filename_base + ".dwg")
             
@@ -437,19 +531,20 @@ def export_dwg(doc, folder_paths, heartbeat_callback=None):
             
             # Verify export succeeded
             if os.path.exists(dwg_path):
-                exported_files.append(dwg_path)
                 if heartbeat_callback:
                     heartbeat_callback("EXPORT", "DWG {}/{} complete: {}".format(
-                        idx, total_sheets, sheet_number))
+                        sheet_index, total_sheets, sheet_number))
+                return dwg_path
             else:
                 if heartbeat_callback:
                     heartbeat_callback("EXPORT", "DWG {}/{} WARNING: File not created: {}".format(
-                        idx, total_sheets, dwg_path), is_error=True)
-            
-        except Exception as e:
-            if heartbeat_callback:
-                heartbeat_callback("EXPORT", "DWG export error for sheet {}/{} '{}': {}".format(
-                    idx, total_sheets, sheet.Name, str(e)))
+                        sheet_index, total_sheets, dwg_path), is_error=True)
+                return None
+        
+        # Use safe export with timeout (3 minutes per DWG)
+        result = safe_export_with_timeout(export_single_dwg, sheet, idx, total_sheets, timeout_minutes=3)
+        if result:
+            exported_files.append(result)
     
     return exported_files
 
@@ -478,12 +573,13 @@ def export_jpg(doc, folder_paths, heartbeat_callback=None):
     if not sheets_to_export:
         return exported_files
     
-    # Export each sheet as JPG
+    # Export each sheet as JPG with timeout protection
     from System.Collections.Generic import List
     
     total_sheets = len(sheets_to_export)
     for idx, sheet in enumerate(sheets_to_export, 1):
-        try:
+        def export_single_jpg(sheet, sheet_index, total_sheets):
+            """Export a single JPG sheet with timeout protection."""
             # Create filename in format: {pim}-{sheetnum}_{sheetname}
             sheet_number = sheet.SheetNumber
             safe_name = sanitize_filename(sheet.Name)
@@ -496,7 +592,7 @@ def export_jpg(doc, folder_paths, heartbeat_callback=None):
             # Log progress for debugging stuck exports
             if heartbeat_callback:
                 heartbeat_callback("EXPORT", "Exporting JPG {}/{}: {} - {}".format(
-                    idx, total_sheets, sheet_number, sheet.Name[:50]))
+                    sheet_index, total_sheets, sheet_number, sheet.Name[:50]))
             
             jpg_path = os.path.join(jpg_folder, filename_base + ".jpg")
             
@@ -575,18 +671,19 @@ def export_jpg(doc, folder_paths, heartbeat_callback=None):
                             break
             
             if found_file:
-                exported_files.append(found_file)
                 if heartbeat_callback:
                     heartbeat_callback("EXPORT", "JPG {}/{} complete: {}".format(
-                        idx, total_sheets, sheet_number))
+                        sheet_index, total_sheets, sheet_number))
+                return found_file
             elif heartbeat_callback:
                 heartbeat_callback("EXPORT", "JPG {}/{} WARNING: Not found after export '{}' (searched for: {})".format(
-                    idx, total_sheets, sheet.Name, filename_base), is_error=True)
-            
-        except Exception as e:
-            if heartbeat_callback:
-                heartbeat_callback("EXPORT", "JPG export error for sheet {}/{} '{}': {}".format(
-                    idx, total_sheets, sheet.Name, str(e)))
+                    sheet_index, total_sheets, sheet.Name, filename_base), is_error=True)
+            return None
+        
+        # Use safe export with timeout (2 minutes per JPG - shorter due to known issues)
+        result = safe_export_with_timeout(export_single_jpg, sheet, idx, total_sheets, timeout_minutes=2)
+        if result:
+            exported_files.append(result)
     
     return exported_files
 

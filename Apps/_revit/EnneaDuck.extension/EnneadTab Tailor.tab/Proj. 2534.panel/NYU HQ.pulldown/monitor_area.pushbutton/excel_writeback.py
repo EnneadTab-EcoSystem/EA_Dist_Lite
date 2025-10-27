@@ -26,9 +26,7 @@ def fake_write_design_values(excel_data, all_matches, excel_path, worksheet):
     Returns:
         dict: Statistics about the fake write operation
     """
-    print("\n" + "=" * 80)
-    print("=== FAKE EXCEL WRITEBACK (No actual changes) ===")
-    print("=" * 80)
+    print("\n=== FAKE EXCEL WRITEBACK (No actual changes) ===")
     
     # Read Excel to find DESIGN column index
     raw_data = EXCEL.read_data_from_excel(
@@ -57,8 +55,7 @@ def fake_write_design_values(excel_data, all_matches, excel_path, worksheet):
     # Convert column index to letter
     design_col_letter = EXCEL.column_number_to_letter(design_col)
     
-    print("Found DESIGN column at index {} (Column {})".format(design_col, design_col_letter))
-    print("")
+    print("DESIGN column: {}".format(design_col_letter))
     
     # Track statistics
     total_updates = 0
@@ -72,40 +69,16 @@ def fake_write_design_values(excel_data, all_matches, excel_path, worksheet):
             continue
             
         updates_by_scheme[scheme_name] = 0
-        print("--- Scheme: {} ---".format(scheme_name))
         
         for match in matches:
             excel_row = match.get('excel_row_index')
             actual_dgsf = match.get('actual_dgsf', 0)
-            room_name = match.get('room_name', 'Unknown')
-            department = match.get('department', 'Unknown')
-            division = match.get('division', 'Unknown')
-            
-            # Print the fake write information
-            print("\n\n[{}] Row {}, Column DESIGN ({}): {:.2f}".format(
-                scheme_name,
-                excel_row,
-                design_col_letter,
-                float(actual_dgsf)
-            ))
-            print("  Entry: {} | {} | {}".format(
-                department,
-                division,
-                room_name
-            ))
-            print("")
             
             total_updates += 1
             updates_by_scheme[scheme_name] += 1
     
     # Print summary
-    print("=" * 80)
-    print("SUMMARY:")
-    print("  Total cells that would be updated: {}".format(total_updates))
-    for scheme_name, count in updates_by_scheme.items():
-        print("    {}: {} cells".format(scheme_name, count))
-    print("=" * 80)
-    print("")
+    print("Total cells to update: {}".format(total_updates))
     
     return {
         'total_updates': total_updates,
@@ -129,11 +102,7 @@ def write_design_values_to_excel(excel_data, all_matches, excel_path, worksheet)
     Returns:
         dict: Statistics about the write operation
     """
-    print("\n" + "=" * 80)
-    print("=== REAL EXCEL WRITEBACK TO ORIGINAL FILE ===")
-    print("=" * 80)
-    print("Target file: {}".format(excel_path))
-    print("")
+    print("\n=== Writing to Excel: {} ===".format(os.path.basename(excel_path)))
     
     # Read Excel to find DESIGN column index
     raw_data = EXCEL.read_data_from_excel(
@@ -163,8 +132,7 @@ def write_design_values_to_excel(excel_data, all_matches, excel_path, worksheet)
     # Convert column index to letter
     design_col_letter = EXCEL.column_number_to_letter(design_col)
     
-    print("Found DESIGN column at index {} (Column {})".format(design_col, design_col_letter))
-    print("")
+    print("DESIGN column: {}".format(design_col_letter))
     
     # Build update_data dictionary for ExcelHandler
     update_data_dict = {}
@@ -179,14 +147,10 @@ def write_design_values_to_excel(excel_data, all_matches, excel_path, worksheet)
             continue
             
         updates_by_scheme[scheme_name] = 0
-        print("--- Processing Scheme: {} ---".format(scheme_name))
         
         for match in matches:
             excel_row = match.get('excel_row_index')
             actual_dgsf = match.get('actual_dgsf', 0)
-            room_name = match.get('room_name', 'Unknown')
-            department = match.get('department', 'Unknown')
-            division = match.get('division', 'Unknown')
             
             # Create update entry for ExcelHandler
             cell_key = "{},{}".format(excel_row, design_col_letter)
@@ -195,19 +159,6 @@ def write_design_values_to_excel(excel_data, all_matches, excel_path, worksheet)
                 "row": excel_row,
                 "column": design_col
             }
-            
-            # Print what we're writing
-            print("Writing to Row {}, Column DESIGN ({}): {:.2f}".format(
-                excel_row,
-                design_col_letter,
-                float(actual_dgsf)
-            ))
-            print("  Entry: {} | {} | {}".format(
-                department,
-                division,
-                room_name
-            ))
-            print("")
             
             total_updates += 1
             updates_by_scheme[scheme_name] += 1
@@ -223,8 +174,7 @@ def write_design_values_to_excel(excel_data, all_matches, excel_path, worksheet)
         }
     }
     
-    print("=" * 80)
-    print("Sending {} cell updates to ExcelHandler...".format(total_updates))
+    print("Updating {} cells...".format(total_updates))
     DATA_FILE.set_data(job_data, "excel_handler_input")
     
     # Launch ExcelHandler
@@ -245,18 +195,10 @@ def write_design_values_to_excel(excel_data, all_matches, excel_path, worksheet)
         print("WARNING: ExcelHandler timeout after 30 seconds")
     
     # Print summary
-    print("=" * 80)
-    print("SUMMARY:")
-    print("  Total cells updated: {}".format(total_updates))
-    for scheme_name, count in updates_by_scheme.items():
-        print("    {}: {} cells".format(scheme_name, count))
-    print("  Original file: {}".format(excel_path))
-    print("=" * 80)
-    print("")
+    print("Excel writeback complete: {} cells updated".format(total_updates))
     
     # Open the Excel file
     if os.path.exists(excel_path):
-        print("Opening Excel file...")
         os.startfile(excel_path)
     else:
         print("WARNING: Excel file not found at: {}".format(excel_path))

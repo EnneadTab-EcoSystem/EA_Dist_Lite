@@ -8,6 +8,7 @@ Supports area schemes for design option comparisons
 
 from Autodesk.Revit import DB # pyright: ignore
 import config
+from EnneadTab.REVIT import REVIT_SPATIAL_ELEMENT
 
 
 def get_revit_area_data_by_scheme():
@@ -53,18 +54,21 @@ def get_revit_area_data_by_scheme():
             # Check if this area belongs to the current scheme
             area_scheme = area.AreaScheme
             if area_scheme and area_scheme.Id == scheme.Id:
+                # Get area value and level first
+                area_sf = area.Area
+                level = area.Level
+                
                 # Get the 3 key parameters for proper matching
                 department = _get_area_parameter_value(area, config.DEPARTMENT_KEY[config.APP_REVIT])
                 program_type = _get_area_parameter_value(area, config.PROGRAM_TYPE_KEY[config.APP_REVIT])
                 program_type_detail = _get_area_parameter_value(area, config.PROGRAM_TYPE_DETAIL_KEY[config.APP_REVIT])
                 
-                # Get area value directly from area.Area property
-                area_sf = area.Area
-                
                 # Get level name and elevation
-                level = area.Level
-                level_name = level.Name if level else "Unknown Level"
+                level_name = level.Name if level else "Not Placed"
                 level_elevation = level.Elevation if level else 0
+                
+                # Determine area status using utility function
+                area_status = REVIT_SPATIAL_ELEMENT.get_element_status(area)
                 
                 # Get creator and editor information
                 creator_name = _get_element_creator(area, doc)
@@ -78,6 +82,7 @@ def get_revit_area_data_by_scheme():
                     'area_sf': area_sf,
                     'level_name': level_name,
                     'level_elevation': level_elevation,
+                    'area_status': area_status,
                     'creator': creator_name,
                     'last_editor': editor_name,
                     'revit_element': area  # Store reference to Revit element for parameter updates
@@ -110,18 +115,21 @@ def get_revit_area_data():
     out = {}
 
     for area in all_areas:
+        # Get area value and level first
+        area_sf = area.Area
+        level = area.Level
+        
         # Get the 3 key parameters for proper matching
         department = _get_area_parameter_value(area, config.DEPARTMENT_KEY["revit"])
         program_type = _get_area_parameter_value(area, config.PROGRAM_TYPE_KEY["revit"])
         program_type_detail = _get_area_parameter_value(area, config.PROGRAM_TYPE_DETAIL_KEY["revit"])
         
-        # Get area value directly from area.Area property
-        area_sf = area.Area
-        
         # Get level name and elevation
-        level = area.Level
-        level_name = level.Name if level else "Unknown Level"
+        level_name = level.Name if level else "Not Placed"
         level_elevation = level.Elevation if level else 0
+        
+        # Determine area status using utility function
+        area_status = REVIT_SPATIAL_ELEMENT.get_element_status(area)
         
         # Get creator and editor information
         creator_name = _get_element_creator(area, doc)
@@ -135,6 +143,7 @@ def get_revit_area_data():
             'area_sf': area_sf,
             'level_name': level_name,
             'level_elevation': level_elevation,
+            'area_status': area_status,
             'creator': creator_name,
             'last_editor': editor_name
         }
@@ -205,17 +214,20 @@ def _get_all_areas_as_list(doc):
         if config.AREA_SCHEMES_TO_PROCESS_PREFIX_KEYWORD and not scheme_name.startswith(config.AREA_SCHEMES_TO_PROCESS_PREFIX_KEYWORD):
             continue
         
+        # Get area value and level first
+        area_sf = area.Area
+        level = area.Level
+        
         # Get the 3 key parameters for proper matching
         department = _get_area_parameter_value(area, config.DEPARTMENT_KEY["revit"])
         program_type = _get_area_parameter_value(area, config.PROGRAM_TYPE_KEY["revit"])
         program_type_detail = _get_area_parameter_value(area, config.PROGRAM_TYPE_DETAIL_KEY["revit"])
         
-        # Get area value directly from area.Area property
-        area_sf = area.Area
-        
         # Get level name
-        level = area.Level
-        level_name = level.Name if level else "Unknown Level"
+        level_name = level.Name if level else "Not Placed"
+        
+        # Determine area status using utility function
+        area_status = REVIT_SPATIAL_ELEMENT.get_element_status(area)
         
         # Get creator and editor information
         creator_name = _get_element_creator(area, doc)
@@ -228,6 +240,7 @@ def _get_all_areas_as_list(doc):
             'program_type_detail': program_type_detail,
             'area_sf': area_sf,
             'level_name': level_name,
+            'area_status': area_status,
             'creator': creator_name,
             'last_editor': editor_name,
             'revit_element': area  # Store reference to Revit element for parameter updates

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __doc__ = "Update door marks based on their To Room parameter values. If multiple doors lead to the same room, append A, B, C etc. to make them unique."
-__title__ = "Room To Door Mark"
+__title__ = "[DEPRECATED] Room To Door Mark"
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()

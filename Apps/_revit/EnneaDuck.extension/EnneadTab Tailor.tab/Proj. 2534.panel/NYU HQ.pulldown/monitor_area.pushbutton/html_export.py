@@ -8,6 +8,7 @@ Uses exact matching on 3 parameters: Department, Program Type, Program Type Deta
 
 import os
 import webbrowser
+import subprocess
 import io
 import time
 from datetime import datetime
@@ -512,7 +513,10 @@ class HTMLReportGenerator:
             <div class="report-info">
                 <p><strong>Generated:</strong> {current_time}</p>
                 <p><strong>Project:</strong> {project_name}</p>
-                <p><strong>Area Scheme:</strong> {scheme_name}</p>
+            </div>
+            <div class="area-scheme-badge">
+                <span class="badge-label">Area Scheme</span>
+                <span class="badge-value">{scheme_name}</span>
             </div>
             <div class="online-dashboard-note">
                 <div class="dashboard-link-container">
@@ -1659,15 +1663,17 @@ class HTMLReportGenerator:
                     area_object['suggestion_text'] = ''  # No suggestion
                     suggestion_text = '<span style="color: #6b7280;">No suggestion available</span>'
                 
-                revit_element = area_object.get('revit_element')
+                # Get area status (Not Placed, Not Enclosed, or Valid)
+                area_status = area_object.get('area_status', 'Valid')
                 is_zero = float(self._safe_float(area_sf)) == 0
-                zero_reason = ''
-                if is_zero:
-                    try:
-                        zero_reason = 'Not Placed' if (revit_element is not None and getattr(revit_element, 'Location', None) is None) else 'Not Enclosed'
-                    except Exception:
-                        zero_reason = 'Not Enclosed'
-                zero_area_badge = '' if not is_zero else '<span class=\"zero-area-badge\" title=\"{}\">{}</span>'.format('Likely {}'.format(zero_reason), zero_reason)
+                
+                # Create badge for special statuses
+                zero_area_badge = ''
+                if area_status == 'Not Placed':
+                    zero_area_badge = '<span class=\"zero-area-badge\" title=\"Area has not been placed in the model\">Not Placed</span>'
+                elif area_status == 'Not Enclosed':
+                    zero_area_badge = '<span class=\"zero-area-badge\" title=\"Area boundary is not properly enclosed\">Not Enclosed</span>'
+                
                 display_area_sf = "{:,.0f}".format(float(self._safe_float(area_sf))) if not is_zero else "0"
                 level_rows.append("""
                     <tr class=\"{zero_row_class}\">\n                        <td class=\"col-dept\">{area_dept}</td>\n                        <td class=\"col-division\">{area_type}</td>\n                        <td class=\"col-function\">{area_detail}</td>\n                        <td class=\"col-area\">{area_sf} SF {zero_area_badge}</td>\n                        <td class=\"col-level\">{creator}</td>\n                        <td class=\"col-level\">{last_editor}</td>\n                        <td class=\"col-status\"><span class=\"status-badge unmatched\">○ Unmatched</span></td>\n                        <td class=\"col-suggestion\">{suggestion}</td>\n                </tr>
@@ -1849,6 +1855,34 @@ class HTMLReportGenerator:
         .report-info strong {
             color: #d1d5db;
             font-weight: 500;
+        }
+        
+        /* Area Scheme Badge - Prominent Display */
+        .area-scheme-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(147, 51, 234, 0.15));
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .area-scheme-badge .badge-label {
+            color: #93c5fd;
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .area-scheme-badge .badge-value {
+            color: #ffffff;
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
         }
         
         .online-dashboard-note {
@@ -5618,12 +5652,32 @@ class HTMLReportGenerator:
         """
     
     def open_report_in_browser(self, filepath=None):
-        """Open the report in the default browser"""
+        """Open the report in Microsoft Edge browser (preferred) or default browser"""
         if filepath is None:
             filepath = os.path.join(self.reports_dir, config.LATEST_REPORT_FILENAME)
         
-        if os.path.exists(filepath):
-            webbrowser.open("file://{}".format(os.path.abspath(filepath)))
-            return True
-        else:
+        if not os.path.exists(filepath):
             return False
+        
+        abs_filepath = os.path.abspath(filepath)
+        
+        # Try to open in Microsoft Edge first
+        edge_paths = [
+            r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe",
+        ]
+        
+        for edge_path in edge_paths:
+            if os.path.exists(edge_path):
+                try:
+                    subprocess.Popen([edge_path, abs_filepath])
+                    print("Opened in Microsoft Edge: {}".format(os.path.basename(filepath)))
+                    return True
+                except Exception as e:
+                    print("Failed to open in Edge: {}".format(str(e)))
+                    continue
+        
+        # Fallback to default browser if Edge not found
+        print("Microsoft Edge not found, using default browser")
+        webbrowser.open("file://{}".format(abs_filepath))
+        return True

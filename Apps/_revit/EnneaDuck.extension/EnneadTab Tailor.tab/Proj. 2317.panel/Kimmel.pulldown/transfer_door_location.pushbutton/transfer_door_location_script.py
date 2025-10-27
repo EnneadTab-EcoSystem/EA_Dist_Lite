@@ -24,7 +24,7 @@ SPECIAL CASES:
 PHASES:
 - Skips doors created in "Existing" phase
 - Processes all other phases until a valid room is found"""
-__title__ = "Transfer Door Location"
+__title__ = "Door Location and Mark"
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
@@ -219,34 +219,42 @@ def transfer_door_locations(doc):
     # PASS 2: Assign door marks based on room numbers
     print("\n=== PASS 2: Assigning door marks ===")
     
-    # Group doors by location string
-    location_groups = {}  # {location_string: [(door, room_object), ...]}
+    # Group doors by room ID (not room name!) to handle duplicate room names
+    room_groups = {}  # {room_id: [(door, location_string, room_object), ...]}
     for door, (location_string, room_object) in door_location_map.items():
-        if location_string not in location_groups:
-            location_groups[location_string] = []
-        location_groups[location_string].append((door, room_object))
+        # Use room ID as key; for special cases (no room, corridor), use location_string
+        if room_object:
+            group_key = room_object.Id.IntegerValue
+        else:
+            # For special cases like "no room" or "CORRIDOR", use location_string
+            group_key = location_string
+        
+        if group_key not in room_groups:
+            room_groups[group_key] = []
+        room_groups[group_key].append((door, location_string, room_object))
     
-    # Process each location group
-    for location_string, door_room_pairs in location_groups.items():
-        print("\nLocation: {}".format(location_string))
+    # Process each room group
+    for group_key, door_info_list in room_groups.items():
+        # Get location and room info from first door in group
+        _first_door, location_string, room_object = door_info_list[0]
+        print("\nLocation: {} (Group Key: {})".format(location_string, group_key))
         
         # Sort doors by element ID
-        sorted_pairs = sorted(door_room_pairs, key=lambda x: x[0].Id.IntegerValue)
+        sorted_pairs = sorted(door_info_list, key=lambda x: x[0].Id.IntegerValue)
         
         # Handle special cases
         if location_string == NO_ROOM_DEFAULT:
             # No room found - set all door marks to "no room"
             print("  Special case: No room found")
-            for door, room_object in sorted_pairs:
+            for door, _loc_str, _room_obj in sorted_pairs:
                 mark_param = door.LookupParameter(MARK_PARAM_NAME)
                 if mark_param:
                     mark_param.Set(NO_ROOM_DEFAULT)
                     print("    Door {} -> Mark: {}".format(output.linkify(door.Id), NO_ROOM_DEFAULT))
             continue
         
-        # Get room number from the first door's room (all should have same room)
-        first_room = sorted_pairs[0][1]
-        room_number = get_room_number(first_room)
+        # Get room number from the room object
+        room_number = get_room_number(room_object)
         
         print("  Room number: {}".format(room_number))
         print("  Doors to this location: {}".format(len(sorted_pairs)))
@@ -261,7 +269,7 @@ def transfer_door_locations(doc):
                 print("    Door {} -> Mark: {}".format(output.linkify(door.Id), room_number))
         else:
             # Multiple doors - append A, B, C, etc.
-            for i, (door, room_object) in enumerate(sorted_pairs):
+            for i, (door, _loc_str, _room_obj) in enumerate(sorted_pairs):
                 suffix = chr(65 + i)  # 65 is ASCII for 'A'
                 door_mark = "{}{}".format(room_number, suffix)
                 mark_param = door.LookupParameter(MARK_PARAM_NAME)

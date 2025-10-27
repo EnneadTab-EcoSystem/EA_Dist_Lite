@@ -41,6 +41,9 @@ SCALED_DGSF_KEY = {
 # Parameter for storing unmatched area suggestions
 UNMATCHED_SUGGESTION_PARAM = "UnMatchedSuggestion"
 
+# Parameter for storing target DGSF from Excel
+TARGET_DGSF_PARAM = "RoomDataTarget"
+
 # =============================================================================
 # EXCEL CONFIGURATION
 # =============================================================================
