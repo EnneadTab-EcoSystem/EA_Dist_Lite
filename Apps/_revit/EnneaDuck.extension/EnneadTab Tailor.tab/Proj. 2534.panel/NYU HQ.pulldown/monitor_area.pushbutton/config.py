@@ -49,7 +49,7 @@ TARGET_DGSF_PARAM = "RoomDataTarget"
 # =============================================================================
 
 # Excel file settings
-EXCEL_FILENAME = r"J:\2534\2_Master File\B-70_Programming\01_Program & Analysis\NYULLI Melville Program.xlsx"
+EXCEL_FILENAME = r"J:\2534\2_Master File\B-70_Programming\01_Program & Analysis\EA_NYULLI Melville Program.xlsx"
 EXCEL_WORKSHEET = "Hospital Program TARGET_DESIGN"
 EXCEL_HEADER_ROW = 1  # Row where headers are located (1-based, as per parse_excel_data documentation)
 

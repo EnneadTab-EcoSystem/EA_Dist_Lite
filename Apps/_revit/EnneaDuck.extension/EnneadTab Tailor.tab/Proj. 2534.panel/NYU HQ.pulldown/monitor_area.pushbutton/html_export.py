@@ -396,7 +396,7 @@ class HTMLReportGenerator:
     
     def generate_html_report(self, excel_data, revit_data, color_hierarchy=None):
         """
-        Generate separate HTML reports for each scheme
+        Generate consolidated HTML report with all schemes in tabs
         
         Args:
             excel_data: Dictionary of Excel data with RowData objects
@@ -424,54 +424,45 @@ class HTMLReportGenerator:
                 unmatched = matcher.get_unmatched_areas(excel_data, areas_list)
                 all_unmatched_areas[scheme_name] = unmatched
         
-        # Generate one HTML per scheme
+        # Generate consolidated HTML with all schemes
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        filepaths = []
         
-        for scheme_name, scheme_data in all_matches.items():
-            # Extract matches for this scheme
-            matches = scheme_data.get('matches', [])
-            unmatched_areas = all_unmatched_areas.get(scheme_name, {})
-            
-            # Generate HTML for this scheme
-            html_content = self._create_scheme_html(
-                scheme_name=scheme_name,
-                matches=matches,
-                unmatched_areas=unmatched_areas,
-                current_time=current_time
-            )
-            
-            # Save to scheme-specific file
-            safe_scheme_name = scheme_name.replace(" ", "_").replace("/", "_")
-            filename = "area_report_{}_{}.html".format(safe_scheme_name, timestamp)
-            filepath = os.path.join(self.reports_dir, filename)
-            
-            with io.open(filepath, 'w', encoding='utf-8') as f:
-                f.write(html_content)
-            
-            filepaths.append(filepath)
+        # Generate single consolidated HTML
+        html_content = self._create_consolidated_html(
+            all_matches_dict=all_matches,
+            all_unmatched_dict=all_unmatched_areas,
+            current_time=current_time
+        )
         
-        # Save the first (or only) report as latest_report.html for easy access
-        if filepaths:
-            latest_path = os.path.join(self.reports_dir, config.LATEST_REPORT_FILENAME)
-            with io.open(latest_path, 'w', encoding='utf-8') as f:
-                # Use the first scheme's HTML as the latest
-                first_scheme = list(all_matches.keys())[0]
-                first_matches = all_matches[first_scheme].get('matches', [])
-                first_unmatched = all_unmatched_areas.get(first_scheme, {})
-                latest_html = self._create_scheme_html(
-                    scheme_name=first_scheme,
-                    matches=first_matches,
-                    unmatched_areas=first_unmatched,
-                    current_time=current_time
-                )
-                f.write(latest_html)
+        # Save to timestamped file
+        filename = "area_report_consolidated_{}.html".format(timestamp)
+        filepath = os.path.join(self.reports_dir, filename)
         
-        return filepaths, all_matches, all_unmatched_areas
+        with io.open(filepath, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        # Also save as latest_report.html for easy access
+        latest_path = os.path.join(self.reports_dir, config.LATEST_REPORT_FILENAME)
+        with io.open(latest_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        
+        # Return single filepath in list for compatibility
+        return [filepath], all_matches, all_unmatched_areas
     
-    def _create_scheme_html(self, scheme_name, matches, unmatched_areas, current_time):
-        """Create HTML for single scheme"""
+    def _create_scheme_content(self, scheme_name, matches, unmatched_areas, is_first=False):
+        """
+        Create HTML content for a single scheme (without outer HTML structure)
+        
+        Args:
+            scheme_name: Name of the area scheme
+            matches: List of matched areas for this scheme
+            unmatched_areas: Dictionary of unmatched areas for this scheme
+            is_first: Whether this is the first scheme (will be visible by default)
+        
+        Returns:
+            str: HTML content wrapped in a scheme container div
+        """
         # Calculate summary statistics
         total_target_count = sum(match['target_count'] for match in matches if match['target_count'] is not None)
         total_actual_count = sum(match['actual_count'] for match in matches if match['actual_count'] is not None)
@@ -490,6 +481,219 @@ class HTMLReportGenerator:
             abs(match['count_delta']) >= config.COUNT_DELTA_ALERT_THRESHOLD and 
             abs(match['dgsf_percentage']) >= config.AREA_PERCENTAGE_ALERT_THRESHOLD)
         
+        # Create safe scheme name for IDs and classes
+        safe_scheme_name = scheme_name.replace(" ", "_").replace("/", "_").replace("-", "_")
+        active_class = " active" if is_first else ""
+        
+        # Generate scheme-specific content
+        content = """
+<div class="scheme-content{active_class}" id="scheme-{safe_scheme_name}" data-scheme="{scheme_name}">
+    <header class="report-header">
+        <div class="area-scheme-badge">
+            <span class="badge-label">Area Scheme</span>
+            <span class="badge-value">{scheme_name}</span>
+        </div>
+        <div class="online-dashboard-note">
+            <div class="dashboard-link-container">
+                <div class="dashboard-link-item">
+                    <div class="link-icon">🌐</div>
+                    <div class="link-content">
+                        <div class="link-title">Online Dashboard</div>
+                        <div class="link-description">View this dashboard anywhere</div>
+                        <a href="https://ennead-architects-llp.github.io/NYU-HQ/" target="_blank" class="dashboard-link">
+                            <span class="link-text">🚀 Live Dashboard</span>
+                            <span class="link-arrow">↗</span>
+                        </a>
+                    </div>
+                </div>
+                <div class="dashboard-link-item">
+                    <div class="link-icon">🔄</div>
+                    <div class="link-content">
+                        <div class="link-title">Data Flow Diagram</div>
+                        <div class="link-description">See how data flows between Excel, Revit, and the web report</div>
+                        <a href="https://ennead-architects-llp.github.io/NYU-HQ/diagram" target="_blank" class="dashboard-link">
+                            <span class="link-text">📊 Flow Chart</span>
+                            <span class="link-arrow">↗</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="legend-section">
+            <h4>📌 Symbol Legend</h4>
+            <div class="legend-grid">
+                <div class="legend-item">
+                    <span class="legend-icon status-fulfilled">✓</span>
+                    <span class="legend-label"><strong>Fulfilled</strong> - All requirements met (count and area within tolerance)</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-icon status-partial">△</span>
+                    <span class="legend-label"><strong>Partial</strong> - Some areas found but requirements not fully met</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-icon status-missing">✕</span>
+                    <span class="legend-label"><strong>Missing</strong> - No areas found or zero count/area</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-icon status-unknown">?</span>
+                    <span class="legend-label"><strong>Unknown</strong> - Status could not be determined</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-icon status-excessive">!</span>
+                    <span class="legend-label"><strong>Excessive</strong> - Significantly exceeds requirements</span>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <div class="department-summary-section">
+        <h2>📊 Department Fulfillment Summary</h2>
+        {department_summary_table}
+        {department_by_level_viz}
+    </div>
+    
+    <div class="tree-view-section">
+        <h2>🌳 TreeView</h2>
+        <div class="tree-controls">
+            <button onclick="expandAllTreeNodes()">Expand All</button>
+            <button onclick="collapseAllTreeNodes()">Collapse All</button>
+        </div>
+        <div class="tree-container">
+            {tree_view_html}
+        </div>
+    </div>
+    
+    {unmatched_section}
+    
+    <div class="summary-section">
+        <h2>📊 Summary</h2>
+        <div class="summary-cards">
+            <div class="card">
+                <h3>Total Requirements</h3>
+                <div class="card-value" title="Total number of unique room types defined in the Excel program">{total_reqs}</div>
+                <div class="card-label">Room Types</div>
+            </div>
+            <div class="card">
+                <h3>Target Count</h3>
+                <div class="card-value" title="Total number of areas required according to the Excel program">{target_count}</div>
+                <div class="card-label">Areas Required</div>
+            </div>
+            <div class="card">
+                <h3>Actual Count</h3>
+                <div class="card-value" title="Total number of areas found in the Revit model">{actual_count}</div>
+                <div class="card-label">Areas Found</div>
+            </div>
+            <div class="card">
+                <h3>Target DGSF</h3>
+                <div class="card-value" title="Target Department Gross Square Feet from the Excel program">{target_dgsf}</div>
+                <div class="card-label">Square Feet</div>
+            </div>
+            <div class="card">
+                <h3>Actual DGSF</h3>
+                <div class="card-value" title="Actual Department Gross Square Feet measured in the Revit model">{actual_dgsf}</div>
+                <div class="card-label">Square Feet</div>
+            </div>
+            <div class="card">
+                <h3>Compliance</h3>
+                <div class="card-value" title="Number of room types that have at least one instance in Revit out of total requirements">{fulfilled_count}/{total_reqs}</div>
+                <div class="card-label">Fulfilled</div>
+            </div>
+            <div class="card">
+                <h3>Count Alerts</h3>
+                <div class="card-value" title="Room types with significant difference between target and actual count">{high_count_delta_alerts}</div>
+                <div class="card-label">High Count Differences</div>
+            </div>
+            <div class="card">
+                <h3>Area Alerts</h3>
+                <div class="card-value" title="Room types with significant difference between target and actual DGSF">{high_area_delta_alerts}</div>
+                <div class="card-label">High Area Differences</div>
+            </div>
+            <div class="card">
+                <h3>Extreme Alerts</h3>
+                <div class="card-value" title="Room types with both high count difference AND high area difference">{extreme_difference_alerts}</div>
+                <div class="card-label">Both High Differences</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="status-summary">
+        <h2>📈 Status Breakdown</h2>
+        <div class="status-cards">
+            <div class="status-card fulfilled">
+                <h3>✓ Fulfilled</h3>
+                <div class="status-count">{fulfilled_count}</div>
+            </div>
+            <div class="status-card partial">
+                <h3>△ Partial</h3>
+                <div class="status-count">{partial_count}</div>
+            </div>
+            <div class="status-card missing">
+                <h3>✕ Missing</h3>
+                <div class="status-count">{missing_count}</div>
+            </div>
+        </div>
+    </div>
+</div>
+""".format(
+            active_class=active_class,
+            safe_scheme_name=safe_scheme_name,
+            scheme_name=scheme_name,
+            total_reqs=len(matches),
+            target_count="{:,}".format(int(float(total_target_count))),
+            actual_count="{:,}".format(int(float(total_actual_count))),
+            target_dgsf="{:,.0f}".format(float(self._safe_float(total_target_dgsf))),
+            actual_dgsf="{:,.0f}".format(float(self._safe_float(total_actual_dgsf))),
+            fulfilled_count=fulfilled_count,
+            partial_count=partial_count,
+            missing_count=missing_count,
+            high_count_delta_alerts=high_count_delta_alerts,
+            high_area_delta_alerts=high_area_delta_alerts,
+            extreme_difference_alerts=extreme_difference_alerts,
+            unmatched_section=self._create_unmatched_section(unmatched_areas, matches, scheme_name),
+            department_summary_table=self._create_department_summary_table(matches),
+            department_by_level_viz=self._create_department_by_level_visualization(matches, unmatched_areas),
+            tree_view_html=self._create_tree_view_html(matches)
+        )
+        
+        return content
+    
+    def _create_consolidated_html(self, all_matches_dict, all_unmatched_dict, current_time):
+        """Create consolidated HTML for all schemes with tabbed navigation"""
+        # Generate content for all schemes
+        all_scheme_contents = []
+        scheme_nav_items = []
+        is_first = True
+        
+        for scheme_name, scheme_data in all_matches_dict.items():
+            matches = scheme_data.get('matches', [])
+            unmatched_areas = all_unmatched_dict.get(scheme_name, {})
+            
+            # Generate scheme content
+            scheme_content = self._create_scheme_content(scheme_name, matches, unmatched_areas, is_first)
+            all_scheme_contents.append(scheme_content)
+            
+            # Generate navigation item
+            safe_scheme_name = scheme_name.replace(" ", "_").replace("/", "_").replace("-", "_")
+            active_class = " active" if is_first else ""
+            nav_item = """
+        <div class="minimap-item scheme-selector{active_class}" onclick="switchToScheme('{safe_scheme_name}')" data-scheme="{safe_scheme_name}">
+            <span class="minimap-icon">📐</span>
+            <span>{scheme_name}</span>
+        </div>""".format(
+                active_class=active_class,
+                safe_scheme_name=safe_scheme_name,
+                scheme_name=scheme_name
+            )
+            scheme_nav_items.append(nav_item)
+            
+            is_first = False
+        
+        # Combine all scheme contents
+        combined_scheme_content = "\n".join(all_scheme_contents)
+        combined_nav_items = "\n".join(scheme_nav_items)
+        
+        # Build complete HTML with outer structure
         html = """
 <!DOCTYPE html>
 <html lang="en">
@@ -508,158 +712,15 @@ class HTMLReportGenerator:
     </div>
     
     <div class="container">
-        <header class="report-header">
+        <header class="main-header">
             <h1>🏥 {report_title}</h1>
             <div class="report-info">
                 <p><strong>Generated:</strong> {current_time}</p>
                 <p><strong>Project:</strong> {project_name}</p>
             </div>
-            <div class="area-scheme-badge">
-                <span class="badge-label">Area Scheme</span>
-                <span class="badge-value">{scheme_name}</span>
-            </div>
-            <div class="online-dashboard-note">
-                <div class="dashboard-link-container">
-                    <div class="dashboard-link-item">
-                        <div class="link-icon">🌐</div>
-                        <div class="link-content">
-                            <div class="link-title">Online Dashboard</div>
-                            <div class="link-description">View this dashboard anywhere</div>
-                            <a href="https://ennead-architects-llp.github.io/NYU-HQ/" target="_blank" class="dashboard-link">
-                                <span class="link-text">🚀 Live Dashboard</span>
-                                <span class="link-arrow">↗</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="dashboard-link-item">
-                        <div class="link-icon">🔄</div>
-                        <div class="link-content">
-                            <div class="link-title">Data Flow Diagram</div>
-                            <div class="link-description">See how data flows between Excel, Revit, and the web report</div>
-                            <a href="https://ennead-architects-llp.github.io/NYU-HQ/diagram" target="_blank" class="dashboard-link">
-                                <span class="link-text">📊 Flow Chart</span>
-                                <span class="link-arrow">↗</span>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            
-            <div class="legend-section">
-                <h4>📌 Symbol Legend</h4>
-                <div class="legend-grid">
-                    <div class="legend-item">
-                        <span class="legend-icon status-fulfilled">✓</span>
-                        <span class="legend-label"><strong>Fulfilled</strong> - All requirements met (count and area within tolerance)</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-icon status-partial">△</span>
-                        <span class="legend-label"><strong>Partial</strong> - Some areas found but requirements not fully met</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-icon status-missing">✕</span>
-                        <span class="legend-label"><strong>Missing</strong> - No areas found or zero count/area</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-icon status-unknown">?</span>
-                        <span class="legend-label"><strong>Unknown</strong> - Status could not be determined</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-icon status-excessive">!</span>
-                        <span class="legend-label"><strong>Excessive</strong> - Significantly exceeds requirements</span>
-                    </div>
-                </div>
-            </div>
         </header>
         
-        <div class="department-summary-section">
-            <h2>📊 Department Fulfillment Summary</h2>
-            {department_summary_table}
-            {department_by_level_viz}
-        </div>
-        
-        <div class="tree-view-section">
-            <h2>🌳 TreeView</h2>
-            <div class="tree-controls">
-                <button onclick="expandAllTreeNodes()">Expand All</button>
-                <button onclick="collapseAllTreeNodes()">Collapse All</button>
-            </div>
-            <div class="tree-container">
-                {tree_view_html}
-            </div>
-        </div>
-        
-        {unmatched_section}
-        
-        <div class="summary-section">
-            <h2>📊 Summary</h2>
-            <div class="summary-cards">
-                <div class="card">
-                    <h3>Total Requirements</h3>
-                    <div class="card-value" title="Total number of unique room types defined in the Excel program">{total_reqs}</div>
-                    <div class="card-label">Room Types</div>
-                </div>
-                <div class="card">
-                    <h3>Target Count</h3>
-                    <div class="card-value" title="Total number of areas required according to the Excel program">{target_count}</div>
-                    <div class="card-label">Areas Required</div>
-                </div>
-                <div class="card">
-                    <h3>Actual Count</h3>
-                    <div class="card-value" title="Total number of areas found in the Revit model">{actual_count}</div>
-                    <div class="card-label">Areas Found</div>
-                </div>
-                <div class="card">
-                    <h3>Target DGSF</h3>
-                    <div class="card-value" title="Target Department Gross Square Feet from the Excel program">{target_dgsf}</div>
-                    <div class="card-label">Square Feet</div>
-                </div>
-                <div class="card">
-                    <h3>Actual DGSF</h3>
-                    <div class="card-value" title="Actual Department Gross Square Feet measured in the Revit model">{actual_dgsf}</div>
-                    <div class="card-label">Square Feet</div>
-                </div>
-                <div class="card">
-                    <h3>Compliance</h3>
-                    <div class="card-value" title="Number of room types that have at least one instance in Revit out of total requirements">{fulfilled_count}/{total_reqs}</div>
-                    <div class="card-label">Fulfilled</div>
-                </div>
-                <div class="card">
-                    <h3>Count Alerts</h3>
-                    <div class="card-value" title="Room types with significant difference between target and actual count">{high_count_delta_alerts}</div>
-                    <div class="card-label">High Count Differences</div>
-                </div>
-                <div class="card">
-                    <h3>Area Alerts</h3>
-                    <div class="card-value" title="Room types with significant difference between target and actual DGSF">{high_area_delta_alerts}</div>
-                    <div class="card-label">High Area Differences</div>
-                </div>
-                <div class="card">
-                    <h3>Extreme Alerts</h3>
-                    <div class="card-value" title="Room types with both high count difference AND high area difference">{extreme_difference_alerts}</div>
-                    <div class="card-label">Both High Differences</div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="status-summary">
-            <h2>📈 Status Breakdown</h2>
-            <div class="status-cards">
-                <div class="status-card fulfilled">
-                    <h3>✓ Fulfilled</h3>
-                    <div class="status-count">{fulfilled_count}</div>
-                </div>
-                <div class="status-card partial">
-                    <h3>△ Partial</h3>
-                    <div class="status-count">{partial_count}</div>
-                </div>
-                <div class="status-card missing">
-                    <h3>✕ Missing</h3>
-                    <div class="status-count">{missing_count}</div>
-                </div>
-            </div>
-        </div>
+        {combined_scheme_content}
         
         <footer class="report-footer">
             <p>Report generated by Monitor Area System | {current_time}</p>
@@ -698,8 +759,13 @@ class HTMLReportGenerator:
         🗺️ Nav
     </div>
     <nav class="minimap-nav" id="minimapNav">
+        <!-- Scheme Switcher Section -->
+        <div class="minimap-title">🔄 Area Schemes</div>
+{scheme_nav_items}
+        
+        <div class="minimap-section-divider"></div>
         <div class="minimap-title">📍 Quick Navigation</div>
-        <div class="minimap-item" onclick="scrollToSection('report-header')" data-section="report-header">
+        <div class="minimap-item" onclick="scrollToSection('main-header')" data-section="main-header">
             <span class="minimap-icon">🏥</span>
             <span>Report Header</span>
         </div>
@@ -735,35 +801,8 @@ class HTMLReportGenerator:
             css_styles=self._get_css_styles(),
             current_time=current_time,
             project_name=config.PROJECT_NAME,
-            scheme_name=scheme_name,
-            total_reqs=len(matches),
-            target_count="{:,}".format(int(float(total_target_count))),
-            actual_count="{:,}".format(int(float(total_actual_count))),
-            target_dgsf="{:,.0f}".format(float(self._safe_float(total_target_dgsf))),
-            actual_dgsf="{:,.0f}".format(float(self._safe_float(total_actual_dgsf))),
-            fulfilled_count=fulfilled_count,
-            partial_count=partial_count,
-            missing_count=missing_count,
-            high_count_delta_alerts=high_count_delta_alerts,
-            high_area_delta_alerts=high_area_delta_alerts,
-            extreme_difference_alerts=extreme_difference_alerts,
-            col_area_detail=config.TABLE_COLUMN_HEADERS['area_detail'],
-            col_department=config.TABLE_COLUMN_HEADERS['department'],
-            col_program_type=config.TABLE_COLUMN_HEADERS['program_type'],
-            col_target_count=config.TABLE_COLUMN_HEADERS['target_count'],
-            col_target_dgsf=config.TABLE_COLUMN_HEADERS['target_dgsf'],
-            col_actual_count=config.TABLE_COLUMN_HEADERS['actual_count'],
-            col_actual_dgsf=config.TABLE_COLUMN_HEADERS['actual_dgsf'],
-            col_count_delta=config.TABLE_COLUMN_HEADERS['count_delta'],
-            col_dgsf_delta=config.TABLE_COLUMN_HEADERS['dgsf_delta'],
-            col_dgsf_percentage=config.TABLE_COLUMN_HEADERS['dgsf_percentage'],
-            col_status=config.TABLE_COLUMN_HEADERS['status'],
-            col_match_quality=config.TABLE_COLUMN_HEADERS['match_quality'],
-            table_rows=self._create_table_rows(matches),
-            unmatched_section=self._create_unmatched_section(unmatched_areas, matches),
-            department_summary_table=self._create_department_summary_table(matches),
-            department_by_level_viz=self._create_department_by_level_visualization(matches, unmatched_areas),
-            tree_view_html=self._create_tree_view_html(matches),
+            combined_scheme_content=combined_scheme_content,
+            scheme_nav_items=combined_nav_items,
             javascript=self._get_javascript()
         )
         return html
@@ -3453,6 +3492,92 @@ class HTMLReportGenerator:
             background: #4b5563;
         }
         
+        /* Scheme Switcher Styles */
+        .minimap-section-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent 0%, #374151 50%, transparent 100%);
+            margin: 16px 0;
+        }
+        
+        .scheme-selector {
+            position: relative;
+        }
+        
+        .scheme-selector.active {
+            background: #1f2937;
+            color: #10b981 !important;
+            border-color: #10b981 !important;
+            font-weight: 600;
+        }
+        
+        .scheme-selector.active::after {
+            content: '✓';
+            position: absolute;
+            right: 12px;
+            color: #10b981;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        
+        .scheme-selector:hover {
+            background: #1f2937;
+            color: #10b981;
+            border-color: #10b981;
+        }
+        
+        /* Scheme Content Visibility */
+        .scheme-content {
+            display: none;
+            animation: fadeInContent 0.4s ease-out;
+        }
+        
+        .scheme-content.active {
+            display: block;
+        }
+        
+        @keyframes fadeInContent {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Main Header Styles */
+        .main-header {
+            text-align: center;
+            margin-bottom: 32px;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.6) 0%, rgba(31, 41, 55, 0.4) 100%);
+            border-radius: 12px;
+            border: 1px solid rgba(75, 85, 99, 0.3);
+        }
+        
+        .main-header h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #60a5fa 0%, #10b981 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .main-header .report-info {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            font-size: 0.9rem;
+            color: #9ca3af;
+        }
+        
+        .main-header .report-info p {
+            margin: 0;
+        }
+        
         /* Tree View Styles */
         .tree-view-section {
             margin: 32px 0;
@@ -5649,6 +5774,216 @@ class HTMLReportGenerator:
         } else {
             initializeTreeView();
         }
+        
+        // ============================================================================
+        // SCHEME SWITCHING FUNCTIONALITY
+        // ============================================================================
+        
+        /**
+         * Switch to a different area scheme
+         * @param {string} schemeId - The safe scheme ID (e.g., "DGSF_Scheme_Opt1")
+         */
+        function switchToScheme(schemeId) {
+            console.log('Switching to scheme:', schemeId);
+            
+            // Hide all scheme contents
+            var allSchemes = document.querySelectorAll('.scheme-content');
+            for (var i = 0; i < allSchemes.length; i++) {
+                allSchemes[i].classList.remove('active');
+            }
+            
+            // Show selected scheme
+            var targetScheme = document.getElementById('scheme-' + schemeId);
+            if (targetScheme) {
+                targetScheme.classList.add('active');
+                
+                // Update URL hash without page reload
+                if (history.pushState) {
+                    history.pushState(null, null, '#' + schemeId);
+                } else {
+                    location.hash = '#' + schemeId;
+                }
+                
+                // Update navigation highlighting
+                updateSchemeNavigation(schemeId);
+                
+                // Re-initialize visualizations for the newly active scheme
+                initializeSchemeVisualizations(targetScheme);
+                
+                // Scroll to top smoothly
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                
+                console.log('Switched to scheme:', schemeId);
+            } else {
+                console.error('Scheme not found:', schemeId);
+            }
+        }
+        
+        /**
+         * Initialize or re-initialize all visualizations within a scheme
+         * @param {HTMLElement} schemeElement - The scheme content element
+         */
+        function initializeSchemeVisualizations(schemeElement) {
+            console.log('Initializing visualizations for scheme:', schemeElement.id);
+            
+            // Check if Chart.js is loaded
+            if (typeof Chart === 'undefined') {
+                console.warn('Chart.js not loaded yet, skipping chart initialization');
+                return;
+            }
+            
+            // Find and initialize department charts within this scheme
+            var chartDataElement = schemeElement.querySelector('[id^="departmentChartData"]');
+            if (chartDataElement) {
+                try {
+                    var chartData = JSON.parse(chartDataElement.textContent);
+                    console.log('Found chart data for scheme:', chartData);
+                    
+                    // Initialize comparison chart
+                    var comparisonCanvas = schemeElement.querySelector('[id^="deptComparisonChart"]');
+                    if (comparisonCanvas && !comparisonCanvas.dataset.initialized) {
+                        createDepartmentComparisonChart(comparisonCanvas, chartData);
+                        comparisonCanvas.dataset.initialized = 'true';
+                    }
+                    
+                    // Initialize percentage chart
+                    var percentageCanvas = schemeElement.querySelector('[id^="deptPercentageChart"]');
+                    if (percentageCanvas && !percentageCanvas.dataset.initialized) {
+                        createDepartmentPercentageChart(percentageCanvas, chartData);
+                        percentageCanvas.dataset.initialized = 'true';
+                    }
+                } catch (e) {
+                    console.error('Error parsing chart data:', e);
+                }
+            }
+            
+            // Re-initialize building section diagram if present
+            var buildingSection = schemeElement.querySelector('[id^="buildingSection"]');
+            if (buildingSection && !buildingSection.dataset.initialized) {
+                createBuildingSection();
+                if (buildingSection) {
+                    buildingSection.dataset.initialized = 'true';
+                }
+            }
+            
+            console.log('Visualizations initialized for scheme');
+        }
+        
+        /**
+         * Update active state of scheme navigation items
+         * @param {string} activeSchemeId - The ID of the active scheme
+         */
+        function updateSchemeNavigation(activeSchemeId) {
+            var schemeSelectors = document.querySelectorAll('.scheme-selector');
+            for (var i = 0; i < schemeSelectors.length; i++) {
+                var selector = schemeSelectors[i];
+                var selectorScheme = selector.getAttribute('data-scheme');
+                
+                if (selectorScheme === activeSchemeId) {
+                    selector.classList.add('active');
+                } else {
+                    selector.classList.remove('active');
+                }
+            }
+        }
+        
+        /**
+         * Initialize scheme from URL hash on page load
+         */
+        function initSchemeFromHash() {
+            var hash = window.location.hash.substring(1); // Remove the '#'
+            var activeScheme = null;
+            
+            if (hash) {
+                console.log('Loading scheme from URL hash:', hash);
+                
+                // Check if scheme exists
+                var targetScheme = document.getElementById('scheme-' + hash);
+                if (targetScheme) {
+                    // Hide all schemes first
+                    var allSchemes = document.querySelectorAll('.scheme-content');
+                    for (var i = 0; i < allSchemes.length; i++) {
+                        allSchemes[i].classList.remove('active');
+                    }
+                    
+                    // Show target scheme
+                    targetScheme.classList.add('active');
+                    updateSchemeNavigation(hash);
+                    activeScheme = targetScheme;
+                } else {
+                    console.warn('Scheme from hash not found:', hash);
+                    // Fall back to first scheme
+                    var firstScheme = document.querySelector('.scheme-content');
+                    if (firstScheme) {
+                        firstScheme.classList.add('active');
+                        activeScheme = firstScheme;
+                    }
+                }
+            } else {
+                // No hash - ensure first scheme is active
+                var firstScheme = document.querySelector('.scheme-content');
+                if (firstScheme) {
+                    firstScheme.classList.add('active');
+                    var firstSchemeId = firstScheme.id.replace('scheme-', '');
+                    updateSchemeNavigation(firstSchemeId);
+                    activeScheme = firstScheme;
+                }
+            }
+            
+            // Initialize visualizations for the active scheme
+            if (activeScheme) {
+                // Wait for Chart.js to load before initializing
+                if (typeof Chart !== 'undefined') {
+                    initializeSchemeVisualizations(activeScheme);
+                } else {
+                    // Chart.js not loaded yet, wait for it
+                    console.log('Waiting for Chart.js to load before initializing scheme visualizations...');
+                    var checkChartInterval = setInterval(function() {
+                        if (typeof Chart !== 'undefined') {
+                            clearInterval(checkChartInterval);
+                            console.log('Chart.js loaded, initializing scheme visualizations');
+                            initializeSchemeVisualizations(activeScheme);
+                        }
+                    }, 100);
+                }
+            }
+        }
+        
+        /**
+         * Handle browser back/forward buttons
+         */
+        function handleHashChange() {
+            var hash = window.location.hash.substring(1);
+            if (hash) {
+                var targetScheme = document.getElementById('scheme-' + hash);
+                if (targetScheme) {
+                    // Hide all schemes
+                    var allSchemes = document.querySelectorAll('.scheme-content');
+                    for (var i = 0; i < allSchemes.length; i++) {
+                        allSchemes[i].classList.remove('active');
+                    }
+                    
+                    // Show target scheme
+                    targetScheme.classList.add('active');
+                    updateSchemeNavigation(hash);
+                    
+                    // Re-initialize visualizations for the scheme
+                    initializeSchemeVisualizations(targetScheme);
+                }
+            }
+        }
+        
+        // Initialize scheme on page load
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSchemeFromHash);
+        } else {
+            initSchemeFromHash();
+        }
+        
+        // Listen for hash changes (browser back/forward)
+        window.addEventListener('hashchange', handleHashChange);
+        
+        console.log('Scheme switching initialized');
         """
     
     def open_report_in_browser(self, filepath=None):

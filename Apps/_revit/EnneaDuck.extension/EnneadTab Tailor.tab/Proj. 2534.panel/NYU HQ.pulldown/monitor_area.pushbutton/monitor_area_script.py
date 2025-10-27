@@ -43,7 +43,7 @@ def monitor_area(doc):
     
     revit_data_by_scheme = get_revit_area_data_by_scheme()
 
-    # Generate HTML reports (one per scheme) and open automatically
+    # Generate consolidated HTML report with all schemes and open automatically
     generator = HTMLReportGenerator()
     filepaths, all_matches, all_unmatched = generator.generate_html_report(excel_data, revit_data_by_scheme, color_hierarchy)
     
@@ -75,17 +75,19 @@ def monitor_area(doc):
         }
         print("Excel writeback skipped by user")
     
-    # Open all generated reports
-    for filepath in filepaths:
-        generator.open_report_in_browser(filepath)
+    # Open the consolidated report (single HTML with all schemes)
+    if filepaths:
+        generator.open_report_in_browser(filepaths[0])
     
     # Calculate total fulfilled across all schemes
     total_fulfilled = 0
     total_requirements = 0
+    scheme_names = []
     for scheme_name, scheme_data in all_matches.items():
         matches = scheme_data.get('matches', [])
         total_requirements += len(matches)
         total_fulfilled += sum(1 for m in matches if m['status'] == 'Fulfilled')
+        scheme_names.append(scheme_name)
     
     # Create notification message with parameter update stats
     param_summary = "\n\nParameter Updates:\n  Matched areas cleared: {}\n  Target DGSF set: {}\n  Unmatched areas updated: {}\n  Skipped: {}".format(
@@ -111,13 +113,15 @@ def monitor_area(doc):
             writeback_summary += "\n  ERROR: Excel file cannot be written because you have it open in another program. Please close it and try again."
             # writeback_summary += "\n  Error: {}".format(writeback_stats['error'])
     
-    if len(filepaths) == 1:
-        msg = "HTML Report Generated and Opened!\nFile: {}\nScheme: {}\nFulfilled: {}/{}{}{}".format(
-            os.path.basename(filepaths[0]), list(all_matches.keys())[0], total_fulfilled, total_requirements, param_summary, writeback_summary)
-    else:
-        filenames = "\n  - ".join([os.path.basename(f) for f in filepaths])
-        msg = "HTML Reports Generated and Opened!\nFiles:\n  - {}\nSchemes: {}\nFulfilled: {}/{}{}{}".format(
-            filenames, len(all_matches), total_fulfilled, total_requirements, param_summary, writeback_summary)
+    # Create notification message
+    schemes_text = ", ".join(scheme_names) if len(scheme_names) <= 3 else "{} schemes".format(len(scheme_names))
+    msg = "Consolidated HTML Report Generated and Opened!\nFile: {}\nSchemes: {}\nFulfilled: {}/{}{}{}".format(
+        os.path.basename(filepaths[0]) if filepaths else "N/A", 
+        schemes_text, 
+        total_fulfilled, 
+        total_requirements, 
+        param_summary, 
+        writeback_summary)
     
     NOTIFICATION.messenger(main_text=msg)
     
