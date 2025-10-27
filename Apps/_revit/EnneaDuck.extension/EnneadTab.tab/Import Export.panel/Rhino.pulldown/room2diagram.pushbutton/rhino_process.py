@@ -161,25 +161,48 @@ class RhinoProcess(BaseProcessor):
             text_content = "{}\n{} SF".format(space_color_identifier, space_area)
             text_geo = Rhino.Display.Text3d(text_content)
             text_geo.HorizontalAlignment = Rhino.DocObjects.TextHorizontalAlignment.Center
-            text_geo.TextPlane = RIR_DECODER.ToPlane(DB.Plane.CreateByNormalAndOrigin(DB.XYZ(0,0,1), space.Location.Point))
+            # Create text plane safely - avoid casting issues
+            try:
+                if RIR_IMPORT_OK:
+                    # Use RhinoInside converter if available
+                    text_geo.TextPlane = RIR_DECODER.ToPlane(DB.Plane.CreateByNormalAndOrigin(DB.XYZ(0,0,1), space.Location.Point))
+                else:
+                    # Fallback: create Rhino plane directly
+                    space_point = space.Location.Point
+                    origin = Rhino.Geometry.Point3d(space_point.X, space_point.Y, space_point.Z)
+                    normal = Rhino.Geometry.Vector3d(0, 0, 1)
+                    text_geo.TextPlane = Rhino.Geometry.Plane(origin, normal)
+            except Exception as plane_error:
+                print("Warning: Failed to create text plane: {}. Using default plane.".format(str(plane_error)))
+                # Use default plane as fallback
+                text_geo.TextPlane = Rhino.Geometry.Plane.WorldXY
             self.rhino_doc.Objects.AddText(text_geo, label_attr)
 
-        # Process boundary curves (already converted to Rhino curves by base class)
+        # Process boundary curves (convert from Revit to Rhino format)
         if boundary_curves:
-            # The boundary_curves from BaseProcessor are already Rhino curves
-            # Just join them and process
-            if len(boundary_curves) > 1:
-                joined_curves = Rhino.Geometry.Curve.JoinCurves(boundary_curves)
-                if joined_curves and len(joined_curves) > 0:
-                    curve = joined_curves[0]
-                else:
-                    curve = boundary_curves[0]  # Fallback to first curve if join fails
-            else:
-                curve = boundary_curves[0]
+            # Convert Revit curves to Rhino curves first
+            rhino_curves = self._convert_to_rhino_curves(boundary_curves, "revit")
             
-            filleted_crv = self._create_filleted_curve(curve, space_color_identifier)
-            if filleted_crv:
-                self._create_and_add_hatch(filleted_crv, space_color_identifier)
+            if rhino_curves and len(rhino_curves) > 0:
+                # Join curves if multiple
+                if len(rhino_curves) > 1:
+                    try:
+                        joined_curves = Rhino.Geometry.Curve.JoinCurves(rhino_curves)
+                        if joined_curves and len(joined_curves) > 0:
+                            curve = joined_curves[0]
+                        else:
+                            curve = rhino_curves[0]  # Fallback to first curve if join fails
+                    except Exception as join_error:
+                        print("Warning: Failed to join curves: {}. Using first curve.".format(str(join_error)))
+                        curve = rhino_curves[0]
+                else:
+                    curve = rhino_curves[0]
+                
+                filleted_crv = self._create_filleted_curve(curve, space_color_identifier)
+                if filleted_crv:
+                    self._create_and_add_hatch(filleted_crv, space_color_identifier)
+            else:
+                print("Warning: No valid Rhino curves converted from boundary curves")
         
         return True
     

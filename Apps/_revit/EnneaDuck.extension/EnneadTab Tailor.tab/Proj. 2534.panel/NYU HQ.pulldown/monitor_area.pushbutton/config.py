@@ -16,17 +16,17 @@ APP_EXCEL = "excel"
 APP_REVIT = "revit"
 
 DEPARTMENT_KEY = {
-    APP_REVIT: "Area_$Department",
+    APP_REVIT: "_HealthCare_Department",
     APP_EXCEL: "DEPARTMENT"
 }
 
 PROGRAM_TYPE_KEY = {
-    APP_REVIT: "Area_$Department_Program Type",
+    APP_REVIT: "_HealthCare_Division",
     APP_EXCEL: "DIVISION"
 }
 
 PROGRAM_TYPE_DETAIL_KEY = {
-    APP_REVIT: "Area_$Department_Program Type Detail",
+    APP_REVIT: "_HealthCare_Room",
     APP_EXCEL: "ROOM NAME"
 }
 

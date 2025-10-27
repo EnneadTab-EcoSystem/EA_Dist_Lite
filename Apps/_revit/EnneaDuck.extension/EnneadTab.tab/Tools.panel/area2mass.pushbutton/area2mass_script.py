@@ -169,19 +169,21 @@ class Area2MassConverter:
             NOTIFICATION.messenger("No area schemes found in project.")
             return False
         
-        # Let user select which area scheme to process
+        # Let user select which area scheme to process using pyRevit SelectFromList
+        # This handles longer lists better than the old dialogue (which was limited to ~4 items)
         scheme_options = []
         for scheme in area_schemes:
             scheme_name = scheme.Name if scheme.Name else "Unnamed Scheme"
             scheme_options.append(scheme_name)
         
-        selected_scheme_name = REVIT_FORMS.dialogue(
+        selected_scheme_name = forms.SelectFromList.show(
+            scheme_options,
+            multiselect=False,
             title="Area2Mass - Select Area Scheme",
-            main_text="Select the area scheme to process:",
-            options=scheme_options
+            button_name="Select Area Scheme"
         )
         
-        if not selected_scheme_name or selected_scheme_name == "Close" or selected_scheme_name == "Cancel":
+        if not selected_scheme_name:
             return False
         
         # Find the selected scheme by matching the name
@@ -269,12 +271,13 @@ class Area2MassConverter:
             opts.append(nm)
             name_map[nm] = s
 
-        choice = REVIT_FORMS.dialogue(
+        choice = forms.SelectFromList.show(
+            opts,
+            multiselect=False,
             title="Area2Mass - Select Color Scheme",
-            main_text="Select a color scheme to drive material colors:",
-            options=opts
+            button_name="Select Color Scheme"
         )
-        if not choice or choice in ("Close", "Cancel"):
+        if not choice:
             return True  # treat as optional; proceed without scheme
 
         self.selected_scheme = name_map.get(choice)

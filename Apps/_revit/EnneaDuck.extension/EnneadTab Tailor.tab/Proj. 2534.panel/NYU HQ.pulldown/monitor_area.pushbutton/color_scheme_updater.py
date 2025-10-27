@@ -87,10 +87,55 @@ def update_color_scheme_from_dict(doc, color_scheme_name, color_dict):
                 print("    Skipping invalid entry name: '{}'".format(entry_name))
                 continue
             
+            # Skip entries starting with # (comments/headers in Excel)
+            if entry_name.strip().startswith('#'):
+                print("    Skipping comment/header entry: '{}'".format(entry_name))
+                continue
+            
             # Skip entries with invalid colors
             if not hex_color or not hex_color.startswith('#'):
                 print("    Skipping entry '{}' with invalid color: '{}'".format(entry_name, hex_color))
                 continue
+            
+            # Sanitize entry name by replacing forbidden characters
+            # Revit error message: "Name cannot contain any of the following characters: \:{}[]|; < >?`~ or any of the non-printable characters."
+            original_name = entry_name
+            sanitized_name = entry_name
+            
+            # Replace forbidden characters with dash (based on Revit's exact error message)
+            # Note: / (forward slash) is allowed and not in this list
+            forbidden_chars = {
+                '\\': '-',  # backslash
+                ':': '-',   # colon
+                '{': '-',   # opening brace
+                '}': '-',   # closing brace
+                '[': '-',   # opening bracket
+                ']': '-',   # closing bracket
+                '|': '-',   # pipe
+                ';': '-',   # semicolon
+                '<': '',    # less than (remove)
+                '>': '',    # greater than (remove)
+                '?': '',    # question mark (remove)
+                '`': '',    # backtick (remove)
+                '~': ''     # tilde (remove)
+            }
+            
+            for forbidden, replacement in forbidden_chars.items():
+                sanitized_name = sanitized_name.replace(forbidden, replacement)
+            
+            # Clean up multiple dashes and spaces
+            while '--' in sanitized_name:
+                sanitized_name = sanitized_name.replace('--', '-')
+            while '  ' in sanitized_name:
+                sanitized_name = sanitized_name.replace('  ', ' ')
+            
+            sanitized_name = sanitized_name.strip(' -')
+            
+            # Log sanitization if name changed
+            if sanitized_name != original_name:
+                print("    Sanitized name: '{}' -> '{}'".format(original_name, sanitized_name))
+            
+            entry_name = sanitized_name
             
             revit_color = hex_to_revit_color(hex_color)
             

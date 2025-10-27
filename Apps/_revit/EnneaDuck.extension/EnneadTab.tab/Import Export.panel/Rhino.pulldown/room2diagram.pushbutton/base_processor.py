@@ -783,39 +783,17 @@ class BaseProcessor:
                                     rhino_curves.append(rhino_curve)
                                     # print("DEBUG: Converted Revit curve to Rhino curve")
                                 else:
-                                    # print("Warning: Invalid Rhino curve converted from Revit curve")
-                                    pass # Removed DEBUG print
+                                    print("Warning: Invalid Rhino curve converted from Revit curve")
+                                    # Try fallback conversion
+                                    rhino_curve = self._fallback_curve_conversion(curve)
+                                    if rhino_curve:
+                                        rhino_curves.append(rhino_curve)
                             except Exception as e:
-                                # print("Warning: Failed to convert Revit curve to Rhino curve: {}".format(str(e)))
-                                # For Revit curves, try using GetEndPoint as fallback
-                                try:
-                                    if hasattr(curve, 'GetEndPoint'):
-                                        start_point = curve.GetEndPoint(0)
-                                        end_point = curve.GetEndPoint(1)
-                                        if start_point and end_point:
-                                            # Create a Rhino line from Revit curve endpoints
-                                            rhino_line = Rhino.Geometry.Line(
-                                                Rhino.Geometry.Point3d(start_point.X, start_point.Y, start_point.Z),
-                                                Rhino.Geometry.Point3d(end_point.X, end_point.Y, end_point.Z)
-                                            )
-                                            if rhino_line.IsValid:
-                                                # Convert Line to Curve for compatibility with Rhino methods
-                                                rhino_curve = rhino_line.ToNurbsCurve()
-                                                if rhino_curve and rhino_curve.IsValid:
-                                                    rhino_curves.append(rhino_curve)
-                                                    # print("Created fallback Rhino curve from Revit curve endpoints")
-                                                else:
-                                                    # print("Warning: Fallback curve conversion failed")
-                                                    pass # Removed DEBUG print
-                                            else:
-                                                # print("Warning: Fallback line creation failed")
-                                                pass # Removed DEBUG print
-                                    else:
-                                        # print("Warning: Revit curve has no GetEndPoint method")
-                                        pass # Removed DEBUG print
-                                except Exception as e2:
-                                    # print("Warning: Fallback conversion also failed: {}".format(str(e2)))
-                                    pass # Removed DEBUG print
+                                print("Warning: Failed to convert Revit curve to Rhino curve: {}".format(str(e)))
+                                # Try fallback conversion
+                                rhino_curve = self._fallback_curve_conversion(curve)
+                                if rhino_curve:
+                                    rhino_curves.append(rhino_curve)
                         else:
                             # print("Warning: Revit curve is invalid")
                             pass # Removed DEBUG print
@@ -1045,6 +1023,35 @@ class BaseProcessor:
             half_distance = offset_distance / 2.0
             print("Error applying offset with distance {} feet: {}. Retrying with {} feet".format(offset_distance, str(e), half_distance))
             return self._try_offset_with_retry(rhino_curve, half_distance, min_distance)
+    
+    def _fallback_curve_conversion(self, curve):
+        """Fallback method to convert Revit curve to Rhino curve when RIR_DECODER fails.
+        
+        Args:
+            curve: Revit curve object
+            
+        Returns:
+            Rhino.Geometry.Curve: Converted Rhino curve or None if failed
+        """
+        try:
+            if hasattr(curve, 'GetEndPoint'):
+                start_point = curve.GetEndPoint(0)
+                end_point = curve.GetEndPoint(1)
+                if start_point and end_point:
+                    # Create a Rhino line from Revit curve endpoints
+                    rhino_line = Rhino.Geometry.Line(
+                        Rhino.Geometry.Point3d(start_point.X, start_point.Y, start_point.Z),
+                        Rhino.Geometry.Point3d(end_point.X, end_point.Y, end_point.Z)
+                    )
+                    if rhino_line.IsValid:
+                        # Convert Line to Curve for compatibility with Rhino methods
+                        rhino_curve = rhino_line.ToNurbsCurve()
+                        if rhino_curve and rhino_curve.IsValid:
+                            return rhino_curve
+        except Exception as e:
+            print("Warning: Fallback curve conversion failed: {}".format(str(e)))
+        
+        return None
     
     # ============================================================================
     # INTERNAL UTILITY METHODS
