@@ -183,6 +183,7 @@ Website/docs/
 
 Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Resource.panel/revit_remote_server.pushbutton/current_job.sexyDuck
 DarkSide/exes/source code/RevitSlave-3.0/revit_logic/current_job.sexyDuck
+DarkSide/exes/source code/RevitSlave-3.0/revit_logic/current_check.txt
 
 # AutoExporter orchestrator runtime files
 Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/AutoExporter.pushbutton/current_job_payload.json
