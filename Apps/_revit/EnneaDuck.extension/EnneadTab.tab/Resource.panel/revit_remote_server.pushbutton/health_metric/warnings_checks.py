@@ -3,15 +3,15 @@ from Autodesk.Revit import DB # pyright: ignore
 
 
 def check_warnings(doc):
-    """Check warnings metrics with advanced analysis"""
+    """Check warnings metrics with advanced analysis - OPTIMIZED"""
     try:
         warnings_data = {}
         
-        # Warnings
+        # BEST PRACTICE: Use doc.GetWarnings() - most direct and efficient method
         all_warnings = doc.GetWarnings()
         warnings_data["warning_count"] = len(all_warnings)
         
-        # Critical warnings
+        # Critical warnings with expanded GUID list
         CRITICAL_WARNINGS = [
             "6e1efefe-c8e0-483d-8482-150b9f1da21a",  # Elements have duplicate "Number" values
             "b4176cef-6086-45a8-a066-c3fd424c9412",  # There are identical instances in the same place
@@ -24,7 +24,9 @@ def check_warnings(doc):
             "f657364a-e0b7-46aa-8c17-edd8e59683b9",  # Multiple Areas are in the same enclosed region
         ]
         
-        critical_warnings = [w for w in all_warnings if w.GetFailureDefinitionId().Guid in CRITICAL_WARNINGS]
+        # OPTIMIZATION: Use set for O(1) lookup instead of list for O(n) lookup
+        critical_guids = set(CRITICAL_WARNINGS)
+        critical_warnings = [w for w in all_warnings if str(w.GetFailureDefinitionId().Guid) in critical_guids]
         warnings_data["critical_warning_count"] = len(critical_warnings)
         
         # Advanced warning analysis
@@ -36,37 +38,36 @@ def check_warnings(doc):
         for warning in all_warnings:
             warning_text = warning.GetDescriptionText()
             
-            # Update warning category count
-            current_count = warning_category.get(warning_text, 0)
-            warning_category[warning_text] = current_count + 1
+            # OPTIMIZATION: Use dict.get() with default instead of checking membership
+            warning_category[warning_text] = warning_category.get(warning_text, 0) + 1
             
             # Collect failing elements
-            failed_elements.extend(list(warning.GetFailingElements()))
+            failing_elements = warning.GetFailingElements()
+            failed_elements.extend(list(failing_elements))
             
             # Process creator and last editor information
-            try:
-                failing_elements = warning.GetFailingElements()
+            # OPTIMIZATION: Only process worksharing info if document is workshared
+            if doc.IsWorkshared:
                 for element_id in failing_elements:
-                    info = DB.WorksharingUtils.GetWorksharingTooltipInfo(doc, element_id)
-                    if info:
-                        creator = info.Creator
-                        last_editor = info.LastChangedBy
-                        
-                        # Track creator warnings
-                        if creator:
-                            if creator not in user_personal_log:
-                                user_personal_log[creator] = {}
-                            current_log = user_personal_log[creator]
-                            current_log[warning_text] = current_log.get(warning_text, 0) + 1
-                        
-                        # Track last editor warnings
-                        if last_editor:
-                            if last_editor not in user_editor_log:
-                                user_editor_log[last_editor] = {}
-                            current_log = user_editor_log[last_editor]
-                            current_log[warning_text] = current_log.get(warning_text, 0) + 1
-            except:
-                pass  # Skip if worksharing info not available
+                    try:
+                        info = DB.WorksharingUtils.GetWorksharingTooltipInfo(doc, element_id)
+                        if info:
+                            creator = info.Creator
+                            last_editor = info.LastChangedBy
+                            
+                            # Track creator warnings
+                            if creator:
+                                if creator not in user_personal_log:
+                                    user_personal_log[creator] = {}
+                                user_personal_log[creator][warning_text] = user_personal_log[creator].get(warning_text, 0) + 1
+                            
+                            # Track last editor warnings
+                            if last_editor:
+                                if last_editor not in user_editor_log:
+                                    user_editor_log[last_editor] = {}
+                                user_editor_log[last_editor][warning_text] = user_editor_log[last_editor].get(warning_text, 0) + 1
+                    except:
+                        pass  # Skip if worksharing info not available
         
         # Store advanced warning analysis
         warnings_data["warning_categories"] = warning_category
@@ -81,31 +82,41 @@ def check_warnings(doc):
 
 
 def _get_user_element_counts(doc, elements):
-    """Get element counts per user (creator and last editor)"""
+    """Get element counts per user (creator and last editor) - OPTIMIZED"""
     try:
+        # OPTIMIZATION: Skip worksharing checks if document isn't workshared
+        if not doc.IsWorkshared:
+            return {
+                "by_creator": {},
+                "by_last_editor": {}
+            }
+        
         creator_data = {}
         last_editor_data = {}
-        for element in elements:
+        
+        # OPTIMIZATION: Process element IDs directly instead of element objects
+        for element_id in elements:
             try:
-                info = DB.WorksharingUtils.GetWorksharingTooltipInfo(
-                    doc, element.Id)
+                info = DB.WorksharingUtils.GetWorksharingTooltipInfo(doc, element_id if isinstance(element_id, DB.ElementId) else element_id.Id)
                 if info:
                     creator = info.Creator
                     last_editor = info.LastChangedBy
                     
                     if creator:
-                        count = creator_data.get(creator, 0)
-                        creator_data[creator] = count + 1
+                        creator_data[creator] = creator_data.get(creator, 0) + 1
                     
                     if last_editor:
-                        count = last_editor_data.get(last_editor, 0)
-                        last_editor_data[last_editor] = count + 1
+                        last_editor_data[last_editor] = last_editor_data.get(last_editor, 0) + 1
             except:
                 pass  # Skip if worksharing info not available
+        
         return {
             "by_creator": creator_data,
             "by_last_editor": last_editor_data
         }
     except:
-        return {}
+        return {
+            "by_creator": {},
+            "by_last_editor": {}
+        }
 

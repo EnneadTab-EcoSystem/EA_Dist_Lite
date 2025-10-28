@@ -3,29 +3,43 @@ from Autodesk.Revit import DB # pyright: ignore
 
 
 def check_templates_filters(doc):
-    """Check templates and filters metrics"""
+    """Check templates and filters metrics - OPTIMIZED"""
     try:
         templates_data = {}
         
-        # View templates
+        # BEST PRACTICE: Single collector call, then filter in memory
         all_views = DB.FilteredElementCollector(doc).OfClass(DB.View).ToElements()
         all_true_views = [v for v in all_views if v.IsTemplate == False]
         all_templates = [v for v in all_views if v.IsTemplate == True]
         
         templates_data["view_templates"] = len(all_templates)
         
-        # Check for unused view templates
-        usage = {}
-        for view in all_true_views:
-            template = doc.GetElement(view.ViewTemplateId)
-            if not template:
-                continue
-            key = template.Name
-            count = usage.get(key, 0)
-            usage[key] = count + 1
+        # OPTIMIZATION: Use ElementId-based set for O(1) lookup instead of name-based
+        usage_by_id = {}
+        usage_by_name = {}
         
-        used_template_names = set(usage.keys())
-        unused_templates = [x for x in all_templates if x.Name not in used_template_names]
+        for view in all_true_views:
+            try:
+                template_id = view.ViewTemplateId
+                # BEST PRACTICE: Check for InvalidElementId to avoid unnecessary doc.GetElement calls
+                if template_id and template_id != DB.ElementId.InvalidElementId:
+                    # Track by ID (more reliable)
+                    id_int = template_id.IntegerValue
+                    usage_by_id[id_int] = usage_by_id.get(id_int, 0) + 1
+                    
+                    # Also track by name for backward compatibility
+                    template = doc.GetElement(template_id)
+                    if template:
+                        usage_by_name[template.Name] = usage_by_name.get(template.Name, 0) + 1
+            except:
+                continue
+        
+        # OPTIMIZATION: Use set for O(1) membership testing
+        used_template_ids = set(usage_by_id.keys())
+        used_template_names = set(usage_by_name.keys())
+        
+        # Find unused templates (templates with no views using them)
+        unused_templates = [t for t in all_templates if t.Id.IntegerValue not in used_template_ids]
         templates_data["unused_view_templates"] = len(unused_templates)
         
         # Collect detailed view template information with creator and last editor
@@ -37,7 +51,7 @@ def check_templates_filters(doc):
                     "id": template.Id.IntegerValue,
                     "view_type": str(template.ViewType) if hasattr(template, 'ViewType') else "Unknown",
                     "is_used": template.Name in used_template_names,
-                    "usage_count": usage.get(template.Name, 0),
+                    "usage_count": usage_by_name.get(template.Name, 0),
                     "creator": "Unknown",
                     "last_editor": "Unknown"
                 }

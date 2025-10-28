@@ -110,18 +110,77 @@ def check_critical_elements(doc):
 
 
 def check_rooms(doc):
-    """Check rooms metrics"""
+    """Check rooms metrics - OPTIMIZED"""
     try:
         rooms_data = {}
         
-        rooms = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_Rooms).WhereElementIsNotElementType().ToElements()
+        # BEST PRACTICE: Use OfCategory with WhereElementIsNotElementType
+        rooms = DB.FilteredElementCollector(doc)\
+            .OfCategory(DB.BuiltInCategory.OST_Rooms)\
+            .WhereElementIsNotElementType()\
+            .ToElements()
         rooms_data["total_rooms"] = len(rooms)
         
-        unplaced_rooms = [r for r in rooms if r.Location is None]
-        rooms_data["unplaced_rooms"] = len(unplaced_rooms)
+        # OPTIMIZATION: Single-pass collection for multiple conditions
+        unplaced_rooms = []
+        unbounded_rooms = []
+        unplaced_room_details = []
+        unbounded_room_details = []
         
-        unbounded_rooms = [r for r in rooms if r.Area == 0]
+        for room in rooms:
+            try:
+                # Check if room is unplaced (Location is None)
+                if room.Location is None:
+                    unplaced_rooms.append(room)
+                    # ENHANCEMENT: Collect details about unplaced rooms
+                    try:
+                        room_info = {
+                            "id": room.Id.IntegerValue,
+                            "name": room.get_Parameter(DB.BuiltInParameter.ROOM_NAME).AsString() if room.get_Parameter(DB.BuiltInParameter.ROOM_NAME) else "<No Name>",
+                            "number": room.get_Parameter(DB.BuiltInParameter.ROOM_NUMBER).AsString() if room.get_Parameter(DB.BuiltInParameter.ROOM_NUMBER) else "<No Number>",
+                            "level": room.Level.Name if room.Level else "<No Level>"
+                        }
+                        unplaced_room_details.append(room_info)
+                    except:
+                        pass
+                
+                # Check if room is unbounded (Area == 0)
+                # BEST PRACTICE: Check Area property (more reliable than parameter)
+                try:
+                    if room.Area == 0 or room.Area < 0.01:  # Account for floating point precision
+                        unbounded_rooms.append(room)
+                        # ENHANCEMENT: Collect details about unbounded rooms
+                        try:
+                            room_info = {
+                                "id": room.Id.IntegerValue,
+                                "name": room.get_Parameter(DB.BuiltInParameter.ROOM_NAME).AsString() if room.get_Parameter(DB.BuiltInParameter.ROOM_NAME) else "<No Name>",
+                                "number": room.get_Parameter(DB.BuiltInParameter.ROOM_NUMBER).AsString() if room.get_Parameter(DB.BuiltInParameter.ROOM_NUMBER) else "<No Number>",
+                                "level": room.Level.Name if room.Level else "<No Level>",
+                                "area": room.Area
+                            }
+                            unbounded_room_details.append(room_info)
+                        except:
+                            pass
+                except:
+                    pass
+            except:
+                continue
+        
+        # MAINTAIN BACKWARD COMPATIBILITY: Keep original keys with counts
+        rooms_data["unplaced_rooms"] = len(unplaced_rooms)
         rooms_data["unbounded_rooms"] = len(unbounded_rooms)
+        
+        # ENHANCEMENT: Add detailed room info (optional fields, backward compatible)
+        rooms_data["unplaced_room_details"] = unplaced_room_details
+        rooms_data["unbounded_room_details"] = unbounded_room_details
+        
+        # ENHANCEMENT: Calculate room health metrics
+        if len(rooms) > 0:
+            rooms_data["unplaced_percentage"] = (len(unplaced_rooms) / float(len(rooms))) * 100
+            rooms_data["unbounded_percentage"] = (len(unbounded_rooms) / float(len(rooms))) * 100
+        else:
+            rooms_data["unplaced_percentage"] = 0
+            rooms_data["unbounded_percentage"] = 0
         
         return rooms_data
         

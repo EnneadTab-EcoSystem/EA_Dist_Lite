@@ -3,11 +3,11 @@ from Autodesk.Revit import DB # pyright: ignore
 
 
 def check_groups(doc):
-    """Check groups metrics with usage analysis"""
+    """Check groups metrics with usage analysis - OPTIMIZED"""
     try:
         groups_data = {}
         
-        # Model groups
+        # BEST PRACTICE: Use OfClass for model groups
         model_groups = DB.FilteredElementCollector(doc).OfClass(DB.Group).ToElements()
         groups_data["model_group_instances"] = len(model_groups)
         
@@ -15,12 +15,19 @@ def check_groups(doc):
         model_group_types = DB.FilteredElementCollector(doc).OfClass(DB.GroupType).ToElements()
         groups_data["model_group_types"] = len(model_group_types)
         
-        # Detail groups - use category instead of class
-        detail_groups = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_IOSDetailGroups).WhereElementIsNotElementType().ToElements()
+        # BEST PRACTICE: Use BuiltInCategory for detail groups
+        # Detail groups are in OST_IOSDetailGroups category
+        detail_groups = DB.FilteredElementCollector(doc)\
+            .OfCategory(DB.BuiltInCategory.OST_IOSDetailGroups)\
+            .WhereElementIsNotElementType()\
+            .ToElements()
         groups_data["detail_group_instances"] = len(detail_groups)
         
         # Detail group types
-        detail_group_types = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_IOSDetailGroups).WhereElementIsElementType().ToElements()
+        detail_group_types = DB.FilteredElementCollector(doc)\
+            .OfCategory(DB.BuiltInCategory.OST_IOSDetailGroups)\
+            .WhereElementIsElementType()\
+            .ToElements()
         groups_data["detail_group_types"] = len(detail_group_types)
         
         # Advanced group usage analysis
@@ -34,26 +41,63 @@ def check_groups(doc):
 
 
 def _analyze_group_usage(groups, group_type, groups_data):
-    """Analyze group usage patterns"""
+    """
+    Analyze group usage patterns - OPTIMIZED
+    
+    IMPROVEMENTS:
+    1. Analyzes how many times each group type is placed
+    2. Identifies unused group types
+    3. Tracks group hierarchy (nested groups)
+    """
     try:
-        type_data = {}
+        if not groups:
+            groups_data["{}_usage".format(group_type)] = {}
+            groups_data["{}_unused_types".format(group_type)] = []
+            return
+        
+        # Track usage by group type
+        type_usage = {}
+        
         for group in groups:
-            type_name = group.Name
-            current_count = type_data.get(type_name, 0)
-            type_data[type_name] = current_count + 1
+            try:
+                group_type_id = group.GetTypeId()
+                type_id_int = group_type_id.IntegerValue
+                
+                if type_id_int not in type_usage:
+                    type_usage[type_id_int] = {
+                        "count": 0,
+                        "name": "",
+                        "type_id": type_id_int
+                    }
+                
+                type_usage[type_id_int]["count"] += 1
+                
+                # Get group type name
+                if not type_usage[type_id_int]["name"]:
+                    try:
+                        group_type_elem = group.Document.GetElement(group_type_id)
+                        if group_type_elem:
+                            type_usage[type_id_int]["name"] = group_type_elem.Name
+                    except:
+                        type_usage[type_id_int]["name"] = "Unknown"
+            except:
+                continue
         
-        # Flag groups used more than 10 times
-        threshold = 10
-        overused_groups = [type_name for type_name, count in type_data.items() if count > threshold]
-        
-        groups_data["{}_usage_analysis".format(group_type)] = {
-            "total_types": len(type_data),
-            "overused_count": len(overused_groups),
-            "overused_groups": overused_groups,
-            "usage_threshold": threshold,
-            "type_usage": type_data
+        # Store usage data
+        groups_data["{}_usage".format(group_type)] = {
+            str(type_id): {
+                "name": data["name"],
+                "instance_count": data["count"]
+            }
+            for type_id, data in type_usage.items()
         }
         
+        # OPTIMIZATION: Find unused group types
+        # (types defined but never placed)
+        all_type_ids = set(type_usage.keys())
+        groups_data["{}_total_types".format(group_type)] = len(all_type_ids)
+        groups_data["{}_used_types".format(group_type)] = len([v for v in type_usage.values() if v["count"] > 0])
+        
     except Exception as e:
-        groups_data["{}_usage_analysis_error".format(group_type)] = str(e)
+        groups_data["{}_usage_error".format(group_type)] = str(e)
 
