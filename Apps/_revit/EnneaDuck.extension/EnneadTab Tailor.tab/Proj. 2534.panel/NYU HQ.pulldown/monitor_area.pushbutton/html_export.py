@@ -547,6 +547,42 @@ class HTMLReportGenerator:
         </div>
     </header>
     
+    <div class="viewer3d-section">
+        <h2>🏗️ 3D Area Geometry Viewer</h2>
+        <div class="viewer3d-controls">
+            <button class="control-btn active" data-mode="2d">2D Floor Plan</button>
+            <button class="control-btn" data-mode="3d">3D Extrusion</button>
+            <select id="level-selector" class="control-select">
+                <option value="all">Level: All Levels</option>
+            </select>
+            <select id="department-selector" class="control-select">
+                <option value="all">Department: All Departments</option>
+            </select>
+            <button class="control-btn" data-mode="target-overlay">Show Target Overlay</button>
+            <button class="control-btn" data-mode="reset">Reset Camera</button>
+            <button class="control-btn" data-mode="zoom">Zoom to Fit</button>
+            <button class="control-btn" data-mode="animate">Animate</button>
+        </div>
+        <div class="viewer3d-instructions">
+            <span>Right-Click: Orbit | Shift+Right: Pan | Scroll: Zoom | Double-Click: Select Area</span>
+        </div>
+        <div class="viewer3d-container">
+            <canvas id="viewer3d-canvas"></canvas>
+            <div class="viewer3d-info" id="viewer3d-info">
+                <div class="info-panel">
+                    <h4>3D Area Geometry</h4>
+                    <p>Loading area data...</p>
+                </div>
+            </div>
+        </div>
+        <div class="viewer3d-legend">
+            <div class="legend-title">View Legend</div>
+            <div class="legend-items" id="viewer3d-legend">
+                <!-- Dynamic legend will be generated here -->
+            </div>
+        </div>
+    </div>
+    
     <div class="department-summary-section">
         <h2>📊 Department Fulfillment Summary</h2>
         {department_summary_table}
@@ -768,6 +804,10 @@ class HTMLReportGenerator:
         <div class="minimap-item" onclick="scrollToSection('main-header')" data-section="main-header">
             <span class="minimap-icon">🏥</span>
             <span>Report Header</span>
+        </div>
+        <div class="minimap-item" onclick="scrollToSection('viewer3d-section')" data-section="viewer3d-section">
+            <span class="minimap-icon">🏗️</span>
+            <span>3D Viewer</span>
         </div>
         <div class="minimap-item" onclick="scrollToSection('department-summary-section')" data-section="department-summary-section">
             <span class="minimap-icon">📊</span>
@@ -2988,6 +3028,30 @@ class HTMLReportGenerator:
             color: white;
         }
         
+        .control-select {
+            padding: 8px 16px;
+            background: #1f2937;
+            color: #e5e7eb;
+            border: 1px solid #374151;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .control-select:hover {
+            background: #374151;
+            border-color: #4b5563;
+        }
+        
+        .viewer3d-instructions {
+            text-align: center;
+            color: #9ca3af;
+            font-size: 0.8rem;
+            margin-bottom: 16px;
+        }
+        
         .viewer3d-container {
             position: relative;
             width: 100%;
@@ -3922,6 +3986,19 @@ class HTMLReportGenerator:
         };
         document.head.appendChild(chartScript);
         
+        // Load Three.js for 3D viewer
+        const threeScript = document.createElement('script');
+        threeScript.src = 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js';
+        threeScript.onload = function() {
+            const controlsScript = document.createElement('script');
+            controlsScript.src = 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js';
+            controlsScript.onload = function() {
+                initialize3DViewer();
+            };
+            document.head.appendChild(controlsScript);
+        };
+        document.head.appendChild(threeScript);
+        
         function initializeChart() {
             console.log('initializeChart called');
             // Wait for DOM to be ready
@@ -3931,6 +4008,29 @@ class HTMLReportGenerator:
                 });
             } else {
                 initializeComponents();
+            }
+        }
+        
+        function initialize3DViewer() {
+            console.log('initialize3DViewer called');
+            // Wait for DOM to be ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function() {
+                    initialize3DComponents();
+                });
+            } else {
+                initialize3DComponents();
+            }
+        }
+        
+        function initialize3DComponents() {
+            console.log('Initializing 3D components...');
+            const canvas = document.getElementById('viewer3d-canvas');
+            if (canvas && typeof THREE !== 'undefined') {
+                console.log('Creating 3D viewer...');
+                create3DViewer(canvas);
+            } else {
+                console.log('3D canvas or Three.js not available');
             }
         }
         
@@ -5984,6 +6084,283 @@ class HTMLReportGenerator:
         window.addEventListener('hashchange', handleHashChange);
         
         console.log('Scheme switching initialized');
+        
+        // ========== 3D VIEWER FUNCTIONS ==========
+        
+        function create3DViewer(canvas) {
+            console.log('Initializing 3D viewer...');
+            
+            if (typeof THREE === 'undefined') {
+                console.error('Three.js not loaded');
+                canvas.parentElement.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 40px;">Three.js library failed to load. Please refresh the page.</p>';
+                return;
+            }
+            
+            // Scene setup
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0f172a);
+            
+            // Camera setup
+            const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 10000);
+            camera.position.set(500, 500, 500);
+            
+            // Renderer setup
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            
+            // Controls
+            const controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.enableZoom = true;
+            controls.enablePan = true;
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(500, 1000, 500);
+            directionalLight.castShadow = true;
+            scene.add(directionalLight);
+            
+            // Extract area geometry data from the page
+            const areaData = extract3DAreaData();
+            console.log('Extracted 3D area data:', areaData);
+            
+            // Create 3D geometry from area data
+            create3DAreaGeometry(scene, areaData);
+            
+            // Setup interactive controls
+            setup3DViewerControls(controls, scene, camera, renderer, areaData);
+            
+            // Animation loop
+            function animate() {
+                requestAnimationFrame(animate);
+                controls.update();
+                renderer.render(scene, camera);
+            }
+            animate();
+            
+            // Handle window resize
+            window.addEventListener('resize', function() {
+                const width = canvas.clientWidth;
+                const height = canvas.clientHeight;
+                camera.aspect = width / height;
+                camera.updateProjectionMatrix();
+                renderer.setSize(width, height);
+            });
+            
+            console.log('3D viewer initialized successfully');
+        }
+        
+        function extract3DAreaData() {
+            console.log('Extracting 3D area data from page...');
+            const areas = [];
+            
+            // Get all tree nodes that represent areas
+            const areaNodes = document.querySelectorAll('.tree-node-content');
+            
+            areaNodes.forEach(node => {
+                try {
+                    const nameElement = node.querySelector('.node-label');
+                    const areaElement = node.querySelector('.node-area');
+                    const levelElement = node.querySelector('.node-level');
+                    
+                    if (nameElement && areaElement) {
+                        const areaName = nameElement.textContent.trim();
+                        const areaText = areaElement.textContent.trim();
+                        const levelText = levelElement ? levelElement.textContent.trim() : 'Unknown';
+                        
+                        // Parse area value
+                        const areaMatch = areaText.match(/([0-9,.]+)\s*SF/);
+                        const areaSF = areaMatch ? parseFloat(areaMatch[1].replace(/,/g, '')) : 0;
+                        
+                        // Get department color from parent
+                        const treeNode = node.closest('.tree-node');
+                        const deptNode = treeNode ? treeNode.closest('.department-node') : null;
+                        const colorElement = deptNode ? deptNode.querySelector('.department-header') : null;
+                        const color = colorElement ? window.getComputedStyle(colorElement).borderColor : '#6b7280';
+                        
+                        if (areaSF > 0) {
+                            areas.push({
+                                name: areaName,
+                                area: areaSF,
+                                level: levelText,
+                                color: color
+                            });
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Error extracting area data:', e);
+                }
+            });
+            
+            console.log('Extracted', areas.length, 'areas with geometry data');
+            return areas;
+        }
+        
+        function create3DAreaGeometry(scene, areaData) {
+            console.log('Creating 3D area geometry...');
+            
+            // Group areas by level
+            const levelGroups = {};
+            areaData.forEach(area => {
+                if (!levelGroups[area.level]) {
+                    levelGroups[area.level] = [];
+                }
+                levelGroups[area.level].push(area);
+            });
+            
+            // Sort levels
+            const levels = Object.keys(levelGroups).sort();
+            let yOffset = 0;
+            
+            levels.forEach((levelName, levelIndex) => {
+                const areas = levelGroups[levelName];
+                const levelHeight = 40;
+                
+                // Create floor plane
+                const floorGeometry = new THREE.PlaneGeometry(1000, 1000);
+                const floorMaterial = new THREE.MeshLambertMaterial({
+                    color: 0x374151,
+                    transparent: true,
+                    opacity: 0.2,
+                    side: THREE.DoubleSide
+                });
+                const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+                floor.rotation.x = -Math.PI / 2;
+                floor.position.y = yOffset;
+                scene.add(floor);
+                
+                // Create areas as extruded shapes
+                let xOffset = 0;
+                let zOffset = 0;
+                const areasPerRow = 10;
+                
+                areas.forEach((area, areaIndex) => {
+                    // Calculate size based on area (square root for proportional dimensions)
+                    const baseSize = Math.sqrt(area.area) * 0.5;
+                    const height = levelHeight;
+                    
+                    // Parse color from RGB string
+                    const colorMatch = area.color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                    let color = 0x6b7280;
+                    if (colorMatch) {
+                        const r = parseInt(colorMatch[1]);
+                        const g = parseInt(colorMatch[2]);
+                        const b = parseInt(colorMatch[3]);
+                        color = (r << 16) | (g << 8) | b;
+                    }
+                    
+                    // Create box geometry for area
+                    const boxGeometry = new THREE.BoxGeometry(baseSize, height, baseSize);
+                    const boxMaterial = new THREE.MeshLambertMaterial({
+                        color: color,
+                        transparent: true,
+                        opacity: 0.8
+                    });
+                    const box = new THREE.Mesh(boxGeometry, boxMaterial);
+                    
+                    // Position in grid layout
+                    if (areaIndex > 0 && areaIndex % areasPerRow === 0) {
+                        xOffset = 0;
+                        zOffset += 80;
+                    }
+                    
+                    box.position.set(xOffset, yOffset + height/2, zOffset);
+                    xOffset += 80;
+                    
+                    // Store metadata
+                    box.userData = {
+                        name: area.name,
+                        area: area.area,
+                        level: area.level,
+                        type: 'area'
+                    };
+                    
+                    scene.add(box);
+                });
+                
+                yOffset += levelHeight + 20;
+            });
+            
+            console.log('Created geometry for', levels.length, 'levels');
+        }
+        
+        function setup3DViewerControls(controls, scene, camera, renderer, areaData) {
+            console.log('Setting up 3D viewer controls...');
+            
+            // Handle control button clicks
+            const controlButtons = document.querySelectorAll('.viewer3d-controls .control-btn');
+            controlButtons.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const mode = this.dataset.mode;
+                    console.log('Control button clicked:', mode);
+                    
+                    switch(mode) {
+                        case '2d':
+                            // Top-down view
+                            camera.position.set(0, 1000, 0);
+                            camera.lookAt(0, 0, 0);
+                            controlButtons.forEach(b => b.classList.remove('active'));
+                            this.classList.add('active');
+                            break;
+                        case '3d':
+                            // Isometric view
+                            camera.position.set(500, 500, 500);
+                            camera.lookAt(0, 0, 0);
+                            controlButtons.forEach(b => b.classList.remove('active'));
+                            this.classList.add('active');
+                            break;
+                        case 'reset':
+                            // Reset camera
+                            camera.position.set(500, 500, 500);
+                            camera.lookAt(0, 0, 0);
+                            controls.target.set(0, 0, 0);
+                            break;
+                        case 'zoom':
+                            // Zoom to fit all objects
+                            controls.reset();
+                            break;
+                    }
+                });
+            });
+            
+            // Handle object selection
+            const raycaster = new THREE.Raycaster();
+            const mouse = new THREE.Vector2();
+            
+            renderer.domElement.addEventListener('dblclick', function(event) {
+                const rect = renderer.domElement.getBoundingClientRect();
+                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObjects(scene.children, true);
+                
+                if (intersects.length > 0) {
+                    const object = intersects[0].object;
+                    if (object.userData && object.userData.type === 'area') {
+                        show3DAreaInfo(object.userData);
+                    }
+                }
+            });
+        }
+        
+        function show3DAreaInfo(areaData) {
+            const infoPanel = document.getElementById('viewer3d-info');
+            if (infoPanel) {
+                infoPanel.innerHTML = '<div class="info-panel">' +
+                    '<h4>' + areaData.name + '</h4>' +
+                    '<p><strong>Area:</strong> ' + areaData.area.toLocaleString() + ' SF</p>' +
+                    '<p><strong>Level:</strong> ' + areaData.level + '</p>' +
+                    '</div>';
+            }
+        }
+        
         """
     
     def open_report_in_browser(self, filepath=None):
