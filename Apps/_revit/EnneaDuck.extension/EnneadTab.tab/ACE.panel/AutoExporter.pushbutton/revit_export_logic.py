@@ -127,12 +127,10 @@ def get_staging_root():
     """Get the root staging directory for ACC-safe local operations
     
     Returns:
-        str: Path to DEBUG/temp/autoexport_staging
+        str: Path to C:/temp/autoexport_staging
     """
-    # Get the workspace root (go up from script location)
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    root_path = os.path.abspath(os.path.join(script_dir, "..", "..", "..", "..", ".."))
-    staging_root = os.path.join(root_path, "DEBUG", "temp", "autoexport_staging")
+    # Use C:/temp for staging (faster, avoids workspace clutter)
+    staging_root = "C:/temp/autoexport_staging"
     return staging_root
 
 
@@ -716,15 +714,21 @@ def sync_to_acc(staging_path, acc_path, heartbeat_callback=None):
         if not os.path.exists(os.path.dirname(acc_path)):
             os.makedirs(os.path.dirname(acc_path))
         
-        # Copy entire tree with overwrite (dirs_exist_ok=True)
-        # This performs ONE operation per file, no deletions
+        # Count files to copy
         file_count = 0
         for root, dirs, files in os.walk(staging_path):
             for file in files:
                 file_count += 1
         
-        log("Copying {} files to ACC (single operation, no deletions)...".format(file_count))
-        shutil.copytree(staging_path, acc_path, dirs_exist_ok=True)
+        log("Copying {} files to ACC...".format(file_count))
+        
+        # IronPython 2.7 compatible: Remove dest if exists, then copy
+        # (dirs_exist_ok doesn't exist in Python 2's shutil.copytree)
+        if os.path.exists(acc_path):
+            log("Removing existing destination folder before copy...")
+            shutil.rmtree(acc_path)
+        
+        shutil.copytree(staging_path, acc_path)
         log("Sync completed successfully: {} files".format(file_count))
         
         return file_count

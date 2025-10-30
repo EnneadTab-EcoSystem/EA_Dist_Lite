@@ -35,8 +35,8 @@
       "szhang@ennead.com",
       "Paula.Gronda@ennead.com"
     ],
-    "subject_template": "{model_name} Auto Export Completed - {date}",
-    "body_template": "\n{model_name} Auto Export Report\n========================\n\nExport Date: {date}\nProject: {project_name}\nPIM Number: {pim_number}\n\nExport Summary:\n- PDF Files: {pdf_count} files\n- DWG Files: {dwg_count} files  \n- JPG Files: {jpg_count} files\n\nExport Location:\n{export_path}\n\nClick the folder link below to open the export location.\n\nFiles Exported:\n{pdf_files}\n{dwg_files}\n{jpg_files}\n\nThis is an automated export from the {model_name} Revit model.\nAll files have been exported with the PIM number prefix for proper project identification.\n\nBest regards,\nEnneadTab Auto Export System\n",
+    "subject_template": "[EnneadTab Bot] AutoExporter {model_name} completed at {date}",
+    "body_template": "\n{model_name} Auto Export Report\n========================\n\nExport Date: {date}\nProject: {project_name}\n{pim_line}\nExport Summary:\n- PDF Files: {pdf_count} files\n- DWG Files: {dwg_count} files  \n- JPG Files: {jpg_count} files\n\nExport Location:\n{export_path}\n\nClick the folder link below to open the export location.\n\nFiles Exported:\n{pdf_files}\n{dwg_files}\n{jpg_files}\n\nThis is an automated export from the {model_name} Revit model.{pim_suffix}\n\nBest regards,\nEnneadTab Auto Export System\n",
     "enable_notifications": true
   },
   "paths": {

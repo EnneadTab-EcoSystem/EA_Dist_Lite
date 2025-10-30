@@ -1,0 +1,20 @@
+{
+  "project_name": "2534_NYUL Long Island HQ",
+  "project_id": "b.4456b0ff-5748-4a86-a35f-3a0e1a257a1e",
+  "publish_with_links": true,
+  "_comment_publish_with_links": "NOTE: Publisher now ALWAYS tries WITH links first, then falls back to WITHOUT links if that fails. This setting is kept for backward compatibility but the smart fallback strategy will be used.",
+  "items": [
+    {
+      "name": "2534_A_EA_NYU HQ_Shell.rvt",
+      "id": "urn:adsk.wipprod:dm.lineage:1FOJBJtpQcWjq4NiP_Zamw",
+      "enabled": true
+    },
+    {
+      "name": "2534_A_EA_NYU HQ_Site.rvt",
+      "id": "urn:adsk.wipprod:dm.lineage:CnKUmDV6RI2KICgfG0grNA",
+      "enabled": true
+    }
+  ],
+  "impersonate_user_email": "sen.zhang@ennead.com",
+  "last_resolved_utc": "2025-10-29T20:44:44Z"
+}

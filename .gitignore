@@ -9,6 +9,9 @@ __pycache__/
 # credential files
 credential.json
 aps_credentials.json
+# App-specific credentials and OAuth tokens (do not commit)
+Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/nyu_hq_daily_publisher/configs/credentials.json
+Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/nyu_hq_daily_publisher/configs/user_oauth.json
 
 # InDesign lock files
 *.idlk
@@ -191,9 +194,17 @@ Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/AutoExporter.pushbutton/
 Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/AutoExporter.pushbutton/orchestrator.lock
 
 # Debug and temporary files
-/DEBUG/
+DEBUG/
 *.tmp
 temp_*.py
 test_*.py
 *_temp.*
 *_test.*
+
+# Area monitoring generated files
+**/monitor_area.pushbutton/reports/*.html
+!**/monitor_area.pushbutton/reports/.gitkeep
+**/monitor_area.pushbutton/area_geometry_debug.json
+**/monitor_area.pushbutton/*.json
+!**/monitor_area.pushbutton/hardware_cache.json
+!**/monitor_area.pushbutton/config.json

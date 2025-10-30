@@ -187,7 +187,6 @@ def _set_suggestion_parameter(area_object):
             if not suggestion_text:
                 suggestion_text = _generate_no_suggestion_text()
             
-            print("    Setting suggestion: '{}'".format(suggestion_text))
             param.Set(suggestion_text)
         
         # Clear RoomDataTarget parameter (unmatched areas have no target)

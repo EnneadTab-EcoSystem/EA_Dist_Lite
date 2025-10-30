@@ -1,19 +1,19 @@
 {
   "project": {
-    "project_name": "2001.00_UCSC Thimann IIRB",
+    "project_name": "2412_SPARC",
     "pim_parameter_name": null
   },
   "models": {
-    "EA_UCSC IIRB_A_Building": {
-      "model_guid": "36d25762-09fd-4379-b52c-0d14535d37a0",
-      "project_guid": "9102ddc7-174e-4dfa-9b79-ab51fa0c4065",
+    "SPARC_A_EA_CUNY_Building": {
+      "model_guid": "0be7efb0-d2a0-43bd-8fa0-67be15d54f94",
+      "project_guid": "d92aaa44-5ca0-46fb-9426-ce3d64ebece9",
       "region": "US",
-      "revit_version": "2025"
+      "revit_version": "2024"
     }
   },
   "export": {
-    "output_base_path": "C:\\Users\\{username}\\DC\\ACCDocs\\Ennead Architects LLP\\2001.00_UCSC Thimann IIRB\\Project Files\\05_EXCHANGE\\01_Architecture_Ennead\\05_AutoExport",
-    "sheet_filter_parameter": "Sheet_$Issue_DD 50%",
+    "output_base_path": "C:\\Users\\{username}\\DC\\ACCDocs\\Ennead Architects LLP\\2412_SPARC\\Project Files\\2_RECORD\\AutoPublish",
+    "sheet_filter_parameter": "Sheet_$Issue_SD",
     "dwg_setting_name": "EA - Sheets",
     "pdf_color_parameter": "Print_In_Color",
     "subfolders": ["PDF", "DWG", "JPG"],
@@ -33,7 +33,7 @@
   "email": {
     "recipients": [
       "szhang@ennead.com",
-      "Paula.Gronda@ennead.com"
+      "Sha.Li@ennead.com"
     ],
     "subject_template": "[EnneadTab Bot] AutoExporter {model_name} completed at {date}",
     "body_template": "\n{model_name} Auto Export Report\n========================\n\nExport Date: {date}\nProject: {project_name}\n{pim_line}\nExport Summary:\n- PDF Files: {pdf_count} files\n- DWG Files: {dwg_count} files  \n- JPG Files: {jpg_count} files\n\nExport Location:\n{export_path}\n\nClick the folder link below to open the export location.\n\nFiles Exported:\n{pdf_files}\n{dwg_files}\n{jpg_files}\n\nThis is an automated export from the {model_name} Revit model.{pim_suffix}\n\nBest regards,\nEnneadTab Auto Export System\n",
@@ -51,6 +51,16 @@
     "enabled": true,
     "folder_name": "heartbeat",
     "date_format": "%Y%m%d"
+  },
+  "schedule": {
+    "monday": true,
+    "tuesday": true,
+    "wednesday": true,
+    "thursday": true,
+    "friday": true,
+    "saturday": false,
+    "sunday": false
   }
 }
+
 

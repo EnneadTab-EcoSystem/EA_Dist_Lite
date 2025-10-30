@@ -9,6 +9,7 @@ Supports area schemes for design option comparisons
 from Autodesk.Revit import DB # pyright: ignore
 import config
 from EnneadTab.REVIT import REVIT_SPATIAL_ELEMENT
+import geometry_extractor
 
 
 def get_revit_area_data_by_scheme():
@@ -59,9 +60,20 @@ def get_revit_area_data_by_scheme():
                 level = area.Level
                 
                 # Get the 3 key parameters for proper matching
-                department = _get_area_parameter_value(area, config.DEPARTMENT_KEY[config.APP_REVIT])
-                program_type = _get_area_parameter_value(area, config.PROGRAM_TYPE_KEY[config.APP_REVIT])
-                program_type_detail = _get_area_parameter_value(area, config.PROGRAM_TYPE_DETAIL_KEY[config.APP_REVIT])
+                try:
+                    department = _get_area_parameter_value(area, config.DEPARTMENT_KEY[config.APP_REVIT])
+                except Exception as e:
+                    department = ""
+                
+                try:
+                    program_type = _get_area_parameter_value(area, config.PROGRAM_TYPE_KEY[config.APP_REVIT])
+                except Exception as e:
+                    program_type = ""
+                
+                try:
+                    program_type_detail = _get_area_parameter_value(area, config.PROGRAM_TYPE_DETAIL_KEY[config.APP_REVIT])
+                except Exception as e:
+                    program_type_detail = ""
                 
                 # Get level name and elevation
                 level_name = level.Name if level else "Not Placed"
@@ -74,6 +86,20 @@ def get_revit_area_data_by_scheme():
                 creator_name = _get_element_creator(area, doc)
                 editor_name = _get_element_last_editor(area, doc)
                 
+                # Extract geometry for 3D visualization
+                geometry = None
+                try:
+                    geometry = geometry_extractor.extract_area_geometry(
+                        area,
+                        department=department,
+                        program_type=program_type,
+                        program_type_detail=program_type_detail,
+                        area_sf=area_sf,
+                        color=None  # Will be populated from color scheme later
+                    )
+                except Exception as e:
+                    print("Warning: Failed to extract geometry for area {}: {}".format(area.Id, str(e)))
+                
                 # Create area object with all parameters plus metadata
                 area_object = {
                     'department': department,
@@ -85,7 +111,8 @@ def get_revit_area_data_by_scheme():
                     'area_status': area_status,
                     'creator': creator_name,
                     'last_editor': editor_name,
-                    'revit_element': area  # Store reference to Revit element for parameter updates
+                    'revit_element': area,  # Store reference to Revit element for parameter updates
+                    'geometry': geometry  # Add geometry data for 3D visualization
                 }
                 
                 areas_list.append(area_object)
@@ -233,6 +260,20 @@ def _get_all_areas_as_list(doc):
         creator_name = _get_element_creator(area, doc)
         editor_name = _get_element_last_editor(area, doc)
         
+        # Extract geometry for 3D visualization
+        geometry = None
+        try:
+            geometry = geometry_extractor.extract_area_geometry(
+                area,
+                department=department,
+                program_type=program_type,
+                program_type_detail=program_type_detail,
+                area_sf=area_sf,
+                color=None  # Will be populated from color scheme later
+            )
+        except Exception as e:
+            print("Warning: Failed to extract geometry for area {}: {}".format(area.Id, str(e)))
+        
         # Create area object with all 3 parameters plus level and metadata
         area_object = {
             'department': department,
@@ -243,7 +284,8 @@ def _get_all_areas_as_list(doc):
             'area_status': area_status,
             'creator': creator_name,
             'last_editor': editor_name,
-            'revit_element': area  # Store reference to Revit element for parameter updates
+            'revit_element': area,  # Store reference to Revit element for parameter updates
+            'geometry': geometry  # Add geometry data for 3D visualization
         }
         
         # Add to scheme's list
@@ -272,16 +314,20 @@ def _get_area_parameter_value(area, parameter_name):
     if param:
         # Try string value first
         if param.StorageType == DB.StorageType.String:
-            return param.AsString() or ""
+            value = param.AsString() or ""
+            return value
         # Try double value for numeric parameters
         elif param.StorageType == DB.StorageType.Double:
-            return param.AsDouble()
+            return str(param.AsDouble())
         # Try integer value
         elif param.StorageType == DB.StorageType.Integer:
-            return param.AsInteger()
+            return str(param.AsInteger())
+        # Fallback for element ID storage
+        elif param.StorageType == DB.StorageType.ElementId:
+            return ""
     
-        
-    raise Exception("ERROR getting parameter '{}': {}".format(parameter_name, "Parameter not found"))
+    # Parameter not found - return empty string
+    return ""
 
 
 def _get_element_creator(element, doc):

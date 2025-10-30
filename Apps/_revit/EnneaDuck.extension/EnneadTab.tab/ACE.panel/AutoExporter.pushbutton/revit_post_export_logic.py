@@ -68,12 +68,21 @@ def send_export_email(export_results, pim_number, project_name, model_name, hear
         else:
             simple_path = full_path
         
+        # Prepare PIM-related placeholders
+        if pim_number:
+            pim_line = "PIM Number: {}".format(pim_number)
+            pim_suffix = "\nAll files have been exported with the PIM number prefix for proper project identification."
+        else:
+            pim_line = ""
+            pim_suffix = ""
+        
         # Create email body
         body = EMAIL_BODY_TEMPLATE.format(
             date=current_date,
             project_name=project_name,
             model_name=model_name,
-            pim_number=pim_number or "Not found",
+            pim_line=pim_line,
+            pim_suffix=pim_suffix,
             pdf_count=len(export_results["pdf_files"]),
             dwg_count=len(export_results["dwg_files"]),
             jpg_count=len(export_results["jpg_files"]),

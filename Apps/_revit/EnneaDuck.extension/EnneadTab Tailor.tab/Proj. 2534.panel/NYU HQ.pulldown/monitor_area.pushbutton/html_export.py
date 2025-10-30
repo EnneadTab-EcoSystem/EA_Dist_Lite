@@ -406,12 +406,13 @@ class HTMLReportGenerator:
         Returns:
             tuple: (list of filepaths, all_matches, all_unmatched_areas)
         """
-        # Store color hierarchy for use in HTML generation
+        # Store color hierarchy and revit_data for use in HTML generation
         self.color_hierarchy = color_hierarchy or {
             'department': {},
             'division': {},
             'room_name': {}
         }
+        self.revit_data = revit_data
         
         # Match areas to requirements
         matcher = AreaMatcher()
@@ -547,42 +548,6 @@ class HTMLReportGenerator:
         </div>
     </header>
     
-    <div class="viewer3d-section">
-        <h2>🏗️ 3D Area Geometry Viewer</h2>
-        <div class="viewer3d-controls">
-            <button class="control-btn active" data-mode="2d">2D Floor Plan</button>
-            <button class="control-btn" data-mode="3d">3D Extrusion</button>
-            <select id="level-selector" class="control-select">
-                <option value="all">Level: All Levels</option>
-            </select>
-            <select id="department-selector" class="control-select">
-                <option value="all">Department: All Departments</option>
-            </select>
-            <button class="control-btn" data-mode="target-overlay">Show Target Overlay</button>
-            <button class="control-btn" data-mode="reset">Reset Camera</button>
-            <button class="control-btn" data-mode="zoom">Zoom to Fit</button>
-            <button class="control-btn" data-mode="animate">Animate</button>
-        </div>
-        <div class="viewer3d-instructions">
-            <span>Right-Click: Orbit | Shift+Right: Pan | Scroll: Zoom | Double-Click: Select Area</span>
-        </div>
-        <div class="viewer3d-container">
-            <canvas id="viewer3d-canvas"></canvas>
-            <div class="viewer3d-info" id="viewer3d-info">
-                <div class="info-panel">
-                    <h4>3D Area Geometry</h4>
-                    <p>Loading area data...</p>
-                </div>
-            </div>
-        </div>
-        <div class="viewer3d-legend">
-            <div class="legend-title">View Legend</div>
-            <div class="legend-items" id="viewer3d-legend">
-                <!-- Dynamic legend will be generated here -->
-            </div>
-        </div>
-    </div>
-    
     <div class="department-summary-section">
         <h2>📊 Department Fulfillment Summary</h2>
         {department_summary_table}
@@ -670,6 +635,47 @@ class HTMLReportGenerator:
             </div>
         </div>
     </div>
+    
+    <div id="geometry-viewer-section-{safe_scheme_name}" class="geometry-viewer-section">
+        <h2>🏗️ 3D Area Geometry Viewer</h2>
+        <div class="viewer-controls">
+            <div class="control-group">
+                <label>View Mode:</label>
+                <button id="btn-2d-{safe_scheme_name}" class="view-mode-btn" onclick="switchViewMode('2d', '{safe_scheme_name}')">2D Floor Plan</button>
+                <button id="btn-3d-{safe_scheme_name}" class="view-mode-btn active" onclick="switchViewMode('3d', '{safe_scheme_name}')">3D Extrusion</button>
+            </div>
+            <div class="control-group">
+                <label>Level:</label>
+                <select id="level-filter-{safe_scheme_name}" onchange="filterByLevel('{safe_scheme_name}', this.value)">
+                    <option value="all">All Levels</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Department:</label>
+                <select id="dept-filter-{safe_scheme_name}" onchange="filterByDepartment('{safe_scheme_name}', this.value)">
+                    <option value="all">All Departments</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>
+                    <input type="checkbox" id="target-overlay-{safe_scheme_name}" onchange="toggleTargetOverlay('{safe_scheme_name}', this.checked)">
+                    Show Target Overlay
+                </label>
+            </div>
+            <div class="control-group">
+                <button onclick="resetCamera('{safe_scheme_name}')">Reset Camera</button>
+                <button onclick="zoomToFit('{safe_scheme_name}')">Zoom to Fit</button>
+                <button onclick="toggleAnimation('{safe_scheme_name}')">Animate</button>
+            </div>
+            <div class="control-group" style="font-size: 0.75rem; color: #9ca3af;">
+                <span>🖱️ Right-Click: Orbit | Shift+Right: Pan | Scroll: Zoom | Double-Click: Select Area</span>
+            </div>
+        </div>
+        <div class="viewer-container">
+            <canvas id="geometry-canvas-{safe_scheme_name}" class="geometry-canvas"></canvas>
+            <div id="area-info-popup-{safe_scheme_name}" class="area-info-popup" style="display: none;"></div>
+        </div>
+    </div>
 </div>
 """.format(
             active_class=active_class,
@@ -701,7 +707,11 @@ class HTMLReportGenerator:
         scheme_nav_items = []
         is_first = True
         
-        for scheme_name, scheme_data in all_matches_dict.items():
+        # Sort schemes alphabetically by name
+        sorted_scheme_names = sorted(all_matches_dict.keys())
+        
+        for scheme_name in sorted_scheme_names:
+            scheme_data = all_matches_dict[scheme_name]
             matches = scheme_data.get('matches', [])
             unmatched_areas = all_unmatched_dict.get(scheme_name, {})
             
@@ -805,10 +815,6 @@ class HTMLReportGenerator:
             <span class="minimap-icon">🏥</span>
             <span>Report Header</span>
         </div>
-        <div class="minimap-item" onclick="scrollToSection('viewer3d-section')" data-section="viewer3d-section">
-            <span class="minimap-icon">🏗️</span>
-            <span>3D Viewer</span>
-        </div>
         <div class="minimap-item" onclick="scrollToSection('department-summary-section')" data-section="department-summary-section">
             <span class="minimap-icon">📊</span>
             <span>Department Summary</span>
@@ -829,9 +835,16 @@ class HTMLReportGenerator:
             <span class="minimap-icon">📈</span>
             <span>Status Breakdown</span>
         </div>
+        <div class="minimap-item" onclick="scrollToGeometryViewer()" data-section="geometry-viewer">
+            <span class="minimap-icon">🏗️</span>
+            <span>3D Viewer</span>
+        </div>
     </nav>
     
     <script>
+        // Area Geometry Data for 3D Visualization
+        const AREA_GEOMETRY_DATA = {geometry_data};
+        
         {javascript}
     </script>
 </body>
@@ -843,6 +856,7 @@ class HTMLReportGenerator:
             project_name=config.PROJECT_NAME,
             combined_scheme_content=combined_scheme_content,
             scheme_nav_items=combined_nav_items,
+            geometry_data=self._generate_geometry_data_json(self.revit_data),
             javascript=self._get_javascript()
         )
         return html
@@ -3028,30 +3042,6 @@ class HTMLReportGenerator:
             color: white;
         }
         
-        .control-select {
-            padding: 8px 16px;
-            background: #1f2937;
-            color: #e5e7eb;
-            border: 1px solid #374151;
-            border-radius: 6px;
-            font-size: 0.875rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .control-select:hover {
-            background: #374151;
-            border-color: #4b5563;
-        }
-        
-        .viewer3d-instructions {
-            text-align: center;
-            color: #9ca3af;
-            font-size: 0.8rem;
-            margin-bottom: 16px;
-        }
-        
         .viewer3d-container {
             position: relative;
             width: 100%;
@@ -3973,6 +3963,159 @@ class HTMLReportGenerator:
         .zero-area-row .col-area {
             color: #fbbf24;
         }
+        
+        /* Geometry Viewer Styles */
+        .geometry-viewer-section {
+            margin: 48px 0;
+            padding: 32px;
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 8px;
+        }
+        
+        .geometry-viewer-section h2 {
+            color: #ffffff;
+            font-size: 1.75rem;
+            margin-bottom: 24px;
+            font-weight: 600;
+        }
+        
+        .viewer-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 24px;
+            padding: 20px;
+            background: #1f2937;
+            border-radius: 6px;
+            align-items: center;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .control-group label {
+            color: #9ca3af;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .control-group select {
+            padding: 8px 12px;
+            background: #111827;
+            color: #f8fafc;
+            border: 1px solid #374151;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .control-group select:hover {
+            border-color: #60a5fa;
+        }
+        
+        .control-group select:focus {
+            outline: none;
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.1);
+        }
+        
+        .control-group input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            cursor: pointer;
+        }
+        
+        .control-group button {
+            padding: 8px 16px;
+            background: #374151;
+            color: #f8fafc;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .control-group button:hover {
+            background: #4b5563;
+        }
+        
+        .view-mode-btn {
+            padding: 8px 16px;
+            background: #374151;
+            color: #9ca3af;
+            border: 1px solid #4b5563;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .view-mode-btn.active {
+            background: #60a5fa;
+            color: #ffffff;
+            border-color: #60a5fa;
+        }
+        
+        .view-mode-btn:hover:not(.active) {
+            background: #4b5563;
+            color: #f8fafc;
+        }
+        
+        .viewer-container {
+            position: relative;
+            width: 100%;
+            height: 600px;
+            background: #0a0e13;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid #374151;
+        }
+        
+        .geometry-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .area-info-popup {
+            position: fixed;
+            padding: 16px;
+            background: rgba(17, 24, 39, 0.98);
+            border: 2px solid #60a5fa;
+            border-radius: 8px;
+            color: #f8fafc;
+            font-size: 0.875rem;
+            pointer-events: auto;
+            z-index: 99999;
+            box-shadow: 0 8px 24px rgba(96, 165, 250, 0.3), 0 4px 12px rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            min-width: 250px;
+            max-width: 400px;
+        }
+        
+        .area-info-popup h4 {
+            color: #60a5fa;
+            font-size: 1rem;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .area-info-popup p {
+            margin: 4px 0;
+            line-height: 1.5;
+        }
+        
+        .area-info-popup strong {
+            color: #9ca3af;
+        }
         """
     
     def _get_javascript(self):
@@ -3986,14 +4129,22 @@ class HTMLReportGenerator:
         };
         document.head.appendChild(chartScript);
         
-        // Load Three.js for 3D viewer
+        // Load Three.js
         const threeScript = document.createElement('script');
-        threeScript.src = 'https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js';
+        threeScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
         threeScript.onload = function() {
+            console.log('Three.js loaded successfully');
+            // Load OrbitControls after Three.js
             const controlsScript = document.createElement('script');
-            controlsScript.src = 'https://cdn.jsdelivr.net/npm/three@0.158.0/examples/js/controls/OrbitControls.js';
+            controlsScript.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js';
             controlsScript.onload = function() {
-                initialize3DViewer();
+                console.log('OrbitControls loaded successfully');
+                // Initialize geometry viewers after Three.js and controls are loaded
+                if (typeof initializeGeometryViewers === 'function') {
+                    initializeGeometryViewers();
+                } else {
+                    console.log('initializeGeometryViewers not yet defined, will be called later');
+                }
             };
             document.head.appendChild(controlsScript);
         };
@@ -4008,29 +4159,6 @@ class HTMLReportGenerator:
                 });
             } else {
                 initializeComponents();
-            }
-        }
-        
-        function initialize3DViewer() {
-            console.log('initialize3DViewer called');
-            // Wait for DOM to be ready
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function() {
-                    initialize3DComponents();
-                });
-            } else {
-                initialize3DComponents();
-            }
-        }
-        
-        function initialize3DComponents() {
-            console.log('Initializing 3D components...');
-            const canvas = document.getElementById('viewer3d-canvas');
-            if (canvas && typeof THREE !== 'undefined') {
-                console.log('Creating 3D viewer...');
-                create3DViewer(canvas);
-            } else {
-                console.log('3D canvas or Three.js not available');
             }
         }
         
@@ -4101,7 +4229,7 @@ class HTMLReportGenerator:
         function createDepartmentComparisonChart(canvas, data) {
             console.log('Creating department comparison chart...');
             
-            new Chart(canvas, {
+            canvas.chartInstance = new Chart(canvas, {
                 type: 'bar',
                 data: {
                     labels: data.departments,
@@ -4221,7 +4349,7 @@ class HTMLReportGenerator:
                 return '#ef4444'; // Red - under
             });
             
-            new Chart(canvas, {
+            canvas.chartInstance = new Chart(canvas, {
                 type: 'bar',
                 data: {
                     labels: data.departments,
@@ -5585,6 +5713,29 @@ class HTMLReportGenerator:
             }
         }
         
+        // Scroll to the geometry viewer of the currently active scheme
+        function scrollToGeometryViewer() {
+            console.log('Scrolling to geometry viewer');
+            
+            // Find the currently active scheme
+            var activeSchemeNav = document.querySelector('.scheme-selector.active');
+            if (activeSchemeNav) {
+                var schemeName = activeSchemeNav.getAttribute('data-scheme');
+                console.log('Active scheme:', schemeName);
+                
+                // Scroll to the geometry viewer section for this scheme
+                var geometryViewerId = 'geometry-viewer-section-' + schemeName;
+                scrollToSection(geometryViewerId);
+            } else {
+                console.warn('No active scheme found, scrolling to first geometry viewer');
+                // Fallback: scroll to first geometry viewer section
+                var firstViewer = document.querySelector('.geometry-viewer-section');
+                if (firstViewer) {
+                    firstViewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+        }
+        
         // Update active state of minimap items based on scroll position
         function updateMinimapActiveState() {
             var sections = [
@@ -5910,6 +6061,46 @@ class HTMLReportGenerator:
                 // Re-initialize visualizations for the newly active scheme
                 initializeSchemeVisualizations(targetScheme);
                 
+                // Initialize geometry viewer if it hasn't been created yet
+                if (typeof geometryViewers !== 'undefined' && !geometryViewers[schemeId]) {
+                    console.log('Initializing geometry viewer for newly visible scheme:', schemeId);
+                    var canvas = document.getElementById('geometry-canvas-' + schemeId);
+                    if (canvas && typeof AREA_GEOMETRY_DATA !== 'undefined') {
+                        // Try exact match first
+                        var schemeData = AREA_GEOMETRY_DATA[schemeId];
+                        
+                        // If not found, try with spaces instead of underscores
+                        if (!schemeData) {
+                            var schemeNameWithSpaces = schemeId.replace(/_/g, ' ');
+                            schemeData = AREA_GEOMETRY_DATA[schemeNameWithSpaces];
+                        }
+                        
+                        // Fuzzy match as fallback
+                        if (!schemeData) {
+                            var normalizedSchemeName = schemeId.toLowerCase().replace(/[_\s]/g, '');
+                            for (var key in AREA_GEOMETRY_DATA) {
+                                if (key.toLowerCase().replace(/[_\s]/g, '') === normalizedSchemeName) {
+                                    schemeData = AREA_GEOMETRY_DATA[key];
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (schemeData && typeof createGeometryViewer === 'function') {
+                            console.log('Creating viewer for scheme:', schemeId);
+                            var viewer = createGeometryViewer(canvas, schemeId, schemeData);
+                            geometryViewers[schemeId] = viewer;
+                            
+                            // Populate filter dropdowns
+                            if (typeof populateFilterDropdowns === 'function') {
+                                populateFilterDropdowns(schemeId, schemeData);
+                            }
+                        } else {
+                            console.warn('No geometry data found for scheme:', schemeId);
+                        }
+                    }
+                }
+                
                 // Scroll to top smoothly
                 window.scrollTo({ top: 0, behavior: 'smooth' });
                 
@@ -5941,16 +6132,22 @@ class HTMLReportGenerator:
                     
                     // Initialize comparison chart
                     var comparisonCanvas = schemeElement.querySelector('[id^="deptComparisonChart"]');
-                    if (comparisonCanvas && !comparisonCanvas.dataset.initialized) {
+                    if (comparisonCanvas) {
+                        // Destroy existing chart if present
+                        if (comparisonCanvas.chartInstance) {
+                            comparisonCanvas.chartInstance.destroy();
+                        }
                         createDepartmentComparisonChart(comparisonCanvas, chartData);
-                        comparisonCanvas.dataset.initialized = 'true';
                     }
                     
                     // Initialize percentage chart
                     var percentageCanvas = schemeElement.querySelector('[id^="deptPercentageChart"]');
-                    if (percentageCanvas && !percentageCanvas.dataset.initialized) {
+                    if (percentageCanvas) {
+                        // Destroy existing chart if present
+                        if (percentageCanvas.chartInstance) {
+                            percentageCanvas.chartInstance.destroy();
+                        }
                         createDepartmentPercentageChart(percentageCanvas, chartData);
-                        percentageCanvas.dataset.initialized = 'true';
                     }
                 } catch (e) {
                     console.error('Error parsing chart data:', e);
@@ -6085,283 +6282,1274 @@ class HTMLReportGenerator:
         
         console.log('Scheme switching initialized');
         
-        // ========== 3D VIEWER FUNCTIONS ==========
+        // ============================================================================
+        // GEOMETRY VIEWER IMPLEMENTATION - 2D and 3D Area Visualization
+        // ============================================================================
         
-        function create3DViewer(canvas) {
-            console.log('Initializing 3D viewer...');
-            
-            if (typeof THREE === 'undefined') {
-                console.error('Three.js not loaded');
-                canvas.parentElement.innerHTML = '<p style="color: #ef4444; text-align: center; padding: 40px;">Three.js library failed to load. Please refresh the page.</p>';
-                return;
-            }
-            
-            // Scene setup
-            const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0f172a);
-            
-            // Camera setup
-            const camera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 10000);
-            camera.position.set(500, 500, 500);
-            
-            // Renderer setup
-            const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
-            renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            
-            // Controls
-            const controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.enableZoom = true;
-            controls.enablePan = true;
-            
-            // Lighting
-            const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
-            scene.add(ambientLight);
-            
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            directionalLight.position.set(500, 1000, 500);
-            directionalLight.castShadow = true;
-            scene.add(directionalLight);
-            
-            // Extract area geometry data from the page
-            const areaData = extract3DAreaData();
-            console.log('Extracted 3D area data:', areaData);
-            
-            // Create 3D geometry from area data
-            create3DAreaGeometry(scene, areaData);
-            
-            // Setup interactive controls
-            setup3DViewerControls(controls, scene, camera, renderer, areaData);
-            
-            // Animation loop
-            function animate() {
-                requestAnimationFrame(animate);
-                controls.update();
-                renderer.render(scene, camera);
-            }
-            animate();
-            
-            // Handle window resize
-            window.addEventListener('resize', function() {
-                const width = canvas.clientWidth;
-                const height = canvas.clientHeight;
-                camera.aspect = width / height;
-                camera.updateProjectionMatrix();
-                renderer.setSize(width, height);
-            });
-            
-            console.log('3D viewer initialized successfully');
-        }
+        // Global storage for geometry viewers (one per scheme)
+        var geometryViewers = {};
         
-        function extract3DAreaData() {
-            console.log('Extracting 3D area data from page...');
-            const areas = [];
+        /**
+         * Initialize all geometry viewers after Three.js loads
+         */
+        function initializeGeometryViewers() {
+            console.log('Initializing geometry viewers...');
+            console.log('AREA_GEOMETRY_DATA:', AREA_GEOMETRY_DATA);
             
-            // Get all tree nodes that represent areas
-            const areaNodes = document.querySelectorAll('.tree-node-content');
+            // Find all geometry viewer canvases
+            var canvases = document.querySelectorAll('.geometry-canvas');
+            console.log('Found geometry canvases:', canvases.length);
             
-            areaNodes.forEach(node => {
-                try {
-                    const nameElement = node.querySelector('.node-label');
-                    const areaElement = node.querySelector('.node-area');
-                    const levelElement = node.querySelector('.node-level');
-                    
-                    if (nameElement && areaElement) {
-                        const areaName = nameElement.textContent.trim();
-                        const areaText = areaElement.textContent.trim();
-                        const levelText = levelElement ? levelElement.textContent.trim() : 'Unknown';
-                        
-                        // Parse area value
-                        const areaMatch = areaText.match(/([0-9,.]+)\s*SF/);
-                        const areaSF = areaMatch ? parseFloat(areaMatch[1].replace(/,/g, '')) : 0;
-                        
-                        // Get department color from parent
-                        const treeNode = node.closest('.tree-node');
-                        const deptNode = treeNode ? treeNode.closest('.department-node') : null;
-                        const colorElement = deptNode ? deptNode.querySelector('.department-header') : null;
-                        const color = colorElement ? window.getComputedStyle(colorElement).borderColor : '#6b7280';
-                        
-                        if (areaSF > 0) {
-                            areas.push({
-                                name: areaName,
-                                area: areaSF,
-                                level: levelText,
-                                color: color
-                            });
+            canvases.forEach(function(canvas) {
+                var canvasId = canvas.id;
+                var schemeName = canvasId.replace('geometry-canvas-', '');
+                console.log('Initializing viewer for scheme:', schemeName);
+                
+                // Find matching scheme name in data (handle underscore vs space differences)
+                var actualSchemeName = null;
+                var schemeData = {};
+                
+                // Try exact match first
+                if (AREA_GEOMETRY_DATA[schemeName]) {
+                    actualSchemeName = schemeName;
+                    schemeData = AREA_GEOMETRY_DATA[schemeName];
+                } else {
+                    // Try converting underscores to spaces
+                    var schemeNameWithSpaces = schemeName.replace(/_/g, ' ');
+                    if (AREA_GEOMETRY_DATA[schemeNameWithSpaces]) {
+                        actualSchemeName = schemeNameWithSpaces;
+                        schemeData = AREA_GEOMETRY_DATA[schemeNameWithSpaces];
+                    } else {
+                        // Try finding similar name (case-insensitive partial match)
+                        for (var key in AREA_GEOMETRY_DATA) {
+                            if (key.replace(/[_\s-]/g, '').toLowerCase() === schemeName.replace(/[_\s-]/g, '').toLowerCase()) {
+                                actualSchemeName = key;
+                                schemeData = AREA_GEOMETRY_DATA[key];
+                                break;
+                            }
                         }
                     }
-                } catch (e) {
-                    console.warn('Error extracting area data:', e);
                 }
+                
+                if (!actualSchemeName || Object.keys(schemeData).length === 0) {
+                    console.warn('No geometry data for scheme:', schemeName, 'Available schemes:', Object.keys(AREA_GEOMETRY_DATA));
+                    canvas.parentElement.innerHTML = '<p style="color: #9ca3af; text-align: center; padding: 40px;">No geometry data available for this scheme.</p>';
+                    return;
+                }
+                
+                console.log('Found geometry data for scheme:', actualSchemeName);
+                
+                // Create viewer for this scheme
+                var viewer = createGeometryViewer(canvas, schemeName, schemeData);
+                geometryViewers[schemeName] = viewer;
+                
+                // Populate filter dropdowns
+                populateFilterDropdowns(schemeName, schemeData);
             });
-            
-            console.log('Extracted', areas.length, 'areas with geometry data');
-            return areas;
         }
         
-        function create3DAreaGeometry(scene, areaData) {
-            console.log('Creating 3D area geometry...');
+        /**
+         * Create a geometry viewer (starts in 2D mode)
+         */
+        function createGeometryViewer(canvas, schemeName, schemeData) {
+            console.log('Creating geometry viewer for:', schemeName);
             
-            // Group areas by level
-            const levelGroups = {};
-            areaData.forEach(area => {
-                if (!levelGroups[area.level]) {
-                    levelGroups[area.level] = [];
-                }
-                levelGroups[area.level].push(area);
+            var viewer = {
+                canvas: canvas,
+                schemeName: schemeName,
+                schemeData: schemeData,
+                scene: null,
+                camera: null,
+                renderer: null,
+                controls: null,
+                viewMode: '3d', // Start in 3D mode
+                currentLevel: 'all',
+                currentDepartment: 'all',
+                areaMeshes: [],
+                raycaster: new THREE.Raycaster(),
+                mouse: new THREE.Vector2(),
+                selectedArea: null,
+                isAnimating: false,
+                animationFrame: null
+            };
+            
+            // Initialize renderer
+            viewer.renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+            viewer.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+            viewer.renderer.shadowMap.enabled = true;
+            
+            // Disable right-click context menu on the canvas
+            viewer.renderer.domElement.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
             });
             
-            // Sort levels
-            const levels = Object.keys(levelGroups).sort();
-            let yOffset = 0;
+            // Start in 3D mode
+            setup3DViewer(viewer);
             
-            levels.forEach((levelName, levelIndex) => {
-                const areas = levelGroups[levelName];
-                const levelHeight = 40;
+            // Add interaction handlers
+            setupViewerInteractions(viewer);
+            
+            // Start animation loop
+            animate(viewer);
+            
+            return viewer;
+        }
+        
+        /**
+         * Setup 2D floor plan viewer (orthographic top-down view)
+         */
+        function setup2DViewer(viewer) {
+            
+            // Create scene
+            viewer.scene = new THREE.Scene();
+            viewer.scene.background = new THREE.Color(0x0a0e13);
+            
+            // Create orthographic camera (top-down view)
+            var aspect = viewer.canvas.clientWidth / viewer.canvas.clientHeight;
+            var frustumSize = 200;
+            viewer.camera = new THREE.OrthographicCamera(
+                frustumSize * aspect / -2,
+                frustumSize * aspect / 2,
+                frustumSize / 2,
+                frustumSize / -2,
+                0.1,
+                1000
+            );
+            viewer.camera.position.set(0, 100, 0);
+            viewer.camera.lookAt(0, 0, 0);
+            
+            // Add ambient light
+            var ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+            viewer.scene.add(ambientLight);
+            
+            // Create area geometries
+            createAreaGeometries2D(viewer);
+            
+            // Setup controls (no OrbitControls for 2D, use pan/zoom instead)
+            setupPanZoomControls(viewer);
+        }
+        
+        /**
+         * Setup 3D extrusion viewer
+         */
+        function setup3DViewer(viewer) {
+            
+            // Create scene
+            viewer.scene = new THREE.Scene();
+            viewer.scene.background = new THREE.Color(0x0a0e13);
+            
+            // Create perspective camera
+            viewer.camera = new THREE.PerspectiveCamera(
+                60,
+                viewer.canvas.clientWidth / viewer.canvas.clientHeight,
+                0.1,
+                10000
+            );
+            viewer.camera.position.set(200, 200, 200);
+            
+            // Lighting
+            var ambientLight = new THREE.AmbientLight(0x404040, 0.6);
+            viewer.scene.add(ambientLight);
+            
+            var directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(100, 200, 100);
+            directionalLight.castShadow = true;
+            viewer.scene.add(directionalLight);
+            
+            // Create area geometries (extruded)
+            createAreaGeometries3D(viewer);
+            
+            // Calculate bounding box center for camera positioning
+            var centerPos = calculateBoundingBoxCenter(viewer);
+            
+            // Position camera to view all areas
+            var distance = 200;
+            viewer.camera.position.set(
+                centerPos.x + distance,
+                centerPos.y + distance,
+                centerPos.z + distance
+            );
+            viewer.camera.lookAt(centerPos.x, centerPos.y, centerPos.z);
+            
+            // Setup OrbitControls with better mouse controls
+            if (typeof THREE.OrbitControls !== 'undefined') {
+                viewer.controls = new THREE.OrbitControls(viewer.camera, viewer.renderer.domElement);
                 
-                // Create floor plane
-                const floorGeometry = new THREE.PlaneGeometry(1000, 1000);
-                const floorMaterial = new THREE.MeshLambertMaterial({
-                    color: 0x374151,
+                // Smooth damping for more fluid camera movement
+                viewer.controls.enableDamping = true;
+                viewer.controls.dampingFactor = 0.08;
+                
+                // Mouse button configuration
+                viewer.controls.mouseButtons = {
+                    LEFT: null,  // Disable left mouse (we'll use it for selection)
+                    MIDDLE: THREE.MOUSE.DOLLY,  // Middle mouse for zoom
+                    RIGHT: THREE.MOUSE.ROTATE   // Right mouse for orbit
+                };
+                
+                // Enable panning with Shift+Right mouse
+                viewer.controls.enablePan = true;
+                viewer.controls.panSpeed = 0.8;
+                viewer.controls.screenSpacePanning = true;  // More intuitive panning
+                
+                // Zoom settings - smoother and with better limits
+                viewer.controls.enableZoom = true;
+                viewer.controls.zoomSpeed = 1.2;
+                viewer.controls.minDistance = 5;
+                viewer.controls.maxDistance = 3000;
+                
+                // Rotation settings - smoother rotation
+                viewer.controls.enableRotate = true;
+                viewer.controls.rotateSpeed = 0.6;
+                
+                // Auto-rotate disabled by default (can be toggled)
+                viewer.controls.autoRotate = false;
+                viewer.controls.autoRotateSpeed = 0.5;
+                
+                // Limit vertical rotation to prevent flipping
+                viewer.controls.maxPolarAngle = Math.PI * 0.95;  // Prevent going under the floor
+                viewer.controls.minPolarAngle = 0;
+                
+                // Pan with shift+right mouse
+                viewer.canvas.addEventListener('mousedown', function(e) {
+                    if (e.button === 2 && e.shiftKey) {
+                        viewer.controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+                    } else if (e.button === 2) {
+                        viewer.controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+                    }
+                });
+                
+                viewer.canvas.addEventListener('mouseup', function(e) {
+                    if (e.button === 2) {
+                        viewer.controls.mouseButtons.RIGHT = THREE.MOUSE.ROTATE;
+                    }
+                });
+                
+                // Add mouse wheel zoom with shift key for faster zoom
+                viewer.canvas.addEventListener('wheel', function(e) {
+                    if (e.shiftKey) {
+                        viewer.controls.zoomSpeed = 2.0;
+                    } else {
+                        viewer.controls.zoomSpeed = 1.2;
+                    }
+                }, { passive: true });
+                
+                // Set orbit center to bounding box center
+                viewer.controls.target.set(centerPos.x, centerPos.y, centerPos.z);
+                viewer.controls.update();
+            } else {
+                console.warn('OrbitControls not available');
+            }
+        }
+        
+        /**
+         * Create 2D area geometries (flat polygons)
+         */
+        function createAreaGeometries2D(viewer) {
+            
+            // Clear existing meshes
+            viewer.areaMeshes.forEach(function(mesh) {
+                viewer.scene.remove(mesh);
+            });
+            viewer.areaMeshes = [];
+            
+            var schemeData = viewer.schemeData;
+            var allAreas = [];
+            
+            // Collect all areas from all levels
+            for (var levelName in schemeData) {
+                var levelAreas = schemeData[levelName];
+                levelAreas.forEach(function(areaData) {
+                    areaData.levelName = levelName;
+                    allAreas.push(areaData);
+                });
+            }
+            
+            console.log('Total areas to render:', allAreas.length);
+            
+            // Calculate bounding box for camera positioning
+            var minX = Infinity, maxX = -Infinity;
+            var minY = Infinity, maxY = -Infinity;
+            
+            allAreas.forEach(function(areaData) {
+                var boundaryLoops = areaData.boundary_loops || [];
+                if (boundaryLoops.length === 0) return;
+                
+                var outerLoop = boundaryLoops[0];
+                var points = outerLoop.points || [];
+                
+                if (points.length < 3) return;
+                
+                // Create THREE.Shape from boundary points
+                var shape = new THREE.Shape();
+                
+                // Scale coordinates (Revit units are in feet, scale down for display)
+                var scale = 0.1;
+                
+                points.forEach(function(pt, index) {
+                    var x = pt[0] * scale;
+                    var z = pt[1] * scale; // In 2D view, Y becomes Z
+                    
+                    // Track bounds
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (z < minY) minY = z;
+                    if (z > maxY) maxY = z;
+                    
+                    if (index === 0) {
+                        shape.moveTo(x, z);
+                    } else {
+                        shape.lineTo(x, z);
+                    }
+                });
+                
+                // Close the shape
+                if (points.length > 0) {
+                    var firstPt = points[0];
+                    shape.lineTo(firstPt[0] * scale, firstPt[1] * scale);
+                }
+                
+                // Handle holes (inner loops)
+                for (var i = 1; i < boundaryLoops.length; i++) {
+                    var holeLoop = boundaryLoops[i];
+                    var holePoints = holeLoop.points || [];
+                    if (holePoints.length < 3) continue;
+                    
+                    var holePath = new THREE.Path();
+                    holePoints.forEach(function(pt, index) {
+                        var x = pt[0] * scale;
+                        var z = pt[1] * scale;
+                        
+                        if (index === 0) {
+                            holePath.moveTo(x, z);
+                        } else {
+                            holePath.lineTo(x, z);
+                        }
+                    });
+                    shape.holes.push(holePath);
+                }
+                
+                // Create geometry from shape
+                var geometry = new THREE.ShapeGeometry(shape);
+                
+                // Get color from department
+                var color = areaData.color || '#6b7280';
+                var material = new THREE.MeshBasicMaterial({
+                    color: new THREE.Color(color),
                     transparent: true,
-                    opacity: 0.2,
+                    opacity: 0.7,
                     side: THREE.DoubleSide
                 });
-                const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-                floor.rotation.x = -Math.PI / 2;
-                floor.position.y = yOffset;
-                scene.add(floor);
                 
-                // Create areas as extruded shapes
-                let xOffset = 0;
-                let zOffset = 0;
-                const areasPerRow = 10;
+                var mesh = new THREE.Mesh(geometry, material);
+                mesh.rotation.x = -Math.PI / 2; // Lay flat
                 
-                areas.forEach((area, areaIndex) => {
-                    // Calculate size based on area (square root for proportional dimensions)
-                    const baseSize = Math.sqrt(area.area) * 0.5;
-                    const height = levelHeight;
-                    
-                    // Parse color from RGB string
-                    const colorMatch = area.color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-                    let color = 0x6b7280;
-                    if (colorMatch) {
-                        const r = parseInt(colorMatch[1]);
-                        const g = parseInt(colorMatch[2]);
-                        const b = parseInt(colorMatch[3]);
-                        color = (r << 16) | (g << 8) | b;
+                // Use level elevation for slight separation
+                var levelElevation = areaData.level_elevation || 0;
+                mesh.position.y = levelElevation * scale * 0.1; // Small offset per level
+                
+                // Store metadata
+                mesh.userData = areaData;
+                
+                viewer.scene.add(mesh);
+                viewer.areaMeshes.push(mesh);
+                
+                // Note: Wireframe edges disabled due to Three.js compatibility issues
+            });
+            
+            // Position camera to view all areas
+            var centerX = (minX + maxX) / 2;
+            var centerZ = (minY + maxY) / 2;
+            var rangeX = maxX - minX;
+            var rangeZ = maxY - minY;
+            var maxRange = Math.max(rangeX, rangeZ, 100);
+            
+            viewer.camera.position.set(centerX, maxRange * 1.5, centerZ);
+            viewer.camera.lookAt(centerX, 0, centerZ);
+            
+            // Update orthographic camera frustum
+            var aspect = viewer.canvas.clientWidth / viewer.canvas.clientHeight;
+            var frustumSize = maxRange * 1.2;
+            viewer.camera.left = frustumSize * aspect / -2;
+            viewer.camera.right = frustumSize * aspect / 2;
+            viewer.camera.top = frustumSize / 2;
+            viewer.camera.bottom = frustumSize / -2;
+            viewer.camera.updateProjectionMatrix();
+            
+            console.log('2D geometries created:', viewer.areaMeshes.length);
+        }
+        
+        /**
+         * Create 3D area geometries (extruded volumes)
+         */
+        function createAreaGeometries3D(viewer) {
+            
+            // Clear existing meshes
+            viewer.areaMeshes.forEach(function(mesh) {
+                viewer.scene.remove(mesh);
+            });
+            viewer.areaMeshes = [];
+            
+            var schemeData = viewer.schemeData;
+            var scale = 0.1;
+            var floorHeight = 1.2; // Height of each extruded area
+            
+            var totalAreas = 0;
+            var skippedNoLoops = 0;
+            var skippedFewPoints = 0;
+            var created = 0;
+            
+            // Collect all areas
+            for (var levelName in schemeData) {
+                var levelAreas = schemeData[levelName];
+                
+                levelAreas.forEach(function(areaData) {
+                    totalAreas++;
+                    var boundaryLoops = areaData.boundary_loops || [];
+                    if (boundaryLoops.length === 0) {
+                        skippedNoLoops++;
+                        return;
                     }
                     
-                    // Create box geometry for area
-                    const boxGeometry = new THREE.BoxGeometry(baseSize, height, baseSize);
-                    const boxMaterial = new THREE.MeshLambertMaterial({
-                        color: color,
+                    var outerLoop = boundaryLoops[0];
+                    var points = outerLoop.points || [];
+                    if (points.length < 3) {
+                        skippedFewPoints++;
+                        return;
+                    }
+                    
+                    // Create THREE.Shape
+                    var shape = new THREE.Shape();
+                    points.forEach(function(pt, index) {
+                        var x = pt[0] * scale;
+                        var z = pt[1] * scale;
+                        
+                        if (index === 0) {
+                            shape.moveTo(x, z);
+                        } else {
+                            shape.lineTo(x, z);
+                        }
+                    });
+                    
+                    // Handle holes
+                    for (var i = 1; i < boundaryLoops.length; i++) {
+                        var holeLoop = boundaryLoops[i];
+                        var holePoints = holeLoop.points || [];
+                        if (holePoints.length < 3) continue;
+                        
+                        var holePath = new THREE.Path();
+                        holePoints.forEach(function(pt, index) {
+                            var x = pt[0] * scale;
+                            var z = pt[1] * scale;
+                            if (index === 0) {
+                                holePath.moveTo(x, z);
+                            } else {
+                                holePath.lineTo(x, z);
+                            }
+                        });
+                        shape.holes.push(holePath);
+                    }
+                    
+                    // Extrude geometry
+                    var extrudeSettings = {
+                        depth: floorHeight,
+                        bevelEnabled: false
+                    };
+                    var geometry = new THREE.ExtrudeGeometry(shape, extrudeSettings);
+                    
+                    // Material with department color
+                    var color = areaData.color || '#6b7280';
+                    var material = new THREE.MeshLambertMaterial({
+                        color: new THREE.Color(color),
                         transparent: true,
                         opacity: 0.8
                     });
-                    const box = new THREE.Mesh(boxGeometry, boxMaterial);
                     
-                    // Position in grid layout
-                    if (areaIndex > 0 && areaIndex % areasPerRow === 0) {
-                        xOffset = 0;
-                        zOffset += 80;
-                    }
+                    var mesh = new THREE.Mesh(geometry, material);
+                    mesh.rotation.x = -Math.PI / 2;
                     
-                    box.position.set(xOffset, yOffset + height/2, zOffset);
-                    xOffset += 80;
+                    // Position at level elevation
+                    var levelElevation = (areaData.level_elevation || 0) * scale;
+                    mesh.position.y = levelElevation;
                     
                     // Store metadata
-                    box.userData = {
-                        name: area.name,
-                        area: area.area,
-                        level: area.level,
-                        type: 'area'
-                    };
+                    mesh.userData = areaData;
                     
-                    scene.add(box);
+                    viewer.scene.add(mesh);
+                    viewer.areaMeshes.push(mesh);
+                    
+                    // Note: Wireframe edges disabled due to Three.js compatibility issues
+                    // causing "Cannot read properties of undefined (reading 'value')" errors
+                    
+                    created++;
                 });
-                
-                yOffset += levelHeight + 20;
-            });
+            }
             
-            console.log('Created geometry for', levels.length, 'levels');
+            if (created > 0) {
+                console.log('3D viewer: Loaded', created, 'areas');
+            }
+            if (skippedNoLoops + skippedFewPoints > 0) {
+                console.warn('Skipped', skippedNoLoops + skippedFewPoints, 'areas (incomplete geometry)');
+            }
         }
         
-        function setup3DViewerControls(controls, scene, camera, renderer, areaData) {
-            console.log('Setting up 3D viewer controls...');
+        /**
+         * Setup pan/zoom controls for 2D view
+         */
+        function setupPanZoomControls(viewer) {
+            var canvas = viewer.canvas;
+            var isDragging = false;
+            var previousMousePosition = { x: 0, y: 0 };
             
-            // Handle control button clicks
-            const controlButtons = document.querySelectorAll('.viewer3d-controls .control-btn');
-            controlButtons.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const mode = this.dataset.mode;
-                    console.log('Control button clicked:', mode);
-                    
-                    switch(mode) {
-                        case '2d':
-                            // Top-down view
-                            camera.position.set(0, 1000, 0);
-                            camera.lookAt(0, 0, 0);
-                            controlButtons.forEach(b => b.classList.remove('active'));
-                            this.classList.add('active');
-                            break;
-                        case '3d':
-                            // Isometric view
-                            camera.position.set(500, 500, 500);
-                            camera.lookAt(0, 0, 0);
-                            controlButtons.forEach(b => b.classList.remove('active'));
-                            this.classList.add('active');
-                            break;
-                        case 'reset':
-                            // Reset camera
-                            camera.position.set(500, 500, 500);
-                            camera.lookAt(0, 0, 0);
-                            controls.target.set(0, 0, 0);
-                            break;
-                        case 'zoom':
-                            // Zoom to fit all objects
-                            controls.reset();
-                            break;
-                    }
-                });
+            canvas.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
             });
             
-            // Handle object selection
-            const raycaster = new THREE.Raycaster();
-            const mouse = new THREE.Vector2();
-            
-            renderer.domElement.addEventListener('dblclick', function(event) {
-                const rect = renderer.domElement.getBoundingClientRect();
-                mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-                mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+            canvas.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
                 
-                raycaster.setFromCamera(mouse, camera);
-                const intersects = raycaster.intersectObjects(scene.children, true);
+                var deltaX = e.clientX - previousMousePosition.x;
+                var deltaY = e.clientY - previousMousePosition.y;
+                
+                var panSpeed = 0.5;
+                viewer.camera.position.x -= deltaX * panSpeed;
+                viewer.camera.position.z += deltaY * panSpeed;
+                
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+            
+            canvas.addEventListener('mouseup', function() {
+                isDragging = false;
+            });
+            
+            canvas.addEventListener('wheel', function(e) {
+                e.preventDefault();
+                var zoomSpeed = 0.1;
+                var delta = e.deltaY > 0 ? 1 + zoomSpeed : 1 - zoomSpeed;
+                
+                // Zoom orthographic camera by adjusting frustum
+                viewer.camera.left *= delta;
+                viewer.camera.right *= delta;
+                viewer.camera.top *= delta;
+                viewer.camera.bottom *= delta;
+                viewer.camera.updateProjectionMatrix();
+            });
+        }
+        
+        /**
+         * Setup viewer interactions (click, hover)
+         */
+        function setupViewerInteractions(viewer) {
+            var canvas = viewer.canvas;
+            
+            // Simple click handler using dblclick to avoid conflicts with orbit controls
+            canvas.addEventListener('dblclick', function(event) {
+                var rect = canvas.getBoundingClientRect();
+                viewer.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                viewer.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                
+                viewer.raycaster.setFromCamera(viewer.mouse, viewer.camera);
+                var intersects = viewer.raycaster.intersectObjects(viewer.areaMeshes, false);
                 
                 if (intersects.length > 0) {
-                    const object = intersects[0].object;
-                    if (object.userData && object.userData.type === 'area') {
-                        show3DAreaInfo(object.userData);
+                    var clickedMesh = intersects[0].object;
+                    var areaData = clickedMesh.userData;
+                    
+                    if (areaData && areaData.area_id) {
+                        console.log('Selected:', areaData.program_type_detail || 'Area ' + areaData.area_id);
+                        showAreaPopup(viewer, areaData, event.clientX, event.clientY);
+                        highlightArea(viewer, clickedMesh);
+                        
+                        // Update orbit center to selected area's center
+                        if (viewer.controls) {
+                            var meshCenter = getMeshCenter(clickedMesh);
+                            viewer.controls.target.set(meshCenter.x, meshCenter.y, meshCenter.z);
+                            viewer.controls.update();
+                        }
                     }
+                } else {
+                    hideAreaPopup(viewer);
+                    clearHighlight(viewer);
+                    
+                    // Reset orbit center to scene center
+                    if (viewer.controls && viewer.viewMode === '3d') {
+                        var sceneCenter = calculateSceneCenter(viewer);
+                        viewer.controls.target.set(sceneCenter.x, sceneCenter.y, sceneCenter.z);
+                        viewer.controls.update();
+                    }
+                }
+            });
+            
+            // Hover handler
+            canvas.addEventListener('mousemove', function(event) {
+                var rect = canvas.getBoundingClientRect();
+                viewer.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+                viewer.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+                
+                viewer.raycaster.setFromCamera(viewer.mouse, viewer.camera);
+                var intersects = viewer.raycaster.intersectObjects(viewer.areaMeshes, false);
+                
+                if (intersects.length > 0) {
+                    canvas.style.cursor = 'pointer';
+                } else {
+                    canvas.style.cursor = 'default';
                 }
             });
         }
         
-        function show3DAreaInfo(areaData) {
-            const infoPanel = document.getElementById('viewer3d-info');
-            if (infoPanel) {
-                infoPanel.innerHTML = '<div class="info-panel">' +
-                    '<h4>' + areaData.name + '</h4>' +
-                    '<p><strong>Area:</strong> ' + areaData.area.toLocaleString() + ' SF</p>' +
-                    '<p><strong>Level:</strong> ' + areaData.level + '</p>' +
-                    '</div>';
+        /**
+         * Show area information popup
+         */
+        function showAreaPopup(viewer, areaData, x, y) {
+            var popupId = 'area-info-popup-' + viewer.schemeName;
+            var popup = document.getElementById(popupId);
+            if (!popup) {
+                console.warn('Popup element not found:', popupId);
+                return;
+            }
+            
+            var html = '<h4>' + (areaData.program_type_detail || 'Unnamed Area') + '</h4>';
+            html += '<p><strong>Department:</strong> ' + (areaData.department || 'N/A') + '</p>';
+            html += '<p><strong>Division:</strong> ' + (areaData.program_type || 'N/A') + '</p>';
+            html += '<p><strong>Area:</strong> ' + Math.round(areaData.area_sf || 0) + ' SF</p>';
+            html += '<p><strong>Level:</strong> ' + (areaData.levelName || viewer.schemeData ? Object.keys(viewer.schemeData)[0] : 'N/A') + '</p>';
+            html += '<p style="font-size: 0.75rem; color: #9ca3af; margin-top: 8px;">Double-click outside to close</p>';
+            
+            popup.innerHTML = html;
+            popup.style.display = 'block';
+            popup.style.position = 'fixed';
+            
+            // Position next to mouse, but keep within viewport
+            var popupWidth = 300;  // Approximate popup width
+            var popupHeight = 200; // Approximate popup height
+            var offsetX = 15;
+            var offsetY = 15;
+            
+            var left = x + offsetX;
+            var top = y + offsetY;
+            
+            // Prevent popup from going off right edge
+            if (left + popupWidth > window.innerWidth) {
+                left = x - popupWidth - offsetX;
+            }
+            
+            // Prevent popup from going off bottom edge
+            if (top + popupHeight > window.innerHeight) {
+                top = y - popupHeight - offsetY;
+            }
+            
+            popup.style.left = left + 'px';
+            popup.style.top = top + 'px';
+            popup.style.zIndex = '99999';
+            
+            console.log('Popup shown at:', left, top, 'for area:', areaData.program_type_detail || areaData.area_id);
+        }
+        
+        /**
+         * Hide area information popup
+         */
+        function hideAreaPopup(viewer) {
+            var popupId = 'area-info-popup-' + viewer.schemeName;
+            var popup = document.getElementById(popupId);
+            if (popup) {
+                popup.style.display = 'none';
             }
         }
         
+        /**
+         * Highlight selected area
+         */
+        function highlightArea(viewer, mesh) {
+            clearHighlight(viewer);
+            viewer.selectedArea = mesh;
+            
+            if (mesh.material) {
+                mesh.material.opacity = 1.0;
+                mesh.material.emissive = new THREE.Color(0x60a5fa);
+                mesh.material.emissiveIntensity = 0.5;
+            }
+        }
+        
+        /**
+         * Clear area highlight
+         */
+        function clearHighlight(viewer) {
+            if (viewer.selectedArea && viewer.selectedArea.material) {
+                viewer.selectedArea.material.opacity = viewer.viewMode === '2d' ? 0.7 : 0.8;
+                viewer.selectedArea.material.emissive = new THREE.Color(0x000000);
+                viewer.selectedArea.material.emissiveIntensity = 0;
+            }
+            viewer.selectedArea = null;
+        }
+        
+        /**
+         * Animation loop
+         */
+        function animate(viewer) {
+            viewer.animationFrame = requestAnimationFrame(function() {
+                animate(viewer);
+            });
+            
+            if (viewer.controls) {
+                viewer.controls.update();
+            }
+            
+            viewer.renderer.render(viewer.scene, viewer.camera);
+        }
+        
+        /**
+         * Switch view mode (2D/3D)
+         */
+        function switchViewMode(mode, schemeName) {
+            
+            var viewer = geometryViewers[schemeName];
+            if (!viewer) return;
+            
+            viewer.viewMode = mode;
+            
+            // Update button states
+            var btn2d = document.getElementById('btn-2d-' + schemeName);
+            var btn3d = document.getElementById('btn-3d-' + schemeName);
+            
+            if (mode === '2d') {
+                btn2d.classList.add('active');
+                btn3d.classList.remove('active');
+                setup2DViewer(viewer);
+                
+                // In 2D mode, auto-select first level if currently showing all levels
+                if (viewer.currentLevel === 'all') {
+                    var levelSelect = document.getElementById('level-filter-' + schemeName);
+                    if (levelSelect && levelSelect.options.length > 1) {
+                        // Skip the "All Levels" option (index 0), select first actual level (index 1)
+                        levelSelect.selectedIndex = 1;
+                        var firstLevel = levelSelect.options[1].value;
+                        viewer.currentLevel = firstLevel;
+                    }
+                }
+            } else {
+                btn3d.classList.add('active');
+                btn2d.classList.remove('active');
+                setup3DViewer(viewer);
+                
+                // In 3D mode, show all levels
+                var levelSelect = document.getElementById('level-filter-' + schemeName);
+                if (levelSelect) {
+                    levelSelect.value = 'all';
+                    viewer.currentLevel = 'all';
+                }
+            }
+        }
+        
+        /**
+         * Populate filter dropdowns
+         */
+        function populateFilterDropdowns(schemeName, schemeData) {
+            var levelData = [];
+            var departments = {};
+            
+            // Collect unique departments and level elevations
+            for (var levelName in schemeData) {
+                var areas = schemeData[levelName];
+                
+                // Get elevation from first area in this level
+                var levelElevation = 0;
+                if (areas.length > 0 && areas[0].level_elevation !== undefined) {
+                    levelElevation = areas[0].level_elevation;
+                }
+                
+                levelData.push({
+                    name: levelName,
+                    elevation: levelElevation
+                });
+                
+                areas.forEach(function(area) {
+                    var dept = area.department || 'Unknown';
+                    departments[dept] = true;
+                });
+            }
+            
+            // Sort levels by elevation (ascending: B1, 1, 2, 3, etc.)
+            levelData.sort(function(a, b) {
+                return a.elevation - b.elevation;
+            });
+            
+            // Populate level filter
+            var levelSelect = document.getElementById('level-filter-' + schemeName);
+            if (levelSelect) {
+                levelData.forEach(function(level) {
+                    var option = document.createElement('option');
+                    option.value = level.name;
+                    option.textContent = level.name;
+                    levelSelect.appendChild(option);
+                });
+                
+                // Set default selection based on view mode
+                var viewer = geometryViewers[schemeName];
+                if (viewer) {
+                    if (viewer.viewMode === '2d' && levelData.length > 0) {
+                        // In 2D mode, select first level by default
+                        levelSelect.value = levelData[0].name;
+                        viewer.currentLevel = levelData[0].name;
+                    } else {
+                        // In 3D mode, show all levels
+                        levelSelect.value = 'all';
+                        viewer.currentLevel = 'all';
+                    }
+                }
+            }
+            
+            // Populate department filter (alphabetically sorted)
+            var deptSelect = document.getElementById('dept-filter-' + schemeName);
+            if (deptSelect) {
+                Object.keys(departments).sort().forEach(function(dept) {
+                    var option = document.createElement('option');
+                    option.value = dept;
+                    option.textContent = dept;
+                    deptSelect.appendChild(option);
+                });
+            }
+        }
+        
+        /**
+         * Filter by level
+         */
+        function filterByLevel(schemeName, levelName) {
+            console.log('Filter by level:', levelName);
+            var viewer = geometryViewers[schemeName];
+            if (!viewer) return;
+            
+            viewer.currentLevel = levelName;
+            applyFilters(viewer);
+        }
+        
+        /**
+         * Filter by department
+         */
+        function filterByDepartment(schemeName, department) {
+            console.log('Filter by department:', department);
+            var viewer = geometryViewers[schemeName];
+            if (!viewer) return;
+            
+            viewer.currentDepartment = department;
+            applyFilters(viewer);
+        }
+        
+        /**
+         * Apply current filters to viewer
+         */
+        function applyFilters(viewer) {
+            viewer.areaMeshes.forEach(function(mesh) {
+                var areaData = mesh.userData;
+                if (!areaData || !areaData.area_id) {
+                    return; // Skip non-area meshes
+                }
+                
+                var showLevel = viewer.currentLevel === 'all' || areaData.levelName === viewer.currentLevel;
+                var showDept = viewer.currentDepartment === 'all' || areaData.department === viewer.currentDepartment;
+                
+                mesh.visible = showLevel && showDept;
+            });
+        }
+        
+        /**
+         * Toggle target overlay (placeholder - to be implemented with Excel data)
+         */
+        function toggleTargetOverlay(schemeName, enabled) {
+            console.log('Toggle target overlay:', enabled);
+            // TODO: Implement target overlay based on Excel requirements
+        }
+        
+        /**
+         * Get center point of a mesh
+         */
+        function getMeshCenter(mesh) {
+            if (!mesh.geometry.boundingBox) {
+                mesh.geometry.computeBoundingBox();
+            }
+            
+            var bbox = mesh.geometry.boundingBox;
+            if (bbox) {
+                var center = new THREE.Vector3();
+                bbox.getCenter(center);
+                
+                // Transform to world space
+                center.applyMatrix4(mesh.matrixWorld);
+                return center;
+            }
+            
+            return mesh.position.clone();
+        }
+        
+        /**
+         * Calculate bounding box center of all area geometries
+         */
+        function calculateBoundingBoxCenter(viewer) {
+            var minX = Infinity, maxX = -Infinity;
+            var minY = Infinity, maxY = -Infinity;
+            var minZ = Infinity, maxZ = -Infinity;
+            var count = 0;
+            
+            viewer.areaMeshes.forEach(function(mesh) {
+                if (mesh.userData && mesh.userData.area_id) {
+                    if (!mesh.geometry.boundingBox) {
+                        mesh.geometry.computeBoundingBox();
+                    }
+                    
+                    var bbox = mesh.geometry.boundingBox;
+                    if (bbox) {
+                        var worldMin = bbox.min.clone();
+                        var worldMax = bbox.max.clone();
+                        worldMin.applyMatrix4(mesh.matrixWorld);
+                        worldMax.applyMatrix4(mesh.matrixWorld);
+                        
+                        if (worldMin.x < minX) minX = worldMin.x;
+                        if (worldMax.x > maxX) maxX = worldMax.x;
+                        if (worldMin.y < minY) minY = worldMin.y;
+                        if (worldMax.y > maxY) maxY = worldMax.y;
+                        if (worldMin.z < minZ) minZ = worldMin.z;
+                        if (worldMax.z > maxZ) maxZ = worldMax.z;
+                        count++;
+                    }
+                }
+            });
+            
+            if (count > 0) {
+                return {
+                    x: (minX + maxX) / 2,
+                    y: (minY + maxY) / 2,
+                    z: (minZ + maxZ) / 2
+                };
+            } else {
+                return { x: 0, y: 0, z: 0 };
+            }
+        }
+        
+        /**
+         * Calculate scene center from all area geometries (simpler, uses position only)
+         */
+        function calculateSceneCenter(viewer) {
+            var minX = Infinity, maxX = -Infinity;
+            var minY = Infinity, maxY = -Infinity;
+            var minZ = Infinity, maxZ = -Infinity;
+            var count = 0;
+            
+            viewer.areaMeshes.forEach(function(mesh) {
+                if (mesh.userData && mesh.userData.area_id) {
+                    var pos = mesh.position;
+                    if (pos.x < minX) minX = pos.x;
+                    if (pos.x > maxX) maxX = pos.x;
+                    if (pos.y < minY) minY = pos.y;
+                    if (pos.y > maxY) maxY = pos.y;
+                    if (pos.z < minZ) minZ = pos.z;
+                    if (pos.z > maxZ) maxZ = pos.z;
+                    count++;
+                }
+            });
+            
+            if (count > 0) {
+                return {
+                    x: (minX + maxX) / 2,
+                    y: (minY + maxY) / 2,
+                    z: (minZ + maxZ) / 2
+                };
+            } else {
+                return { x: 0, y: 0, z: 0 };
+            }
+        }
+        
+        /**
+         * Reset camera to initial view (zoom to fit all areas)
+         */
+        function resetCamera(schemeName) {
+            var viewer = geometryViewers[schemeName];
+            if (!viewer) return;
+            
+            if (viewer.viewMode === '2d') {
+                setup2DViewer(viewer);
+            } else {
+                // Reset 3D camera
+                var centerPos = calculateSceneCenter(viewer);
+                
+                // Position camera at 45-degree angle
+                var distance = 200;
+                viewer.camera.position.set(
+                    centerPos.x + distance,
+                    centerPos.y + distance,
+                    centerPos.z + distance
+                );
+                
+                if (viewer.controls) {
+                    viewer.controls.target.set(centerPos.x, centerPos.y, centerPos.z);
+                    viewer.controls.update();
+                }
+            }
+        }
+        
+        /**
+         * Zoom to fit all visible areas
+         */
+        function zoomToFit(schemeName) {
+            var viewer = geometryViewers[schemeName];
+            if (!viewer) return;
+            
+            console.log('Zooming to fit all areas');
+            
+            // Calculate bounding box of visible areas
+            var minX = Infinity, maxX = -Infinity;
+            var minY = Infinity, maxY = -Infinity;
+            var minZ = Infinity, maxZ = -Infinity;
+            var visibleCount = 0;
+            
+            viewer.areaMeshes.forEach(function(mesh) {
+                if (!mesh.visible || !mesh.userData || !mesh.userData.area_id) return;
+                
+                // Get bounding box of this mesh
+                if (!mesh.geometry.boundingBox) {
+                    mesh.geometry.computeBoundingBox();
+                }
+                
+                var bbox = mesh.geometry.boundingBox;
+                if (bbox) {
+                    var worldMin = bbox.min.clone();
+                    var worldMax = bbox.max.clone();
+                    
+                    // Transform to world space
+                    worldMin.applyMatrix4(mesh.matrixWorld);
+                    worldMax.applyMatrix4(mesh.matrixWorld);
+                    
+                    if (worldMin.x < minX) minX = worldMin.x;
+                    if (worldMax.x > maxX) maxX = worldMax.x;
+                    if (worldMin.y < minY) minY = worldMin.y;
+                    if (worldMax.y > maxY) maxY = worldMax.y;
+                    if (worldMin.z < minZ) minZ = worldMin.z;
+                    if (worldMax.z > maxZ) maxZ = worldMax.z;
+                    visibleCount++;
+                }
+            });
+            
+            if (visibleCount === 0) {
+                console.log('No visible areas to fit');
+                return;
+            }
+            
+            var center = {
+                x: (minX + maxX) / 2,
+                y: (minY + maxY) / 2,
+                z: (minZ + maxZ) / 2
+            };
+            
+            var size = {
+                x: maxX - minX,
+                y: maxY - minY,
+                z: maxZ - minZ
+            };
+            
+            var maxDim = Math.max(size.x, size.y, size.z);
+            var distance = maxDim * 2.5; // Distance multiplier for nice framing
+            
+            if (viewer.viewMode === '2d') {
+                // For 2D orthographic
+                viewer.camera.position.set(center.x, center.y + 100, center.z);
+                viewer.camera.lookAt(center.x, center.y, center.z);
+                
+                var aspect = viewer.canvas.clientWidth / viewer.canvas.clientHeight;
+                var frustumSize = maxDim * 1.1;
+                viewer.camera.left = frustumSize * aspect / -2;
+                viewer.camera.right = frustumSize * aspect / 2;
+                viewer.camera.top = frustumSize / 2;
+                viewer.camera.bottom = frustumSize / -2;
+                viewer.camera.updateProjectionMatrix();
+            } else {
+                // For 3D perspective
+                viewer.camera.position.set(
+                    center.x + distance * 0.7,
+                    center.y + distance * 0.7,
+                    center.z + distance * 0.7
+                );
+                
+                if (viewer.controls) {
+                    viewer.controls.target.set(center.x, center.y, center.z);
+                    viewer.controls.update();
+                }
+            }
+            
+            console.log('Zoomed to fit', visibleCount, 'areas');
+        }
+        
+        /**
+         * Reset camera to initial view
+         */
+        function resetCamera(schemeName) {
+            var viewer = geometryViewers[schemeName];
+            if (!viewer) return;
+            
+            if (viewer.viewMode === '2d') {
+                setup2DViewer(viewer);
+            } else {
+                setup3DViewer(viewer);
+            }
+        }
+        
+        /**
+         * Toggle animation (explode view / fly-through)
+         */
+        function toggleAnimation(schemeName) {
+            var viewer = geometryViewers[schemeName];
+            if (!viewer) return;
+            
+            viewer.isAnimating = !viewer.isAnimating;
+            
+            if (viewer.isAnimating) {
+                console.log('Starting animation');
+                // TODO: Implement explode view animation
+            } else {
+                console.log('Stopping animation');
+            }
+        }
+        
+        // Auto-initialize geometry viewers when Three.js is available
+        if (typeof THREE !== 'undefined' && typeof THREE.OrbitControls !== 'undefined') {
+            console.log('Three.js already loaded, initializing geometry viewers now');
+            initializeGeometryViewers();
+        } else {
+            console.log('Waiting for Three.js to load geometry viewers...');
+        }
+        
         """
+    
+    def _sanitize_for_json(self, value):
+        """
+        Sanitize value for JSON serialization (handle Unicode in Python 2.7)
+        
+        Args:
+            value: Any value to sanitize
+        
+        Returns:
+            Sanitized value safe for JSON
+        """
+        if value is None:
+            return ""
+        
+        if isinstance(value, (int, float, bool)):
+            return value
+        
+        # Handle strings - ensure they're unicode
+        try:
+            if isinstance(value, str):
+                # In Python 2.7, str is bytes
+                return value.decode('utf-8', errors='replace')
+            elif isinstance(value, unicode):
+                return value
+            else:
+                return unicode(str(value), 'utf-8', errors='replace')
+        except:
+            # Fallback: convert to ASCII
+            try:
+                return str(value).encode('ascii', errors='replace').decode('ascii')
+            except:
+                return ""
+    
+    def _generate_geometry_data_json(self, revit_data):
+        """
+        Generate JavaScript-ready JSON data for area geometries
+        
+        Args:
+            revit_data: Dictionary of area data by scheme {scheme_name: [areas]}
+        
+        Returns:
+            str: JavaScript object literal with geometry data
+        """
+        import json
+        
+        # Build geometry data structure organized by scheme -> level -> areas
+        geometry_data = {}
+        
+        
+        for scheme_name, areas_list in revit_data.items():
+            if not isinstance(areas_list, list):
+                continue
+            
+            
+            scheme_data = {}
+            areas_with_geometry = 0
+            
+            for area_obj in areas_list:
+                geometry = area_obj.get('geometry')
+                if not geometry:
+                    # Skip areas without geometry
+                    continue
+                
+                areas_with_geometry += 1
+                
+                level_name = geometry.get('level_name', 'Unknown')
+                
+                # Initialize level if not exists
+                if level_name not in scheme_data:
+                    scheme_data[level_name] = []
+                
+                # Get metadata from area_obj (not geometry)
+                department = area_obj.get('department', '')
+                program_type = area_obj.get('program_type', '')
+                program_type_detail = area_obj.get('program_type_detail', '')
+                area_sf = area_obj.get('area_sf', 0)
+                
+                
+                # Get department color from hierarchy
+                dept_color = self.get_color('department', department)
+                
+                # Build area geometry object for JavaScript
+                # Sanitize all values for JSON serialization (Python 2.7 compatible)
+                area_geom = {
+                    'area_id': int(geometry.get('area_id')) if geometry.get('area_id') else 0,
+                    'department': self._sanitize_for_json(department),
+                    'program_type': self._sanitize_for_json(program_type),
+                    'program_type_detail': self._sanitize_for_json(program_type_detail),
+                    'area_sf': float(area_sf),
+                    'level_elevation': float(geometry.get('level_elevation', 0)),
+                    'boundary_loops': geometry.get('boundary_loops', []),
+                    'color': self._sanitize_for_json(dept_color)
+                }
+                
+                scheme_data[level_name].append(area_geom)
+            
+            
+            geometry_data[scheme_name] = scheme_data
+        
+        # Convert to JSON string
+        try:
+            # Python 2.7 compatible JSON serialization
+            # Use ensure_ascii=True to avoid encoding issues in Python 2.7
+            json_str = json.dumps(geometry_data, indent=2, ensure_ascii=True)
+            
+            # Write to script folder for debugging
+            try:
+                import os
+                # Debug JSON output (optional - comment out for production)
+                # import io
+                # script_dir = os.path.dirname(__file__)
+                # debug_path = os.path.join(script_dir, "area_geometry_debug.json")
+                # with io.open(debug_path, 'w', encoding='utf-8') as f:
+                #     if isinstance(json_str, str):
+                #         json_str_unicode = json_str.decode('utf-8')
+                #     else:
+                #         json_str_unicode = json_str
+                #     f.write(json_str_unicode)
+                
+                # Summary
+                total_areas = sum(sum(len(areas) for areas in levels.values()) for levels in geometry_data.values())
+                if total_areas > 0:
+                    print("3D geometry: {} areas loaded".format(total_areas))
+            except Exception as debug_e:
+                pass
+            
+            return json_str
+        except Exception as e:
+            print("Error generating geometry JSON: {}".format(str(e)))
+            import traceback
+            traceback.print_exc()
+            return "{}"
     
     def open_report_in_browser(self, filepath=None):
         """Open the report in Microsoft Edge browser (preferred) or default browser"""
