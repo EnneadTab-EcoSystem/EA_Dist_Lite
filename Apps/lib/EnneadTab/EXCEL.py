@@ -186,7 +186,6 @@ class ExcelDataCollection:
             self.data.append(item)
             self.used_coord[(self.row, self.column)] = item
 
-        print (self.pointer)
 
     def add_row(self, row):
         self.row += 1

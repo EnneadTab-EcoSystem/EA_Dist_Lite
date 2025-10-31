@@ -14,7 +14,14 @@ import time
 from datetime import datetime
 import config
 import suggestion_logic
+import department_matrix
 from EnneadTab import ENVIRONMENT
+
+try:
+    _BUILTINS_DICT = __builtins__ if isinstance(__builtins__, dict) else __builtins__.__dict__
+    TEXT_TYPE = _BUILTINS_DICT.get('unicode', str)
+except Exception:
+    TEXT_TYPE = str
 
 
 class AreaMatcher:
@@ -426,6 +433,9 @@ class HTMLReportGenerator:
         }
         self.revit_data = revit_data
         
+        # Track department-level matrices per scheme
+        self.department_matrix_cache = {}
+
         # Match areas to requirements
         matcher = AreaMatcher()
         all_matches = matcher.match_areas_to_requirements(excel_data, revit_data)
@@ -498,6 +508,11 @@ class HTMLReportGenerator:
         
         # Create safe scheme name for IDs and classes
         safe_scheme_name = scheme_name.replace(" ", "_").replace("/", "_").replace("-", "_")
+
+        scheme_areas = self.revit_data.get(scheme_name, [])
+        matrix_data = department_matrix.build_matrix(matches, scheme_areas, self.color_hierarchy)
+        self.department_matrix_cache[scheme_name] = matrix_data
+        matrix_html = department_matrix.render_html(matrix_data, safe_scheme_name)
         active_class = " active" if is_first else ""
         
         # Generate scheme-specific content
@@ -562,14 +577,22 @@ class HTMLReportGenerator:
         </div>
     </header>
     
+    <div class="department-matrix-section">
+        <h2>📊 Department Area Matrix by Level</h2>
+        <p class="section-description">This matrix focuses on approved departments only. Division and room-level accuracy is not evaluated here.</p>
+        {matrix_html}
+    </div>
+
     <div class="department-summary-section">
         <h2>📊 Department Fulfillment Summary</h2>
+        <p class="section-description">This summary reflects total valid department, division, and room matches. Only fully validated elements count toward these totals.</p>
         {department_summary_table}
         {department_by_level_viz}
     </div>
     
     <div class="tree-view-section">
         <h2>🌳 TreeView</h2>
+        <p class="section-description">The TreeView shows total valid department, division, and room matches—the same validated elements counted in the fulfillment summary.</p>
         <div class="tree-controls">
             <button onclick="expandAllTreeNodes()">Expand All</button>
             <button onclick="collapseAllTreeNodes()">Collapse All</button>
@@ -709,6 +732,7 @@ class HTMLReportGenerator:
             unmatched_section=self._create_unmatched_section(unmatched_areas, matches, scheme_name),
             department_summary_table=self._create_department_summary_table(matches),
             department_by_level_viz=self._create_department_by_level_visualization(matches, unmatched_areas),
+            matrix_html=matrix_html,
             tree_view_html=self._create_tree_view_html(matches)
         )
         
@@ -829,6 +853,10 @@ class HTMLReportGenerator:
         <div class="minimap-item" onclick="scrollToSection('main-header')" data-section="main-header">
             <span class="minimap-icon">🏥</span>
             <span>Report Header</span>
+        </div>
+        <div class="minimap-item" onclick="scrollToSection('level-matrix-section')" data-section="level-matrix-section">
+            <span class="minimap-icon">🏢</span>
+            <span>Dept by Level</span>
         </div>
         <div class="minimap-item" onclick="scrollToSection('department-summary-section')" data-section="department-summary-section">
             <span class="minimap-icon">📊</span>
@@ -2187,6 +2215,165 @@ class HTMLReportGenerator:
             font-weight: 600;
         }
         
+        .level-matrix-section {
+            margin: 32px 0;
+            padding: 24px;
+            background: rgba(17, 24, 39, 0.6);
+            border: 1px solid rgba(75, 85, 99, 0.4);
+            border-radius: 12px;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.4);
+        }
+
+        .level-matrix-section h2 {
+            margin: 0 0 12px 0;
+            font-size: 1.35rem;
+            color: #f9fafb;
+            font-weight: 600;
+        }
+
+        .matrix-description {
+            margin-bottom: 18px;
+            color: #cbd5f5;
+            font-size: 0.9rem;
+        }
+
+        .matrix-scroll {
+            width: 100%;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        .department-matrix {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            min-width: 960px;
+        }
+
+        .department-matrix thead th {
+            position: sticky;
+            top: 0;
+            background: #1b2433;
+            padding: 14px 18px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 1rem;
+            color: #f9fafb;
+            z-index: 2;
+            letter-spacing: 0.03em;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+        }
+
+        .matrix-level-header {
+            min-width: 180px;
+            text-align: left;
+            border-top-left-radius: 12px;
+        }
+
+        .dept-header span {
+            display: block;
+            word-break: break-word;
+        }
+
+        .department-matrix tbody tr:first-child .matrix-level {
+            border-top-left-radius: 12px;
+        }
+
+        .matrix-level {
+            padding: 12px 16px;
+            background: rgba(17, 24, 39, 0.85);
+            color: #e2e8f0;
+            font-weight: 600;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+        }
+
+        .matrix-cell {
+            padding: 12px 14px;
+            text-align: right;
+            color: #f1f5f9;
+            font-family: 'Source Code Pro', 'Consolas', monospace;
+            font-size: 0.9rem;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        }
+
+        .matrix-cell:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 18px rgba(15, 23, 42, 0.35);
+            color: #ffffff;
+        }
+
+        .matrix-cell.empty {
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .summary-row .summary-title {
+            padding: 10px 16px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            color: #f8fafc;
+        }
+
+        .summary-cell {
+            padding: 11px 14px;
+            text-align: right;
+            color: #0b1120;
+            font-weight: 600;
+            font-family: 'Source Code Pro', 'Consolas', monospace;
+        }
+
+        .summary-row.total .summary-title {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.75), rgba(5, 150, 105, 0.9));
+        }
+
+        .summary-row.total .summary-cell {
+            background: linear-gradient(135deg, rgba(45, 212, 191, 0.35), rgba(16, 185, 129, 0.45));
+            color: #032524;
+        }
+
+        .summary-row.target .summary-title {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.75), rgba(37, 99, 235, 0.9));
+        }
+
+        .summary-row.target .summary-cell {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.55), rgba(37, 99, 235, 0.65));
+            color: #e8f2ff;
+        }
+
+        .summary-row.delta .summary-title {
+            background: linear-gradient(135deg, rgba(249, 115, 22, 0.75), rgba(194, 65, 12, 0.9));
+        }
+
+        .summary-cell.delta {
+            color: #0b1120;
+        }
+
+        .summary-cell.delta.positive {
+            background: rgba(16, 185, 129, 0.75);
+            color: #f8fafc;
+        }
+
+        .summary-cell.delta.negative {
+            background: rgba(220, 38, 38, 0.8);
+            color: #f8fafc;
+        }
+
+        .matrix-scroll::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .matrix-scroll::-webkit-scrollbar-track {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 999px;
+        }
+
+        .matrix-scroll::-webkit-scrollbar-thumb {
+            background: rgba(96, 165, 250, 0.65);
+            border-radius: 999px;
+        }
+
         @media (max-width: 768px) {
             .legend-grid {
                 grid-template-columns: 1fr;
@@ -5702,6 +5889,7 @@ class HTMLReportGenerator:
         function updateMinimapActiveState() {
             var sections = [
                 'report-header',
+                'level-matrix-section',
                 'department-summary-section',
                 'tree-view-section',
                 'unmatched-section',
@@ -7397,20 +7585,20 @@ class HTMLReportGenerator:
         if isinstance(value, (int, float, bool)):
             return value
         
-        # Handle strings - ensure they're unicode
+        # Handle strings - ensure they're TEXT_TYPE
         try:
-            if isinstance(value, str):
-                # In Python 2.7, str is bytes
-                return value.decode('utf-8', errors='replace')
-            elif isinstance(value, unicode):
+            if isinstance(value, bytes):
+                try:
+                    return value.decode('utf-8', 'replace')
+                except Exception:
+                    return value
+            if isinstance(value, TEXT_TYPE):
                 return value
-            else:
-                return unicode(str(value), 'utf-8', errors='replace')
-        except:
-            # Fallback: convert to ASCII
+            return TEXT_TYPE(str(value))
+        except Exception:
             try:
-                return str(value).encode('ascii', errors='replace').decode('ascii')
-            except:
+                return str(value)
+            except Exception:
                 return ""
     
     def _generate_geometry_data_json(self, revit_data):
