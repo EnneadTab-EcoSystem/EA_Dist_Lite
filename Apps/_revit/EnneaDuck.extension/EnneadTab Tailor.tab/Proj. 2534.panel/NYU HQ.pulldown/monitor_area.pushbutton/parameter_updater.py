@@ -9,6 +9,7 @@ Handles both matched areas (clear suggestion) and unmatched areas (set suggestio
 from Autodesk.Revit import DB # pyright: ignore
 from EnneadTab.REVIT import REVIT_SELECTION
 import config
+import suggestion_logic
 
 
 def update_area_parameters(doc, matches_by_scheme, unmatched_by_scheme):
@@ -68,7 +69,21 @@ def update_area_parameters(doc, matches_by_scheme, unmatched_by_scheme):
         # Process unmatched areas - set suggestion text
         for scheme_name, unmatched_areas in unmatched_by_scheme.items():
             print("Processing {} unmatched areas for scheme: {}".format(len(unmatched_areas), scheme_name))
+
+            scheme_matches = matches_by_scheme.get(scheme_name, {})
+            valid_items = suggestion_logic.build_valid_items(scheme_matches.get('matches', []))
+
             for area_object in unmatched_areas:
+                if not area_object.get('suggestion_text'):
+                    suggestion_text = suggestion_logic.get_suggestion_text(
+                        area_object.get('department', ''),
+                        area_object.get('program_type', ''),
+                        area_object.get('program_type_detail', ''),
+                        valid_items
+                    )
+                    if suggestion_text:
+                        area_object['suggestion_text'] = suggestion_text
+
                 result = _set_suggestion_parameter(area_object)
                 if result['success']:
                     stats['unmatched_updated'] += 1
@@ -182,11 +197,11 @@ def _set_suggestion_parameter(area_object):
         if param and not param.IsReadOnly:
             # Get suggestion from area_object or generate it
             suggestion_text = area_object.get('suggestion_text', '')
-            
-            # If no suggestion text is stored, create it from area data
+
+            # If no suggestion text is stored, use shared fallback text
             if not suggestion_text:
-                suggestion_text = _generate_no_suggestion_text()
-            
+                suggestion_text = suggestion_logic.get_no_suggestion_text()
+
             param.Set(suggestion_text)
         
         # Clear RoomDataTarget parameter (unmatched areas have no target)
@@ -200,29 +215,3 @@ def _set_suggestion_parameter(area_object):
         result['error'] = "Error setting parameter: {}".format(str(e))
     
     return result
-
-
-def _generate_no_suggestion_text():
-    """
-    Generate text when no suggestion is available
-    
-    Returns:
-        str: Default text for no suggestion
-    """
-    return "No matching suggestion found"
-
-
-def generate_suggestion_text(department, division, room_name):
-    """
-    Generate formatted suggestion text for display
-    
-    Args:
-        department: Department value
-        division: Division/Program Type value
-        room_name: Room Name/Program Type Detail value
-        
-    Returns:
-        str: Formatted suggestion text
-    """
-    return "{} | {} | {}".format(department, division, room_name)
-

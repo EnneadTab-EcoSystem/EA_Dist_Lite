@@ -248,29 +248,53 @@ def check_pyrevit_available():
         return False
 
 
-def kill_revit_processes(logger):
-    """Kill any lingering Revit processes"""
+def kill_revit_processes(logger, specific_pid=None):
+    """Kill Revit processes
+    
+    Args:
+        logger: Logger instance
+        specific_pid: If provided, kill only this specific PID. Otherwise kill all Revit.exe/RevitWorker.exe
+    """
     try:
         import subprocess
         
-        # Only kill Revit.exe and RevitWorker.exe, never pyrevit or python processes
-        processes_to_kill = ['Revit.exe', 'RevitWorker.exe']
-        
-        for proc_name in processes_to_kill:
+        if specific_pid:
+            # Kill specific PID only (and its children)
             try:
-                # Check if process exists
-                check_cmd = 'tasklist /FI "IMAGENAME eq {}" 2>NUL | find /I /N "{}"'.format(
-                    proc_name, proc_name
-                )
+                # Check if PID still exists
+                check_cmd = 'tasklist /FI "PID eq {}" /NH 2>NUL | find /I "{}"'.format(specific_pid, str(specific_pid))
                 result = subprocess.call(check_cmd, shell=True, stdout=subprocess.PIPE)
                 
-                if result == 0:  # Process found
-                    logger.warning("Found lingering {}, killing...".format(proc_name))
-                    kill_cmd = 'taskkill /F /IM "{}" >NUL 2>&1'.format(proc_name)
+                if result == 0:  # Process still exists
+                    logger.info("Killing specific Revit PID {} and its children...".format(specific_pid))
+                    # Kill process tree (parent and children)
+                    kill_cmd = 'taskkill /F /T /PID {} >NUL 2>&1'.format(specific_pid)
                     subprocess.call(kill_cmd, shell=True)
                     time.sleep(2)  # Wait for cleanup
+                else:
+                    logger.info("Revit PID {} already terminated".format(specific_pid))
             except Exception as e:
-                logger.warning("Error checking/killing {}: {}".format(proc_name, e))
+                logger.warning("Error killing PID {}: {}".format(specific_pid, e))
+        else:
+            # Fallback: Kill ALL Revit.exe and RevitWorker.exe (old behavior)
+            # Only kill Revit.exe and RevitWorker.exe, never pyrevit or python processes
+            processes_to_kill = ['Revit.exe', 'RevitWorker.exe']
+            
+            for proc_name in processes_to_kill:
+                try:
+                    # Check if process exists
+                    check_cmd = 'tasklist /FI "IMAGENAME eq {}" 2>NUL | find /I /N "{}"'.format(
+                        proc_name, proc_name
+                    )
+                    result = subprocess.call(check_cmd, shell=True, stdout=subprocess.PIPE)
+                    
+                    if result == 0:  # Process found
+                        logger.warning("Found lingering {}, killing ALL instances...".format(proc_name))
+                        kill_cmd = 'taskkill /F /IM "{}" >NUL 2>&1'.format(proc_name)
+                        subprocess.call(kill_cmd, shell=True)
+                        time.sleep(2)  # Wait for cleanup
+                except Exception as e:
+                    logger.warning("Error checking/killing {}: {}".format(proc_name, e))
     except Exception as e:
         logger.error("Process cleanup error: {}".format(e))
 
@@ -780,8 +804,12 @@ def process_job(config_path, logger):
             'job_id': job_id,
             'success': False,
             'error': error,
-            'duration': 0
+            'duration': 0,
+            'pid': None
         })
+    
+    # Track the PID for cleanup
+    pid = process.pid if hasattr(process, 'pid') else None
     
     # Wait for completion
     success, error, status_data = wait_for_completion(process, config_path, job_id, logger)
@@ -794,7 +822,8 @@ def process_job(config_path, logger):
         'success': success,
         'error': error,
         'duration': duration,
-        'status_data': status_data
+        'status_data': status_data,
+        'pid': pid
     }
     
     if success:
@@ -889,7 +918,16 @@ def run_orchestrator():
             # Cleanup between jobs
             if i < len(config_paths) - 1:  # Not the last job
                 logger.info("Cleaning up before next job...")
-                kill_revit_processes(logger)
+                
+                # Kill only the specific Revit PID for this job (not all Revit instances)
+                pid = job_result.get('pid')
+                if pid:
+                    kill_revit_processes(logger, specific_pid=pid)
+                else:
+                    # Fallback: kill all Revit if PID not tracked
+                    logger.warning("PID not tracked, killing all Revit processes (fallback)")
+                    kill_revit_processes(logger)
+                
                 cleanup_stale_files()
                 cleanup_heartbeat_files()  # Remove heartbeat files to prevent timestamp pollution
                 

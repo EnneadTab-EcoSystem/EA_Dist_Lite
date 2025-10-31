@@ -7,7 +7,7 @@ Excel Data Module - Handles Excel file reading and parsing
 
 import os
 import config
-from EnneadTab import EXCEL
+from EnneadTab import EXCEL, NOTIFICATION
 
 
 def enrich_sparse_data(raw_data, header_row):
@@ -379,11 +379,19 @@ def get_excel_data():
     # Read and process Excel data
     print("Reading Excel: {}".format(excel_path))
     
-    raw_data = EXCEL.read_data_from_excel(
-        excel_path, 
-        worksheet=config.EXCEL_WORKSHEET, 
-        return_dict=True
-    )
+    try:
+        raw_data = EXCEL.read_data_from_excel(
+            excel_path, 
+            worksheet=config.EXCEL_WORKSHEET, 
+            return_dict=True
+        )
+    except Exception as ex:
+        error_message = str(ex)
+        notification_message = "Cannot open Excel file at {}.\n\nYour J drive may be disconnected or the Excel file has been renamed.".format(excel_path)
+        if error_message:
+            notification_message = "{}\n\nError: {}".format(notification_message, error_message)
+        NOTIFICATION.messenger(notification_message)
+        raise
     
     # Extract colors from COLOR column
     color_extracted_data = extract_color_from_color_column(raw_data, config.EXCEL_HEADER_ROW)

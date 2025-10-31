@@ -689,8 +689,10 @@ def export_jpg(doc, folder_paths, heartbeat_callback=None):
 def sync_to_acc(staging_path, acc_path, heartbeat_callback=None):
     """Sync files from local staging to ACC destination with overwrite
     
-    This performs a single batch copy operation to avoid triggering ACC Desktop
-    Connector deletion warnings.
+    Only copies clean PDF, DWG, JPG files. Filters out:
+    - .pcp files (plot configuration)
+    - Embedded resource files (long Revit-generated names)
+    - Other temporary files
     
     Args:
         staging_path: Source path (local staging folder)
@@ -705,31 +707,64 @@ def sync_to_acc(staging_path, acc_path, heartbeat_callback=None):
         if heartbeat_callback:
             heartbeat_callback("SYNC", message)
     
+    def should_copy_file(filepath):
+        """Determine if a file should be copied to ACC"""
+        filename = os.path.basename(filepath)
+        ext = os.path.splitext(filename)[1].lower()
+        
+        # Only copy our main export files
+        if ext not in ['.pdf', '.dwg', '.jpg']:
+            return False
+        
+        # Skip embedded resources (detect by very long names or embedded indicators)
+        # Revit embeds resources with model name prefix like "EA_UCSCIIRB_A_Building____-"
+        if '____-' in filename or len(filename) > 150:
+            return False
+        
+        return True
+    
     try:
-        log("Syncing files from staging to ACC...")
+        log("Syncing clean export files from staging to ACC...")
         log("  Source: {}".format(staging_path))
         log("  Destination: {}".format(acc_path))
         
-        # Ensure destination parent exists
-        if not os.path.exists(os.path.dirname(acc_path)):
-            os.makedirs(os.path.dirname(acc_path))
+        # Ensure destination exists
+        if not os.path.exists(acc_path):
+            os.makedirs(acc_path)
         
-        # Count files to copy
+        # Copy files selectively with filtering
         file_count = 0
+        skipped_count = 0
+        
         for root, dirs, files in os.walk(staging_path):
+            # Calculate relative path for destination
+            rel_path = os.path.relpath(root, staging_path)
+            dest_dir = os.path.join(acc_path, rel_path) if rel_path != '.' else acc_path
+            
+            # Ensure destination directory exists
+            if not os.path.exists(dest_dir):
+                os.makedirs(dest_dir)
+            
             for file in files:
-                file_count += 1
+                src_file = os.path.join(root, file)
+                
+                if should_copy_file(src_file):
+                    dest_file = os.path.join(dest_dir, file)
+                    
+                    # Remove existing file if present
+                    if os.path.exists(dest_file):
+                        try:
+                            os.remove(dest_file)
+                        except:
+                            pass
+                    
+                    # Copy file
+                    shutil.copy2(src_file, dest_file)
+                    file_count += 1
+                else:
+                    skipped_count += 1
         
-        log("Copying {} files to ACC...".format(file_count))
-        
-        # IronPython 2.7 compatible: Remove dest if exists, then copy
-        # (dirs_exist_ok doesn't exist in Python 2's shutil.copytree)
-        if os.path.exists(acc_path):
-            log("Removing existing destination folder before copy...")
-            shutil.rmtree(acc_path)
-        
-        shutil.copytree(staging_path, acc_path)
-        log("Sync completed successfully: {} files".format(file_count))
+        log("Sync completed: {} clean files copied, {} temp files skipped".format(file_count, skipped_count))
         
         return file_count
     except Exception as e:

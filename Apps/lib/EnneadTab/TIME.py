@@ -58,6 +58,20 @@ def get_formatted_time(input_time):
     hour, minute, second = '{:02d}'.format(input_time.hour), '{:02d}'.format(input_time.minute), '{:02d}'.format(input_time.second)
     return "{}-{}-{}_{}-{}-{}".format(year, month, day, hour, minute, second)
 
+
+def get_human_readable_datetime(input_time=None, include_seconds=False):
+    """Return a human-friendly timestamp like '2025-10-31 3:45 PM'."""
+    if input_time is None:
+        input_time = datetime.datetime.now()
+    elif isinstance(input_time, float):
+        input_time = datetime.datetime.fromtimestamp(input_time)
+
+    time_format = "%I:%M %p" if not include_seconds else "%I:%M:%S %p"
+    time_str = input_time.strftime(time_format).lstrip("0")
+    date_str = input_time.strftime("%Y-%m-%d")
+    return "{} {}".format(date_str, time_str)
+
+
 def get_readable_time(time_in_seconds):
     """
     Converts time in seconds to a human-readable format.
