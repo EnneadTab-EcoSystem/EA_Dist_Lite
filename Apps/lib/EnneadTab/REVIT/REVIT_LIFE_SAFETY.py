@@ -532,18 +532,28 @@ class EgressPathManager:
         res = REVIT_FORMS.dialogue(main_text="Do you want to show or hide the note on the egress path marker?", options=options)
         hide_note = res == options[0]
         all_type_names = REVIT_FAMILY.get_all_types_by_family_name(self.egress_path_family_name, doc=self.doc, return_name=True)
+        if all_type_names is None:
+            NOTIFICATION.messenger("Cannot find family '{}' in the document.".format(self.egress_path_family_name))
+            t.RollBack()
+            return
         for family_type_name in all_type_names:
             self.process_type(family_type_name, hide_note)
         t.Commit()
 
     def process_type(self, family_type_name, hide_note):
         family_type = REVIT_FAMILY.get_family_type_by_name(self.egress_path_family_name, family_type_name, doc=self.doc)
+        if family_type is None:
+            print("Warning: Cannot find family type '{}' for family '{}'".format(family_type_name, self.egress_path_family_name))
+            return
         if not family_type.IsActive:
             family_type.Activate()
         family_type.LookupParameter("Type Comments").Set(family_type_name)
         family_type.LookupParameter("show_note").Set(hide_note)
 
         instances = REVIT_FAMILY.get_family_instances_by_family_name_and_type_name(self.egress_path_family_name, family_type_name, doc=self.doc)
+        if instances is None:
+            print("Warning: No instances found for family type '{}' in family '{}'".format(family_type_name, self.egress_path_family_name))
+            return
         egress_dict = {}
         for instance in instances:
             view_scale = self.doc.GetElement(instance.OwnerViewId).Scale

@@ -411,9 +411,9 @@
             async checkConnectionStatus() {
                 try {
                     const controller = new AbortController();
-                    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+                    const timeoutId = setTimeout(() => controller.abort(), 1000); // 1 second timeout for heartbeat
                     
-                    const response = await fetch(`${this.baseUrl}/api/status`, {
+                    const response = await fetch(`${this.baseUrl}/api/heartbeat`, {
                         method: 'GET',
                         signal: controller.signal
                     });
@@ -422,33 +422,80 @@
                     
                     if (response.ok) {
                         this.lastSuccessfulRequest = Date.now();
-                        this.setConnectionStatus(true);
+                        this.setConnectionStatus(true, false);
                     } else {
-                        this.setConnectionStatus(false);
+                        // Heartbeat failed, check if server is processing
+                        await this.checkIfProcessing();
                     }
                 } catch (error) {
-                    console.log('Connection check failed:', error.message);
-                    this.setConnectionStatus(false);
+                    // Heartbeat failed, check if server is processing before marking as lost
+                    await this.checkIfProcessing();
                 }
             }
             
-            setConnectionStatus(connected) {
+            async checkIfProcessing() {
+                try {
+                    const response = await fetch(`${this.baseUrl}/api/processing_status`, {
+                        method: 'GET'
+                    });
+                    
+                    if (response.ok) {
+                        const status = await response.json();
+                        if (status.processing) {
+                            // Server is busy processing, not actually disconnected
+                            this.setConnectionStatus(true, true, status);
+                        } else {
+                            // Not processing, actually disconnected
+                            this.setConnectionStatus(false, false);
+                        }
+                    } else {
+                        // Can't reach processing status either, truly disconnected
+                        this.setConnectionStatus(false, false);
+                    }
+                } catch (error) {
+                    // Can't check processing status, assume disconnected
+                    this.setConnectionStatus(false, false);
+                }
+            }
+            
+            setConnectionStatus(connected, processing = false, processingStatus = null) {
                 const wasConnected = !this.connectionLost;
                 this.connectionLost = !connected;
                 
                 const container = document.getElementById('mainContainer');
                 const warning = document.getElementById('connectionWarning');
                 
-                if (this.connectionLost && wasConnected) {
-                    // Connection just lost
+                if (processing && processingStatus) {
+                    // Server is processing, show processing status instead of connection lost
+                    container.classList.remove('connection-lost');
+                    warning.classList.remove('hidden');
+                    
+                    let progressText = '';
+                    if (processingStatus.progress && processingStatus.progress.total > 0) {
+                        progressText = ` (${processingStatus.progress.current}/${processingStatus.progress.total})`;
+                    }
+                    
+                    let operationText = processingStatus.operation === 'batch_processing' ? 'Batch Processing' : 'Processing';
+                    let fileName = processingStatus.current_file ? ` - ${processingStatus.current_file.split('\\').pop()}` : '';
+                    
+                    warning.innerHTML = `🔄 ${operationText}${progressText}${fileName}`;
+                    warning.style.backgroundColor = '#2563eb'; // Blue for processing
+                } else if (this.connectionLost && wasConnected) {
+                    // Connection actually lost
                     container.classList.add('connection-lost');
                     warning.classList.remove('hidden');
+                    warning.innerHTML = '⚠️ Connection is lost - Please check your connection and refresh the page';
+                    warning.style.backgroundColor = ''; // Reset to default warning color
                     console.warn('Connection lost - showing warning');
                 } else if (!this.connectionLost && !wasConnected) {
                     // Connection restored
                     container.classList.remove('connection-lost');
                     warning.classList.add('hidden');
+                    warning.innerHTML = '⚠️ Connection is lost - Please check your connection and refresh the page';
                     console.log('Connection restored - hiding warning');
+                } else if (!this.connectionLost && !processing) {
+                    // Everything normal, hide warning
+                    warning.classList.add('hidden');
                 }
             }
 
@@ -2240,6 +2287,9 @@
                            this.showBatchStep('batchProgress');
                            this.initializeBatchProgress();
                            
+                           // Start polling processing status during batch
+                           this.startBatchProgressPolling();
+                           
                            const response = await fetch(`${this.baseUrl}/api/batch_repath`, {
                                method: 'POST',
                                headers: { 'Content-Type': 'application/json' },
@@ -2250,6 +2300,9 @@
                                })
                            });
                            
+                           // Stop polling when batch completes
+                           this.stopBatchProgressPolling();
+                           
                            const data = await response.json();
                            
                            if (data.success) {
@@ -2259,7 +2312,51 @@
                                this.showBatchStatus(`Processing failed: ${data.error}`, 'error');
                            }
                        } catch (error) {
+                           this.stopBatchProgressPolling();
                            this.showBatchStatus(`Processing error: ${error.message}`, 'error');
+                       }
+                   }
+                   
+                   startBatchProgressPolling() {
+                       // Poll every 2 seconds during batch processing
+                       this.batchProgressInterval = setInterval(async () => {
+                           try {
+                               const response = await fetch(`${this.baseUrl}/api/processing_status`);
+                               if (response.ok) {
+                                   const status = await response.json();
+                                   if (status.processing && status.progress) {
+                                       this.updateBatchProgress(status);
+                                   }
+                               }
+                           } catch (error) {
+                               console.log('Progress polling error:', error.message);
+                           }
+                       }, 2000);
+                   }
+                   
+                   stopBatchProgressPolling() {
+                       if (this.batchProgressInterval) {
+                           clearInterval(this.batchProgressInterval);
+                           this.batchProgressInterval = null;
+                       }
+                   }
+                   
+                   updateBatchProgress(status) {
+                       const progressBar = document.getElementById('batchProgressBar');
+                       const progressText = document.getElementById('batchProgressText');
+                       const currentFile = document.getElementById('batchCurrentFile');
+                       const processedCount = document.getElementById('batchProcessedCount');
+                       
+                       if (status.progress && status.progress.total > 0) {
+                           const percent = Math.round((status.progress.current / status.progress.total) * 100);
+                           progressBar.style.width = `${percent}%`;
+                           progressText.textContent = `${percent}%`;
+                           processedCount.textContent = `${status.progress.current} of ${status.progress.total} files processed`;
+                       }
+                       
+                       if (status.current_file) {
+                           const fileName = status.current_file.split('\\').pop();
+                           currentFile.textContent = `Processing: ${fileName}`;
                        }
                    }
 

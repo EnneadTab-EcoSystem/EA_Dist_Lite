@@ -84,6 +84,12 @@ class WebHandler(SimpleHTTPRequestHandler):
         elif self.path == '/api/status':
             self.send_json_response({'status': 'ready'})
             return
+        elif self.path == '/api/heartbeat':
+            self.handle_heartbeat()
+            return
+        elif self.path == '/api/processing_status':
+            self.handle_processing_status()
+            return
         elif self.path.startswith('/api/preview_image/'):
             self.handle_preview_image()
             return
@@ -145,6 +151,28 @@ class WebHandler(SimpleHTTPRequestHandler):
         except Exception as e:
             print(f"API: Error getting versions: {e}")
             self.send_json_response({'success': False, 'error': str(e)})
+    
+    def handle_heartbeat(self):
+        """Handle heartbeat check - always responds quickly."""
+        import time
+        self.send_json_response({
+            'alive': True,
+            'timestamp': time.time()
+        })
+    
+    def handle_processing_status(self):
+        """Handle processing status request - returns current operation state."""
+        try:
+            status = InDesignLinkRepather.get_processing_status()
+            self.send_json_response(status)
+        except Exception as e:
+            self.send_json_response({
+                'processing': False,
+                'operation': 'error',
+                'current_file': '',
+                'progress': {'current': 0, 'total': 0},
+                'error': str(e)
+            })
             
     def handle_connect(self):
         """Handle InDesign connection request."""

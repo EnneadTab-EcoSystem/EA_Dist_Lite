@@ -22,6 +22,12 @@ import win32com.client
 class InDesignLinkRepather:
     """Main class for handling InDesign link repathing operations."""
     
+    # Class-level variables for processing state tracking
+    _processing = False
+    _current_operation = "idle"
+    _progress = {"current": 0, "total": 0}
+    _current_file = ""
+    
     def __init__(self):
         self.app = None
         self.doc = None
@@ -42,6 +48,16 @@ class InDesignLinkRepather:
                 ]
             )
         self.logger = logging.getLogger(__name__)
+    
+    @classmethod
+    def get_processing_status(cls) -> Dict:
+        """Get current processing status for heartbeat monitoring."""
+        return {
+            'processing': cls._processing,
+            'operation': cls._current_operation,
+            'current_file': cls._current_file,
+            'progress': cls._progress.copy()
+        }
         
     def connect_to_indesign(self, version_path=None):
         """Connect to InDesign application."""
@@ -80,8 +96,14 @@ class InDesignLinkRepather:
             else:
                 raise Exception(f"Failed to connect to InDesign: {error_msg}")
             
-    def open_document(self, file_path: str):
-        """Open an InDesign document."""
+    def open_document(self, file_path: str, suppress_dialogs: bool = True):
+        """Open an InDesign document using official Adobe InDesign Scripting DOM API.
+        
+        Args:
+            file_path: Path to the InDesign document
+            suppress_dialogs: If True, suppresses all dialogs including link update prompts (default: True for automation)
+                             Uses InDesign's official UserInteractionLevel API
+        """
         try:
             if not self.app:
                 raise Exception("Not connected to InDesign. Please connect first.")
@@ -91,9 +113,50 @@ class InDesignLinkRepather:
                 
             if not file_path.lower().endswith('.indd'):
                 raise ValueError("File must be an InDesign document (.indd)")
+            
+            # Use official InDesign Scripting DOM API to suppress dialogs
+            # Reference: https://developer.adobe.com/indesign/dom/api/
+            original_interaction_level = None
+            if suppress_dialogs:
+                try:
+                    # Save original UserInteractionLevel setting
+                    original_interaction_level = self.app.ScriptPreferences.UserInteractionLevel
+                    # Set to NEVER_INTERACT using the InDesign enum constant
+                    # The constant value for neverInteract is 1852403060 (not 1)
+                    # InDesign DOM: idUserInteractionLevels.neverInteract = 1852403060
+                    # Other values: interactWithAll = 1852403553, interactWithLocal = 1852403564
+                    # This suppresses all dialogs including:
+                    # - "Do you want to update modified links?"
+                    # - Font missing warnings
+                    # - Any other file-opening prompts
+                    self.app.ScriptPreferences.UserInteractionLevel = 1852403060  # neverInteract
+                    self.logger.info("Set UserInteractionLevel to neverInteract (1852403060)")
+                except Exception as e:
+                    self.logger.warning(f"Could not set UserInteractionLevel: {e}")
+                    # If setting fails, try to dismiss any existing dialogs
+                    try:
+                        # Check if there are any open dialogs and close them
+                        if hasattr(self.app, 'Dialogs') and self.app.Dialogs.Count > 0:
+                            for i in range(self.app.Dialogs.Count):
+                                try:
+                                    self.app.Dialogs.Item(i).Destroy()
+                                except:
+                                    pass
+                    except:
+                        pass
                 
-            self.doc = self.app.Open(file_path)
-            self.logger.info(f"Opened document: {file_path}")
+            # Open the document (ShowingWindow=True to display the document)
+            self.doc = self.app.Open(file_path, True)
+            self.logger.info(f"Opened document: {file_path} (suppress_dialogs: {suppress_dialogs})")
+            
+            # Restore original UserInteractionLevel setting
+            if suppress_dialogs and original_interaction_level is not None:
+                try:
+                    self.app.ScriptPreferences.UserInteractionLevel = original_interaction_level
+                    self.logger.info("Restored original UserInteractionLevel")
+                except Exception as e:
+                    self.logger.warning(f"Could not restore UserInteractionLevel: {e}")
+            
             return True
         except FileNotFoundError:
             raise Exception(f"Document not found: {file_path}")
@@ -698,15 +761,30 @@ class InDesignLinkRepather:
         }
         
         try:
+            # Set processing state for single file
+            InDesignLinkRepather._processing = True
+            InDesignLinkRepather._current_operation = "single_file"
+            if self.doc:
+                try:
+                    InDesignLinkRepather._current_file = self.doc.Name if hasattr(self.doc, 'Name') else "current document"
+                except:
+                    InDesignLinkRepather._current_file = "current document"
+            
             if not self.doc:
                 raise Exception("No document is open")
                 
             links = self.get_all_links()
             self.logger.info(f"Processing {len(links)} links for repathing")
             
-            for link_info in links:
+            # Update progress
+            InDesignLinkRepather._progress = {"current": 0, "total": len(links)}
+            
+            for idx, link_info in enumerate(links):
                 current_path = None
                 try:
+                    # Update progress
+                    InDesignLinkRepather._progress["current"] = idx + 1
+                    
                     # Get the link object using the index
                     link_index = link_info.get('index', 0)
                     link = self.doc.Links.Item(link_index)
@@ -818,11 +896,33 @@ class InDesignLinkRepather:
                     self.logger.error(f"Failed to repath link {link_info['name']}: {e}")
                     
             self.logger.info(f"Repathing complete: {results['success']} success, {results['failed']} failed, {results['skipped']} skipped")
+            
+            # Auto-save if any links were successfully updated
+            if results['success'] > 0:
+                try:
+                    if self.doc:
+                        self.doc.Save()
+                        self.logger.info(f"Document auto-saved after updating {results['success']} link(s)")
+                        results['saved'] = True
+                except Exception as save_error:
+                    self.logger.error(f"Failed to auto-save document: {save_error}")
+                    results['saved'] = False
+                    results['save_error'] = str(save_error)
+            else:
+                results['saved'] = False
+                results['save_error'] = "No links were updated"
+            
             return results
             
         except Exception as e:
             self.logger.error(f"Failed to repath links: {e}")
             raise
+        finally:
+            # Clear processing state
+            InDesignLinkRepather._processing = False
+            InDesignLinkRepather._current_operation = "idle"
+            InDesignLinkRepather._current_file = ""
+            InDesignLinkRepather._progress = {"current": 0, "total": 0}
             
     def preview_repath(self, old_folder: str, new_folder: str) -> Dict:
         """Preview the repathing operation without actually changing links."""
@@ -1147,9 +1247,16 @@ class InDesignLinkRepather:
         }
         
         try:
+            # Set processing state
+            InDesignLinkRepather._processing = True
+            InDesignLinkRepather._current_operation = "batch_processing"
+            
             # Find all InDesign files
             indesign_files = self.find_indesign_files(folder_path)
             results['total_files'] = len(indesign_files)
+            
+            # Update progress totals
+            InDesignLinkRepather._progress = {"current": 0, "total": results['total_files']}
             
             if results['total_files'] == 0:
                 self.logger.warning(f"No InDesign files found in {folder_path}")
@@ -1158,6 +1265,10 @@ class InDesignLinkRepather:
             # Process each file
             for i, file_path in enumerate(indesign_files):
                 try:
+                    # Update processing state
+                    InDesignLinkRepather._current_file = file_path
+                    InDesignLinkRepather._progress["current"] = i + 1
+                    
                     if progress_callback:
                         progress_callback(i, results['total_files'], file_path)
                     
@@ -1245,6 +1356,12 @@ class InDesignLinkRepather:
         except Exception as e:
             self.logger.error(f"Failed to perform batch repathing: {e}")
             raise
+        finally:
+            # Clear processing state
+            InDesignLinkRepather._processing = False
+            InDesignLinkRepather._current_operation = "idle"
+            InDesignLinkRepather._current_file = ""
+            InDesignLinkRepather._progress = {"current": 0, "total": 0}
 
     def preview_batch_repath(self, folder_path: str, old_folder: str, new_folder: str) -> Dict:
         """Preview batch repathing operation without making changes."""
