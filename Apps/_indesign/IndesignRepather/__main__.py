@@ -33,31 +33,88 @@ def setup_logging():
     )
     return logging.getLogger(__name__)
 
-def install_dependency(package_name):
-    """Install a Python package using pip."""
+def get_requirements():
+    """Get list of required packages from requirements.txt or fallback list."""
+    requirements = []
+    requirements_file = current_dir / "src" / "requirements.txt"
+    
+    # Try to read from requirements.txt
+    if requirements_file.exists():
+        try:
+            with open(requirements_file, 'r') as f:
+                for line in f:
+                    line = line.strip()
+                    # Skip empty lines and comments
+                    if line and not line.startswith('#'):
+                        # Extract package name (remove version specifiers)
+                        pkg = line.split('>=')[0].split('==')[0].split('<')[0].split('>')[0].strip()
+                        if pkg:
+                            requirements.append((pkg, line))  # (import_name, pip_name)
+        except Exception as e:
+            print(f"⚠️  Could not read requirements.txt: {e}")
+    
+    # Fallback to hardcoded list if no requirements found
+    if not requirements:
+        requirements = [("pywin32", "pywin32>=306")]
+    
+    return requirements
+
+def install_dependency(package_spec):
+    """Install a Python package using pip.
+    
+    Args:
+        package_spec: Package specification (e.g., "pywin32>=306" or "pywin32")
+    """
     import subprocess
     import sys
     
+    package_name = package_spec.split('>=')[0].split('==')[0].split('<')[0].split('>')[0].strip()
     print(f"📦 Installing {package_name}...")
     try:
+        # Use --upgrade to ensure we get the right version
         result = subprocess.run([
-            sys.executable, "-m", "pip", "install", package_name, "--quiet"
+            sys.executable, "-m", "pip", "install", package_spec, "--upgrade"
         ], check=True, capture_output=True, text=True)
         print(f"✅ Successfully installed {package_name}")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to install {package_name}: {e}")
+        print(f"❌ Failed to install {package_name}")
+        if e.stderr:
+            print(f"   Error: {e.stderr.strip()}")
         return False
 
 def check_and_install_dependencies():
     """Check if required dependencies are available and install if missing."""
+    import importlib
+    
+    print("🔍 Checking dependencies...")
+    
+    # Get requirements
+    requirements = get_requirements()
     missing_deps = []
     
-    # Check pywin32
-    try:
-        import win32com.client  # noqa: F401
-    except ImportError:
-        missing_deps.append("pywin32")
+    # Map of package names to their import names (if different)
+    import_names = {
+        'pywin32': 'win32com.client'
+    }
+    
+    # Check each dependency
+    for pkg_name, pkg_spec in requirements:
+        import_name = import_names.get(pkg_name, pkg_name)
+        try:
+            # Try to import the module
+            if '.' in import_name:
+                # For nested imports like win32com.client
+                parts = import_name.split('.')
+                module = importlib.import_module(parts[0])
+                for part in parts[1:]:
+                    module = getattr(module, part)
+            else:
+                importlib.import_module(import_name)
+            print(f"   ✓ {pkg_name} is installed")
+        except (ImportError, AttributeError):
+            print(f"   ✗ {pkg_name} is missing")
+            missing_deps.append(pkg_spec)
     
     # Check standard library modules (these shouldn't need installation)
     try:
@@ -67,28 +124,53 @@ def check_and_install_dependencies():
         import threading  # noqa: F401
         import time  # noqa: F401
     except ImportError:
-        print("❌ Standard library modules not available. This might indicate a Python installation issue.")
+        print("\n❌ Standard library modules not available.")
+        print("   This might indicate a Python installation issue.")
         return False
     
     # Install missing dependencies
     if missing_deps:
-        print("🔍 Checking dependencies...")
+        print(f"\n📥 Installing {len(missing_deps)} missing package(s)...")
+        failed_deps = []
+        
         for dep in missing_deps:
             if not install_dependency(dep):
-                print(f"\n❌ Failed to install {dep}")
-                print("🔧 Please try installing manually:")
-                print(f"   pip install {dep}")
-                return False
+                failed_deps.append(dep)
         
-        # Verify installation (pywin32 may need a restart to work properly)
-        print("🔍 Verifying installation...")
-        try:
-            import win32com.client  # noqa: F401
-            print("✅ All dependencies verified successfully!")
-        except ImportError:
-            print("⚠️  pywin32 was installed but may need a Python restart to work properly.")
-            print("✅ Installation completed - please restart the application if you encounter issues.")
-            # Don't fail here, as pywin32 installation might work after restart
+        if failed_deps:
+            print(f"\n❌ Failed to install {len(failed_deps)} package(s):")
+            for dep in failed_deps:
+                print(f"   - {dep}")
+            print("\n🔧 Please try installing manually:")
+            print(f"   {sys.executable} -m pip install {' '.join(failed_deps)}")
+            return False
+        
+        # Verify installation
+        print("\n🔍 Verifying installation...")
+        verification_failed = []
+        
+        for pkg_name, pkg_spec in requirements:
+            import_name = import_names.get(pkg_name, pkg_name)
+            try:
+                if '.' in import_name:
+                    parts = import_name.split('.')
+                    module = importlib.import_module(parts[0])
+                    for part in parts[1:]:
+                        module = getattr(module, part)
+                else:
+                    importlib.import_module(import_name)
+                print(f"   ✓ {pkg_name} verified")
+            except (ImportError, AttributeError):
+                verification_failed.append(pkg_name)
+        
+        if verification_failed:
+            print(f"\n⚠️  Some packages were installed but couldn't be verified:")
+            for pkg in verification_failed:
+                print(f"   - {pkg}")
+            print("\n💡 This is normal for some packages (like pywin32).")
+            print("   If you encounter issues, please restart the application.")
+    else:
+        print("✅ All dependencies are already installed!")
     
     return True
 
