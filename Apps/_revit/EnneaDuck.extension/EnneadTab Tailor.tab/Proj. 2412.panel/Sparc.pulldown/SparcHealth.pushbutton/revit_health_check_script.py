@@ -309,197 +309,109 @@ def collect_health_metrics(doc, start_time):
         health_output["error"] = "No document available"
         return health_output
     
+    # Import health_metric modules (copied from RevitSlave-3.0)
+    print("Importing health metric modules...")
     try:
-        # Check 1: Critical Elements (matching RevitSlave-3.0)
-        print("Collecting critical elements...")
-        critical_elements = {}
-        all_elements = DB.FilteredElementCollector(doc).WhereElementIsNotElementType().ToElements()
-        total_elements = len(list(all_elements))
-        critical_elements["total_elements"] = total_elements
+        from health_metric import (
+            project_checks,
+            linked_files_checks,
+            elements_checks,
+            views_checks,
+            templates_checks,
+            cad_checks,
+            families_checks,
+            graphical_checks,
+            groups_checks,
+            reference_checks,
+            materials_checks,
+            warnings_checks,
+            file_checks,
+            regions_checks,
+        )
+        print("All health metric modules imported successfully")
+    except Exception as import_ex:
+        error_msg = "Failed to import health_metric modules: {}".format(str(import_ex))
+        print(error_msg)
+        health_output["status"] = "failed"
+        health_output["error"] = error_msg
+        return health_output
+    
+    try:
+        # Run all 17 health checks (matching RevitSlave-3.0)
+        print("Running health checks...")
         
-        # Element counts by category
-        element_counts = {}
-        categories_to_count = [
-            (DB.BuiltInCategory.OST_Walls, "Walls"),
-            (DB.BuiltInCategory.OST_Doors, "Doors"),
-            (DB.BuiltInCategory.OST_Windows, "Windows"),
-            (DB.BuiltInCategory.OST_Floors, "Floors"),
-            (DB.BuiltInCategory.OST_Roofs, "Roofs"),
-            (DB.BuiltInCategory.OST_Columns, "Columns"),
-            (DB.BuiltInCategory.OST_StructuralColumns, "Structural Columns"),
-            (DB.BuiltInCategory.OST_StructuralFraming, "Structural Framing"),
-            (DB.BuiltInCategory.OST_Rooms, "Rooms"),
-            (DB.BuiltInCategory.OST_MEPSpaces, "Spaces"),
-            (DB.BuiltInCategory.OST_DuctCurves, "Ducts"),
-            (DB.BuiltInCategory.OST_PipeCurves, "Pipes"),
-            (DB.BuiltInCategory.OST_ElectricalEquipment, "Electrical Equipment"),
-            (DB.BuiltInCategory.OST_MechanicalEquipment, "Mechanical Equipment"),
-            (DB.BuiltInCategory.OST_LightingFixtures, "Lighting Fixtures"),
-            (DB.BuiltInCategory.OST_Furniture, "Furniture"),
-        ]
+        # Check 1: Project Info
+        print("[1/17] project_info")
+        checks["project_info"] = project_checks.check_project_info(doc)
         
-        for bic, name in categories_to_count:
-            try:
-                count = DB.FilteredElementCollector(doc).OfCategory(bic).WhereElementIsNotElementType().GetElementCount()
-                if count > 0:
-                    element_counts[name] = count
-            except:
-                pass
+        # Check 2: Linked Files
+        print("[2/17] linked_files")
+        checks["linked_files"] = linked_files_checks.check_linked_files(doc)
         
-        critical_elements["element_counts_by_category"] = element_counts
+        # Check 3: Critical Elements
+        print("[3/17] critical_elements")
+        checks["critical_elements"] = elements_checks.check_critical_elements(doc)
         
-        # Collect warning counts
-        print("Collecting warnings...")
-        try:
-            warnings = doc.GetWarnings()
-            warning_count = len(list(warnings))
-            critical_elements["warning_count"] = warning_count
-            
-            # Group warnings by severity
-            warning_by_severity = {}
-            for warning in warnings:
-                severity = str(warning.GetSeverity())
-                warning_by_severity[severity] = warning_by_severity.get(severity, 0) + 1
-            critical_elements["warnings_by_severity"] = warning_by_severity
-        except Exception as e:
-            critical_elements["warning_count"] = "Error: {}".format(str(e))
+        # Check 4: Rooms
+        print("[4/17] rooms")
+        checks["rooms"] = elements_checks.check_rooms(doc)
         
-        # Store critical elements check
-        checks["critical_elements"] = critical_elements
+        # Check 5: Views and Sheets
+        print("[5/17] views_sheets")
+        checks["views_sheets"] = views_checks.check_sheets_views(doc)
         
-        # Check 2: Views and Sheets (matching RevitSlave-3.0)
-        print("Collecting views and sheets...")
-        views_sheets = {}
-        try:
-            all_views = DB.FilteredElementCollector(doc).OfClass(DB.View).WhereElementIsNotElementType()
-            view_count = all_views.GetElementCount()
-            views_sheets["total_views"] = view_count
-            
-            # Count by view type
-            view_types = {}
-            for view in all_views:
-                if view.IsTemplate:
-                    continue
-                vt = str(view.ViewType)
-                view_types[vt] = view_types.get(vt, 0) + 1
-            views_sheets["view_count_by_type"] = view_types
-        except Exception as e:
-            views_sheets["total_views"] = "Error: {}".format(str(e))
+        # Check 6: Templates and Filters
+        print("[6/17] templates_filters")
+        checks["templates_filters"] = templates_checks.check_templates_filters(doc)
         
-        # Collect sheet counts
-        try:
-            sheets = DB.FilteredElementCollector(doc).OfClass(DB.ViewSheet).WhereElementIsNotElementType()
-            sheet_count = sheets.GetElementCount()
-            views_sheets["total_sheets"] = sheet_count
-        except Exception as e:
-            views_sheets["total_sheets"] = "Error: {}".format(str(e))
+        # Check 7: CAD Files
+        print("[7/17] cad_files")
+        checks["cad_files"] = cad_checks.check_cad_files(doc)
         
-        # Store views_sheets check
-        checks["views_sheets"] = views_sheets
+        # Check 8: Families
+        print("[8/17] families")
+        checks["families"] = families_checks.check_families(doc)
         
-        # Check 3: Project Info (including worksets - matching RevitSlave-3.0)
-        print("Collecting project info...")
-        project_info = {}
-        try:
-            project_info["is_workshared"] = doc.IsWorkshared
-            if doc.IsWorkshared:
-                worksets = DB.FilteredWorksetCollector(doc).OfKind(DB.WorksetKind.UserWorkset).ToWorksets()
-                workset_count = len(list(worksets))
-                project_info["workset_count"] = workset_count
-                
-                workset_names = []
-                for ws in worksets:
-                    workset_names.append(ws.Name)
-                project_info["workset_names"] = workset_names
-            else:
-                project_info["workset_count"] = 0
-        except Exception as e:
-            project_info["workset_info_error"] = "Error: {}".format(str(e))
+        # Check 9: Graphical Elements
+        print("[9/17] graphical_elements")
+        checks["graphical_elements"] = graphical_checks.check_graphical_elements(doc)
         
-        # Store project_info check
-        checks["project_info"] = project_info
+        # Check 10: Groups
+        print("[10/17] groups")
+        checks["groups"] = groups_checks.check_groups(doc)
         
-        # Check 4: Linked Files (matching RevitSlave-3.0)
-        print("Collecting linked models...")
-        linked_files = {}
-        try:
-            rvt_links = DB.FilteredElementCollector(doc).OfClass(DB.RevitLinkInstance)
-            link_count = rvt_links.GetElementCount()
-            linked_files["linked_files_count"] = link_count
-            
-            if link_count > 0:
-                link_list = []
-                for link in rvt_links:
-                    try:
-                        link_doc = link.GetLinkDocument()
-                        if link_doc:
-                            link_list.append({
-                                "linked_file_name": link_doc.Title,
-                                "instance_name": link.Name,
-                                "loaded_status": "Loaded" if link_doc else "Unloaded"
-                            })
-                        else:
-                            link_list.append({
-                                "linked_file_name": "Unloaded",
-                                "instance_name": link.Name,
-                                "loaded_status": "Unloaded"
-                            })
-                    except:
-                        link_list.append({
-                            "linked_file_name": "Unknown",
-                            "instance_name": "Unknown",
-                            "loaded_status": "Error"
-                        })
-                linked_files["linked_files"] = link_list
-        except Exception as e:
-            linked_files["error"] = "Error: {}".format(str(e))
+        # Check 11: Reference Planes
+        print("[11/17] reference_planes")
+        checks["reference_planes"] = reference_checks.check_reference_planes(doc)
         
-        # Store linked_files check
-        checks["linked_files"] = linked_files
+        # Check 12: Materials
+        print("[12/17] materials")
+        checks["materials"] = materials_checks.check_materials(doc)
         
-        # Check 5: Families (matching RevitSlave-3.0)
-        print("Collecting family counts...")
-        families_check = {}
-        try:
-            families = DB.FilteredElementCollector(doc).OfClass(DB.Family)
-            family_count = families.GetElementCount()
-            families_check["family_count"] = family_count
-        except Exception as e:
-            families_check["error"] = "Error: {}".format(str(e))
+        # Check 13: Line Count
+        print("[13/17] line_count")
+        checks["line_count"] = materials_checks.check_line_count(doc)
         
-        # Store families check
-        checks["families"] = families_check
+        # Check 14: Warnings (detailed)
+        print("[14/17] warnings")
+        checks["warnings"] = warnings_checks.check_warnings(doc)
         
-        # Check 6: Additional project parameters
-        print("Collecting additional project parameters...")
-        try:
-            proj_info = doc.ProjectInformation
-            if proj_info:
-                # Try to get common project info parameters
-                param_names = ["Project Name", "Project Number", "Project Address", "Client Name", "Project Status"]
-                for param_name in param_names:
-                    try:
-                        param = proj_info.LookupParameter(param_name)
-                        if param and param.HasValue:
-                            project_info[param_name.lower().replace(" ", "_")] = param.AsString()
-                    except:
-                        pass
-        except Exception as e:
-            project_info["parameters_error"] = "Error: {}".format(str(e))
+        # Check 15: File Size
+        print("[15/17] file_size")
+        checks["file_size"] = file_checks.check_file_size(doc)
         
-        # Update project_info check with additional parameters
-        checks["project_info"] = project_info
+        # Check 16: Filled Regions
+        print("[16/17] filled_regions")
+        checks["filled_regions"] = regions_checks.check_filled_regions(doc)
         
-        # Optional: Design options (if present)
-        try:
-            design_options = DB.FilteredElementCollector(doc).OfClass(DB.DesignOption)
-            design_option_count = design_options.GetElementCount()
-            if design_option_count > 0:
-                checks["design_options"] = {"count": design_option_count}
-        except:
-            pass
+        # Check 17: Grids and Levels
+        print("[17/17] grids_levels")
+        checks["grids_levels"] = reference_checks.check_grids_levels(doc)
         
-        print("Health metrics collected successfully")
+        print("")
+        print("="*60)
+        print("All 17 health checks completed successfully!")
+        print("="*60)
         
     except Exception as e:
         health_output["status"] = "partial"
@@ -510,7 +422,7 @@ def collect_health_metrics(doc, start_time):
 
 
 def write_health_output(health_data):
-    """Write health data to output folder
+    """Write health data to hierarchical output folder (RevitSlave3 format)
     
     Args:
         health_data: Dictionary with health check results
@@ -519,20 +431,43 @@ def write_health_output(health_data):
         str: Path to output file
     """
     try:
-        # Get output base path
+        # Get output base path and settings
         output_base = OUTPUT_SETTINGS.get('base_path', '')
         if not output_base:
             raise RuntimeError("Output base path not configured")
         
-        # Ensure output directory exists
-        if not os.path.exists(output_base):
-            os.makedirs(output_base)
+        use_hierarchical = OUTPUT_SETTINGS.get('use_hierarchical_structure', True)
         
-        # Generate output filename
-        model_name = MODEL_DATA.get('name', 'Unknown') if MODEL_DATA else 'Unknown'
-        timestamp = datetime.now().strftime(OUTPUT_SETTINGS.get('date_format', '%Y%m%d_%H%M%S'))
-        output_filename = "{}_{}.json".format(model_name, timestamp)
-        output_path = os.path.join(output_base, output_filename)
+        if use_hierarchical:
+            # RevitSlave3 format: {base}/task_output/{project}/{model}.rvt/job_{timestamp}_{id}.sexyDuck
+            project_name = PROJECT_INFO.get('project_name', 'Unknown')
+            model_name = MODEL_DATA.get('name', 'Unknown') if MODEL_DATA else 'Unknown'
+            
+            # Build hierarchical path
+            task_output_dir = os.path.join(output_base, "task_output")
+            project_dir = os.path.join(task_output_dir, project_name)
+            model_dir = os.path.join(project_dir, model_name + ".rvt")
+            
+            # Ensure directories exist
+            if not os.path.exists(model_dir):
+                os.makedirs(model_dir)
+            
+            # Generate filename: job_{timestamp}_{id}.sexyDuck
+            timestamp = datetime.now().strftime(OUTPUT_SETTINGS.get('date_format', '%Y%m%d_%H%M%S'))
+            # Extract sequential ID from job_id (last part after last underscore)
+            job_id_parts = JOB_ID.split('_') if JOB_ID else ['000']
+            sequential_id = job_id_parts[-1] if len(job_id_parts) > 0 else '000'
+            output_filename = "job_{}_{}.sexyDuck".format(timestamp, sequential_id)
+            output_path = os.path.join(model_dir, output_filename)
+        else:
+            # Legacy flat format: {base}/{model}_{timestamp}.json
+            if not os.path.exists(output_base):
+                os.makedirs(output_base)
+            
+            model_name = MODEL_DATA.get('name', 'Unknown') if MODEL_DATA else 'Unknown'
+            timestamp = datetime.now().strftime(OUTPUT_SETTINGS.get('date_format', '%Y%m%d_%H%M%S'))
+            output_filename = "{}_{}.json".format(model_name, timestamp)
+            output_path = os.path.join(output_base, output_filename)
         
         # Write JSON file
         import json
