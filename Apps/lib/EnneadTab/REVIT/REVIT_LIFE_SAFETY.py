@@ -558,17 +558,24 @@ class EgressPathManager:
         for instance in instances:
             view_scale = self.doc.GetElement(instance.OwnerViewId).Scale
             instance.LookupParameter("ScaleFactor_desired").Set(view_scale)
+            
+            # Determine and set the level name first
             try:
-                instance.LookupParameter(self.para_name_egress_level).Set(self.doc.GetElement(instance.OwnerViewId).GenLevel.Name)
+                level_name = self.doc.GetElement(instance.OwnerViewId).GenLevel.Name
             except:
                 # some time if it is plaaced at drafting view or legend view there is not level information.
-                instance.LookupParameter(self.para_name_egress_level).Set(self.doc.GetElement(instance.OwnerViewId).Name)
+                level_name = self.doc.GetElement(instance.OwnerViewId).Name
+            instance.LookupParameter(self.para_name_egress_level).Set(level_name)
 
+            # Then get/set path_id and create the grouping key
             path_id = instance.LookupParameter(self.para_name_egress_path_path_id).AsString() or "No Path ID"
             instance.LookupParameter(self.para_name_egress_path_path_id).Set(path_id)
-            egress_dict.setdefault(path_id, []).append(instance)
+            
+            # Use the level_name we just determined to create the key
+            key = (level_name, path_id)
+            egress_dict.setdefault(key, []).append(instance)
 
-        for path_id, instances in egress_dict.items():
+        for key, instances in egress_dict.items():
             total_length = sum(instance.LookupParameter("Length").AsDouble() for instance in instances)
             for instance in instances:
                 instance.LookupParameter(self.para_name_egress_path_total).Set(total_length)
