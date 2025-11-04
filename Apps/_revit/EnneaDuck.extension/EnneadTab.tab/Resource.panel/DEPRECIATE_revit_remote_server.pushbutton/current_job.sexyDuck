@@ -1,0 +1,30 @@
+{
+    "command": "pyrevit run C:\\Users\\szhang\\github\\EnneadTab-OS\\Apps\\_revit\\EnneaDuck.extension\\EnneadTab.tab\\Resource.panel\\revit_remote_server.pushbutton\\revit_remote_server_script.py C:\\Users\\szhang\\DC\\ACCDocs\\Ennead Architects LLP\\2526_St. Paul's School Dining and Wellness Center\\Project Files\\06_BIM\\08_Food Service_Kaizen\\SPSDHWC_QF_KAI_Food.rvt --revit=2025 --purge --debug", 
+    "paths": {
+        "database_folder": "C:\\Users\\szhang\\Documents\\EnneadTab Ecosystem\\Dump\\RevitSlaveDatabase", 
+        "log_dir": "C:\\Users\\szhang\\Documents\\EnneadTab Ecosystem\\Dump\\RevitSlaveDatabase\\_log", 
+        "model_name": "SPSDHWC_QF_KAI_Food.rvt", 
+        "project_name": "2526_St. Paul's School Dining and Wellness Center", 
+        "debug_dir": "C:\\Users\\szhang\\Documents\\EnneadTab Ecosystem\\Dump\\RevitSlaveDatabase\\_debug", 
+        "task_output_dir": "C:\\Users\\szhang\\Documents\\EnneadTab Ecosystem\\Dump\\RevitSlaveDatabase\\task_output\\2526_St. Paul's School Dining and Wellness Center\\SPSDHWC_QF_KAI_Food"
+    }, 
+    "acc_data": {
+        "model_guid": "92eb65ad-1885-45e3-9696-a1ea02a98d49", 
+        "file_id": "urn:adsk.wipprod:dm.lineage:QMqd07cjSkWVNvsekI10Aw", 
+        "version": 2025, 
+        "project_type": "ACC", 
+        "project_id": "b.f63c6c7d-2cb5-4c5b-8dd7-4fb408efd0ec", 
+        "project_guid": "6c7b4897-d457-4607-9ad7-2cbb511ff14b"
+    }, 
+    "result_data": {}, 
+    "file_name": "SPSDHWC_QF_KAI_Food.rvt", 
+    "hub_name": "Ennead Architects LLP", 
+    "model_name": "SPSDHWC_QF_KAI_Food.rvt", 
+    "job_id": "job_20251027_142120_1", 
+    "project_name": "2526_St. Paul's School Dining and Wellness Center", 
+    "model_path": "C:\\Users\\szhang\\DC\\ACCDocs\\Ennead Architects LLP\\2526_St. Paul's School Dining and Wellness Center\\Project Files\\06_BIM\\08_Food Service_Kaizen\\SPSDHWC_QF_KAI_Food.rvt", 
+    "status": "completed", 
+    "timestamp": "2025-10-27T14:21:20.699976", 
+    "run_exporter": false, 
+    "revit_version": "2025"
+}

@@ -19,7 +19,7 @@ AutoExporter.pushbutton/
 │   └── AutoExportConfig_*.json          # Export config files (auto-discovered)
 ├── orchestrator.py                       # Main orchestrator (runs outside Revit - CPython)
 ├── run_orchestrator.bat                  # Batch launcher for task scheduler (ONLY bat file)
-├── revit_server_entry_script.py          # Revit entry point (runs inside Revit - IronPython)
+├── revit_auto_export_script.py           # Revit entry point (runs inside Revit - IronPython)
 ├── revit_export_logic.py                 # Export operations (runs inside Revit - IronPython)
 ├── revit_post_export_logic.py            # Post-export tasks (runs inside Revit - IronPython)
 ├── config_loader.py                      # Configuration loader (Python 2/3 compatible)

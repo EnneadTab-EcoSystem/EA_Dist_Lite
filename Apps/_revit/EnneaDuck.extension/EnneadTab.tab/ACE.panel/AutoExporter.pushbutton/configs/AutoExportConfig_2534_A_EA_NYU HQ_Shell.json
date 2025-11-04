@@ -51,6 +51,15 @@
     "enabled": true,
     "folder_name": "heartbeat",
     "date_format": "%Y%m%d"
+  },
+  "schedule": {
+    "monday": false,
+    "tuesday": false,
+    "wednesday": true,
+    "thursday": false,
+    "friday": true,
+    "saturday": false,
+    "sunday": false
   }
 }
 

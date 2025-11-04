@@ -2,19 +2,18 @@
 # -*- coding: utf-8 -*-
 
 """
-AutoExporter Orchestrator
+SparcHealth Orchestrator
 
-A flexible orchestration system for automated Revit model exports.
-Discovers and processes multiple export configuration files sequentially,
-launching Revit for each config to perform exports and notifications.
+A flexible orchestration system for automated Sparc model health checks.
+Processes multiple models from a single config file sequentially,
+launching Revit for each model to perform health checks.
 
 Features:
-- Auto-discovers all AutoExportConfig_*.json files in configs/ folder
-- Sequential job processing with comprehensive logging
-- Timeout protection (default 30 min per job, configurable)
+- Processes all models from config.json sequentially
+- Timeout protection (default 20 min per job, configurable)
 - Process cleanup between jobs (kills lingering Revit processes)
 - Pre-flight checks (disk space, pyRevit availability, config validation)
-- Continues processing on failure (logs errors, proceeds to next config)
+- Continues processing on failure (logs errors, proceeds to next model)
 - Status tracking via JSON files for monitoring
 - Lock file prevents multiple concurrent instances
 - Exit codes for task scheduler integration
@@ -25,8 +24,8 @@ Architecture:
 - Uses JSON files for inter-process communication (payload, status)
 
 Usage:
-1. Add config files to configs/ folder (AutoExportConfig_*.json)
-2. Run this script directly or via run_orchestrator.bat
+1. Configure models in config.json
+2. Run this script directly or via run_SparcHealth.bat
 3. Monitor orchestrator_logs/ for execution details
 4. Check heartbeat/ logs for Revit script execution details
 
@@ -39,7 +38,6 @@ import sys
 import json
 import time
 import subprocess
-import glob
 from datetime import datetime
 
 
@@ -48,12 +46,12 @@ from datetime import datetime
 # =============================================================================
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIGS_DIR = os.path.join(SCRIPT_DIR, "configs")
+CONFIG_FILE = os.path.join(SCRIPT_DIR, "config.json")
 PAYLOAD_FILE = os.path.join(SCRIPT_DIR, "current_job_payload.json")
 STATUS_FILE = os.path.join(SCRIPT_DIR, "current_job_status.json")
 LOCK_FILE = os.path.join(SCRIPT_DIR, "orchestrator.lock")
 
-DEFAULT_TIMEOUT_MINUTES = 30
+DEFAULT_TIMEOUT_MINUTES = 20
 DEFAULT_COOLDOWN_SECONDS = 10
 LOCK_FILE_MAX_AGE_HOURS = 24
 MIN_DISK_SPACE_GB = 5
@@ -91,7 +89,7 @@ class OrchestratorLogger:
         )
         
         self._log("="*80)
-        self._log("AUTOEXPORTER ORCHESTRATOR LOG")
+        self._log("SPARCHEALTH ORCHESTRATOR LOG")
         self._log("="*80)
     
     def _log(self, message, level="INFO"):
@@ -300,97 +298,95 @@ def kill_revit_processes(logger, specific_pid=None):
 
 
 # =============================================================================
-# CONFIG DISCOVERY & VALIDATION
+# CONFIG LOADING & VALIDATION
 # =============================================================================
 
-def discover_configs():
-    """Discover all AutoExportConfig_*.json files in configs folder"""
-    if not os.path.exists(CONFIGS_DIR):
+def load_models_from_config():
+    """Load models from config.json
+    
+    Returns:
+        list: List of model dictionaries
+    """
+    if not os.path.exists(CONFIG_FILE):
         return []
     
-    pattern = os.path.join(CONFIGS_DIR, "AutoExportConfig_*.json")
-    config_files = glob.glob(pattern)
-    
-    # Sort alphabetically for consistent order
-    config_files.sort()
-    
-    return config_files
+    try:
+        with open(CONFIG_FILE, 'r') as f:
+            config = json.load(f)
+        
+        # Expand {username} placeholders
+        username = os.environ.get('USERNAME', os.environ.get('USER', ''))
+        config = _expand_placeholders_in_dict(config, username)
+        
+        models = config.get('models', [])
+        return models
+    except Exception as e:
+        print("Error loading config: {}".format(e))
+        return []
 
 
-def validate_config(config_path):
-    """Validate a config file has required structure
+def _expand_placeholders_in_dict(obj, username):
+    """Recursively expand {username} placeholders"""
+    if isinstance(obj, dict):
+        result = {}
+        for key, value in obj.items():
+            if isinstance(value, str):
+                result[key] = value.replace('{username}', username)
+            elif isinstance(value, (dict, list)):
+                result[key] = _expand_placeholders_in_dict(value, username)
+            else:
+                result[key] = value
+        return result
+    elif isinstance(obj, list):
+        return [_expand_placeholders_in_dict(item, username) if isinstance(item, (dict, list, str)) 
+                else item for item in obj]
+    elif isinstance(obj, str):
+        return obj.replace('{username}', username)
+    else:
+        return obj
+
+
+def validate_model(model):
+    """Validate a model has required structure
     
     Returns:
         (is_valid, errors_list)
     """
     errors = []
     
-    try:
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-    except Exception as e:
-        return (False, ["Failed to parse JSON: {}".format(str(e))])
-    
-    # Check required sections
-    required_sections = ['project', 'models', 'export', 'email']
-    for section in required_sections:
-        if section not in config:
-            errors.append("Missing required section: {}".format(section))
-    
-    # Check project section
-    if 'project' in config:
-        if 'project_name' not in config['project']:
-            errors.append("Missing project.project_name")
-    
-    # Check models section
-    if 'models' in config:
-        if not config['models']:
-            errors.append("No models defined")
-        else:
-            for model_name, model_data in config['models'].items():
-                required_keys = ['model_guid', 'project_guid', 'region', 'revit_version']
-                for key in required_keys:
-                    if key not in model_data:
-                        errors.append("Model '{}' missing: {}".format(model_name, key))
-    
-    # Check export section
-    if 'export' in config:
-        if 'output_base_path' not in config['export']:
-            errors.append("Missing export.output_base_path")
-    
-    # Check email section
-    if 'email' in config:
-        if 'recipients' not in config['email'] or not config['email']['recipients']:
-            errors.append("Missing or empty email.recipients")
+    required_keys = ['name', 'model_guid', 'project_guid', 'region', 'revit_version']
+    for key in required_keys:
+        if key not in model:
+            errors.append("Model missing required key: {}".format(key))
     
     is_valid = len(errors) == 0
     return (is_valid, errors)
 
 
-def validate_all_configs(config_paths, logger):
-    """Validate all configs before processing
+def validate_all_models(models, logger):
+    """Validate all models before processing
     
     Returns:
         (all_valid, validation_results)
     """
-    logger.info("Validating {} config files...".format(len(config_paths)))
+    logger.info("Validating {} model(s)...".format(len(models)))
     
     validation_results = {}
     all_valid = True
     
-    for config_path in config_paths:
-        config_name = os.path.basename(config_path)
-        is_valid, errors = validate_config(config_path)
+    for model in models:
+        model_name = model.get('name', 'Unknown')
+        is_valid, errors = validate_model(model)
         
-        validation_results[config_name] = {
+        validation_results[model_name] = {
             'valid': is_valid,
             'errors': errors
         }
         
         if is_valid:
-            logger.info("  [OK] {}".format(config_name))
+            logger.info("  [OK] {}".format(model_name))
         else:
-            logger.error("  [FAIL] {}".format(config_name))
+            logger.error("  [FAIL] {}".format(model_name))
             for error in errors:
                 logger.error("    - {}".format(error))
             all_valid = False
@@ -402,11 +398,10 @@ def validate_all_configs(config_paths, logger):
 # JOB EXECUTION
 # =============================================================================
 
-def write_payload(config_path, job_id, logger):
+def write_payload(model_data, job_id, logger):
     """Write job payload file atomically"""
     payload = {
-        "config_file": os.path.basename(config_path),
-        "config_path": config_path,
+        "model_data": model_data,
         "job_id": job_id,
         "started_at": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
@@ -431,26 +426,10 @@ def write_payload(config_path, job_id, logger):
         return False
 
 
-def get_revit_version_from_config(config_path):
-    """Extract Revit version from config"""
-    try:
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-        
-        # Get first model's Revit version
-        models = config.get('models', {})
-        if models:
-            first_model = list(models.values())[0]
-            return first_model.get('revit_version', '2026')
-        return '2026'
-    except:
-        return '2026'
-
-
-def get_timeout_from_config(config_path):
+def get_timeout_from_config():
     """Extract timeout setting from config"""
     try:
-        with open(config_path, 'r') as f:
+        with open(CONFIG_FILE, 'r') as f:
             config = json.load(f)
         
         orchestrator_settings = config.get('orchestrator', {})
@@ -470,14 +449,14 @@ def get_empty_doc_path(revit_version):
     return empty_doc
 
 
-def launch_revit_job(config_path, job_id, logger):
+def launch_revit_job(model_data, job_id, logger):
     """Launch Revit with pyrevit to process the job
     
     Returns:
         (success, error_message, process) - process is None if failed
     """
-    # Get Revit version from config
-    revit_version = get_revit_version_from_config(config_path)
+    # Get Revit version from model data
+    revit_version = model_data.get('revit_version', '2024')
     logger.info("Revit version: {}".format(revit_version))
     write_orchestrator_heartbeat(job_id, "PREP", "Preparing to launch Revit {}".format(revit_version))
     
@@ -491,7 +470,7 @@ def launch_revit_job(config_path, job_id, logger):
     logger.info("Empty doc: {}".format(empty_doc))
     
     # Build pyrevit command
-    script_path = os.path.join(SCRIPT_DIR, "revit_auto_export_script.py")
+    script_path = os.path.join(SCRIPT_DIR, "revit_health_check_script.py")
     
     cmd = [
         'pyrevit', 'run',
@@ -580,7 +559,7 @@ def get_last_heartbeat_message():
     return None
 
 
-def wait_for_completion(process, config_path, job_id, logger):
+def wait_for_completion(process, model_data, job_id, logger):
     """Wait for job to complete with ACTIVITY-BASED timeout
     
     Timeout only triggers if there's NO progress (status/heartbeat updates) for the timeout duration.
@@ -589,7 +568,7 @@ def wait_for_completion(process, config_path, job_id, logger):
     Returns:
         (success, error_message, status_data)
     """
-    timeout_minutes = get_timeout_from_config(config_path)
+    timeout_minutes = get_timeout_from_config()
     timeout_seconds = timeout_minutes * 60
     start_time = time.time()
     
@@ -749,47 +728,35 @@ def wait_for_completion(process, config_path, job_id, logger):
         time.sleep(check_interval)
 
 
-def process_job(config_path, logger):
-    """Process a single config job
+def process_job(model_data, logger):
+    """Process a single model health check job
     
     Returns:
         (success, job_result_dict)
     """
-    config_name = os.path.basename(config_path)
+    model_name = model_data.get('name', 'Unknown')
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     
-    # Extract project name from config
-    try:
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-        project_name = config.get('project', {}).get('project_name', 'Unknown')
-        # Also get model info for better debugging
-        models = config.get('models', {})
-        model_names = list(models.keys())
-    except:
-        project_name = 'Unknown'
-        model_names = []
-    
-    job_id = "{}_{}".format(timestamp, project_name.replace(' ', '_'))
+    job_id = "{}_{}".format(timestamp, model_name.replace(' ', '_'))
     
     logger.info("")
     logger.info("="*80)
-    logger.info("Starting Job: {}".format(config_name))
+    logger.info("Starting Job: {}".format(model_name))
     logger.info("Job ID: {}".format(job_id))
     logger.info("="*80)
     
     # Write initial orchestrator heartbeat
-    write_orchestrator_heartbeat(job_id, "JOB_START", "Starting job: {} | Project: {} | Models: {}".format(
-        config_name, project_name, ', '.join(model_names) if model_names else 'None'))
+    write_orchestrator_heartbeat(job_id, "JOB_START", "Starting health check: {} | Revit: {}".format(
+        model_name, model_data.get('revit_version', 'Unknown')))
     
     start_time = time.time()
     
     # Write payload
     write_orchestrator_heartbeat(job_id, "PAYLOAD", "Writing job payload file")
-    if not write_payload(config_path, job_id, logger):
+    if not write_payload(model_data, job_id, logger):
         write_orchestrator_heartbeat(job_id, "PAYLOAD_ERROR", "Failed to write payload file", is_error=True)
         return (False, {
-            'config': config_name,
+            'model': model_name,
             'job_id': job_id,
             'success': False,
             'error': 'Failed to write payload',
@@ -797,10 +764,10 @@ def process_job(config_path, logger):
         })
     
     # Launch Revit job
-    success, error, process = launch_revit_job(config_path, job_id, logger)
+    success, error, process = launch_revit_job(model_data, job_id, logger)
     if not success:
         return (False, {
-            'config': config_name,
+            'model': model_name,
             'job_id': job_id,
             'success': False,
             'error': error,
@@ -812,12 +779,12 @@ def process_job(config_path, logger):
     pid = process.pid if hasattr(process, 'pid') else None
     
     # Wait for completion
-    success, error, status_data = wait_for_completion(process, config_path, job_id, logger)
+    success, error, status_data = wait_for_completion(process, model_data, job_id, logger)
     
     duration = time.time() - start_time
     
     job_result = {
-        'config': config_name,
+        'model': model_name,
         'job_id': job_id,
         'success': success,
         'error': error,
@@ -828,13 +795,6 @@ def process_job(config_path, logger):
     
     if success:
         logger.success("Job completed successfully in {:.1f} seconds".format(duration))
-        if status_data:
-            exports = status_data.get('exports', {})
-            logger.info("Exports: PDF={}, DWG={}, JPG={}".format(
-                exports.get('pdf', 0),
-                exports.get('dwg', 0),
-                exports.get('jpg', 0)
-            ))
     else:
         logger.error("Job failed: {}".format(error))
     
@@ -849,7 +809,7 @@ def run_orchestrator():
     """Main orchestrator function"""
     logger = OrchestratorLogger()
     
-    logger.info("AutoExporter Orchestrator Starting...")
+    logger.info("SparcHealth Orchestrator Starting...")
     logger.info("Script directory: {}".format(SCRIPT_DIR))
     logger.info("Root path: {}".format(ROOT_PATH))
     
@@ -882,41 +842,41 @@ def run_orchestrator():
             return 1
         logger.info("pyrevit command available")
         
-        # Discover configs
-        logger.info("Discovering config files...")
-        config_paths = discover_configs()
+        # Load models from config
+        logger.info("Loading models from config...")
+        models = load_models_from_config()
         
-        if not config_paths:
-            logger.error("No config files found in: {}".format(CONFIGS_DIR))
+        if not models:
+            logger.error("No models found in: {}".format(CONFIG_FILE))
             return 1
         
-        logger.info("Found {} config file(s)".format(len(config_paths)))
-        for config_path in config_paths:
-            logger.info("  - {}".format(os.path.basename(config_path)))
+        logger.info("Found {} model(s)".format(len(models)))
+        for model in models:
+            logger.info("  - {}".format(model.get('name', 'Unknown')))
         
-        # Validate all configs
-        all_valid, _ = validate_all_configs(config_paths, logger)
+        # Validate all models
+        all_valid, _ = validate_all_models(models, logger)
         if not all_valid:
-            logger.error("Config validation failed! Fix errors before running.")
+            logger.error("Model validation failed! Fix errors before running.")
             return 1
         
-        logger.success("All configs validated successfully")
+        logger.success("All models validated successfully")
         
-        # Process each config
+        # Process each model
         logger.info("")
         logger.info("="*80)
-        logger.info("Starting Job Processing")
+        logger.info("Starting Health Check Processing")
         logger.info("="*80)
         
         job_results = []
         
-        for i, config_path in enumerate(config_paths):
+        for i, model_data in enumerate(models):
             # Process job
-            _, job_result = process_job(config_path, logger)
+            _, job_result = process_job(model_data, logger)
             job_results.append(job_result)
             
             # Cleanup between jobs
-            if i < len(config_paths) - 1:  # Not the last job
+            if i < len(models) - 1:  # Not the last job
                 logger.info("Cleaning up before next job...")
                 
                 # Kill only the specific Revit PID for this job (not all Revit instances)
@@ -953,7 +913,7 @@ def run_orchestrator():
             status = "SUCCESS" if result['success'] else "FAILED"
             logger.info("[{}] {} ({:.1f}s)".format(
                 status,
-                result['config'],
+                result['model'],
                 result['duration']
             ))
             if not result['success']:
