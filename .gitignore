@@ -195,6 +195,13 @@ Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/AutoExporter.pushbutton/
 
 # Debug and temporary files
 DEBUG/
+
+# RevitSlave3 debug/status files (should be in DEBUG or task_output)
+SCRIPT_STARTED_*.txt
+OPEN_ERROR_*.txt
+METRICS_ERROR_*.txt
+current_check.txt
+current_job_status.json
 *.tmp
 temp_*.py
 test_*.py
