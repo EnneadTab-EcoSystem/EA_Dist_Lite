@@ -1015,7 +1015,14 @@ def run_orchestrator():
         logger.info("Log file: {}".format(logger.get_log_file()))
         
         # Run HealthMetricSender.exe to upload results to GitHub (like RevitSlave3)
-        run_health_metric_sender(project_name=config.get('project', {}).get('project_name', 'Unknown'))
+        try:
+            # Load config to get project_name
+            with open(CONFIG_FILE, 'r') as f:
+                config = json.load(f)
+            project_name = config.get('project', {}).get('project_name', '2412_SPARC')
+            run_health_metric_sender(project_name=project_name)
+        except Exception as e:
+            logger.warning("Could not run HealthMetricSender: {}".format(e))
         
         # Open log file
         try:
