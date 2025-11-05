@@ -802,6 +802,98 @@ def process_job(model_data, logger):
 
 
 # =============================================================================
+# HEALTH METRIC SENDER
+# =============================================================================
+
+def run_health_metric_sender(project_name):
+    """
+    Run HealthMetricSender.exe after processing completes (like RevitSlave3)
+    Sends task_output to GitHub and updates WikiBuilder
+    
+    Args:
+        project_name: Name of the project (e.g., "2412_SPARC")
+        
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    from pathlib import Path
+    
+    print("")
+    print("="*80)
+    print("Running HealthMetricSender.exe for: {}".format(project_name))
+    print("="*80)
+    
+    # Try multiple possible locations for HealthMetricSender.exe
+    health_metric_path = None
+    
+    # Option 1: Repository location (for development)
+    repo_root = Path(__file__).parent.parent.parent.parent.parent.parent.parent
+    repo_exe_path = repo_root / "Apps" / "lib" / "ExeProducts" / "HealthMetricSender.exe"
+    
+    if repo_exe_path.exists():
+        health_metric_path = repo_exe_path
+        print("[OK] Using repository HealthMetricSender.exe")
+    else:
+        # Option 2: Deployed location (EnneadTab Ecosystem/EA_Dist)
+        username = os.environ.get('USERNAME', 'USERNAME')
+        dump_folder = Path("C:/Users") / username / "Documents" / "EnneadTab Ecosystem" / "Dump"
+        deployed_exe_path = dump_folder.parent / "EA_Dist" / "Apps" / "lib" / "ExeProducts" / "HealthMetricSender.exe"
+        
+        if deployed_exe_path.exists():
+            health_metric_path = deployed_exe_path
+            print("[OK] Using deployed HealthMetricSender.exe")
+    
+    if not health_metric_path:
+        print("[WARNING] HealthMetricSender.exe not found")
+        print("  Checked: {}".format(repo_exe_path))
+        if 'deployed_exe_path' in locals():
+            print("  Checked: {}".format(deployed_exe_path))
+        print("  Skipping GitHub upload for this project")
+        print("="*80)
+        return True  # Don't fail the orchestrator
+    
+    print("[INFO] HealthMetricSender.exe path: {}".format(health_metric_path))
+    
+    try:
+        # Run HealthMetricSender.exe with timeout
+        result = subprocess.run(
+            [str(health_metric_path)], 
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        
+        if result.returncode == 0:
+            print("[SUCCESS] HealthMetricSender.exe executed successfully")
+            print("  Project '{}' data sent to GitHub".format(project_name))
+            if result.stdout:
+                print("  Output: {}".format(result.stdout))
+            print("="*80)
+            return True
+        else:
+            print("[WARNING] HealthMetricSender.exe returned code {}".format(result.returncode))
+            if result.stdout:
+                print("  Output: {}".format(result.stdout))
+            if result.stderr:
+                print("  Error: {}".format(result.stderr))
+            print("="*80)
+            return False
+            
+    except subprocess.TimeoutExpired:
+        print("[WARNING] HealthMetricSender.exe execution timed out")
+        print("="*80)
+        return False
+    except FileNotFoundError:
+        print("[WARNING] HealthMetricSender.exe not found or not executable")
+        print("="*80)
+        return False
+    except Exception as e:
+        print("[ERROR] Error running HealthMetricSender.exe: {}".format(e))
+        print("="*80)
+        return False
+
+
+# =============================================================================
 # MAIN ORCHESTRATOR
 # =============================================================================
 
@@ -921,6 +1013,9 @@ def run_orchestrator():
         
         logger.info("="*80)
         logger.info("Log file: {}".format(logger.get_log_file()))
+        
+        # Run HealthMetricSender.exe to upload results to GitHub (like RevitSlave3)
+        run_health_metric_sender(project_name=config.get('project', {}).get('project_name', 'Unknown'))
         
         # Open log file
         try:
