@@ -168,7 +168,7 @@
         .selectAll(".node")
         .data(treeData.nodes)
         .join("g")
-        .attr("class", "node")
+        .attr("class", d => d.isShared ? "node shared-family" : "node")
         .call(d3.drag()
             .on("start", dragstarted)
             .on("drag", dragged)
