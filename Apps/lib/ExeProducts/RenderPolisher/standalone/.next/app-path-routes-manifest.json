@@ -1,6 +1,7 @@
 {
   "/_global-error/page": "/_global-error",
   "/_not-found/page": "/_not-found",
+  "/api/audio/[...file]/route": "/api/audio/[...file]",
   "/api/nano/route": "/api/nano",
   "/favicon.ico/route": "/favicon.ico",
   "/page": "/"

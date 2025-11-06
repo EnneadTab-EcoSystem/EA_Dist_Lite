@@ -30,3 +30,4 @@ layout:
   - random_deselect
   - explode_axon
   - area2mass
+  - render_polisher

@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:gen": "node scripts/test-generation.js both 1 1",
+    "test:gen:image": "node scripts/test-generation.js image 5 5",
+    "test:gen:video": "node scripts/test-generation.js video 3 3",
+    "test:gen:concurrent": "node scripts/test-generation.js image 5 10",
+    "test:gen:many": "node scripts/test-generation.js image 5 20",
+    "test:veo": "node scripts/test-veo.js 6"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",

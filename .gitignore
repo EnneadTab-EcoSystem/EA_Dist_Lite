@@ -214,6 +214,9 @@ test_*.py
 *_temp.*
 *_test.*
 
+# Auto-generated analysis files
+longest_paths.json
+
 # Area monitoring generated files
 **/monitor_area.pushbutton/reports/*.html
 !**/monitor_area.pushbutton/reports/.gitkeep

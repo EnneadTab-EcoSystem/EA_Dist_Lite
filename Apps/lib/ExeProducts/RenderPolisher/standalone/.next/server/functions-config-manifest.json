@@ -1,8 +1,9 @@
 {
   "version": 1,
   "functions": {
+    "/api/audio/[...file]": {},
     "/api/nano": {
-      "maxDuration": 60
+      "maxDuration": 300
     }
   }
 }
