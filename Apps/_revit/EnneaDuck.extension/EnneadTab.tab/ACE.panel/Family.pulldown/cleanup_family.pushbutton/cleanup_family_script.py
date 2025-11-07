@@ -1,22 +1,24 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = """Clean up selected families by purging all unused elements.
+__doc__ = """Clean up selected families by purging unused elements and standardizing units.
 
 This script allows you to select multiple families from your project and automatically
-purge all unused elements from them. It will also walk through all nested families and
-clean them up recursively.
+purge all unused elements from them. It walks through nested families recursively and can
+apply a consistent unit system (metric or imperial) to every processed family.
 
 Key Features:
 - Select multiple families from project
 - Purge all unused elements from each family
 - Recursively process all nested families
-- Save and reload after each cleanup level
+- Optionally set family units to metric (millimeters) or imperial (feet-inches)
+- Save results to original paths when possible, with clear fallback messaging for read-only locations
 - Comprehensive progress reporting and error handling
 
 Note: 
 This operation may take some time for families with many nested levels.
-The script will save each family after cleanup and reload it back to the project.
+The script will save each family after cleanup and reload it back to the project, using the
+EnneadTab dump folder when the original path is unavailable.
 """
 __title__ = "CleanUp\nFamily"
 __tip__ = True
@@ -29,13 +31,98 @@ from pyrevit.revit import ErrorSwallower
 import proDUCKtion  # pyright: ignore
 proDUCKtion.validify()
 from EnneadTab import ENVIRONMENT, NOTIFICATION, ERROR_HANDLE, LOG
-from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FAMILY, REVIT_SELECTION, REVIT_FORMS, REVIT_SYNC
+from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FAMILY, REVIT_SELECTION, REVIT_FORMS, REVIT_SYNC, REVIT_UNIT
 from Autodesk.Revit import DB  # pyright: ignore
 from System.Collections.Generic import List, HashSet  # pyright: ignore
 
 # Get current document
 uidoc = REVIT_APPLICATION.get_uidoc()
 doc = REVIT_APPLICATION.get_doc()
+
+
+UNIT_MODE_IDS = {
+    "metric": {
+        "length": "millimeters",
+        "area": "squareMeters"
+    },
+    "imperial": {
+        "length": "feetFractionalInches",
+        "area": "squareFeet"
+    }
+}
+
+
+def _get_unit_id_safe(unit_name):
+    try:
+        unit_id = REVIT_UNIT.lookup_unit_id(unit_name)
+        if unit_id is not None:
+            return unit_id
+    except Exception:
+        pass
+    return None
+
+
+def _get_spec_id_safe(spec_name):
+    try:
+        spec_id = REVIT_UNIT.lookup_unit_spec_id(spec_name)
+        if spec_id is not None:
+            return spec_id
+    except Exception:
+        pass
+
+    fallback_specs = {
+        "length": DB.SpecTypeId.Length,
+        "area": DB.SpecTypeId.Area,
+        "number": DB.SpecTypeId.Number
+    }
+    return fallback_specs.get(spec_name)
+
+
+def change_document_units(doc_obj, unit_mode):
+    if not doc_obj or unit_mode not in UNIT_MODE_IDS:
+        return False
+
+    transaction = DB.Transaction(doc_obj, "EnneadTab Set Family Units")
+    try:
+        transaction.Start()
+
+        project_units = doc_obj.GetUnits()
+        unit_types = UNIT_MODE_IDS[unit_mode]
+
+        for unit_type_key in unit_types:
+            unit_name = unit_types[unit_type_key]
+            unit_id = _get_unit_id_safe(unit_name)
+            spec_id = _get_spec_id_safe(unit_type_key)
+
+            if unit_id is None or spec_id is None:
+                continue
+
+            try:
+                format_options = DB.FormatOptions(unit_id)
+                project_units.SetFormatOptions(spec_id, format_options)
+            except Exception as format_error:
+                ERROR_HANDLE.print_note(
+                    "Warning: Could not set format for {} in '{}': {}".format(
+                        unit_type_key,
+                        doc_obj.Title,
+                        str(format_error)
+                    )
+                )
+
+        doc_obj.SetUnits(project_units)
+        transaction.Commit()
+        return True
+    except Exception as change_error:
+        if transaction.HasStarted():
+            transaction.RollBack()
+        ERROR_HANDLE.print_note(
+            "Error converting units in '{}': {}".format(
+                doc_obj.Title,
+                str(change_error)
+            )
+        )
+        return False
+
 
 
 class FamilyCleanupProcessor:
@@ -49,6 +136,68 @@ class FamilyCleanupProcessor:
         self.total_elements_deleted = 0
         self.families_processed = 0
         self.families_failed = 0
+        self.unit_mode = None
+        self.unit_action_desc = "Keep current family units"
+        self.unit_attempted = 0
+        self.unit_success = 0
+
+    def set_unit_mode(self, unit_mode, description):
+        self.unit_mode = unit_mode
+        self.unit_action_desc = description
+
+    def _apply_unit_mode(self, family_doc):
+        if not self.unit_mode:
+            return
+        self.unit_attempted += 1
+        if change_document_units(family_doc, self.unit_mode):
+            self.unit_success += 1
+        else:
+            ERROR_HANDLE.print_note(
+                "Unit change failed for '{}'.".format(family_doc.Title)
+            )
+
+    def _save_family_document(self, family_doc, family_name):
+        original_path = family_doc.PathName
+
+        if original_path:
+            try:
+                family_doc.Save()
+                return original_path
+            except Exception as save_error:
+                ERROR_HANDLE.print_note(
+                    "Could not save '{}' to original location '{}': {}".format(
+                        family_name,
+                        original_path,
+                        str(save_error)
+                    )
+                )
+
+        temp_folder = os.path.join(ENVIRONMENT.DUMP_FOLDER, "family_cleanup")
+        if not os.path.exists(temp_folder):
+            os.makedirs(temp_folder)
+
+        temp_path = os.path.join(temp_folder, family_name + ".rfa")
+        save_as_options = DB.SaveAsOptions()
+        save_as_options.OverwriteExistingFile = True
+
+        try:
+            family_doc.SaveAs(temp_path, save_as_options)
+            NOTIFICATION.messenger(
+                "Saved '{}' to temporary location because the original path was unavailable or read-only:\n{}".format(
+                    family_name,
+                    temp_path
+                )
+            )
+            return temp_path
+        except Exception as save_as_error:
+            ERROR_HANDLE.print_note(
+                "Failed to save '{}' to temporary location '{}': {}".format(
+                    family_name,
+                    temp_path,
+                    str(save_as_error)
+                )
+            )
+            raise
         
     def select_families_from_project(self):
         """Prompt user to select families from the project.
@@ -229,6 +378,8 @@ class FamilyCleanupProcessor:
             if not family_doc:
                 raise Exception("Could not open family document")
             
+            self._apply_unit_mode(family_doc)
+
             # Step 1: Get and process nested families first (bottom-up approach)
             nested_families = self.get_nested_families(family_doc)
             
@@ -236,7 +387,7 @@ class FamilyCleanupProcessor:
                 for nested_family in nested_families:
                     try:
                         # Recursively process nested family
-                        success, deleted = self.cleanup_family_recursive(
+                        _, deleted = self.cleanup_family_recursive(
                             nested_family, 
                             family_doc, 
                             indentation_level + 1
@@ -254,19 +405,11 @@ class FamilyCleanupProcessor:
             deleted_count = self.purge_unused_elements(family_doc)
             total_deleted += deleted_count
             
-            # Step 3: Save the family document
-            # If family has a path, save to same location
-            if family_doc.PathName:
-                family_doc.Save()
-            else:
-                # Family doesn't have a saved location, save to temp
-                temp_folder = os.path.join(ENVIRONMENT.DUMP_FOLDER, "family_cleanup")
-                if not os.path.exists(temp_folder):
-                    os.makedirs(temp_folder)
-                temp_path = os.path.join(temp_folder, family_name + ".rfa")
-                save_as_options = DB.SaveAsOptions()
-                save_as_options.OverwriteExistingFile = True
-                family_doc.SaveAs(temp_path, save_as_options)
+            # Step 3: Save the family document with clear fallback messaging
+            try:
+                self._save_family_document(family_doc, family_name)
+            except Exception as save_failure:
+                raise Exception("Unable to save family '{}': {}".format(family_name, str(save_failure)))
             
             # Step 4: Load family back into parent document
             family_doc.LoadFamily(parent_doc, REVIT_FAMILY.EnneadTabFamilyLoadingOption())
@@ -331,6 +474,8 @@ class FamilyCleanupProcessor:
         
         # Notify start of processing
         NOTIFICATION.messenger("Starting cleanup of {} families...".format(len(families)))
+        if self.unit_action_desc:
+            NOTIFICATION.messenger("Unit preference: {}".format(self.unit_action_desc))
         
         # Process each selected family
         for family in families:
@@ -362,6 +507,10 @@ class FamilyCleanupProcessor:
         print("Families Processed: {}".format(self.families_processed))
         print("Families Failed: {}".format(self.families_failed))
         print("Total Elements Deleted: {}".format(self.total_elements_deleted))
+        if self.unit_mode:
+            unit_success_text = "{} of {}".format(self.unit_success, self.unit_attempted)
+            print("Unit Preference: {}".format(self.unit_action_desc))
+            print("Unit Changes Applied: {}".format(unit_success_text))
         print("Time Elapsed: {:.2f} seconds".format(elapsed_time))
         print("=" * 80)
         
@@ -384,14 +533,31 @@ class FamilyCleanupProcessor:
             )
         
         # Show completion message
-        if self.families_failed > 0:
-            msg = "Cleanup completed with {} failures.\n\nSee output window for details.".format(
-                self.families_failed
+        if self.unit_mode:
+            unit_summary = "\nUnits: {} ({} of {} families updated)".format(
+                self.unit_action_desc,
+                self.unit_success,
+                self.unit_attempted
             )
         else:
-            msg = "Cleanup completed successfully!\n\nProcessed: {} families\nDeleted: {} elements".format(
+            unit_summary = ""
+
+        if self.families_failed > 0:
+            msg = (
+                "Cleanup completed with {} failures.\n\n"
+                "See output window for details.{}"
+            ).format(
+                self.families_failed,
+                unit_summary
+            )
+        else:
+            msg = (
+                "Cleanup completed successfully!\n\n"
+                "Processed: {} families\nDeleted: {} elements{}"
+            ).format(
                 self.families_processed,
-                self.total_elements_deleted
+                self.total_elements_deleted,
+                unit_summary
             )
         
         NOTIFICATION.messenger(msg)
@@ -403,7 +569,7 @@ def main():
     """Main entry point for the script."""
     
     # Check if we're in a project document
-    if doc.IsFamilyDocument:
+    if doc.IsFamilyDocument:  # pyright: ignore
         NOTIFICATION.messenger(
             "This tool is designed to work in project documents, not family documents.\n\n"
             "Please open a project document and try again."
@@ -419,19 +585,43 @@ def main():
     if not selected_families:
         return
     
+    unit_options = [
+        ("Keep current family units", None, "Keep current family units"),
+        ("Set to Metric (millimeters)", "metric", "Set units to Metric (millimeters)"),
+        ("Set to Imperial (feet-inches)", "imperial", "Set units to Imperial (feet-inches)")
+    ]
+
+    unit_labels = [option[0] for option in unit_options]
+    unit_choice = REVIT_FORMS.dialogue(
+        title="Family Unit Preference",
+        main_text="Select unit system to apply to cleaned families:",
+        sub_text=None,
+        options=unit_labels
+    )
+
+    if unit_choice is None:
+        unit_choice = unit_labels[0]
+
+    for option in unit_options:
+        if option[0] == unit_choice:
+            processor.set_unit_mode(option[1], option[2])
+            break
+
     # Ask if user wants to sync and close after completion
     will_sync_and_close = REVIT_SYNC.do_you_want_to_sync_and_close_after_done()
     
     # Confirm action using EnneadTab dialog
     main_text = "You are about to clean up {} families.".format(len(selected_families))
+    unit_line = "- Units: {}".format(processor.unit_action_desc)
     sub_text = (
         "This will:\n"
         "- Purge all unused elements from each family\n"
         "- Recursively process all nested families\n"
-        "- Save and reload families after cleanup\n\n"
+        "- Save and reload families after cleanup\n"
+        "{}\n\n"
         "This operation may take several minutes.\n\n"
         "Do you want to continue?"
-    )
+    ).format(unit_line)
     
     result = REVIT_FORMS.dialogue(
         title="Confirm Family Cleanup",
@@ -445,7 +635,7 @@ def main():
         return
     
     # Process families with error swallowing
-    with ErrorSwallower() as swallower:
+    with ErrorSwallower():
         processor.process_selected_families(selected_families)
     
     # Sync and close if requested
