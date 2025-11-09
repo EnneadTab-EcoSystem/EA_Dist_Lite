@@ -1,0 +1,726 @@
+{
+  "status": "completed", 
+  "job_metadata": {
+    "project_name": "SPARC_A_EA_Exterior", 
+    "revit_version": "Autodesk Revit 2024", 
+    "hub_name": null, 
+    "model_file_size_readable": "Unknown", 
+    "execution_time_seconds": 0.41999999999999998, 
+    "model_name": "SPARC_A_EA_Exterior", 
+    "job_id": "test_slave_20251109_131017", 
+    "model_file_size_bytes": 0, 
+    "timestamp": "2025-11-09T13:10:18.290000", 
+    "execution_time_readable": "0.4s"
+  }, 
+  "error": null, 
+  "export_data": null, 
+  "health_metric_result": {
+    "is_EnneadTab_Available": false, 
+    "timestamp": "2025-11-09T13:10:17.884000", 
+    "checks": {
+      "cad_files": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.003509521484375, 
+        "data": {
+          "imported_dwgs": 0, 
+          "linked_dwgs": 0, 
+          "dwg_files": 0
+        }
+      }, 
+      "families": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.051300048828125, 
+        "data": {
+          "non_parametric_families_creators": {
+            "note": "Worksharing info not available (cloud model protection)", 
+            "creators": {}, 
+            "last_editors": {}
+          }, 
+          "unused_families_names": [], 
+          "non_parametric_families": 6, 
+          "unused_families_count": 0, 
+          "detail_components": 0, 
+          "generic_models_types": 5, 
+          "in_place_families_creators": {
+            "note": "Worksharing info not available (cloud model protection)", 
+            "creators": {}, 
+            "last_editors": {}
+          }, 
+          "in_place_families": 1, 
+          "total_families": 53
+        }
+      }, 
+      "materials": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.00251007080078125, 
+        "data": {
+          "materials": 97
+        }
+      }, 
+      "linked_files": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.00299072265625, 
+        "data": {
+          "linked_files_count": 0, 
+          "linked_files": []
+        }
+      }, 
+      "file_size": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.00099945068359375, 
+        "data": {
+          "error": "Could not determine file size", 
+          "file_size_bytes": 0, 
+          "file_size_mb": 0
+        }
+      }, 
+      "line_count": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.018035888671875, 
+        "data": {
+          "model_lines_total": 188, 
+          "model_lines_per_view": {}, 
+          "detail_lines_per_view": {
+            "Level 16": 2, 
+            "Level 00.5 (Mezzanine)": 8, 
+            "_Save to Central": 115, 
+            "Control_Grids": 5, 
+            "Section 2": 18, 
+            "Level RF": 3, 
+            "Section 1": 5, 
+            "Text Style Reference": 4, 
+            "Level 15": 1, 
+            "Level 08": 1, 
+            "Level 10": 7, 
+            "Level 17": 2, 
+            "Level 06 - Control Plan": 228, 
+            "Level 16 - Control Plan": 14, 
+            "Level 02 - Control Plan": 18, 
+            "Level 12 - Control Plan": 14, 
+            "Elevation 1 - b": 5, 
+            "Level 02": 2, 
+            "Level 15 - Control Plan": 15, 
+            "Level 01 - Control Plan": 28, 
+            "Level 11 - Control Plan": 14, 
+            "Level 09 - Control Plan": 14, 
+            "Filled Regions": 218, 
+            "Level 14 - Control Plan": 14, 
+            "Level 04 - Control Plan": 12, 
+            "Level 10 - Control Plan": 21, 
+            "Level 05 - Control Plan": 11, 
+            "Elevation 1 - a": 8, 
+            "Level 08 - Control Plan": 19, 
+            "Linestyles": 30, 
+            "Level 01": 4, 
+            "Level 18 (RF) - Control Plan": 13, 
+            "Color By FamilyName": 40, 
+            "Level 13": 1, 
+            "Level 03": 3, 
+            "Dimension Style Reference": 20, 
+            "Unnamed": 4, 
+            "Level 07 - Control Plan": 244, 
+            "Level 17 - Control Plan": 14, 
+            "Level 03 - Control Plan": 13, 
+            "Level 13 - Control Plan": 15
+          }, 
+          "detail_lines_total": 1227, 
+          "top_detail_line_views": [
+            {
+              "view": "Level 07 - Control Plan", 
+              "count": 244
+            }, 
+            {
+              "view": "Level 06 - Control Plan", 
+              "count": 228
+            }, 
+            {
+              "view": "Filled Regions", 
+              "count": 218
+            }, 
+            {
+              "view": "_Save to Central", 
+              "count": 115
+            }, 
+            {
+              "view": "Color By FamilyName", 
+              "count": 40
+            }, 
+            {
+              "view": "Linestyles", 
+              "count": 30
+            }, 
+            {
+              "view": "Level 01 - Control Plan", 
+              "count": 28
+            }, 
+            {
+              "view": "Level 10 - Control Plan", 
+              "count": 21
+            }, 
+            {
+              "view": "Dimension Style Reference", 
+              "count": 20
+            }, 
+            {
+              "view": "Level 08 - Control Plan", 
+              "count": 19
+            }
+          ]
+        }
+      }, 
+      "project_info": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.015045166015625, 
+        "data": {
+          "is_EnneadTab_Available": false, 
+          "client_name": "Unknown", 
+          "project_number": "Unknown", 
+          "timestamp": "2025-11-09T13:10:17.901000", 
+          "project_name": "Unknown", 
+          "project_phases": [
+            "Existing", 
+            "New Construction"
+          ], 
+          "is_workshared": false, 
+          "document_title": "SPARC_A_EA_Exterior", 
+          "worksets": "Not Workshared (or cloud model protection active)"
+        }
+      }, 
+      "graphical_elements": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.033355712890625, 
+        "data": {
+          "text_notes_all_caps": 0, 
+          "dimensions": 973, 
+          "revision_clouds": 0, 
+          "line_patterns": 65, 
+          "detail_lines": 1227, 
+          "text_notes_instances": 145, 
+          "dimension_types": 15, 
+          "dimension_overrides": 0, 
+          "text_notes_types_solid_background": 0, 
+          "text_notes_width_factor_not_1": 0, 
+          "text_notes_types": 8
+        }
+      }, 
+      "views_sheets": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.02435302734375, 
+        "data": {
+          "view_count_by_type": {
+            "DrawingSheet": 3, 
+            "ProjectBrowser": 1, 
+            "AreaPlan": 4, 
+            "Legend": 2, 
+            "DraftingView": 6, 
+            "SystemBrowser": 1, 
+            "CeilingPlan": 6, 
+            "Section": 3, 
+            "Elevation": 4, 
+            "ThreeD": 15, 
+            "Schedule": 3, 
+            "FloorPlan": 45
+          }, 
+          "view_count_by_type_non_template": {
+            "DrawingSheet": 3, 
+            "ProjectBrowser": 1, 
+            "AreaPlan": 4, 
+            "Legend": 2, 
+            "DraftingView": 6, 
+            "SystemBrowser": 1, 
+            "CeilingPlan": 6, 
+            "Section": 3, 
+            "Elevation": 4, 
+            "ThreeD": 10, 
+            "Schedule": 3, 
+            "FloorPlan": 42
+          }, 
+          "view_count_by_type_template": {
+            "ThreeD": 5, 
+            "FloorPlan": 3
+          }, 
+          "schedules_not_on_sheets": 0, 
+          "views_not_on_sheets": 77, 
+          "total_sheets": 3, 
+          "total_views": 93, 
+          "copied_views": 85
+        }
+      }, 
+      "warnings": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.00299072265625, 
+        "data": {
+          "warning_count_per_user": {
+            "by_last_editor": {}, 
+            "by_creator": {}
+          }, 
+          "critical_warning_count": 0, 
+          "warning_details_per_creator": {}, 
+          "warning_count": 2, 
+          "warning_categories": {
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 2
+          }, 
+          "warning_details_per_last_editor": {}
+        }
+      }, 
+      "filled_regions": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.00449371337890625, 
+        "data": {
+          "filled_regions": 186, 
+          "filled_region_types": 0
+        }
+      }, 
+      "reference_planes": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.0070037841796875, 
+        "data": {
+          "reference_planes": 11, 
+          "reference_planes_no_name": 11
+        }
+      }, 
+      "rooms": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.0170135498046875, 
+        "data": {
+          "unbounded_rooms": 3, 
+          "unplaced_room_details": [
+            {
+              "number": "1", 
+              "name": "Room", 
+              "level": "Level 01", 
+              "id": 144035
+            }, 
+            {
+              "number": "2", 
+              "name": "Room", 
+              "level": "Level 01", 
+              "id": 144044
+            }, 
+            {
+              "number": "3", 
+              "name": "Room", 
+              "level": "Level 01", 
+              "id": 144048
+            }
+          ], 
+          "unplaced_rooms": 3, 
+          "unplaced_percentage": 100.0, 
+          "total_rooms": 3, 
+          "unbounded_percentage": 100.0, 
+          "unbounded_room_details": [
+            {
+              "number": "1", 
+              "area": 0.0, 
+              "name": "Room", 
+              "level": "Level 01", 
+              "id": 144035
+            }, 
+            {
+              "number": "2", 
+              "area": 0.0, 
+              "name": "Room", 
+              "level": "Level 01", 
+              "id": 144044
+            }, 
+            {
+              "number": "3", 
+              "area": 0.0, 
+              "name": "Room", 
+              "level": "Level 01", 
+              "id": 144048
+            }
+          ]
+        }
+      }, 
+      "critical_elements": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.16988372802734375, 
+        "data": {
+          "purgeable_elements": 0, 
+          "critical_warning_count": 0, 
+          "total_elements": 12731, 
+          "warning_details": [
+            {
+              "severity": "Warning", 
+              "elements_info": [
+                {
+                  "category": "Walls", 
+                  "creator": "tpetersonZP5WJ", 
+                  "last_editor": "Sha.Li2P4YA", 
+                  "id": 288002
+                }, 
+                {
+                  "category": "Walls", 
+                  "creator": "Sha.Li2P4YA", 
+                  "last_editor": "Sha.Li2P4YA", 
+                  "id": 1867324
+                }
+              ], 
+              "element_ids": [
+                288002, 
+                1867324
+              ], 
+              "description": "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other."
+            }, 
+            {
+              "severity": "Warning", 
+              "elements_info": [
+                {
+                  "category": "Walls", 
+                  "creator": "Sha.Li2P4YA", 
+                  "last_editor": "szhangGOODLOOKING", 
+                  "id": 740138
+                }, 
+                {
+                  "category": "Walls", 
+                  "creator": "Sha.Li2P4YA", 
+                  "last_editor": "zeyi.xuan_Ennead", 
+                  "id": 740844
+                }
+              ], 
+              "element_ids": [
+                740138, 
+                740844
+              ], 
+              "description": "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other."
+            }
+          ], 
+          "warning_count": 2, 
+          "warning_last_editors": {
+            "zeyi.xuan_Ennead": 1, 
+            "Sha.Li2P4YA": 2, 
+            "szhangGOODLOOKING": 1
+          }, 
+          "warning_creators": {
+            "tpetersonZP5WJ": 1, 
+            "Sha.Li2P4YA": 3
+          }, 
+          "critical_warning_details": []
+        }
+      }, 
+      "groups": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.01601409912109375, 
+        "data": {
+          "model_group_used_types": 10, 
+          "detail_group_total_types": 10, 
+          "model_group_usage": {
+            "317676": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "317774": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "317359": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "302132": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "319029": {
+              "instance_count": 2, 
+              "name": "Unknown"
+            }, 
+            "303258": {
+              "instance_count": 47, 
+              "name": "Unknown"
+            }, 
+            "292680": {
+              "instance_count": 6, 
+              "name": "Unknown"
+            }, 
+            "317431": {
+              "instance_count": 3, 
+              "name": "Unknown"
+            }, 
+            "317199": {
+              "instance_count": 4, 
+              "name": "Unknown"
+            }, 
+            "313468": {
+              "instance_count": 47, 
+              "name": "Unknown"
+            }
+          }, 
+          "model_group_instances": 113, 
+          "model_group_total_types": 10, 
+          "detail_group_used_types": 10, 
+          "model_group_types": 10, 
+          "detail_group_instances": 113, 
+          "detail_group_types": 10, 
+          "detail_group_usage": {
+            "317676": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "317774": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "317359": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "302132": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "319029": {
+              "instance_count": 2, 
+              "name": "Unknown"
+            }, 
+            "303258": {
+              "instance_count": 47, 
+              "name": "Unknown"
+            }, 
+            "292680": {
+              "instance_count": 6, 
+              "name": "Unknown"
+            }, 
+            "317431": {
+              "instance_count": 3, 
+              "name": "Unknown"
+            }, 
+            "317199": {
+              "instance_count": 4, 
+              "name": "Unknown"
+            }, 
+            "313468": {
+              "instance_count": 47, 
+              "name": "Unknown"
+            }
+          }
+        }
+      }, 
+      "grids_levels": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.01052093505859375, 
+        "data": {
+          "total_grids": 17, 
+          "unpinned_levels": 15, 
+          "pinned_grids": 16, 
+          "total_levels": 24, 
+          "unpinned_level_details": [
+            {
+              "elevation": 10.5, 
+              "name": "Level 00.5 (Mezzanine)"
+            }, 
+            {
+              "elevation": 52.333333333333336, 
+              "name": "Level 03"
+            }, 
+            {
+              "elevation": 127.33333333333331, 
+              "name": "Level 07"
+            }, 
+            {
+              "elevation": 143.33333333333331, 
+              "name": "Level 08"
+            }, 
+            {
+              "elevation": 159.33333333333331, 
+              "name": "Level 09"
+            }, 
+            {
+              "elevation": 175.33333333333331, 
+              "name": "Level 10"
+            }, 
+            {
+              "elevation": 191.33333333333334, 
+              "name": "Level 11"
+            }, 
+            {
+              "elevation": 207.33333333333334, 
+              "name": "Level 12"
+            }, 
+            {
+              "elevation": 223.33333333333334, 
+              "name": "Level 13"
+            }, 
+            {
+              "elevation": 239.33333333333334, 
+              "name": "Level 14"
+            }, 
+            {
+              "elevation": 255.33333333333334, 
+              "name": "Level 15"
+            }, 
+            {
+              "elevation": 271.33333333333337, 
+              "name": "Level 16"
+            }, 
+            {
+              "elevation": 287.33333333333331, 
+              "name": "Level 17"
+            }, 
+            {
+              "elevation": 309.33333333333331, 
+              "name": "Level 18 (RF)"
+            }, 
+            {
+              "elevation": 339.33333333333331, 
+              "name": "Level RF"
+            }
+          ], 
+          "pinned_levels": 9, 
+          "unpinned_grids": 1, 
+          "unpinned_grid_names": [
+            "1"
+          ], 
+          "unpinned_level_names": [
+            "Level 00.5 (Mezzanine)", 
+            "Level 03", 
+            "Level 07", 
+            "Level 08", 
+            "Level 09", 
+            "Level 10", 
+            "Level 11", 
+            "Level 12", 
+            "Level 13", 
+            "Level 14", 
+            "Level 15", 
+            "Level 16", 
+            "Level 17", 
+            "Level 18 (RF)", 
+            "Level RF"
+          ]
+        }
+      }, 
+      "templates_filters": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.0170135498046875, 
+        "data": {
+          "filters": 33, 
+          "unused_view_templates": 4, 
+          "view_template_creators": {
+            "note": "Worksharing info not available (cloud model or non-workshared)", 
+            "creators": {}, 
+            "last_editors": {}
+          }, 
+          "view_templates": 8, 
+          "unused_filters": 21, 
+          "view_template_details": [
+            {
+              "usage_count": 0, 
+              "is_used": false, 
+              "view_type": "ThreeD", 
+              "creator": "Unknown", 
+              "name": "Clash_Export", 
+              "last_editor": "Unknown", 
+              "id": 20620
+            }, 
+            {
+              "usage_count": 0, 
+              "is_used": false, 
+              "view_type": "FloorPlan", 
+              "creator": "Unknown", 
+              "name": "Plans_Working", 
+              "last_editor": "Unknown", 
+              "id": 141139
+            }, 
+            {
+              "usage_count": 0, 
+              "is_used": false, 
+              "view_type": "ThreeD", 
+              "creator": "Unknown", 
+              "name": "3D - Faceted", 
+              "last_editor": "Unknown", 
+              "id": 229302
+            }, 
+            {
+              "usage_count": 0, 
+              "is_used": false, 
+              "view_type": "ThreeD", 
+              "creator": "Unknown", 
+              "name": "3D - Rectilinear", 
+              "last_editor": "Unknown", 
+              "id": 230513
+            }, 
+            {
+              "usage_count": 4, 
+              "is_used": true, 
+              "view_type": "FloorPlan", 
+              "creator": "Unknown", 
+              "name": "Elevation View", 
+              "last_editor": "Unknown", 
+              "id": 259990
+            }, 
+            {
+              "usage_count": 18, 
+              "is_used": true, 
+              "view_type": "FloorPlan", 
+              "creator": "Unknown", 
+              "name": "Plans_Control Plan", 
+              "last_editor": "Unknown", 
+              "id": 290575
+            }, 
+            {
+              "usage_count": 1, 
+              "is_used": true, 
+              "view_type": "ThreeD", 
+              "creator": "Unknown", 
+              "name": "Exterior_SL", 
+              "last_editor": "Unknown", 
+              "id": 292493
+            }, 
+            {
+              "usage_count": 2, 
+              "is_used": true, 
+              "view_type": "ThreeD", 
+              "creator": "Unknown", 
+              "name": "AXON", 
+              "last_editor": "Unknown", 
+              "id": 3155742
+            }
+          ], 
+          "unused_view_template_details": [
+            {
+              "view_type": "ThreeD", 
+              "name": "Clash_Export", 
+              "id": 20620
+            }, 
+            {
+              "view_type": "FloorPlan", 
+              "name": "Plans_Working", 
+              "id": 141139
+            }, 
+            {
+              "view_type": "ThreeD", 
+              "name": "3D - Faceted", 
+              "id": 229302
+            }, 
+            {
+              "view_type": "ThreeD", 
+              "name": "3D - Rectilinear", 
+              "id": 230513
+            }
+          ]
+        }
+      }
+    }, 
+    "version": "v2", 
+    "document_title": "SPARC_A_EA_Exterior"
+  }
+}

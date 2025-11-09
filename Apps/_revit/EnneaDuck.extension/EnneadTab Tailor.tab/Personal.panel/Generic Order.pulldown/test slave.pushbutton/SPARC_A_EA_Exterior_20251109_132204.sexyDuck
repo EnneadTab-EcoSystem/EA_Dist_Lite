@@ -1,0 +1,1116 @@
+{
+  "status": "completed", 
+  "job_metadata": {
+    "revit_version": "Autodesk Revit 2024", 
+    "execution_time_readable": "0.2s", 
+    "job_id": "test_slave_20251109_132204", 
+    "model_file_size_readable": "Cloud Model", 
+    "project_name": "SPARC_A_EA_Exterior", 
+    "model_name": "SPARC_A_EA_Exterior", 
+    "model_path": "Autodesk Docs://2412_SPARC/SPARC_A_EA_Exterior.rvt", 
+    "model_file_size_bytes": 0, 
+    "timestamp": "2025-11-09T13:22:04.298000", 
+    "execution_time_seconds": 0.23999999999999999, 
+    "hub_name": null
+  }, 
+  "error": null, 
+  "export_data": null, 
+  "health_metric_result": {
+    "is_EnneadTab_Available": false, 
+    "timestamp": "2025-11-09T13:22:04.067000", 
+    "checks": {
+      "cad_files": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.00299835205078125, 
+        "data": {
+          "imported_dwgs": 0, 
+          "linked_dwgs": 0, 
+          "dwg_files": 0
+        }
+      }, 
+      "families": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.02764892578125, 
+        "data": {
+          "non_parametric_families_creators": {
+            "creators": {
+              "zeyi.xuan_Ennead": 2, 
+              "Mia.TsiamisWXHXG": 4
+            }, 
+            "last_editors": {
+              "zeyi.xuan_Ennead": 2, 
+              "Mia.TsiamisWXHXG": 4
+            }
+          }, 
+          "unused_families_names": [], 
+          "non_parametric_families": 6, 
+          "unused_families_count": 0, 
+          "detail_components": 0, 
+          "generic_models_types": 5, 
+          "in_place_families_creators": {
+            "creators": {
+              "zeyi.xuan_Ennead": 1
+            }, 
+            "last_editors": {
+              "zeyi.xuan_Ennead": 1
+            }
+          }, 
+          "in_place_families": 1, 
+          "total_families": 53
+        }
+      }, 
+      "materials": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.00099945068359375, 
+        "data": {
+          "materials": 97
+        }
+      }, 
+      "linked_files": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.00124359130859375, 
+        "data": {
+          "linked_files_count": 0, 
+          "linked_files": []
+        }
+      }, 
+      "file_size": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.00099945068359375, 
+        "data": {
+          "error": "Could not determine file size", 
+          "file_size_bytes": 0, 
+          "file_size_mb": 0
+        }
+      }, 
+      "line_count": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.01567840576171875, 
+        "data": {
+          "model_lines_total": 188, 
+          "model_lines_per_view": {}, 
+          "detail_lines_per_view": {
+            "Level 16": 2, 
+            "Level 00.5 (Mezzanine)": 8, 
+            "_Save to Central": 115, 
+            "Control_Grids": 5, 
+            "Section 2": 18, 
+            "Level RF": 3, 
+            "Section 1": 5, 
+            "Text Style Reference": 4, 
+            "Level 15": 1, 
+            "Level 08": 1, 
+            "Level 10": 7, 
+            "Level 17": 2, 
+            "Level 06 - Control Plan": 228, 
+            "Level 16 - Control Plan": 14, 
+            "Level 02 - Control Plan": 18, 
+            "Level 12 - Control Plan": 14, 
+            "Elevation 1 - b": 5, 
+            "Level 02": 2, 
+            "Level 15 - Control Plan": 15, 
+            "Level 01 - Control Plan": 28, 
+            "Level 11 - Control Plan": 14, 
+            "Level 09 - Control Plan": 14, 
+            "Filled Regions": 218, 
+            "Level 14 - Control Plan": 14, 
+            "Level 04 - Control Plan": 12, 
+            "Level 10 - Control Plan": 21, 
+            "Level 05 - Control Plan": 11, 
+            "Elevation 1 - a": 8, 
+            "Level 08 - Control Plan": 19, 
+            "Linestyles": 30, 
+            "Level 01": 4, 
+            "Level 18 (RF) - Control Plan": 13, 
+            "Color By FamilyName": 40, 
+            "Level 13": 1, 
+            "Level 03": 3, 
+            "Dimension Style Reference": 20, 
+            "Unnamed": 4, 
+            "Level 07 - Control Plan": 244, 
+            "Level 17 - Control Plan": 14, 
+            "Level 03 - Control Plan": 13, 
+            "Level 13 - Control Plan": 15
+          }, 
+          "detail_lines_total": 1227, 
+          "top_detail_line_views": [
+            {
+              "view": "Level 07 - Control Plan", 
+              "count": 244
+            }, 
+            {
+              "view": "Level 06 - Control Plan", 
+              "count": 228
+            }, 
+            {
+              "view": "Filled Regions", 
+              "count": 218
+            }, 
+            {
+              "view": "_Save to Central", 
+              "count": 115
+            }, 
+            {
+              "view": "Color By FamilyName", 
+              "count": 40
+            }, 
+            {
+              "view": "Linestyles", 
+              "count": 30
+            }, 
+            {
+              "view": "Level 01 - Control Plan", 
+              "count": 28
+            }, 
+            {
+              "view": "Level 10 - Control Plan", 
+              "count": 21
+            }, 
+            {
+              "view": "Dimension Style Reference", 
+              "count": 20
+            }, 
+            {
+              "view": "Level 08 - Control Plan", 
+              "count": 19
+            }
+          ]
+        }
+      }, 
+      "project_info": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.07877349853515625, 
+        "data": {
+          "is_EnneadTab_Available": false, 
+          "client_name": "Unknown", 
+          "project_number": "Unknown", 
+          "timestamp": "2025-11-09T13:22:04.147000", 
+          "project_name": "Unknown", 
+          "project_phases": [
+            "Existing", 
+            "New Construction"
+          ], 
+          "is_workshared": true, 
+          "document_title": "SPARC_A_EA_Exterior", 
+          "worksets": {
+            "workset_details": [
+              {
+                "name": "Workset1", 
+                "creator": "mia.tsiamiswxhxg", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "last_editor": "mia.tsiamiswxhxg", 
+                "last_editor_count": 34, 
+                "id": 0, 
+                "is_editable": false, 
+                "creator_count": 34, 
+                "owner": ""
+              }, 
+              {
+                "name": "0_Shared Levels & Grids", 
+                "creator": "mia.tsiamiswxhxg", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "last_editor": "mia.tsiamiswxhxg", 
+                "last_editor_count": 58, 
+                "id": 182, 
+                "is_editable": false, 
+                "creator_count": 70, 
+                "owner": ""
+              }, 
+              {
+                "id": 233, 
+                "last_editor": "Unknown", 
+                "creator": "Unknown", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "owner": "", 
+                "is_editable": false, 
+                "name": "0_References"
+              }, 
+              {
+                "id": 234, 
+                "last_editor": "Unknown", 
+                "creator": "Unknown", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "owner": "", 
+                "is_editable": false, 
+                "name": "1_Core"
+              }, 
+              {
+                "name": "1_Exterior Walls", 
+                "creator": "sha.li2p4ya", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "last_editor": "sha.li2p4ya", 
+                "last_editor_count": 42, 
+                "id": 235, 
+                "is_editable": false, 
+                "creator_count": 61, 
+                "owner": ""
+              }, 
+              {
+                "id": 236, 
+                "last_editor": "Unknown", 
+                "creator": "Unknown", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "owner": "", 
+                "is_editable": false, 
+                "name": "1_FF&E"
+              }, 
+              {
+                "id": 237, 
+                "last_editor": "Unknown", 
+                "creator": "Unknown", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "owner": "", 
+                "is_editable": false, 
+                "name": "1_Interiors"
+              }, 
+              {
+                "id": 238, 
+                "last_editor": "Unknown", 
+                "creator": "Unknown", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "owner": "", 
+                "is_editable": false, 
+                "name": "1_Planning"
+              }, 
+              {
+                "id": 239, 
+                "last_editor": "Unknown", 
+                "creator": "Unknown", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "owner": "", 
+                "is_editable": false, 
+                "name": "1_Site"
+              }, 
+              {
+                "name": "1_Structure", 
+                "creator": "richard.zhutq4mv", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "last_editor": "richard.zhutq4mv", 
+                "last_editor_count": 90, 
+                "id": 240, 
+                "is_editable": false, 
+                "creator_count": 89, 
+                "owner": ""
+              }, 
+              {
+                "name": "2_RVT Links_A_DA_Site & Infrastructure", 
+                "creator": "paul.carey_ennead", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "last_editor": "paul.carey_ennead", 
+                "last_editor_count": 1, 
+                "id": 241, 
+                "is_editable": false, 
+                "creator_count": 1, 
+                "owner": ""
+              }, 
+              {
+                "name": "2_RVT Links_A_EA_Coordinates", 
+                "creator": "mia.tsiamiswxhxg", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "last_editor": "mia.tsiamiswxhxg", 
+                "last_editor_count": 1, 
+                "id": 242, 
+                "is_editable": false, 
+                "creator_count": 1, 
+                "owner": ""
+              }, 
+              {
+                "id": 243, 
+                "last_editor": "Unknown", 
+                "creator": "Unknown", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "owner": "", 
+                "is_editable": false, 
+                "name": "3_CAD Links"
+              }, 
+              {
+                "id": 244, 
+                "last_editor": "Unknown", 
+                "creator": "Unknown", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "owner": "", 
+                "is_editable": false, 
+                "name": "4_Rendering"
+              }, 
+              {
+                "id": 245, 
+                "last_editor": "Unknown", 
+                "creator": "Unknown", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "owner": "", 
+                "is_editable": false, 
+                "name": "4_Temp"
+              }, 
+              {
+                "name": "2_RVT Links_A_EA_CUNY_Building", 
+                "creator": "paul.carey_ennead", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "last_editor": "paul.carey_ennead", 
+                "last_editor_count": 24, 
+                "id": 253, 
+                "is_editable": false, 
+                "creator_count": 27, 
+                "owner": ""
+              }, 
+              {
+                "id": 263, 
+                "last_editor": "Unknown", 
+                "creator": "Unknown", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "owner": "", 
+                "is_editable": false, 
+                "name": "1_DA Exterior Walls"
+              }, 
+              {
+                "name": "1_Cladding", 
+                "creator": "tpetersonzp5wj", 
+                "kind": "UserWorkset", 
+                "is_open": true, 
+                "last_editor": "zeyi.xuan_ennead", 
+                "last_editor_count": 8, 
+                "id": 619, 
+                "is_editable": false, 
+                "creator_count": 4, 
+                "owner": ""
+              }
+            ], 
+            "user_worksets": 18, 
+            "workset_element_ownership": {
+              "2_RVT Links_A_DA_Site & Infrastructure": {
+                "current_owners": {}, 
+                "creators": {
+                  "paul.carey_ennead": 1
+                }, 
+                "last_editors": {
+                  "paul.carey_ennead": 1
+                }
+              }, 
+              "0_Shared Levels & Grids": {
+                "current_owners": {}, 
+                "creators": {
+                  "sha.li2p4ya": 1, 
+                  "paul.carey_ennead": 1, 
+                  "mia.tsiamiswxhxg": 70, 
+                  "zeyi.xuan_ennead": 2
+                }, 
+                "last_editors": {
+                  "mia.tsiamiswxhxg": 58, 
+                  "richard.zhutq4mv": 2, 
+                  "zeyi.xuan_ennead": 3, 
+                  "sha.li2p4ya": 7, 
+                  "paul.carey_ennead": 4
+                }
+              }, 
+              "1_Cladding": {
+                "current_owners": {}, 
+                "creators": {
+                  "tpetersonzp5wj": 4, 
+                  "zeyi.xuan_ennead": 4, 
+                  "mariana.bravoglg3v": 4
+                }, 
+                "last_editors": {
+                  "sha.li2p4ya": 2, 
+                  "szhanggoodlooking": 2, 
+                  "zeyi.xuan_ennead": 8
+                }
+              }, 
+              "Workset1": {
+                "current_owners": {}, 
+                "creators": {
+                  "mia.tsiamiswxhxg": 34
+                }, 
+                "last_editors": {
+                  "mia.tsiamiswxhxg": 34
+                }
+              }, 
+              "2_RVT Links_A_EA_Coordinates": {
+                "current_owners": {}, 
+                "creators": {
+                  "mia.tsiamiswxhxg": 1
+                }, 
+                "last_editors": {
+                  "mia.tsiamiswxhxg": 1
+                }
+              }, 
+              "2_RVT Links_A_EA_CUNY_Building": {
+                "current_owners": {}, 
+                "creators": {
+                  "paul.carey_ennead": 27, 
+                  "mia.tsiamiswxhxg": 3
+                }, 
+                "last_editors": {
+                  "sha.li2p4ya": 1, 
+                  "paul.carey_ennead": 24, 
+                  "mia.tsiamiswxhxg": 5
+                }
+              }, 
+              "1_Exterior Walls": {
+                "current_owners": {}, 
+                "creators": {
+                  "mia.tsiamiswxhxg": 2, 
+                  "zeyi.xuan_ennead": 11, 
+                  "tpetersonzp5wj": 3, 
+                  "sha.li2p4ya": 61, 
+                  "mariana.bravoglg3v": 23
+                }, 
+                "last_editors": {
+                  "mia.tsiamiswxhxg": 2, 
+                  "zeyi.xuan_ennead": 23, 
+                  "tpetersonzp5wj": 2, 
+                  "szhanggoodlooking": 31, 
+                  "sha.li2p4ya": 42
+                }
+              }, 
+              "1_Structure": {
+                "current_owners": {}, 
+                "creators": {
+                  "mia.tsiamiswxhxg": 1, 
+                  "richard.zhutq4mv": 89, 
+                  "zeyi.xuan_ennead": 2, 
+                  "mariana.bravoglg3v": 1, 
+                  "paul.carey_ennead": 7
+                }, 
+                "last_editors": {
+                  "mia.tsiamiswxhxg": 1, 
+                  "richard.zhutq4mv": 90, 
+                  "zeyi.xuan_ennead": 2, 
+                  "sha.li2p4ya": 1, 
+                  "mariana.bravoglg3v": 1, 
+                  "paul.carey_ennead": 5
+                }
+              }
+            }, 
+            "workset_names": [
+              "Workset1", 
+              "0_Shared Levels & Grids", 
+              "0_References", 
+              "1_Core", 
+              "1_Exterior Walls", 
+              "1_FF&E", 
+              "1_Interiors", 
+              "1_Planning", 
+              "1_Site", 
+              "1_Structure", 
+              "2_RVT Links_A_DA_Site & Infrastructure", 
+              "2_RVT Links_A_EA_Coordinates", 
+              "3_CAD Links", 
+              "4_Rendering", 
+              "4_Temp", 
+              "2_RVT Links_A_EA_CUNY_Building", 
+              "1_DA Exterior Walls", 
+              "1_Cladding"
+            ], 
+            "total_worksets": 18, 
+            "workset_element_counts": {
+              "2_RVT Links_A_DA_Site & Infrastructure": 1, 
+              "4_Rendering": 0, 
+              "0_Shared Levels & Grids": 74, 
+              "1_Cladding": 12, 
+              "1_FF&E": 0, 
+              "4_Temp": 0, 
+              "1_Planning": 0, 
+              "Workset1": 34, 
+              "1_DA Exterior Walls": 0, 
+              "0_References": 0, 
+              "2_RVT Links_A_EA_Coordinates": 1, 
+              "2_RVT Links_A_EA_CUNY_Building": 30, 
+              "1_Core": 0, 
+              "3_CAD Links": 0, 
+              "1_Exterior Walls": 5288, 
+              "1_Interiors": 0, 
+              "1_Site": 0, 
+              "1_Structure": 517
+            }, 
+            "workset_ownership": {}
+          }
+        }
+      }, 
+      "graphical_elements": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.0265350341796875, 
+        "data": {
+          "text_notes_all_caps": 0, 
+          "dimensions": 973, 
+          "revision_clouds": 0, 
+          "line_patterns": 65, 
+          "detail_lines": 1227, 
+          "text_notes_instances": 145, 
+          "dimension_types": 15, 
+          "dimension_overrides": 0, 
+          "text_notes_types_solid_background": 0, 
+          "text_notes_width_factor_not_1": 0, 
+          "text_notes_types": 8
+        }
+      }, 
+      "views_sheets": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.0141448974609375, 
+        "data": {
+          "view_count_by_type": {
+            "DrawingSheet": 3, 
+            "ProjectBrowser": 1, 
+            "AreaPlan": 4, 
+            "Legend": 2, 
+            "DraftingView": 6, 
+            "SystemBrowser": 1, 
+            "CeilingPlan": 6, 
+            "Section": 3, 
+            "Elevation": 4, 
+            "ThreeD": 15, 
+            "Schedule": 3, 
+            "FloorPlan": 45
+          }, 
+          "view_count_by_type_non_template": {
+            "DrawingSheet": 3, 
+            "ProjectBrowser": 1, 
+            "AreaPlan": 4, 
+            "Legend": 2, 
+            "DraftingView": 6, 
+            "SystemBrowser": 1, 
+            "CeilingPlan": 6, 
+            "Section": 3, 
+            "Elevation": 4, 
+            "ThreeD": 10, 
+            "Schedule": 3, 
+            "FloorPlan": 42
+          }, 
+          "view_count_by_type_template": {
+            "ThreeD": 5, 
+            "FloorPlan": 3
+          }, 
+          "schedules_not_on_sheets": 0, 
+          "views_not_on_sheets": 77, 
+          "total_sheets": 3, 
+          "total_views": 93, 
+          "copied_views": 85
+        }
+      }, 
+      "warnings": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.0019989013671875, 
+        "data": {
+          "warning_count_per_user": {
+            "by_last_editor": {
+              "sha.li2p4ya": 2, 
+              "szhanggoodlooking": 1, 
+              "zeyi.xuan_ennead": 1
+            }, 
+            "by_creator": {
+              "sha.li2p4ya": 3, 
+              "tpetersonzp5wj": 1
+            }
+          }, 
+          "critical_warning_count": 0, 
+          "warning_details_per_creator": {
+            "tpetersonZP5WJ": {
+              "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 1
+            }, 
+            "Sha.Li2P4YA": {
+              "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 3
+            }
+          }, 
+          "warning_count": 2, 
+          "warning_categories": {
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 2
+          }, 
+          "warning_details_per_last_editor": {
+            "zeyi.xuan_Ennead": {
+              "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 1
+            }, 
+            "Sha.Li2P4YA": {
+              "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 2
+            }, 
+            "szhangGOODLOOKING": {
+              "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 1
+            }
+          }
+        }
+      }, 
+      "filled_regions": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.0045013427734375, 
+        "data": {
+          "filled_regions": 186, 
+          "filled_region_types": 0
+        }
+      }, 
+      "reference_planes": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.00200653076171875, 
+        "data": {
+          "reference_planes": 11, 
+          "reference_planes_no_name": 11
+        }
+      }, 
+      "rooms": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.00502777099609375, 
+        "data": {
+          "unbounded_rooms": 3, 
+          "unplaced_room_details": [
+            {
+              "number": "1", 
+              "name": "Room", 
+              "level": "Level 01", 
+              "id": 144035
+            }, 
+            {
+              "number": "2", 
+              "name": "Room", 
+              "level": "Level 01", 
+              "id": 144044
+            }, 
+            {
+              "number": "3", 
+              "name": "Room", 
+              "level": "Level 01", 
+              "id": 144048
+            }
+          ], 
+          "unplaced_rooms": 3, 
+          "unplaced_percentage": 100.0, 
+          "total_rooms": 3, 
+          "unbounded_percentage": 100.0, 
+          "unbounded_room_details": [
+            {
+              "number": "1", 
+              "area": 0.0, 
+              "name": "Room", 
+              "level": "Level 01", 
+              "id": 144035
+            }, 
+            {
+              "number": "2", 
+              "area": 0.0, 
+              "name": "Room", 
+              "level": "Level 01", 
+              "id": 144044
+            }, 
+            {
+              "number": "3", 
+              "area": 0.0, 
+              "name": "Room", 
+              "level": "Level 01", 
+              "id": 144048
+            }
+          ]
+        }
+      }, 
+      "critical_elements": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.01149749755859375, 
+        "data": {
+          "purgeable_elements": 0, 
+          "critical_warning_count": 0, 
+          "total_elements": 12731, 
+          "warning_details": [
+            {
+              "severity": "Warning", 
+              "elements_info": [
+                {
+                  "category": "Walls", 
+                  "creator": "tpetersonZP5WJ", 
+                  "last_editor": "Sha.Li2P4YA", 
+                  "id": 288002
+                }, 
+                {
+                  "category": "Walls", 
+                  "creator": "Sha.Li2P4YA", 
+                  "last_editor": "Sha.Li2P4YA", 
+                  "id": 1867324
+                }
+              ], 
+              "element_ids": [
+                288002, 
+                1867324
+              ], 
+              "description": "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other."
+            }, 
+            {
+              "severity": "Warning", 
+              "elements_info": [
+                {
+                  "category": "Walls", 
+                  "creator": "Sha.Li2P4YA", 
+                  "last_editor": "szhangGOODLOOKING", 
+                  "id": 740138
+                }, 
+                {
+                  "category": "Walls", 
+                  "creator": "Sha.Li2P4YA", 
+                  "last_editor": "zeyi.xuan_Ennead", 
+                  "id": 740844
+                }
+              ], 
+              "element_ids": [
+                740138, 
+                740844
+              ], 
+              "description": "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other."
+            }
+          ], 
+          "warning_count": 2, 
+          "warning_last_editors": {
+            "zeyi.xuan_Ennead": 1, 
+            "Sha.Li2P4YA": 2, 
+            "szhangGOODLOOKING": 1
+          }, 
+          "warning_creators": {
+            "tpetersonZP5WJ": 1, 
+            "Sha.Li2P4YA": 3
+          }, 
+          "critical_warning_details": []
+        }
+      }, 
+      "groups": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.00949859619140625, 
+        "data": {
+          "model_group_used_types": 10, 
+          "detail_group_total_types": 10, 
+          "model_group_usage": {
+            "317676": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "317774": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "317359": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "302132": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "319029": {
+              "instance_count": 2, 
+              "name": "Unknown"
+            }, 
+            "303258": {
+              "instance_count": 47, 
+              "name": "Unknown"
+            }, 
+            "292680": {
+              "instance_count": 6, 
+              "name": "Unknown"
+            }, 
+            "317431": {
+              "instance_count": 3, 
+              "name": "Unknown"
+            }, 
+            "317199": {
+              "instance_count": 4, 
+              "name": "Unknown"
+            }, 
+            "313468": {
+              "instance_count": 47, 
+              "name": "Unknown"
+            }
+          }, 
+          "model_group_instances": 113, 
+          "model_group_total_types": 10, 
+          "detail_group_used_types": 10, 
+          "model_group_types": 10, 
+          "detail_group_instances": 113, 
+          "detail_group_types": 10, 
+          "detail_group_usage": {
+            "317676": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "317774": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "317359": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "302132": {
+              "instance_count": 1, 
+              "name": "Unknown"
+            }, 
+            "319029": {
+              "instance_count": 2, 
+              "name": "Unknown"
+            }, 
+            "303258": {
+              "instance_count": 47, 
+              "name": "Unknown"
+            }, 
+            "292680": {
+              "instance_count": 6, 
+              "name": "Unknown"
+            }, 
+            "317431": {
+              "instance_count": 3, 
+              "name": "Unknown"
+            }, 
+            "317199": {
+              "instance_count": 4, 
+              "name": "Unknown"
+            }, 
+            "313468": {
+              "instance_count": 47, 
+              "name": "Unknown"
+            }
+          }
+        }
+      }, 
+      "grids_levels": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.0050048828125, 
+        "data": {
+          "total_grids": 17, 
+          "unpinned_levels": 15, 
+          "pinned_grids": 16, 
+          "total_levels": 24, 
+          "unpinned_level_details": [
+            {
+              "elevation": 10.5, 
+              "name": "Level 00.5 (Mezzanine)"
+            }, 
+            {
+              "elevation": 52.333333333333336, 
+              "name": "Level 03"
+            }, 
+            {
+              "elevation": 127.33333333333331, 
+              "name": "Level 07"
+            }, 
+            {
+              "elevation": 143.33333333333331, 
+              "name": "Level 08"
+            }, 
+            {
+              "elevation": 159.33333333333331, 
+              "name": "Level 09"
+            }, 
+            {
+              "elevation": 175.33333333333331, 
+              "name": "Level 10"
+            }, 
+            {
+              "elevation": 191.33333333333334, 
+              "name": "Level 11"
+            }, 
+            {
+              "elevation": 207.33333333333334, 
+              "name": "Level 12"
+            }, 
+            {
+              "elevation": 223.33333333333334, 
+              "name": "Level 13"
+            }, 
+            {
+              "elevation": 239.33333333333334, 
+              "name": "Level 14"
+            }, 
+            {
+              "elevation": 255.33333333333334, 
+              "name": "Level 15"
+            }, 
+            {
+              "elevation": 271.33333333333337, 
+              "name": "Level 16"
+            }, 
+            {
+              "elevation": 287.33333333333331, 
+              "name": "Level 17"
+            }, 
+            {
+              "elevation": 309.33333333333331, 
+              "name": "Level 18 (RF)"
+            }, 
+            {
+              "elevation": 339.33333333333331, 
+              "name": "Level RF"
+            }
+          ], 
+          "pinned_levels": 9, 
+          "unpinned_grids": 1, 
+          "unpinned_grid_names": [
+            "1"
+          ], 
+          "unpinned_level_names": [
+            "Level 00.5 (Mezzanine)", 
+            "Level 03", 
+            "Level 07", 
+            "Level 08", 
+            "Level 09", 
+            "Level 10", 
+            "Level 11", 
+            "Level 12", 
+            "Level 13", 
+            "Level 14", 
+            "Level 15", 
+            "Level 16", 
+            "Level 17", 
+            "Level 18 (RF)", 
+            "Level RF"
+          ]
+        }
+      }, 
+      "templates_filters": {
+        "status": "completed", 
+        "error": null, 
+        "execution_time": 0.0115203857421875, 
+        "data": {
+          "filters": 33, 
+          "unused_view_templates": 4, 
+          "view_template_creators": {
+            "creators": {
+              "Sha.Li2P4YA": 3, 
+              "Mia.TsiamisWXHXG": 1, 
+              "szhangGOODLOOKING": 1, 
+              "paul.carey_Ennead": 1, 
+              "zeyi.xuan_Ennead": 2
+            }, 
+            "last_editors": {
+              "zeyi.xuan_Ennead": 3, 
+              "Sha.Li2P4YA": 3, 
+              "Mia.TsiamisWXHXG": 1, 
+              "szhangGOODLOOKING": 1
+            }
+          }, 
+          "view_templates": 8, 
+          "unused_filters": 21, 
+          "view_template_details": [
+            {
+              "usage_count": 0, 
+              "is_used": false, 
+              "view_type": "ThreeD", 
+              "creator": "Mia.TsiamisWXHXG", 
+              "name": "Clash_Export", 
+              "last_editor": "Mia.TsiamisWXHXG", 
+              "id": 20620
+            }, 
+            {
+              "usage_count": 0, 
+              "is_used": false, 
+              "view_type": "FloorPlan", 
+              "creator": "paul.carey_Ennead", 
+              "name": "Plans_Working", 
+              "last_editor": "Sha.Li2P4YA", 
+              "id": 141139
+            }, 
+            {
+              "usage_count": 0, 
+              "is_used": false, 
+              "view_type": "ThreeD", 
+              "creator": "zeyi.xuan_Ennead", 
+              "name": "3D - Faceted", 
+              "last_editor": "zeyi.xuan_Ennead", 
+              "id": 229302
+            }, 
+            {
+              "usage_count": 0, 
+              "is_used": false, 
+              "view_type": "ThreeD", 
+              "creator": "zeyi.xuan_Ennead", 
+              "name": "3D - Rectilinear", 
+              "last_editor": "zeyi.xuan_Ennead", 
+              "id": 230513
+            }, 
+            {
+              "usage_count": 4, 
+              "is_used": true, 
+              "view_type": "FloorPlan", 
+              "creator": "Sha.Li2P4YA", 
+              "name": "Elevation View", 
+              "last_editor": "zeyi.xuan_Ennead", 
+              "id": 259990
+            }, 
+            {
+              "usage_count": 18, 
+              "is_used": true, 
+              "view_type": "FloorPlan", 
+              "creator": "Sha.Li2P4YA", 
+              "name": "Plans_Control Plan", 
+              "last_editor": "Sha.Li2P4YA", 
+              "id": 290575
+            }, 
+            {
+              "usage_count": 1, 
+              "is_used": true, 
+              "view_type": "ThreeD", 
+              "creator": "Sha.Li2P4YA", 
+              "name": "Exterior_SL", 
+              "last_editor": "Sha.Li2P4YA", 
+              "id": 292493
+            }, 
+            {
+              "usage_count": 2, 
+              "is_used": true, 
+              "view_type": "ThreeD", 
+              "creator": "szhangGOODLOOKING", 
+              "name": "AXON", 
+              "last_editor": "szhangGOODLOOKING", 
+              "id": 3155742
+            }
+          ], 
+          "unused_view_template_details": [
+            {
+              "view_type": "ThreeD", 
+              "name": "Clash_Export", 
+              "id": 20620
+            }, 
+            {
+              "view_type": "FloorPlan", 
+              "name": "Plans_Working", 
+              "id": 141139
+            }, 
+            {
+              "view_type": "ThreeD", 
+              "name": "3D - Faceted", 
+              "id": 229302
+            }, 
+            {
+              "view_type": "ThreeD", 
+              "name": "3D - Rectilinear", 
+              "id": 230513
+            }
+          ]
+        }
+      }
+    }, 
+    "version": "v2", 
+    "document_title": "SPARC_A_EA_Exterior"
+  }
+}
