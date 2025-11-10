@@ -206,6 +206,7 @@ OPEN_ERROR_*.txt
 METRICS_ERROR_*.txt
 current_check.txt
 current_job_status.json
+DarkSide/exes/source code/RevitSlave-4.0/revit_logic/current_job.sexyDuck
 *.tmp
 *.lock
 temp_*.py

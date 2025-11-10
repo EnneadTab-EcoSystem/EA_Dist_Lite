@@ -123,6 +123,47 @@ PDF_OPTIONS = EXPORT_SETTINGS.get('pdf_options', {})
 JPG_OPTIONS = EXPORT_SETTINGS.get('jpg_options', {})
 
 
+def get_element_id_numeric_value(element_id):
+    """Return a Python int for the given ElementId, handling Revit version differences.
+    
+    Args:
+        element_id: Autodesk.Revit.DB.ElementId or None
+    
+    Returns:
+        int or None: ElementId numeric value, or None if unavailable/invalid
+    """
+    if not element_id:
+        return None
+    
+    try:
+        if element_id == DB.ElementId.InvalidElementId:
+            return None
+    except Exception:
+        # Some ElementId comparisons can raise if the API version differs; ignore and continue
+        pass
+    
+    for attr_name in ("Value", "IntegerValue"):
+        try:
+            attr_value = getattr(element_id, attr_name)
+        except AttributeError:
+            continue
+        except Exception:
+            continue
+        
+        if callable(attr_value):
+            try:
+                attr_value = attr_value()
+            except Exception:
+                continue
+        
+        try:
+            return int(attr_value)
+        except Exception:
+            continue
+    
+    return None
+
+
 def get_staging_root():
     """Get the root staging directory for ACC-safe local operations
     
@@ -268,7 +309,8 @@ def get_sheets_to_export(doc, heartbeat_callback=None):
                 elif param.StorageType == DB.StorageType.Double:
                     has_value = param_value != 0.0
                 elif param.StorageType == DB.StorageType.ElementId:
-                    has_value = param_value and param_value.IntegerValue != -1
+                    element_numeric_value = get_element_id_numeric_value(param_value)
+                    has_value = element_numeric_value is not None and element_numeric_value != -1
                 else:
                     has_value = (param_value and 
                                str(param_value).strip() != "" and 
