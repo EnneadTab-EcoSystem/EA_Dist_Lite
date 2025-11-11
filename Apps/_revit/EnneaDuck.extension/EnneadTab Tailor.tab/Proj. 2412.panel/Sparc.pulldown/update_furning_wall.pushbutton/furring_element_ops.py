@@ -1,0 +1,272 @@
+from Autodesk.Revit import DB  # pyright: ignore
+
+from EnneadTab.REVIT import REVIT_FILTER
+from furring_constants import (
+    BASE_OFFSET,
+    HEIGHT_OFFSET,
+    PIER_MARKER_ORDER,
+    ROOM_SEPARATOR_MARKER_ORDER,
+    ROOM_SEPARATOR_SELECTION_NAME,
+)
+
+
+def map_levels_by_name(doc):
+    level_map = {}
+    levels = DB.FilteredElementCollector(doc).OfClass(DB.Level).WhereElementIsNotElementType()
+    for level in levels:
+        level_map[level.Name] = level
+    return level_map
+
+
+def get_wall_type_by_name(doc, type_name):
+    wall_types = DB.FilteredElementCollector(doc).OfClass(DB.WallType)
+    for wall_type in wall_types:
+        type_name_param = wall_type.get_Parameter(DB.BuiltInParameter.ALL_MODEL_TYPE_NAME)
+        current_name = type_name_param.AsString() if type_name_param else None
+        if current_name == type_name:
+            return wall_type
+    return None
+
+
+def delete_existing_furring_walls(doc, wall_type):
+    walls = list(DB.FilteredElementCollector(doc).OfClass(DB.Wall).WhereElementIsNotElementType().ToElements())
+    deleted_count = 0
+    for wall in walls:
+        if wall.WallType.Id == wall_type.Id:
+            doc.Delete(wall.Id)
+            deleted_count += 1
+    return deleted_count
+
+
+def create_furring_walls(doc, panel_records, wall_type, host_level_map):
+    base_offset = BASE_OFFSET
+    created_count = 0
+    segment_plans = []
+    for record in panel_records:
+        level = record["nearest_level"]
+        if level is None:
+            print("    Skipping panel {0} due to missing nearest level.".format(record["panel_unique_id"]))
+            continue
+        host_level = host_level_map.get(level.Name)
+        if host_level is None:
+            raise ValueError("Host document is missing level named \"{0}\" required for panel {1}.".format(level.Name, record["panel_unique_id"]))
+        panel_height = record.get("panel_height")
+        if panel_height is None:
+            print("        Cannot determine height for panel {0}; missing parameter.".format(record["panel_unique_id"]))
+            continue
+        height = panel_height - HEIGHT_OFFSET
+        if height <= 0:
+            print("        Computed height {0} for panel {1} is not positive; skipping.".format(height, record["panel_unique_id"]))
+            continue
+        pier_markers = record["pier_markers"]
+        ordered_points = []
+        for marker_key in PIER_MARKER_ORDER:
+            entry = pier_markers.get(marker_key)
+            if entry is None or entry["point_host"] is None:
+                print("        Cannot create walls for panel {0}; missing host point for index {1}.".format(record["panel_unique_id"], marker_key))
+                ordered_points = []
+                break
+            ordered_points.append(entry["point_host"])
+        if len(ordered_points) < 2:
+            continue
+        segment_plans.append((record["panel_unique_id"], host_level, height, ordered_points))
+
+    total_segments = sum(len(points) - 1 for (_, _, _, points) in segment_plans)
+    if total_segments == 0:
+        return created_count
+
+    current_index = 0
+    for _, host_level, height, ordered_points in segment_plans:
+        for idx in range(len(ordered_points) - 1):
+            current_index += 1
+            start_point = ordered_points[idx]
+            end_point = ordered_points[idx + 1]
+            line = DB.Line.CreateBound(start_point, end_point)
+            new_wall = DB.Wall.Create(doc, line, wall_type.Id, host_level.Id, height, base_offset, False, False)
+            param_height = new_wall.get_Parameter(DB.BuiltInParameter.WALL_USER_HEIGHT_PARAM)
+            if param_height is not None:
+                param_height.Set(height)
+            param_base_offset = new_wall.get_Parameter(DB.BuiltInParameter.WALL_BASE_OFFSET)
+            if param_base_offset is not None:
+                param_base_offset.Set(base_offset)
+            try:
+                new_wall.CrossSection = DB.WallCrossSection.SingleSlanted
+            except Exception as exc:
+                print("        Unable to set cross section to SingleSlanted for wall {0}: {1}".format(new_wall.Id, exc))
+            start_name = PIER_MARKER_ORDER[idx]
+            end_name = PIER_MARKER_ORDER[idx + 1]
+            if current_index == total_segments or current_index % 50 == 0 or current_index == 1:
+                print("        [{0}/{1}] Created furring wall ({2}->{3}) UniqueId: {4}".format(
+                    current_index,
+                    total_segments,
+                    start_name,
+                    end_name,
+                    new_wall.UniqueId
+                ))
+            created_count += 1
+    return created_count
+
+
+def delete_room_separation_lines(doc):
+    selection_filter = REVIT_FILTER.get_selection_filter_by_name(doc, ROOM_SEPARATOR_SELECTION_NAME)
+    if not selection_filter:
+        return 0
+    element_ids = list(selection_filter.GetElementIds())
+    deleted_count = 0
+    for element_id in element_ids:
+        element = doc.GetElement(element_id)
+        if element is None or not element.IsValidObject:
+            continue
+        try:
+            doc.Delete(element_id)
+            deleted_count += 1
+        except Exception as exc:
+            print("        Failed to delete room separation line {0} because {1}".format(element_id, exc))
+    if deleted_count and len(element_ids) != deleted_count:
+        print("        Removed {0} of {1} saved room separation elements.".format(deleted_count, len(element_ids)))
+    return deleted_count
+
+
+def create_room_separation_lines(doc, panel_records, host_level_map):
+    sketch_plane_cache = {}
+    plan_view_cache = {}
+    line_plans = []
+    total_segments = 0
+    for record in panel_records:
+        level = record.get("nearest_level")
+        if level is None:
+            print("    Skipping room lines for panel {0}; missing nearest level.".format(record["panel_unique_id"]))
+            continue
+        host_level = host_level_map.get(level.Name)
+        if host_level is None:
+            print("    Host level {0} missing for panel {1}; cannot create room separation lines.".format(level.Name, record["panel_unique_id"]))
+            continue
+        ordered_entries = []
+        for marker_key in ROOM_SEPARATOR_MARKER_ORDER:
+            entry = record["room_markers"].get(marker_key)
+            if entry is None or entry["point_host"] is None:
+                print("        Cannot create room line for panel {0}; missing host point for index {1}.".format(record["panel_unique_id"], marker_key))
+                ordered_entries = []
+                break
+            host_point = entry["point_host"]
+            adjusted_point = DB.XYZ(host_point.X, host_point.Y, host_level.ProjectElevation)
+            ordered_entries.append((marker_key, adjusted_point))
+        if len(ordered_entries) < 2:
+            continue
+        line_plans.append((record["panel_unique_id"], host_level, ordered_entries))
+        total_segments += len(ordered_entries) - 1
+
+    if total_segments == 0:
+        return 0, []
+
+    created_ids = []
+    current_index = 0
+    for panel_id, host_level, ordered_entries in line_plans:
+        sketch_plane = _get_or_create_sketch_plane(doc, host_level, sketch_plane_cache)
+        plan_view = _get_or_create_level_plan_view(doc, host_level, plan_view_cache)
+        if plan_view is None:
+            print("        Unable to determine plan view for level {0}; skipping room lines for panel {1}.".format(
+                host_level.Name,
+                panel_id,
+            ))
+            continue
+        curve_array = DB.CurveArray()
+        segment_names = []
+        for idx in range(len(ordered_entries) - 1):
+            start_name, start_point = ordered_entries[idx]
+            end_name, end_point = ordered_entries[idx + 1]
+            if start_point is None or end_point is None:
+                continue
+            if start_point.DistanceTo(end_point) <= 0.0001:
+                continue
+            line = DB.Line.CreateBound(start_point, end_point)
+            curve_array.Append(line)
+            segment_names.append((start_name, end_name))
+        if curve_array.Size == 0:
+            continue
+        new_lines = doc.Create.NewRoomBoundaryLines(sketch_plane, curve_array, plan_view)
+        for idx, item in enumerate(new_lines):
+            if isinstance(item, DB.ElementId):
+                element_id = item
+                element = doc.GetElement(element_id)
+            else:
+                element = item
+                element_id = element.Id if element is not None else None
+            if element_id is None:
+                continue
+            created_ids.append(element_id)
+            current_index += 1
+            if current_index == total_segments or current_index % 50 == 0 or current_index == 1:
+                start_name, end_name = segment_names[idx] if idx < len(segment_names) else ("?", "?")
+                unique_id = element.UniqueId if element is not None else "Unknown"
+                print("        [{0}/{1}] Created room separation line for panel {2} ({3}->{4}) UniqueId: {5}".format(
+                    current_index,
+                    total_segments,
+                    panel_id,
+                    start_name,
+                    end_name,
+                    unique_id,
+                ))
+    return len(created_ids), created_ids
+
+
+def _get_or_create_sketch_plane(doc, level, cache):
+    cached_plane = cache.get(level.Id)
+    if cached_plane is not None and cached_plane.IsValidObject:
+        return cached_plane
+    try:
+        sketch_plane = DB.SketchPlane.Create(doc, level.Id)
+    except Exception:
+        plane = DB.Plane.CreateByNormalAndOrigin(DB.XYZ.BasisZ, DB.XYZ(0, 0, level.ProjectElevation))
+        sketch_plane = DB.SketchPlane.Create(doc, plane)
+    cache[level.Id] = sketch_plane
+    return sketch_plane
+
+
+def _get_or_create_level_plan_view(doc, level, cache):
+    cached_view = cache.get(level.Id)
+    if cached_view is not None and cached_view.IsValidObject:
+        return cached_view
+    collector = DB.FilteredElementCollector(doc).OfClass(DB.ViewPlan)
+    for view in collector:
+        if view.IsTemplate:
+            continue
+        if getattr(view, "GenLevel", None) and view.GenLevel.Id == level.Id:
+            cache[level.Id] = view
+            return view
+    view_family_type = _get_default_floor_plan_view_type(doc)
+    if view_family_type is None:
+        return None
+    try:
+        view = DB.ViewPlan.Create(doc, view_family_type.Id, level.Id)
+        view.Name = _generate_room_plan_view_name(level.Name, doc)
+        cache[level.Id] = view
+        return view
+    except Exception as exc:
+        print("        Unable to create plan view for level {0}: {1}".format(level.Name, exc))
+        return None
+
+
+def _get_default_floor_plan_view_type(doc):
+    collector = DB.FilteredElementCollector(doc).OfClass(DB.ViewFamilyType)
+    for view_type in collector:
+        if view_type.ViewFamily == DB.ViewFamily.FloorPlan:
+            return view_type
+    return None
+
+
+def _generate_room_plan_view_name(level_name, doc):
+    base_name = "MagicPlanDoNotDelete_{0}".format(level_name)
+    existing = set()
+    collector = DB.FilteredElementCollector(doc).OfClass(DB.View)
+    for view in collector:
+        if view.IsTemplate:
+            continue
+        existing.add(view.Name)
+    candidate = base_name
+    index = 1
+    while candidate in existing:
+        candidate = "{0} ({1})".format(base_name, index)
+        index += 1
+    return candidate
+

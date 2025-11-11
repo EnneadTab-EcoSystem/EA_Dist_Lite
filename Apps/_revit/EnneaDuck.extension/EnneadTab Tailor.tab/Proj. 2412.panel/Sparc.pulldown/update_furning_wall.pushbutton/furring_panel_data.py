@@ -1,0 +1,241 @@
+from Autodesk.Revit import DB  # pyright: ignore
+
+from EnneadTab.REVIT import REVIT_FAMILY
+
+from furring_constants import (
+    CHILD_FAMILY_NAME,
+    EXPECTED_CHILD_COUNT,
+    FAMILY_INSTANCE_FILTER,
+    MARKER_INDEX_PARAMETER,
+    PIER_MARKER_ORDER,
+    PANEL_HEIGHT_PARAMETER,
+    PANEL_LOG_PREVIEW_LIMIT,
+    ROOM_SEPARATOR_MARKER_ORDER,
+    TARGET_PANEL_FAMILIES,
+)
+
+
+def get_family_name(element):
+    symbol = getattr(element, "Symbol", None)
+    if symbol:
+        family = symbol.Family
+        if family:
+            return family.Name
+    param = element.get_Parameter(DB.BuiltInParameter.ELEM_FAMILY_PARAM)
+    if param:
+        return param.AsString()
+    return None
+
+
+def get_parameter_value(element, parameter_name):
+    parameter = element.LookupParameter(parameter_name)
+    if parameter is None:
+        return None
+    value = parameter.AsString()
+    if value:
+        return value
+    try:
+        value = parameter.AsValueString()
+    except Exception:
+        value = None
+    if value:
+        return value
+    if parameter.StorageType == DB.StorageType.Integer:
+        return str(parameter.AsInteger())
+    if parameter.StorageType == DB.StorageType.Double:
+        return str(parameter.AsDouble())
+    return None
+
+
+def get_parameter_double(element, parameter_name):
+    parameter = element.LookupParameter(parameter_name)
+    if parameter is None:
+        return None
+    if parameter.StorageType != DB.StorageType.Double:
+        try:
+            return parameter.AsDouble()
+        except Exception:
+            return None
+    return parameter.AsDouble()
+
+
+def get_child_family_instances(parent_element, source_doc, target_family_name):
+    child_elements = {}
+    child_ids = parent_element.GetDependentElements(FAMILY_INSTANCE_FILTER)
+    for child_id in child_ids:
+        child_element = source_doc.GetElement(child_id)
+        if not child_element:
+            continue
+        child_family = get_family_name(child_element)
+        if child_family == target_family_name:
+            index_value = get_parameter_value(child_element, MARKER_INDEX_PARAMETER)
+            key = index_value if index_value else "unknown"
+            child_elements[key] = child_element
+    return child_elements
+
+
+def collect_levels_with_z(doc):
+    levels = DB.FilteredElementCollector(doc).OfClass(DB.Level).WhereElementIsNotElementType()
+    level_data = []
+    for level in levels:
+        level_z = level.ProjectElevation
+        level_data.append((level, level_z))
+    return level_data
+
+
+def find_nearest_level(point, level_data):
+    if not level_data:
+        return (None, None)
+    nearest_level = None
+    nearest_level_z = None
+    min_distance = None
+    for level, level_z in level_data:
+        distance = abs(point.Z - level_z)
+        if (min_distance is None) or (distance < min_distance):
+            min_distance = distance
+            nearest_level = level
+            nearest_level_z = level_z
+    return (nearest_level, nearest_level_z)
+
+
+def collect_panels_from_doc(source_doc, source_name, printed_ids, levels, transform):
+    collector = DB.FilteredElementCollector(source_doc).OfCategory(DB.BuiltInCategory.OST_CurtainWallPanels).WhereElementIsNotElementType()
+    panel_records = []
+    panel_logs = []
+    for element in collector:
+        family_name = get_family_name(element)
+        type_name = REVIT_FAMILY.get_family_type_name(element)
+        if not _is_target_panel(family_name, type_name):
+            continue
+        unique_id = element.UniqueId
+        if unique_id in printed_ids:
+            continue
+        printed_ids.add(unique_id)
+        ref_markers = get_child_family_instances(element, source_doc, CHILD_FAMILY_NAME)
+        pier_marker_data, first_pier_point = _build_marker_entries(ref_markers, PIER_MARKER_ORDER, transform)
+        room_marker_data, first_room_point = _build_marker_entries(ref_markers, ROOM_SEPARATOR_MARKER_ORDER, transform)
+        first_marker_point = first_pier_point or first_room_point
+        if first_marker_point is not None:
+            nearest_level, level_z = find_nearest_level(first_marker_point, levels)
+        else:
+            nearest_level = None
+            level_z = None
+        height_value = get_parameter_double(element, PANEL_HEIGHT_PARAMETER)
+        pier_marker_count = len([entry for entry in pier_marker_data.values() if entry["element"] is not None])
+        room_marker_count = len([entry for entry in room_marker_data.values() if entry["element"] is not None])
+        panel_record = {
+            "source_name": source_name,
+            "panel_unique_id": unique_id,
+            "markers": pier_marker_data,
+            "pier_markers": pier_marker_data,
+            "room_markers": room_marker_data,
+            "ref_marker_count": pier_marker_count,
+            "pier_marker_count": pier_marker_count,
+            "room_marker_count": room_marker_count,
+            "nearest_level": nearest_level,
+            "nearest_level_z": level_z,
+            "first_marker_point": first_marker_point,
+            "panel_element": element,
+            "panel_height": height_value,
+        }
+        panel_records.append(panel_record)
+        panel_logs.append(_format_panel_info(panel_record))
+    return panel_records, panel_logs
+
+
+def _format_panel_info(panel_record):
+    lines = []
+    lines.append("\nPanel ({0}): {1}".format(panel_record["source_name"], panel_record["panel_unique_id"]))
+    lines.append("    Pier marker count: {0}".format(panel_record.get("pier_marker_count", 0)))
+    for marker_key in PIER_MARKER_ORDER:
+        entry = panel_record["pier_markers"].get(marker_key)
+        if entry is None or entry["element"] is None:
+            lines.append("        Missing pier marker for index \"{0}\".".format(marker_key))
+            continue
+        point = entry["point_link"]
+        if point is None:
+            lines.append("        {0}: Location not available.".format(marker_key))
+        else:
+            lines.append("        {0}: {1}, {2}, {3} (UniqueId: {4})".format(
+                marker_key,
+                point.X,
+                point.Y,
+                point.Z,
+                entry["unique_id"]
+            ))
+    lines.append("    Room marker count: {0}".format(panel_record.get("room_marker_count", 0)))
+    for marker_key in ROOM_SEPARATOR_MARKER_ORDER:
+        entry = panel_record["room_markers"].get(marker_key)
+        if entry is None or entry["element"] is None:
+            lines.append("        Missing room marker for index \"{0}\".".format(marker_key))
+            continue
+        point = entry["point_link"]
+        if point is None:
+            lines.append("        {0}: Location not available.".format(marker_key))
+        else:
+            lines.append("        {0}: {1}, {2}, {3} (UniqueId: {4})".format(
+                marker_key,
+                point.X,
+                point.Y,
+                point.Z,
+                entry["unique_id"]
+            ))
+    if panel_record["ref_marker_count"] != EXPECTED_CHILD_COUNT:
+        lines.append("    Warning: Expected {0} RefMarker children but found {1}.".format(
+            EXPECTED_CHILD_COUNT,
+            panel_record["ref_marker_count"]
+        ))
+    nearest_level = panel_record["nearest_level"]
+    level_z = panel_record["nearest_level_z"]
+    first_point = panel_record.get("first_marker_point")
+    if nearest_level is not None and level_z is not None and first_point is not None:
+        offset = abs(first_point.Z - level_z)
+        lines.append("    Closest level: {0} (Z={1}, delta={2})".format(nearest_level.Name, level_z, offset))
+    else:
+        lines.append("    Closest level: Not found.")
+    return "\n".join(lines)
+
+
+def _build_marker_entries(ref_markers, marker_keys, transform):
+    marker_data = {}
+    first_point = None
+    for marker_key in marker_keys:
+        marker_element = ref_markers.get(marker_key)
+        entry = {
+            "name": marker_key,
+            "element": marker_element,
+            "unique_id": None,
+            "point_link": None,
+            "point_host": None,
+        }
+        if marker_element is not None:
+            entry["unique_id"] = marker_element.UniqueId
+            location = marker_element.Location
+            point = getattr(location, "Point", None)
+            if point is not None:
+                entry["point_link"] = point
+                entry["point_host"] = transform.OfPoint(point) if transform is not None else point
+                if first_point is None:
+                    first_point = point
+        marker_data[marker_key] = entry
+    return marker_data, first_point
+
+
+def print_panel_logs(panel_logs, preview_limit=None):
+    total = len(panel_logs)
+    if total == 0:
+        return
+    if preview_limit is None:
+        preview_limit = PANEL_LOG_PREVIEW_LIMIT
+    limit = min(preview_limit, total)
+    for idx in range(limit):
+        print(panel_logs[idx])
+    if total > limit:
+        print("\n... Skipping {0} additional panels (preview limited to {1}).".format(total - limit, limit))
+
+
+def _is_target_panel(family_name, type_name):
+    for target_family_name, target_type_name in TARGET_PANEL_FAMILIES:
+        if family_name == target_family_name and (target_type_name is None or type_name == target_type_name):
+            return True
+    return False

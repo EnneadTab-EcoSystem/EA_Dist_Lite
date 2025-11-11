@@ -155,6 +155,53 @@ def is_family_exist(family_name, doc=None):
             return True
     return False
 
+
+def get_family_type_name(element):
+    """Return the family type name for a given element.
+
+    Args:
+        element (DB.Element): Revit element instance.
+
+    Returns:
+        str or None: Type name if available.
+    """
+    if element is None:
+        return None
+    try:
+        symbol = getattr(element, "Symbol", None)
+        if symbol is not None:
+            name = getattr(symbol, "Name", None)
+            if name:
+                return name
+        if hasattr(element, "GetTypeId"):
+            type_id = element.GetTypeId()
+            if type_id and type_id != DB.ElementId.InvalidElementId:
+                doc = getattr(element, "Document", DOC)
+                if doc is not None:
+                    type_element = doc.GetElement(type_id)
+                    if type_element is not None:
+                        name = getattr(type_element, "Name", None)
+                        if name:
+                            return name
+                        param = type_element.LookupParameter("Type Name")
+                        if param:
+                            value = param.AsString()
+                            if value:
+                                return value
+        param = element.LookupParameter("Type Name")
+        if param:
+            value = param.AsString()
+            if value:
+                return value
+        param = element.get_Parameter(DB.BuiltInParameter.ELEM_TYPE_PARAM)
+        if param:
+            value = param.AsString()
+            if value:
+                return value
+    except Exception:
+        pass
+    return None
+
 def get_family_by_name(family_name, 
                        doc=None, 
                        load_path_if_not_exist=None):
