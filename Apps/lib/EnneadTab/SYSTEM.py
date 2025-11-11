@@ -311,7 +311,14 @@ def check_system_uptime():
     if uptime > 7 * 24 * 60 * 60:  # 7 days in seconds
         days = int(uptime / (24 * 60 * 60))
         hours = int((uptime % (24 * 60 * 60)) / (60 * 60))
-        NOTIFICATION.messenger("Your computer has been running for {} days and {} hours. Consider restarting your computer for optimal performance.\nNo one even work their donkey this hard.".format(days, hours))
+        uptime_messages = [
+            "No one even work their donkey this hard.\nYour computer has been running for {} days and {} hours. Consider restarting your computer for optimal performance.",
+            "Let me sleep, please please please.\nThis PC has been awake for {} days and {} hours.",
+            "Your revit file is about to form a union becuase of how much overworked there is.\nFun fact: your computer hasn't rebooted in {} days and {} hours.",
+            "Treat your revit file to a restart spa day.\nThis copmuter has survived {} days and {} hours without a reboot.",
+            "Reboot before dust bunnies start paying rent.\nWe're seeing {} days and {} hours of nonstop revit usage.",
+        ]
+        NOTIFICATION.messenger(random.choice(uptime_messages).format(days, hours))
     return uptime
 
 def purge_powershell_folder():

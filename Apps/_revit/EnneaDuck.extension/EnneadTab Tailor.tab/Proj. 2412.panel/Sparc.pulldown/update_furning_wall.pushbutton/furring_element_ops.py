@@ -1,13 +1,29 @@
 from Autodesk.Revit import DB  # pyright: ignore
 
-from EnneadTab.REVIT import REVIT_FILTER
+from EnneadTab import NOTIFICATION
+from EnneadTab.REVIT import REVIT_FILTER, REVIT_SELECTION
 from furring_constants import (
     BASE_OFFSET,
+    FULL_SPANDREL_PARAMETER,
     HEIGHT_OFFSET,
     PIER_MARKER_ORDER,
     ROOM_SEPARATOR_MARKER_ORDER,
     ROOM_SEPARATOR_SELECTION_NAME,
+    SILL_MARKER_ORDER,
+    SILL_WALL_HEIGHT,
 )
+
+
+def _prefix_log_tag(prefix_value):
+    if prefix_value in (None, ""):
+        return ""
+    return "[{0}] ".format(prefix_value)
+
+
+def _prefix_description(prefix_value):
+    if prefix_value in (None, ""):
+        return ""
+    return " (prefix \"{0}\")".format(prefix_value)
 
 
 def map_levels_by_name(doc):
@@ -30,11 +46,24 @@ def get_wall_type_by_name(doc, type_name):
 
 def delete_existing_furring_walls(doc, wall_type):
     walls = list(DB.FilteredElementCollector(doc).OfClass(DB.Wall).WhereElementIsNotElementType().ToElements())
+    walls = [wall for wall in walls if wall.WallType.Id == wall_type.Id]
+    walls = list(REVIT_SELECTION.filter_elements_changable(walls))
     deleted_count = 0
     for wall in walls:
-        if wall.WallType.Id == wall_type.Id:
-            doc.Delete(wall.Id)
-            deleted_count += 1
+        if getattr(wall, "IsReadOnly", False):
+            print("        Cannot delete wall {0}; element is read-only.".format(wall.Id))
+            continue
+        if hasattr(wall, "Pinned") and wall.Pinned:
+            print("        Cannot delete wall {0}; element is pinned.".format(wall.Id))
+            continue
+        try:
+            if hasattr(doc, "IsElementModifiable") and not doc.IsElementModifiable(wall.Id):
+                print("        Cannot delete wall {0}; element is not modifiable.".format(wall.Id))
+                continue
+        except Exception:
+            pass
+        doc.Delete(wall.Id)
+        deleted_count += 1
     return deleted_count
 
 
@@ -43,13 +72,20 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
     created_count = 0
     segment_plans = []
     for record in panel_records:
+        if record.get("is_full_spandrel"):
+            print("    Skipping furring walls for panel {0}; \"{1}\" is True.".format(
+                record["panel_unique_id"],
+                FULL_SPANDREL_PARAMETER,
+            ))
+            continue
         level = record["nearest_level"]
         if level is None:
             print("    Skipping panel {0} due to missing nearest level.".format(record["panel_unique_id"]))
             continue
         host_level = host_level_map.get(level.Name)
         if host_level is None:
-            raise ValueError("Host document is missing level named \"{0}\" required for panel {1}.".format(level.Name, record["panel_unique_id"]))
+            print("        Host document missing level \"{0}\"; skipping panel {1} for furring walls.".format(level.Name, record["panel_unique_id"]))
+            continue
         panel_height = record.get("panel_height")
         if panel_height is None:
             print("        Cannot determine height for panel {0}; missing parameter.".format(record["panel_unique_id"]))
@@ -58,25 +94,80 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
         if height <= 0:
             print("        Computed height {0} for panel {1} is not positive; skipping.".format(height, record["panel_unique_id"]))
             continue
-        pier_markers = record["pier_markers"]
-        ordered_points = []
-        for marker_key in PIER_MARKER_ORDER:
-            entry = pier_markers.get(marker_key)
-            if entry is None or entry["point_host"] is None:
-                print("        Cannot create walls for panel {0}; missing host point for index {1}.".format(record["panel_unique_id"], marker_key))
-                ordered_points = []
-                break
-            ordered_points.append(entry["point_host"])
-        if len(ordered_points) < 2:
-            continue
-        segment_plans.append((record["panel_unique_id"], host_level, height, ordered_points))
+        pier_marker_groups = record.get("pier_marker_groups")
+        if not pier_marker_groups:
+            fallback_group = {
+                "prefix": None,
+                "markers": record.get("pier_markers", {}),
+            }
+            pier_marker_groups = [fallback_group]
+        for group in pier_marker_groups:
+            marker_data = group.get("markers", {})
+            prefix_value = group.get("prefix")
+            ordered_points = []
+            missing_key = None
+            for marker_key in PIER_MARKER_ORDER:
+                entry = marker_data.get(marker_key)
+                if entry is None or entry["point_host"] is None:
+                    missing_key = marker_key
+                    break
+                ordered_points.append(entry["point_host"])
+            if missing_key is not None:
+                print("        Cannot create walls for panel {0}; missing host point for index {1}{2}.".format(
+                    record["panel_unique_id"],
+                    missing_key,
+                    _prefix_description(prefix_value)
+                ))
+                continue
+            if len(ordered_points) < 2:
+                continue
+            segment_plans.append({
+                "panel_id": record["panel_unique_id"],
+                "host_level": host_level,
+                "height": height,
+                "points": ordered_points,
+                "marker_order": PIER_MARKER_ORDER,
+                "prefix": prefix_value,
+            })
 
-    total_segments = sum(len(points) - 1 for (_, _, _, points) in segment_plans)
+        sill_markers = record.get("sill_markers", {})
+        sill_points = []
+        sill_missing = False
+        for marker_key in SILL_MARKER_ORDER:
+            entry = sill_markers.get(marker_key)
+            if entry is None or entry["point_host"] is None:
+                sill_missing = True
+                if entry is None or entry["element"] is None:
+                    print("        Missing sill marker \"{0}\" for panel {1}; skipping sill wall.".format(marker_key, record["panel_unique_id"]))
+                else:
+                    print("        Cannot determine host point for sill marker \"{0}\" on panel {1}; skipping sill wall.".format(marker_key, record["panel_unique_id"]))
+                break
+            sill_points.append(entry["point_host"])
+        if not sill_missing and len(sill_points) == len(SILL_MARKER_ORDER):
+            segment_plans.append({
+                "panel_id": record["panel_unique_id"],
+                "host_level": host_level,
+                "height": SILL_WALL_HEIGHT,
+                "points": sill_points,
+                "marker_order": SILL_MARKER_ORDER,
+                "prefix": None,
+            })
+
+    total_segments = 0
+    for plan in segment_plans:
+        points = plan.get("points")
+        if points and len(points) > 1:
+            total_segments += len(points) - 1
     if total_segments == 0:
         return created_count
 
     current_index = 0
-    for _, host_level, height, ordered_points in segment_plans:
+    for plan in segment_plans:
+        host_level = plan["host_level"]
+        height = plan["height"]
+        ordered_points = plan["points"]
+        marker_order = plan["marker_order"]
+        prefix_value = plan.get("prefix")
         for idx in range(len(ordered_points) - 1):
             current_index += 1
             start_point = ordered_points[idx]
@@ -93,16 +184,19 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
                 new_wall.CrossSection = DB.WallCrossSection.SingleSlanted
             except Exception as exc:
                 print("        Unable to set cross section to SingleSlanted for wall {0}: {1}".format(new_wall.Id, exc))
-            start_name = PIER_MARKER_ORDER[idx]
-            end_name = PIER_MARKER_ORDER[idx + 1]
-            if current_index == total_segments or current_index % 50 == 0 or current_index == 1:
-                print("        [{0}/{1}] Created furring wall ({2}->{3}) UniqueId: {4}".format(
+            start_name = marker_order[idx] if idx < len(marker_order) else "?"
+            end_name = marker_order[idx + 1] if (idx + 1) < len(marker_order) else "?"
+            if current_index == total_segments or current_index % 99 == 0 or current_index == 1:
+                print("        [{0}/{1}] {2}Created furring wall ({3}->{4}) UniqueId: {5}".format(
                     current_index,
                     total_segments,
+                    _prefix_log_tag(prefix_value),
                     start_name,
                     end_name,
                     new_wall.UniqueId
                 ))
+            if total_segments and (current_index % 200 == 0 or current_index == total_segments):
+                NOTIFICATION.messenger("{0} of {1} furring wall segments processed.".format(current_index, total_segments))
             created_count += 1
     return created_count
 
@@ -196,7 +290,7 @@ def create_room_separation_lines(doc, panel_records, host_level_map):
                 continue
             created_ids.append(element_id)
             current_index += 1
-            if current_index == total_segments or current_index % 50 == 0 or current_index == 1:
+            if current_index == total_segments or current_index % 99 == 0 or current_index == 1:
                 start_name, end_name = segment_names[idx] if idx < len(segment_names) else ("?", "?")
                 unique_id = element.UniqueId if element is not None else "Unknown"
                 print("        [{0}/{1}] Created room separation line for panel {2} ({3}->{4}) UniqueId: {5}".format(
@@ -207,6 +301,8 @@ def create_room_separation_lines(doc, panel_records, host_level_map):
                     end_name,
                     unique_id,
                 ))
+            if total_segments and (current_index % 200 == 0 or current_index == total_segments):
+                NOTIFICATION.messenger("{0} of {1} room separation segments processed.".format(current_index, total_segments))
     return len(created_ids), created_ids
 
 

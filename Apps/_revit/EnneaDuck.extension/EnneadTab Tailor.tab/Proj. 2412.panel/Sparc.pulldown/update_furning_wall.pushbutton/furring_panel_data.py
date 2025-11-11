@@ -4,13 +4,16 @@ from EnneadTab.REVIT import REVIT_FAMILY
 
 from furring_constants import (
     CHILD_FAMILY_NAME,
-    EXPECTED_CHILD_COUNT,
+    EXPECTED_PIER_MARKER_COUNT,
     FAMILY_INSTANCE_FILTER,
+    FULL_SPANDREL_PARAMETER,
     MARKER_INDEX_PARAMETER,
+    MARKER_PREFIX_PARAMETER,
     PIER_MARKER_ORDER,
     PANEL_HEIGHT_PARAMETER,
     PANEL_LOG_PREVIEW_LIMIT,
     ROOM_SEPARATOR_MARKER_ORDER,
+    SILL_MARKER_ORDER,
     TARGET_PANEL_FAMILIES,
 )
 
@@ -59,8 +62,31 @@ def get_parameter_double(element, parameter_name):
     return parameter.AsDouble()
 
 
+def get_parameter_bool(element, parameter_name):
+    parameter = element.LookupParameter(parameter_name)
+    if parameter is None:
+        return None
+    try:
+        return bool(parameter.AsInteger())
+    except Exception:
+        pass
+    value = get_parameter_value(element, parameter_name)
+    if value is None:
+        return None
+    lowered = value.lower()
+    if lowered in ("true", "yes", "1"):
+        return True
+    if lowered in ("false", "no", "0"):
+        return False
+    try:
+        return bool(int(value))
+    except Exception:
+        return None
+
+
 def get_child_family_instances(parent_element, source_doc, target_family_name):
-    child_elements = {}
+    child_groups = {}
+    prefix_order = []
     child_ids = parent_element.GetDependentElements(FAMILY_INSTANCE_FILTER)
     for child_id in child_ids:
         child_element = source_doc.GetElement(child_id)
@@ -68,10 +94,41 @@ def get_child_family_instances(parent_element, source_doc, target_family_name):
             continue
         child_family = get_family_name(child_element)
         if child_family == target_family_name:
+            prefix_value = get_parameter_value(child_element, MARKER_PREFIX_PARAMETER)
+            prefix_key = _normalize_marker_prefix(prefix_value)
+            if prefix_key not in child_groups:
+                child_groups[prefix_key] = {}
+                prefix_order.append(prefix_key)
             index_value = get_parameter_value(child_element, MARKER_INDEX_PARAMETER)
             key = index_value if index_value else "unknown"
-            child_elements[key] = child_element
-    return child_elements
+            group = child_groups[prefix_key]
+            if key in group:
+                suffix = 1
+                candidate = "{0}_{1}".format(key, suffix)
+                while candidate in group:
+                    suffix += 1
+                    candidate = "{0}_{1}".format(key, suffix)
+                key = candidate
+            group[key] = child_element
+    grouped_children = []
+    for prefix_key in prefix_order:
+        grouped_children.append((prefix_key, child_groups[prefix_key]))
+    return grouped_children
+
+
+def _normalize_marker_prefix(prefix_value):
+    if prefix_value is None:
+        return None
+    try:
+        value = prefix_value.strip()
+    except Exception:
+        try:
+            value = str(prefix_value).strip()
+        except Exception:
+            value = ""
+    if not value:
+        return None
+    return value
 
 
 def collect_levels_with_z(doc):
@@ -111,32 +168,49 @@ def collect_panels_from_doc(source_doc, source_name, printed_ids, levels, transf
         if unique_id in printed_ids:
             continue
         printed_ids.add(unique_id)
-        ref_markers = get_child_family_instances(element, source_doc, CHILD_FAMILY_NAME)
-        pier_marker_data, first_pier_point = _build_marker_entries(ref_markers, PIER_MARKER_ORDER, transform)
-        room_marker_data, first_room_point = _build_marker_entries(ref_markers, ROOM_SEPARATOR_MARKER_ORDER, transform)
-        first_marker_point = first_pier_point or first_room_point
+        ref_marker_groups = get_child_family_instances(element, source_doc, CHILD_FAMILY_NAME)
+        pier_marker_groups, first_pier_point = _build_marker_groups(ref_marker_groups, PIER_MARKER_ORDER, transform)
+        room_marker_groups, first_room_point = _build_marker_groups(ref_marker_groups, ROOM_SEPARATOR_MARKER_ORDER, transform)
+        sill_marker_groups, first_sill_point = _build_marker_groups(ref_marker_groups, SILL_MARKER_ORDER, transform)
+        if first_pier_point is None and first_room_point is None and first_sill_point is None:
+            print("Skipping panel {0}; marker locations unavailable.".format(unique_id))
+            continue
+        first_marker_point = first_pier_point or first_room_point or first_sill_point
         if first_marker_point is not None:
             nearest_level, level_z = find_nearest_level(first_marker_point, levels)
         else:
             nearest_level = None
             level_z = None
         height_value = get_parameter_double(element, PANEL_HEIGHT_PARAMETER)
-        pier_marker_count = len([entry for entry in pier_marker_data.values() if entry["element"] is not None])
-        room_marker_count = len([entry for entry in room_marker_data.values() if entry["element"] is not None])
+        is_full_spandrel = get_parameter_bool(element, FULL_SPANDREL_PARAMETER)
+        primary_pier_markers = pier_marker_groups[0]["markers"] if pier_marker_groups else {}
+        primary_room_markers = room_marker_groups[0]["markers"] if room_marker_groups else {}
+        primary_sill_markers = sill_marker_groups[0]["markers"] if sill_marker_groups else {}
+        pier_marker_count = _count_markers_in_groups(pier_marker_groups)
+        room_marker_count = _count_markers_in_groups(room_marker_groups)
+        sill_marker_count = _count_markers_in_groups(sill_marker_groups)
+        pier_group_count = len(pier_marker_groups)
         panel_record = {
             "source_name": source_name,
             "panel_unique_id": unique_id,
-            "markers": pier_marker_data,
-            "pier_markers": pier_marker_data,
-            "room_markers": room_marker_data,
+            "markers": primary_pier_markers,
+            "pier_markers": primary_pier_markers,
+            "pier_marker_groups": pier_marker_groups,
+            "room_markers": primary_room_markers,
+            "room_marker_groups": room_marker_groups,
+            "sill_markers": primary_sill_markers,
+            "sill_marker_groups": sill_marker_groups,
             "ref_marker_count": pier_marker_count,
             "pier_marker_count": pier_marker_count,
             "room_marker_count": room_marker_count,
+            "sill_marker_count": sill_marker_count,
+            "pier_marker_group_count": pier_group_count,
             "nearest_level": nearest_level,
             "nearest_level_z": level_z,
             "first_marker_point": first_marker_point,
             "panel_element": element,
             "panel_height": height_value,
+            "is_full_spandrel": is_full_spandrel,
         }
         panel_records.append(panel_record)
         panel_logs.append(_format_panel_info(panel_record))
@@ -146,23 +220,56 @@ def collect_panels_from_doc(source_doc, source_name, printed_ids, levels, transf
 def _format_panel_info(panel_record):
     lines = []
     lines.append("\nPanel ({0}): {1}".format(panel_record["source_name"], panel_record["panel_unique_id"]))
-    lines.append("    Pier marker count: {0}".format(panel_record.get("pier_marker_count", 0)))
-    for marker_key in PIER_MARKER_ORDER:
-        entry = panel_record["pier_markers"].get(marker_key)
-        if entry is None or entry["element"] is None:
-            lines.append("        Missing pier marker for index \"{0}\".".format(marker_key))
-            continue
-        point = entry["point_link"]
-        if point is None:
-            lines.append("        {0}: Location not available.".format(marker_key))
-        else:
-            lines.append("        {0}: {1}, {2}, {3} (UniqueId: {4})".format(
-                marker_key,
-                point.X,
-                point.Y,
-                point.Z,
-                entry["unique_id"]
-            ))
+    full_spandrel = panel_record.get("is_full_spandrel")
+    if full_spandrel is None:
+        full_spandrel_text = "Unknown"
+    elif full_spandrel:
+        full_spandrel_text = "Yes"
+    else:
+        full_spandrel_text = "No"
+    lines.append("    Full spandrel: {0}".format(full_spandrel_text))
+    lines.append("    Pier marker total count: {0}".format(panel_record.get("pier_marker_count", 0)))
+    pier_groups = panel_record.get("pier_marker_groups") or []
+    if pier_groups:
+        for group in pier_groups:
+            prefix_label = _format_marker_prefix(group.get("prefix"))
+            marker_data = group.get("markers", {})
+            group_count = _count_markers(marker_data)
+            lines.append("        Group {0}: {1}".format(prefix_label, group_count))
+            for marker_key in PIER_MARKER_ORDER:
+                entry = marker_data.get(marker_key)
+                if entry is None or entry["element"] is None:
+                    lines.append("            Missing pier marker for index \"{0}\".".format(marker_key))
+                    continue
+                point = entry["point_link"]
+                if point is None:
+                    lines.append("            {0}: Location not available.".format(marker_key))
+                else:
+                    lines.append("            {0}: {1}, {2}, {3} (UniqueId: {4})".format(
+                        marker_key,
+                        point.X,
+                        point.Y,
+                        point.Z,
+                        entry["unique_id"]
+                    ))
+    else:
+        pier_markers = panel_record.get("pier_markers", {})
+        for marker_key in PIER_MARKER_ORDER:
+            entry = pier_markers.get(marker_key)
+            if entry is None or entry["element"] is None:
+                lines.append("        Missing pier marker for index \"{0}\".".format(marker_key))
+                continue
+            point = entry["point_link"]
+            if point is None:
+                lines.append("        {0}: Location not available.".format(marker_key))
+            else:
+                lines.append("        {0}: {1}, {2}, {3} (UniqueId: {4})".format(
+                    marker_key,
+                    point.X,
+                    point.Y,
+                    point.Z,
+                    entry["unique_id"]
+                ))
     lines.append("    Room marker count: {0}".format(panel_record.get("room_marker_count", 0)))
     for marker_key in ROOM_SEPARATOR_MARKER_ORDER:
         entry = panel_record["room_markers"].get(marker_key)
@@ -180,9 +287,30 @@ def _format_panel_info(panel_record):
                 point.Z,
                 entry["unique_id"]
             ))
-    if panel_record["ref_marker_count"] != EXPECTED_CHILD_COUNT:
-        lines.append("    Warning: Expected {0} RefMarker children but found {1}.".format(
-            EXPECTED_CHILD_COUNT,
+    lines.append("    Sill marker count: {0}".format(panel_record.get("sill_marker_count", 0)))
+    for marker_key in SILL_MARKER_ORDER:
+        entry = panel_record["sill_markers"].get(marker_key)
+        if entry is None or entry["element"] is None:
+            lines.append("        Missing sill marker for index \"{0}\".".format(marker_key))
+            continue
+        point = entry["point_link"]
+        if point is None:
+            lines.append("        {0}: Location not available.".format(marker_key))
+        else:
+            lines.append("        {0}: {1}, {2}, {3} (UniqueId: {4})".format(
+                marker_key,
+                point.X,
+                point.Y,
+                point.Z,
+                entry["unique_id"]
+            ))
+    group_total = panel_record.get("pier_marker_group_count", 0)
+    if group_total < 1:
+        group_total = 1
+    expected_total = EXPECTED_PIER_MARKER_COUNT * group_total
+    if panel_record["ref_marker_count"] != expected_total:
+        lines.append("    Warning: Expected {0} pier RefMarker children but found {1}.".format(
+            expected_total,
             panel_record["ref_marker_count"]
         ))
     nearest_level = panel_record["nearest_level"]
@@ -219,6 +347,51 @@ def _build_marker_entries(ref_markers, marker_keys, transform):
                     first_point = point
         marker_data[marker_key] = entry
     return marker_data, first_point
+
+
+def _build_marker_groups(ref_marker_groups, marker_keys, transform):
+    groups = []
+    first_point = None
+    if not ref_marker_groups:
+        return groups, None
+    for prefix, marker_map in ref_marker_groups:
+        if marker_map is None:
+            marker_map = {}
+        marker_data, group_first_point = _build_marker_entries(marker_map, marker_keys, transform)
+        group_entry = {
+            "prefix": prefix,
+            "markers": marker_data,
+            "first_point": group_first_point,
+        }
+        groups.append(group_entry)
+        if first_point is None and group_first_point is not None:
+            first_point = group_first_point
+    return groups, first_point
+
+
+def _count_markers(marker_data):
+    count = 0
+    for marker_key in marker_data:
+        entry = marker_data[marker_key]
+        if entry is not None and entry.get("element") is not None:
+            count += 1
+    return count
+
+
+def _count_markers_in_groups(marker_groups):
+    total = 0
+    if not marker_groups:
+        return total
+    for group in marker_groups:
+        marker_data = group.get("markers", {})
+        total += _count_markers(marker_data)
+    return total
+
+
+def _format_marker_prefix(prefix_value):
+    if prefix_value is None:
+        return "(no prefix)"
+    return prefix_value
 
 
 def print_panel_logs(panel_logs, preview_limit=None):
