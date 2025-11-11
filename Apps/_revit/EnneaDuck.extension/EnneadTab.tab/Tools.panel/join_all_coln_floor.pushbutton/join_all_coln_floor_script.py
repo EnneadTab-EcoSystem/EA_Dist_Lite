@@ -20,16 +20,21 @@ DOC = REVIT_APPLICATION.get_doc()
 @ERROR_HANDLE.try_catch_error()
 def join_all_coln_floor(doc):
     # Define join pairs (better ordering and naming)
-    join_pairs = [
+    join_pairs = sorted([
         ("Architectural Column + Architectural Floor", DB.BuiltInCategory.OST_Columns, DB.BuiltInCategory.OST_Floors),
         ("Architectural Wall + Architectural Floor", DB.BuiltInCategory.OST_Walls, DB.BuiltInCategory.OST_Floors),
         ("Architectural Column + Ceiling", DB.BuiltInCategory.OST_Columns, DB.BuiltInCategory.OST_Ceilings),
         ("Architectural Wall + Ceiling", DB.BuiltInCategory.OST_Walls, DB.BuiltInCategory.OST_Ceilings),
         ("Structural Column + Architectural Floor", DB.BuiltInCategory.OST_StructuralColumns, DB.BuiltInCategory.OST_Floors),
+        ("Structural Beam + Architectural Floor", DB.BuiltInCategory.OST_StructuralFraming, DB.BuiltInCategory.OST_Floors),
         ("Structural Column + Ceiling", DB.BuiltInCategory.OST_StructuralColumns, DB.BuiltInCategory.OST_Ceilings),
+        ("Structural Beam + Ceiling", DB.BuiltInCategory.OST_StructuralFraming, DB.BuiltInCategory.OST_Ceilings),
+        ("Structural Beam + Architectural Wall", DB.BuiltInCategory.OST_StructuralFraming, DB.BuiltInCategory.OST_Walls),
+        ("Structural Beam + Structural Column", DB.BuiltInCategory.OST_StructuralFraming, DB.BuiltInCategory.OST_StructuralColumns),
+        ("Structural Beam + Structural Beam", DB.BuiltInCategory.OST_StructuralFraming, DB.BuiltInCategory.OST_StructuralFraming),
         ("Architectural Wall + Architectural Wall", DB.BuiltInCategory.OST_Walls, DB.BuiltInCategory.OST_Walls),
         ("Architectural Floor + Architectural Floor", DB.BuiltInCategory.OST_Floors, DB.BuiltInCategory.OST_Floors),
-    ]
+    ], key=lambda x: x[0])
     pair_names = [x[0] for x in join_pairs]
 
     selected_pairs = forms.SelectFromList.show(pair_names, multiselect=True, title="Pick element pairs to join")

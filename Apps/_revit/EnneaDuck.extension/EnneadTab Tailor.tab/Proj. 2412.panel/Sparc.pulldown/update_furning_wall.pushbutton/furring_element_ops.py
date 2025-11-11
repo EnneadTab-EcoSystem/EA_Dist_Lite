@@ -128,6 +128,7 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
                 "points": ordered_points,
                 "marker_order": PIER_MARKER_ORDER,
                 "prefix": prefix_value,
+                "room_bounding": True,
             })
 
         sill_markers = record.get("sill_markers", {})
@@ -151,6 +152,7 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
                 "points": sill_points,
                 "marker_order": SILL_MARKER_ORDER,
                 "prefix": None,
+                "room_bounding": False,
             })
 
     total_segments = 0
@@ -168,6 +170,7 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
         ordered_points = plan["points"]
         marker_order = plan["marker_order"]
         prefix_value = plan.get("prefix")
+        room_bounding_enabled = plan.get("room_bounding", True)
         for idx in range(len(ordered_points) - 1):
             current_index += 1
             start_point = ordered_points[idx]
@@ -180,6 +183,13 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
             param_base_offset = new_wall.get_Parameter(DB.BuiltInParameter.WALL_BASE_OFFSET)
             if param_base_offset is not None:
                 param_base_offset.Set(base_offset)
+            if not room_bounding_enabled:
+                room_bounding_param = new_wall.get_Parameter(DB.BuiltInParameter.WALL_ATTR_ROOM_BOUNDING)
+                if room_bounding_param is not None and not room_bounding_param.IsReadOnly:
+                    try:
+                        room_bounding_param.Set(0)
+                    except Exception as exc:
+                        print("        Unable to disable room bounding for wall {0}: {1}".format(new_wall.Id, exc))
             try:
                 new_wall.CrossSection = DB.WallCrossSection.SingleSlanted
             except Exception as exc:
