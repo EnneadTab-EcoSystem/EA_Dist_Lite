@@ -357,18 +357,69 @@ def _build_marker_entries(ref_markers, marker_keys, transform):
             "unique_id": None,
             "point_link": None,
             "point_host": None,
+            "location_kind": "None",
+            "diagnostic_note": None,
         }
         if marker_element is not None:
             entry["unique_id"] = marker_element.UniqueId
-            location = marker_element.Location
-            point = getattr(location, "Point", None)
-            if point is not None:
-                entry["point_link"] = point
-                entry["point_host"] = transform.OfPoint(point) if transform is not None else point
-                if first_point is None:
-                    first_point = point
+            point_link, point_host, location_kind, diagnostic_note = _extract_marker_points(marker_element, transform)
+            entry["point_link"] = point_link
+            entry["point_host"] = point_host
+            entry["location_kind"] = location_kind
+            entry["diagnostic_note"] = diagnostic_note
+            if first_point is None and point_link is not None:
+                first_point = point_link
         marker_data[marker_key] = entry
     return marker_data, first_point
+
+
+def _extract_marker_points(marker_element, transform):
+    location_kind = "None"
+    diagnostic_parts = []
+    point_link = None
+    point_host = None
+    if marker_element is None:
+        diagnostic_parts.append("Marker element is None.")
+        return point_link, point_host, location_kind, "; ".join(diagnostic_parts)
+    location = getattr(marker_element, "Location", None)
+    if location is None:
+        diagnostic_parts.append("Location property is None.")
+    else:
+        location_kind = location.__class__.__name__
+        point = getattr(location, "Point", None)
+        if point is not None:
+            point_link = point
+        else:
+            curve = getattr(location, "Curve", None)
+            if curve is not None:
+                try:
+                    point_link = curve.Evaluate(0.5, True)
+                    diagnostic_parts.append("Computed midpoint from LocationCurve.")
+                except Exception as error:
+                    diagnostic_parts.append("Failed to evaluate LocationCurve midpoint: {0}".format(error))
+            else:
+                diagnostic_parts.append("Location lacks Point/Curve data.")
+    if point_link is None:
+        if hasattr(marker_element, "GetTransform"):
+            try:
+                element_transform = marker_element.GetTransform()
+                if element_transform is not None:
+                    point_link = element_transform.Origin
+                    diagnostic_parts.append("Using transform origin as fallback.")
+            except Exception as error:
+                diagnostic_parts.append("GetTransform failed: {0}".format(error))
+        else:
+            diagnostic_parts.append("Element missing GetTransform method.")
+    if point_link is not None:
+        if transform is not None:
+            try:
+                point_host = transform.OfPoint(point_link)
+            except Exception as error:
+                diagnostic_parts.append("Transform.OfPoint failed: {0}".format(error))
+        else:
+            point_host = point_link
+    diagnostic_note = "; ".join(diagnostic_parts) if diagnostic_parts else None
+    return point_link, point_host, location_kind, diagnostic_note
 
 
 def _build_marker_groups(ref_marker_groups, marker_keys, transform):

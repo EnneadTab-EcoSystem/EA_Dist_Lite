@@ -1,7 +1,14 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "PlaceHolder Documentation, To Be Updated."
+__doc__ = """Update Furring Wall
+
+2025-11 discovery: curtain-panel marker families can appear in multiple prefix
+groups (for example none/left/right). The automation now evaluates every prefix
+variation when building pier walls, sill walls, and room separation lines so we
+capture whichever group actually contains host points. Diagnostic logging shows
+which groups were used or skipped, making it easier to troubleshoot missing
+geometry."""
 __title__ = "Update Furning Wall"
 
 import proDUCKtion  # pyright: ignore
@@ -31,6 +38,7 @@ from furring_element_ops import (
     get_wall_type_by_name,
     map_levels_by_name,
     update_panel_selection_filter,
+    ENABLE_VERBOSE_LOGS,
 )
 
 UIDOC = REVIT_APPLICATION.get_uidoc()
@@ -124,7 +132,8 @@ def update_furning_wall(doc):
         print("No curtain panels matching {0} were found in link \"{1}\".".format(", ".join(family_labels), TARGET_LINK_TITLE))
         return
 
-    print_panel_logs(panel_logs)
+    if ENABLE_VERBOSE_LOGS:
+        print_panel_logs(panel_logs)
 
     wall_type = get_wall_type_by_name(doc, FURRING_WALL_TYPE_NAME)
     if wall_type is None:
@@ -190,8 +199,9 @@ def update_furning_wall(doc):
             filter_name = build_panel_selection_filter_name(family_name, type_name)
             selection_set_examples.append((filter_name, family_name, type_name))
             label = _format_panel_family_label(family_name, type_name)
-            print("Processing panel selection set: {0} ({1} panel record(s)).".format(label, len(records)))
-            print("    Selection set name: {0}".format(filter_name))
+            if ENABLE_VERBOSE_LOGS:
+                print("Processing panel selection set: {0} ({1} panel record(s)).".format(label, len(records)))
+                print("    Selection set name: {0}".format(filter_name))
             NOTIFICATION.messenger(
                 "Processing {0}/{1}: {2} ({3} panel record(s))".format(
                     processed_sets,
@@ -201,7 +211,7 @@ def update_furning_wall(doc):
                 )
             )
             deleted_total, deleted_walls, deleted_room_lines = delete_elements_in_selection_filter(doc, filter_name)
-            if deleted_total:
+            if deleted_total and ENABLE_VERBOSE_LOGS:
                 print("    Removed {0} existing element(s) from selection set (walls: {1}, room lines: {2}).".format(
                     deleted_total,
                     deleted_walls,
@@ -220,7 +230,8 @@ def update_furning_wall(doc):
             combined_ids = list(wall_ids)
             combined_ids.extend(room_line_ids)
             saved_count = update_panel_selection_filter(doc, filter_name, combined_ids)
-            print("    Recorded {0} element(s) in selection set.".format(saved_count))
+            if ENABLE_VERBOSE_LOGS:
+                print("    Recorded {0} element(s) in selection set.".format(saved_count))
             NOTIFICATION.messenger(
                 "Completed {0}/{1}: {2}. Processed {3}/{4} panel record(s) overall.".format(
                     processed_sets,
