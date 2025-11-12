@@ -235,10 +235,16 @@ def fill_drafter_info(doc):
     
     t = DB.Transaction(doc, "Fill Drafter Info")
     t.Start()
+    is_sparc_project = False
+    if doc and doc.Title:
+        is_sparc_project = doc.Title.strip().lower() == "sparc_a_ea_cuny_building"
     for sheet in free_sheets:
-        sheet.LookupParameter("Drawn By").Set(DB.WorksharingUtils.GetWorksharingTooltipInfo(doc, sheet.Id).Creator)
-        
-        sheet.LookupParameter("Designed By").Set(DB.WorksharingUtils.GetWorksharingTooltipInfo(doc, sheet.Id).LastChangedBy)
+        tooltip_info = DB.WorksharingUtils.GetWorksharingTooltipInfo(doc, sheet.Id)
+        sheet.LookupParameter("Drawn By").Set(tooltip_info.Creator)
+        designed_by_value = tooltip_info.LastChangedBy
+        if is_sparc_project:
+            designed_by_value = "Ennead Architects"
+        sheet.LookupParameter("Designed By").Set(designed_by_value)
     t.Commit()
 
 

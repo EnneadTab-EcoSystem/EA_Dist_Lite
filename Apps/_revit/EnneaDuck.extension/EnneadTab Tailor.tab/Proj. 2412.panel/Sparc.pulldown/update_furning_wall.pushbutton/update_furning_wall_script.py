@@ -7,6 +7,8 @@ __title__ = "Update Furning Wall"
 import proDUCKtion  # pyright: ignore
 proDUCKtion.validify()
 
+from pyrevit import forms
+
 from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FILTER, REVIT_SELECTION
 from Autodesk.Revit import DB  # pyright: ignore
@@ -35,10 +37,47 @@ UIDOC = REVIT_APPLICATION.get_uidoc()
 DOC = REVIT_APPLICATION.get_doc()
 
 
+def _format_panel_family_label(family_name, type_name):
+    if type_name:
+        return "{0} ({1})".format(family_name, type_name)
+    return "{0} (All Types)".format(family_name)
+
+
+def _select_target_panel_families():
+    label_map = {}
+    option_labels = []
+    for family_name, type_name in TARGET_PANEL_FAMILIES:
+        label = _format_panel_family_label(family_name, type_name)
+        if label not in label_map:
+            label_map[label] = []
+            option_labels.append(label)
+        label_map[label].append((family_name, type_name))
+    selected_labels = forms.SelectFromList.show(
+        option_labels,
+        multiselect=True,
+        title="Select Curtain Panel Families",
+        button_name="Run",
+    )
+    if not selected_labels:
+        return []
+    selected_pairs = []
+    for label in selected_labels:
+        pairs = label_map.get(label) or []
+        for pair in pairs:
+            if pair not in selected_pairs:
+                selected_pairs.append(pair)
+    return selected_pairs
+
+
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def update_furning_wall(doc):
     printed_ids = set()
+
+    selected_panel_families = _select_target_panel_families()
+    if not selected_panel_families:
+        NOTIFICATION.messenger("Update cancelled. No panel families selected.")
+        return
 
     link_doc = REVIT_SELECTION.get_revit_link_doc_by_name(TARGET_LINK_TITLE, doc=doc)
     if link_doc is None:
@@ -64,10 +103,11 @@ def update_furning_wall(doc):
         printed_ids,
         levels,
         transform,
+        target_panel_families=selected_panel_families,
     )
 
     if not panel_records:
-        family_labels = ["{0} ({1})".format(name, type_name) for (name, type_name) in TARGET_PANEL_FAMILIES]
+        family_labels = [_format_panel_family_label(name, type_name) for (name, type_name) in selected_panel_families]
         print("No curtain panels matching {0} were found in link \"{1}\".".format(", ".join(family_labels), TARGET_LINK_TITLE))
         return
 

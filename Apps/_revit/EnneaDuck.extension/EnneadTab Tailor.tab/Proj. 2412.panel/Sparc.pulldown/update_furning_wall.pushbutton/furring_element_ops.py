@@ -11,6 +11,7 @@ from furring_constants import (
     ROOM_SEPARATOR_SELECTION_NAME,
     SILL_MARKER_ORDER,
     SILL_WALL_HEIGHT,
+    IGNORE_FURRING_PARAMETER,
 )
 
 
@@ -71,7 +72,15 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
     base_offset = BASE_OFFSET
     created_count = 0
     segment_plans = []
+    pier_wall_baselines = []
     for record in panel_records:
+        ignore_flag = record.get("ignore_furring_flag")
+        if ignore_flag is True:
+            print("    Skipping furring walls for panel {0}; \"{1}\" parameter is True.".format(
+                record["panel_unique_id"],
+                IGNORE_FURRING_PARAMETER,
+            ))
+            continue
         if record.get("is_full_spandrel"):
             print("    Skipping furring walls for panel {0}; \"{1}\" is True.".format(
                 record["panel_unique_id"],
@@ -129,6 +138,7 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
                 "marker_order": PIER_MARKER_ORDER,
                 "prefix": prefix_value,
                 "room_bounding": True,
+                "is_sill": False,
             })
 
         sill_markers = record.get("sill_markers", {})
@@ -153,6 +163,7 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
                 "marker_order": SILL_MARKER_ORDER,
                 "prefix": None,
                 "room_bounding": False,
+                "is_sill": True,
             })
 
     total_segments = 0
@@ -208,7 +219,58 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
             if total_segments and (current_index % 200 == 0 or current_index == total_segments):
                 NOTIFICATION.messenger("{0} of {1} furring wall segments processed.".format(current_index, total_segments))
             created_count += 1
+            if not plan.get("is_sill"):
+                baseline_key = _build_baseline_key(start_point, end_point)
+                if baseline_key is not None:
+                    pier_wall_baselines.append((baseline_key, new_wall.Id))
+            if plan.get("is_sill"):
+                try:
+                    DB.WallUtils.DisallowWallJoinAtEnd(new_wall, 0)
+                    DB.WallUtils.DisallowWallJoinAtEnd(new_wall, 1)
+                except Exception as exc:
+                    print("        Unable to disallow joins for sill wall {0}: {1}".format(new_wall.Id, exc))
+    deleted_duplicates = _cleanup_duplicate_pier_walls(doc, pier_wall_baselines)
+    if deleted_duplicates:
+        created_count -= deleted_duplicates
+        if created_count < 0:
+            created_count = 0
     return created_count
+
+
+def _build_baseline_key(start_point, end_point, precision=6):
+    if start_point is None or end_point is None:
+        return None
+    start_tuple = (round(start_point.X, precision), round(start_point.Y, precision), round(start_point.Z, precision))
+    end_tuple = (round(end_point.X, precision), round(end_point.Y, precision), round(end_point.Z, precision))
+    if start_tuple <= end_tuple:
+        return (start_tuple, end_tuple)
+    return (end_tuple, start_tuple)
+
+
+def _cleanup_duplicate_pier_walls(doc, baseline_records):
+    if not baseline_records:
+        return 0
+    baseline_map = {}
+    for baseline_key, wall_id in baseline_records:
+        if baseline_key is None:
+            continue
+        if baseline_key not in baseline_map:
+            baseline_map[baseline_key] = []
+        baseline_map[baseline_key].append(wall_id)
+    deleted_count = 0
+    for baseline_key in baseline_map:
+        wall_ids = baseline_map[baseline_key]
+        if len(wall_ids) <= 1:
+            continue
+        for wall_id in wall_ids:
+            try:
+                doc.Delete(wall_id)
+                deleted_count += 1
+            except Exception as exc:
+                print("        Failed to delete duplicate pier wall {0}: {1}".format(wall_id, exc))
+    if deleted_count:
+        print("    Removed {0} duplicate pier furring wall(s) with matching baselines.".format(deleted_count))
+    return deleted_count
 
 
 def delete_room_separation_lines(doc):

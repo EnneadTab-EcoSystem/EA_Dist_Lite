@@ -15,6 +15,7 @@ from furring_constants import (
     ROOM_SEPARATOR_MARKER_ORDER,
     SILL_MARKER_ORDER,
     TARGET_PANEL_FAMILIES,
+    IGNORE_FURRING_PARAMETER,
 )
 
 
@@ -155,14 +156,16 @@ def find_nearest_level(point, level_data):
     return (nearest_level, nearest_level_z)
 
 
-def collect_panels_from_doc(source_doc, source_name, printed_ids, levels, transform):
+def collect_panels_from_doc(source_doc, source_name, printed_ids, levels, transform, target_panel_families=None):
+    if target_panel_families is None:
+        target_panel_families = TARGET_PANEL_FAMILIES
     collector = DB.FilteredElementCollector(source_doc).OfCategory(DB.BuiltInCategory.OST_CurtainWallPanels).WhereElementIsNotElementType()
     panel_records = []
     panel_logs = []
     for element in collector:
         family_name = get_family_name(element)
         type_name = REVIT_FAMILY.get_family_type_name(element)
-        if not _is_target_panel(family_name, type_name):
+        if not _is_target_panel(family_name, type_name, target_panel_families):
             continue
         unique_id = element.UniqueId
         if unique_id in printed_ids:
@@ -183,6 +186,7 @@ def collect_panels_from_doc(source_doc, source_name, printed_ids, levels, transf
             level_z = None
         height_value = get_parameter_double(element, PANEL_HEIGHT_PARAMETER)
         is_full_spandrel = get_parameter_bool(element, FULL_SPANDREL_PARAMETER)
+        ignore_furring_flag = get_parameter_bool(element, IGNORE_FURRING_PARAMETER)
         primary_pier_markers = pier_marker_groups[0]["markers"] if pier_marker_groups else {}
         primary_room_markers = room_marker_groups[0]["markers"] if room_marker_groups else {}
         primary_sill_markers = sill_marker_groups[0]["markers"] if sill_marker_groups else {}
@@ -211,6 +215,7 @@ def collect_panels_from_doc(source_doc, source_name, printed_ids, levels, transf
             "panel_element": element,
             "panel_height": height_value,
             "is_full_spandrel": is_full_spandrel,
+            "ignore_furring_flag": ignore_furring_flag,
         }
         panel_records.append(panel_record)
         panel_logs.append(_format_panel_info(panel_record))
@@ -228,6 +233,14 @@ def _format_panel_info(panel_record):
     else:
         full_spandrel_text = "No"
     lines.append("    Full spandrel: {0}".format(full_spandrel_text))
+    ignore_flag = panel_record.get("ignore_furring_flag")
+    if ignore_flag is None:
+        ignore_text = "Not Set"
+    elif ignore_flag:
+        ignore_text = "True"
+    else:
+        ignore_text = "False"
+    lines.append("    Ignore furring flag: {0}".format(ignore_text))
     lines.append("    Pier marker total count: {0}".format(panel_record.get("pier_marker_count", 0)))
     pier_groups = panel_record.get("pier_marker_groups") or []
     if pier_groups:
@@ -407,8 +420,10 @@ def print_panel_logs(panel_logs, preview_limit=None):
         print("\n... Skipping {0} additional panels (preview limited to {1}).".format(total - limit, limit))
 
 
-def _is_target_panel(family_name, type_name):
-    for target_family_name, target_type_name in TARGET_PANEL_FAMILIES:
+def _is_target_panel(family_name, type_name, target_panel_families=None):
+    if target_panel_families is None:
+        target_panel_families = TARGET_PANEL_FAMILIES
+    for target_family_name, target_type_name in target_panel_families:
         if family_name == target_family_name and (target_type_name is None or type_name == target_type_name):
             return True
     return False

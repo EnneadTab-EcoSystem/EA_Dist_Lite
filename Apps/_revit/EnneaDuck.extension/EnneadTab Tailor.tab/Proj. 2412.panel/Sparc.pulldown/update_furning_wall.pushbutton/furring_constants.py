@@ -39,3 +39,4 @@ HEIGHT_OFFSET = 3.0  # how much to reduce from the panel height
 BASE_OFFSET = 0.0
 SILL_WALL_HEIGHT = 30.0 / 12.0 # 30inches converted to feet
 FAMILY_INSTANCE_FILTER = DB.ElementClassFilter(DB.FamilyInstance)
+IGNORE_FURRING_PARAMETER = "is_ignore furring"
