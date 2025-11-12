@@ -38,10 +38,7 @@ def get_parameter_value(element, parameter_name):
     value = parameter.AsString()
     if value:
         return value
-    try:
-        value = parameter.AsValueString()
-    except Exception:
-        value = None
+    value = parameter.AsValueString()
     if value:
         return value
     if parameter.StorageType == DB.StorageType.Integer:
@@ -55,22 +52,16 @@ def get_parameter_double(element, parameter_name):
     parameter = element.LookupParameter(parameter_name)
     if parameter is None:
         return None
-    if parameter.StorageType != DB.StorageType.Double:
-        try:
-            return parameter.AsDouble()
-        except Exception:
-            return None
     return parameter.AsDouble()
 
 
-def get_parameter_bool(element, parameter_name):
-    parameter = element.LookupParameter(parameter_name)
+def get_parameter_bool(element, parameter_name, parameter=None):
+    if parameter is None:
+        parameter = element.LookupParameter(parameter_name)
     if parameter is None:
         return None
-    try:
+    if parameter.StorageType == DB.StorageType.Integer:
         return bool(parameter.AsInteger())
-    except Exception:
-        pass
     value = get_parameter_value(element, parameter_name)
     if value is None:
         return None
@@ -79,10 +70,21 @@ def get_parameter_bool(element, parameter_name):
         return True
     if lowered in ("false", "no", "0"):
         return False
-    try:
-        return bool(int(value))
-    except Exception:
+    return bool(int(value))
+
+
+def _get_parameter_raw_value(parameter):
+    if parameter is None:
         return None
+    storage_type = parameter.StorageType
+    if storage_type == DB.StorageType.Integer:
+        return parameter.AsInteger()
+    if storage_type == DB.StorageType.Double:
+        return parameter.AsDouble()
+    value = parameter.AsString()
+    if value:
+        return value
+    return parameter.AsValueString()
 
 
 def get_child_family_instances(parent_element, source_doc, target_family_name):
@@ -120,13 +122,7 @@ def get_child_family_instances(parent_element, source_doc, target_family_name):
 def _normalize_marker_prefix(prefix_value):
     if prefix_value is None:
         return None
-    try:
-        value = prefix_value.strip()
-    except Exception:
-        try:
-            value = str(prefix_value).strip()
-        except Exception:
-            value = ""
+    value = str(prefix_value).strip()
     if not value:
         return None
     return value
@@ -186,7 +182,10 @@ def collect_panels_from_doc(source_doc, source_name, printed_ids, levels, transf
             level_z = None
         height_value = get_parameter_double(element, PANEL_HEIGHT_PARAMETER)
         is_full_spandrel = get_parameter_bool(element, FULL_SPANDREL_PARAMETER)
-        ignore_furring_flag = get_parameter_bool(element, IGNORE_FURRING_PARAMETER)
+        ignore_param = element.LookupParameter(IGNORE_FURRING_PARAMETER)
+        ignore_furring_flag = get_parameter_bool(element, IGNORE_FURRING_PARAMETER, parameter=ignore_param)
+        ignore_furring_raw = _get_parameter_raw_value(ignore_param)
+        ignore_furring_storage = str(ignore_param.StorageType) if ignore_param is not None else None
         primary_pier_markers = pier_marker_groups[0]["markers"] if pier_marker_groups else {}
         primary_room_markers = room_marker_groups[0]["markers"] if room_marker_groups else {}
         primary_sill_markers = sill_marker_groups[0]["markers"] if sill_marker_groups else {}
@@ -197,6 +196,8 @@ def collect_panels_from_doc(source_doc, source_name, printed_ids, levels, transf
         panel_record = {
             "source_name": source_name,
             "panel_unique_id": unique_id,
+            "family_name": family_name,
+            "type_name": type_name,
             "markers": primary_pier_markers,
             "pier_markers": primary_pier_markers,
             "pier_marker_groups": pier_marker_groups,
@@ -216,6 +217,8 @@ def collect_panels_from_doc(source_doc, source_name, printed_ids, levels, transf
             "panel_height": height_value,
             "is_full_spandrel": is_full_spandrel,
             "ignore_furring_flag": ignore_furring_flag,
+            "ignore_furring_raw": ignore_furring_raw,
+            "ignore_furring_storage": ignore_furring_storage,
         }
         panel_records.append(panel_record)
         panel_logs.append(_format_panel_info(panel_record))
@@ -241,6 +244,12 @@ def _format_panel_info(panel_record):
     else:
         ignore_text = "False"
     lines.append("    Ignore furring flag: {0}".format(ignore_text))
+    raw_value = panel_record.get("ignore_furring_raw")
+    storage_type = panel_record.get("ignore_furring_storage")
+    lines.append("    Ignore furring raw value: {0} (StorageType: {1})".format(
+        raw_value if raw_value is not None else "Not Available",
+        storage_type if storage_type is not None else "Unknown",
+    ))
     lines.append("    Pier marker total count: {0}".format(panel_record.get("pier_marker_count", 0)))
     pier_groups = panel_record.get("pier_marker_groups") or []
     if pier_groups:

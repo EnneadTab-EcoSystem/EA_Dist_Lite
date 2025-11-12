@@ -1,14 +1,14 @@
 from Autodesk.Revit import DB  # pyright: ignore
 
 from EnneadTab import NOTIFICATION
-from EnneadTab.REVIT import REVIT_FILTER, REVIT_SELECTION
+from EnneadTab.REVIT import REVIT_FILTER
 from furring_constants import (
     BASE_OFFSET,
     FULL_SPANDREL_PARAMETER,
     HEIGHT_OFFSET,
     PIER_MARKER_ORDER,
     ROOM_SEPARATOR_MARKER_ORDER,
-    ROOM_SEPARATOR_SELECTION_NAME,
+    PANEL_SELECTION_FILTER_PREFIX,
     SILL_MARKER_ORDER,
     SILL_WALL_HEIGHT,
     IGNORE_FURRING_PARAMETER,
@@ -25,6 +25,97 @@ def _prefix_description(prefix_value):
     if prefix_value in (None, ""):
         return ""
     return " (prefix \"{0}\")".format(prefix_value)
+
+
+def _sanitize_filter_token(raw_value, fallback_value):
+    if raw_value is None:
+        token = fallback_value
+    else:
+        token = str(raw_value)
+    if token is None:
+        token = fallback_value
+    token = token.strip()
+    if not token:
+        token = fallback_value
+    replacement_pairs = [
+        ("\r", " "),
+        ("\n", " "),
+        ("\t", " "),
+    ]
+    for search_value, replace_value in replacement_pairs:
+        token = token.replace(search_value, replace_value)
+    invalid_chars = [
+        ":", "/", "\\", "<", ">", "\"", "|", "?", "*",
+    ]
+    for char in invalid_chars:
+        token = token.replace(char, "_")
+    while "  " in token:
+        token = token.replace("  ", " ")
+    return token
+
+
+def build_panel_selection_filter_name(family_name, type_name):
+    family_token = _sanitize_filter_token(family_name, "Unknown Family")
+    if type_name is None:
+        type_fallback = "All Types"
+    else:
+        type_fallback = "Unnamed Type"
+    type_token = _sanitize_filter_token(type_name, type_fallback)
+    return "{0}__{1}__{2}".format(PANEL_SELECTION_FILTER_PREFIX, family_token, type_token)
+
+
+def delete_elements_in_selection_filter(doc, filter_name):
+    selection_filter = REVIT_FILTER.get_selection_filter_by_name(doc, filter_name)
+    if not selection_filter:
+        return (0, 0, 0)
+    element_ids = list(selection_filter.GetElementIds())
+    deleted_total = 0
+    deleted_walls = 0
+    deleted_room_lines = 0
+    room_line_category_id = DB.ElementId(DB.BuiltInCategory.OST_RoomSeparationLines)
+    for element_id in element_ids:
+        element = doc.GetElement(element_id)
+        if element is None or not element.IsValidObject:
+            continue
+        if getattr(element, "IsReadOnly", False):
+            print("        Cannot delete element {0}; element is read-only.".format(element.Id))
+            continue
+        if hasattr(element, "Pinned") and element.Pinned:
+            print("        Cannot delete element {0}; element is pinned.".format(element.Id))
+            continue
+        is_wall = isinstance(element, DB.Wall)
+        is_room_line = False
+        if not is_wall and room_line_category_id is not None:
+            category = getattr(element, "Category", None)
+            if category is not None and category.Id == room_line_category_id:
+                is_room_line = True
+        doc.Delete(element_id)
+        deleted_total += 1
+        if is_wall:
+            deleted_walls += 1
+        elif is_room_line:
+            deleted_room_lines += 1
+    REVIT_FILTER.update_selection_filter(doc, filter_name, [])
+    return (deleted_total, deleted_walls, deleted_room_lines)
+
+
+def update_panel_selection_filter(doc, filter_name, element_ids):
+    selection = []
+    seen_ids = set()
+    for element_id in element_ids or []:
+        if element_id is None:
+            continue
+        integer_value = element_id.IntegerValue
+        if integer_value is not None and integer_value in seen_ids:
+            continue
+        element = doc.GetElement(element_id)
+        if element is None or not element.IsValidObject:
+            continue
+        if integer_value is not None:
+            seen_ids.add(integer_value)
+        selection.append(element)
+    REVIT_FILTER.update_selection_filter(doc, filter_name, selection)
+    return len(selection)
 
 
 def map_levels_by_name(doc):
@@ -45,40 +136,20 @@ def get_wall_type_by_name(doc, type_name):
     return None
 
 
-def delete_existing_furring_walls(doc, wall_type):
-    walls = list(DB.FilteredElementCollector(doc).OfClass(DB.Wall).WhereElementIsNotElementType().ToElements())
-    walls = [wall for wall in walls if wall.WallType.Id == wall_type.Id]
-    walls = list(REVIT_SELECTION.filter_elements_changable(walls))
-    deleted_count = 0
-    for wall in walls:
-        if getattr(wall, "IsReadOnly", False):
-            print("        Cannot delete wall {0}; element is read-only.".format(wall.Id))
-            continue
-        if hasattr(wall, "Pinned") and wall.Pinned:
-            print("        Cannot delete wall {0}; element is pinned.".format(wall.Id))
-            continue
-        try:
-            if hasattr(doc, "IsElementModifiable") and not doc.IsElementModifiable(wall.Id):
-                print("        Cannot delete wall {0}; element is not modifiable.".format(wall.Id))
-                continue
-        except Exception:
-            pass
-        doc.Delete(wall.Id)
-        deleted_count += 1
-    return deleted_count
-
-
 def create_furring_walls(doc, panel_records, wall_type, host_level_map):
     base_offset = BASE_OFFSET
     created_count = 0
+    created_wall_ids = []
     segment_plans = []
     pier_wall_baselines = []
     for record in panel_records:
         ignore_flag = record.get("ignore_furring_flag")
         if ignore_flag is True:
-            print("    Skipping furring walls for panel {0}; \"{1}\" parameter is True.".format(
+            raw_value = record.get("ignore_furring_raw")
+            print("    Skipping furring walls for panel {0}; \"{1}\" parameter is True (raw value: {2}).".format(
                 record["panel_unique_id"],
                 IGNORE_FURRING_PARAMETER,
+                raw_value if raw_value is not None else "N/A",
             ))
             continue
         if record.get("is_full_spandrel"):
@@ -172,7 +243,7 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
         if points and len(points) > 1:
             total_segments += len(points) - 1
     if total_segments == 0:
-        return created_count
+        return created_count, created_wall_ids
 
     current_index = 0
     for plan in segment_plans:
@@ -197,14 +268,8 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
             if not room_bounding_enabled:
                 room_bounding_param = new_wall.get_Parameter(DB.BuiltInParameter.WALL_ATTR_ROOM_BOUNDING)
                 if room_bounding_param is not None and not room_bounding_param.IsReadOnly:
-                    try:
-                        room_bounding_param.Set(0)
-                    except Exception as exc:
-                        print("        Unable to disable room bounding for wall {0}: {1}".format(new_wall.Id, exc))
-            try:
-                new_wall.CrossSection = DB.WallCrossSection.SingleSlanted
-            except Exception as exc:
-                print("        Unable to set cross section to SingleSlanted for wall {0}: {1}".format(new_wall.Id, exc))
+                    room_bounding_param.Set(0)
+            new_wall.CrossSection = DB.WallCrossSection.SingleSlanted
             start_name = marker_order[idx] if idx < len(marker_order) else "?"
             end_name = marker_order[idx + 1] if (idx + 1) < len(marker_order) else "?"
             if current_index == total_segments or current_index % 99 == 0 or current_index == 1:
@@ -219,22 +284,29 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
             if total_segments and (current_index % 200 == 0 or current_index == total_segments):
                 NOTIFICATION.messenger("{0} of {1} furring wall segments processed.".format(current_index, total_segments))
             created_count += 1
+            created_wall_ids.append(new_wall.Id)
             if not plan.get("is_sill"):
                 baseline_key = _build_baseline_key(start_point, end_point)
                 if baseline_key is not None:
                     pier_wall_baselines.append((baseline_key, new_wall.Id))
             if plan.get("is_sill"):
-                try:
-                    DB.WallUtils.DisallowWallJoinAtEnd(new_wall, 0)
-                    DB.WallUtils.DisallowWallJoinAtEnd(new_wall, 1)
-                except Exception as exc:
-                    print("        Unable to disallow joins for sill wall {0}: {1}".format(new_wall.Id, exc))
+                DB.WallUtils.DisallowWallJoinAtEnd(new_wall, 0)
+                DB.WallUtils.DisallowWallJoinAtEnd(new_wall, 1)
     deleted_duplicates = _cleanup_duplicate_pier_walls(doc, pier_wall_baselines)
     if deleted_duplicates:
-        created_count -= deleted_duplicates
-        if created_count < 0:
-            created_count = 0
-    return created_count
+        deleted_values = set()
+        for wall_id in deleted_duplicates:
+            deleted_values.add(wall_id.IntegerValue)
+        if deleted_values:
+            remaining_ids = []
+            for wall_id in created_wall_ids:
+                integer_value = wall_id.IntegerValue
+                if integer_value is not None and integer_value in deleted_values:
+                    continue
+                remaining_ids.append(wall_id)
+            created_wall_ids = remaining_ids
+    created_count = len(created_wall_ids)
+    return created_count, created_wall_ids
 
 
 def _build_baseline_key(start_point, end_point, precision=6):
@@ -249,7 +321,7 @@ def _build_baseline_key(start_point, end_point, precision=6):
 
 def _cleanup_duplicate_pier_walls(doc, baseline_records):
     if not baseline_records:
-        return 0
+        return []
     baseline_map = {}
     for baseline_key, wall_id in baseline_records:
         if baseline_key is None:
@@ -257,40 +329,17 @@ def _cleanup_duplicate_pier_walls(doc, baseline_records):
         if baseline_key not in baseline_map:
             baseline_map[baseline_key] = []
         baseline_map[baseline_key].append(wall_id)
-    deleted_count = 0
+    deleted_ids = []
     for baseline_key in baseline_map:
         wall_ids = baseline_map[baseline_key]
         if len(wall_ids) <= 1:
             continue
         for wall_id in wall_ids:
-            try:
-                doc.Delete(wall_id)
-                deleted_count += 1
-            except Exception as exc:
-                print("        Failed to delete duplicate pier wall {0}: {1}".format(wall_id, exc))
-    if deleted_count:
-        print("    Removed {0} duplicate pier furring wall(s) with matching baselines.".format(deleted_count))
-    return deleted_count
-
-
-def delete_room_separation_lines(doc):
-    selection_filter = REVIT_FILTER.get_selection_filter_by_name(doc, ROOM_SEPARATOR_SELECTION_NAME)
-    if not selection_filter:
-        return 0
-    element_ids = list(selection_filter.GetElementIds())
-    deleted_count = 0
-    for element_id in element_ids:
-        element = doc.GetElement(element_id)
-        if element is None or not element.IsValidObject:
-            continue
-        try:
-            doc.Delete(element_id)
-            deleted_count += 1
-        except Exception as exc:
-            print("        Failed to delete room separation line {0} because {1}".format(element_id, exc))
-    if deleted_count and len(element_ids) != deleted_count:
-        print("        Removed {0} of {1} saved room separation elements.".format(deleted_count, len(element_ids)))
-    return deleted_count
+            doc.Delete(wall_id)
+            deleted_ids.append(wall_id)
+    if deleted_ids:
+        print("    Removed {0} duplicate pier furring wall(s) with matching baselines.".format(len(deleted_ids)))
+    return deleted_ids
 
 
 def create_room_separation_lines(doc, panel_records, host_level_map):
@@ -299,6 +348,15 @@ def create_room_separation_lines(doc, panel_records, host_level_map):
     line_plans = []
     total_segments = 0
     for record in panel_records:
+        ignore_flag = record.get("ignore_furring_flag")
+        if ignore_flag is True:
+            raw_value = record.get("ignore_furring_raw")
+            print("    Skipping room lines for panel {0}; \"{1}\" parameter is True (raw value: {2}).".format(
+                record["panel_unique_id"],
+                IGNORE_FURRING_PARAMETER,
+                raw_value if raw_value is not None else "N/A",
+            ))
+            continue
         level = record.get("nearest_level")
         if level is None:
             print("    Skipping room lines for panel {0}; missing nearest level.".format(record["panel_unique_id"]))
@@ -382,11 +440,7 @@ def _get_or_create_sketch_plane(doc, level, cache):
     cached_plane = cache.get(level.Id)
     if cached_plane is not None and cached_plane.IsValidObject:
         return cached_plane
-    try:
-        sketch_plane = DB.SketchPlane.Create(doc, level.Id)
-    except Exception:
-        plane = DB.Plane.CreateByNormalAndOrigin(DB.XYZ.BasisZ, DB.XYZ(0, 0, level.ProjectElevation))
-        sketch_plane = DB.SketchPlane.Create(doc, plane)
+    sketch_plane = DB.SketchPlane.Create(doc, level.Id)
     cache[level.Id] = sketch_plane
     return sketch_plane
 
@@ -405,14 +459,10 @@ def _get_or_create_level_plan_view(doc, level, cache):
     view_family_type = _get_default_floor_plan_view_type(doc)
     if view_family_type is None:
         return None
-    try:
-        view = DB.ViewPlan.Create(doc, view_family_type.Id, level.Id)
-        view.Name = _generate_room_plan_view_name(level.Name, doc)
-        cache[level.Id] = view
-        return view
-    except Exception as exc:
-        print("        Unable to create plan view for level {0}: {1}".format(level.Name, exc))
-        return None
+    view = DB.ViewPlan.Create(doc, view_family_type.Id, level.Id)
+    view.Name = _generate_room_plan_view_name(level.Name, doc)
+    cache[level.Id] = view
+    return view
 
 
 def _get_default_floor_plan_view_type(doc):

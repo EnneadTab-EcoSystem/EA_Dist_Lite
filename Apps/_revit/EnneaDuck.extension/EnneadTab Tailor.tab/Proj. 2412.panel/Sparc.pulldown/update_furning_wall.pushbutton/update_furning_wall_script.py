@@ -10,12 +10,11 @@ proDUCKtion.validify()
 from pyrevit import forms
 
 from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION
-from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FILTER, REVIT_SELECTION
+from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_SELECTION
 from Autodesk.Revit import DB  # pyright: ignore
 
 from furring_constants import (
     FURRING_WALL_TYPE_NAME,
-    ROOM_SEPARATOR_SELECTION_NAME,
     TARGET_LINK_TITLE,
     TARGET_PANEL_FAMILIES,
 )
@@ -25,12 +24,13 @@ from furring_panel_data import (
     print_panel_logs,
 )
 from furring_element_ops import (
+    build_panel_selection_filter_name,
     create_furring_walls,
     create_room_separation_lines,
-    delete_existing_furring_walls,
-    delete_room_separation_lines,
+    delete_elements_in_selection_filter,
     get_wall_type_by_name,
     map_levels_by_name,
+    update_panel_selection_filter,
 )
 
 UIDOC = REVIT_APPLICATION.get_uidoc()
@@ -55,7 +55,7 @@ def _select_target_panel_families():
     selected_labels = forms.SelectFromList.show(
         option_labels,
         multiselect=True,
-        title="Select Curtain Panel Families",
+        title="Select Curtain Panel Families and types to process. Unpicked item will not be updated.",
         button_name="Run",
     )
     if not selected_labels:
@@ -67,6 +67,19 @@ def _select_target_panel_families():
             if pair not in selected_pairs:
                 selected_pairs.append(pair)
     return selected_pairs
+
+
+def _coerce_element_id_sequence(value):
+    if value is None:
+        return []
+    if isinstance(value, DB.ElementId):
+        return [value]
+    if isinstance(value, (list, tuple)):
+        return [item for item in value if item is not None]
+    try:
+        return [item for item in value if item is not None]
+    except TypeError:
+        return []
 
 
 @LOG.log(__file__, __title__)
@@ -121,36 +134,130 @@ def update_furning_wall(doc):
 
     transaction = DB.Transaction(doc, __title__)
     transaction.Start()
-    deleted_walls = 0
-    created_walls = 0
-    deleted_room_lines = 0
-    created_room_lines = 0
+    total_deleted_elements = 0
+    total_deleted_walls = 0
+    total_deleted_room_lines = 0
+    total_created_walls = 0
+    total_created_room_lines = 0
+    selection_set_examples = []
+    transaction_state = "unknown"
     try:
-        deleted_walls = delete_existing_furring_walls(doc, wall_type)
-        deleted_room_lines = delete_room_separation_lines(doc)
-        created_walls = create_furring_walls(doc, panel_records, wall_type, host_level_map)
-        created_room_lines, room_line_ids = create_room_separation_lines(doc, panel_records, host_level_map)
-        room_line_elements = []
-        for element_id in room_line_ids:
-            element = doc.GetElement(element_id)
-            if element is not None and element.IsValidObject:
-                room_line_elements.append(element)
-        selection_filter_exists = REVIT_FILTER.get_selection_filter_by_name(doc, ROOM_SEPARATOR_SELECTION_NAME) is not None
-        if room_line_elements or selection_filter_exists:
-            REVIT_FILTER.update_selection_filter(doc, ROOM_SEPARATOR_SELECTION_NAME, room_line_elements)
+        panel_groups = {}
+        for record in panel_records:
+            family_name = record.get("family_name")
+            type_name = record.get("type_name")
+            key = (family_name, type_name)
+            if key not in panel_groups:
+                panel_groups[key] = []
+            panel_groups[key].append(record)
+        total_panel_records = sum(len(panel_groups[key]) for key in panel_groups)
+        ordered_keys = []
+        missing_labels = []
+        processed_keys = set()
+        for family_name, type_name in selected_panel_families:
+            if type_name is None:
+                found_any = False
+                for key in panel_groups:
+                    if key[0] == family_name and key not in processed_keys:
+                        ordered_keys.append(key)
+                        processed_keys.add(key)
+                        found_any = True
+                if not found_any:
+                    missing_labels.append(_format_panel_family_label(family_name, type_name))
+            else:
+                key = (family_name, type_name)
+                if key in panel_groups and key not in processed_keys:
+                    ordered_keys.append(key)
+                    processed_keys.add(key)
+                else:
+                    missing_labels.append(_format_panel_family_label(family_name, type_name))
+        total_selection_sets = len(ordered_keys)
+        if total_selection_sets:
+            NOTIFICATION.messenger(
+                "Updating {0} selection set(s) covering {1} panel record(s).".format(
+                    total_selection_sets,
+                    total_panel_records,
+                )
+            )
+        processed_sets = 0
+        processed_panels = 0
+        for key in ordered_keys:
+            family_name, type_name = key
+            records = panel_groups.get(key) or []
+            if not records:
+                continue
+            processed_sets += 1
+            filter_name = build_panel_selection_filter_name(family_name, type_name)
+            selection_set_examples.append((filter_name, family_name, type_name))
+            label = _format_panel_family_label(family_name, type_name)
+            print("Processing panel selection set: {0} ({1} panel record(s)).".format(label, len(records)))
+            print("    Selection set name: {0}".format(filter_name))
+            NOTIFICATION.messenger(
+                "Processing {0}/{1}: {2} ({3} panel record(s))".format(
+                    processed_sets,
+                    total_selection_sets,
+                    label,
+                    len(records),
+                )
+            )
+            deleted_total, deleted_walls, deleted_room_lines = delete_elements_in_selection_filter(doc, filter_name)
+            if deleted_total:
+                print("    Removed {0} existing element(s) from selection set (walls: {1}, room lines: {2}).".format(
+                    deleted_total,
+                    deleted_walls,
+                    deleted_room_lines,
+                ))
+            walls_created_count, wall_ids = create_furring_walls(doc, records, wall_type, host_level_map)
+            room_created_count, room_line_ids = create_room_separation_lines(doc, records, host_level_map)
+            total_created_walls += walls_created_count
+            total_created_room_lines += room_created_count
+            total_deleted_elements += deleted_total
+            total_deleted_walls += deleted_walls
+            total_deleted_room_lines += deleted_room_lines
+            processed_panels += len(records)
+            wall_ids = _coerce_element_id_sequence(wall_ids)
+            room_line_ids = _coerce_element_id_sequence(room_line_ids)
+            combined_ids = list(wall_ids)
+            combined_ids.extend(room_line_ids)
+            saved_count = update_panel_selection_filter(doc, filter_name, combined_ids)
+            print("    Recorded {0} element(s) in selection set.".format(saved_count))
+            NOTIFICATION.messenger(
+                "Completed {0}/{1}: {2}. Processed {3}/{4} panel record(s) overall.".format(
+                    processed_sets,
+                    total_selection_sets,
+                    label,
+                    processed_panels,
+                    total_panel_records,
+                )
+            )
+        if not ordered_keys:
+            print("No panel records matched the selected panel families inside the link.")
+        elif missing_labels:
+            print("No panel records matched the following selections: {0}".format(", ".join(missing_labels)))
     except Exception:
         transaction.RollBack()
+        transaction_state = "rolled back"
+        NOTIFICATION.messenger("Update furring wall transaction rolled back due to an error.")
         raise
     else:
         transaction.Commit()
+        transaction_state = "committed"
         NOTIFICATION.messenger(
-            "Furring walls created/updated: {0} (removed: {1}); Room separation lines created: {2} (removed: {3})".format(
-                created_walls,
-                deleted_walls,
-                created_room_lines,
-                deleted_room_lines,
+            "Furring walls created: {0}; Room separation lines created: {1}; Removed prior elements: {2}".format(
+                total_created_walls,
+                total_created_room_lines,
+                total_deleted_elements,
             )
         )
+        if selection_set_examples:
+            example_name, example_family, example_type = selection_set_examples[0]
+            example_label = _format_panel_family_label(example_family, example_type)
+            print("Example selection set for {0}: {1}".format(example_label, example_name))
+    finally:
+        if transaction_state != "unknown":
+            print("Update furring wall transaction {0}.".format(transaction_state))
+        else:
+            print("Update furring wall transaction status unknown.")
 
 
 ################## main code below #####################

@@ -163,7 +163,6 @@ def disjoin_columns_from_walls(doc):
     disjoined_pairs = 0
     columns_without_walls = 0
     solid_cut_pairs = 0
-    skipped_pinned = 0
     skipped_locked = 0
     failure_pairs = 0
     solid_cut_failures = 0
@@ -171,13 +170,10 @@ def disjoin_columns_from_walls(doc):
         for column in columns:
             if column is None or not column.IsValidObject:
                 continue
+
             if getattr(column, "IsReadOnly", False):
                 skipped_locked += 1
                 print "    Skipping column {0}; element is read-only.".format(column.Id)
-                continue
-            if hasattr(column, "Pinned") and column.Pinned:
-                skipped_pinned += 1
-                print "    Skipping column {0}; element is pinned.".format(column.Id)
                 continue
             try:
                 if hasattr(doc, "IsElementModifiable") and not doc.IsElementModifiable(column.Id):
@@ -241,8 +237,6 @@ def disjoin_columns_from_walls(doc):
         summary_lines.append("Solid-solid cuts removed: {0}".format(solid_cut_pairs))
     if columns_without_walls:
         summary_lines.append("Columns without wall joins: {0}".format(columns_without_walls))
-    if skipped_pinned:
-        summary_lines.append("Pinned columns skipped: {0}".format(skipped_pinned))
     if skipped_locked:
         summary_lines.append("Locked/read-only columns skipped: {0}".format(skipped_locked))
     if failure_pairs:
