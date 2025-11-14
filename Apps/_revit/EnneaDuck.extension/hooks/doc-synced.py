@@ -2,6 +2,7 @@ import os
 import random
 import io
 import imp
+import time
 from pyrevit import EXEC_PARAMS
 from Autodesk.Revit import DB  # pyright: ignore
 from pyrevit.coreutils import envvars
@@ -18,7 +19,8 @@ from EnneadTab import (
 )
 from EnneadTab.REVIT import (
     REVIT_SYNC, REVIT_FORMS, REVIT_EVENT, 
-    REVIT_SPATIAL_ELEMENT, REVIT_PROJ_DATA
+    REVIT_SPATIAL_ELEMENT, REVIT_PROJ_DATA,
+    REVIT_SELECTION
 )
 
 __title__ = "Doc Synced Hook"
@@ -49,6 +51,10 @@ REGISTERED_AUTO_PROJS = [
 ]
 
 REGISTERED_AUTO_PROJS = [x.lower() for x in REGISTERED_AUTO_PROJS]
+
+SPARC_RELOAD_COOLDOWN_SECONDS = 60 * 60  # 1 hour
+SPARC_RELOAD_MARKER_FILE = "sparc_exterior_reload_marker.txt"
+SPARC_TARGET_LINK_NAME = "sparc_a_ea_exterior"
 
 
 # =============================================================================
@@ -148,6 +154,40 @@ def warn_revit_session_too_long():
 def play_success_sound():
     file = 'sound_effect_mario_1up.wav'
     SOUND.play_sound(file)
+
+
+def _get_sparc_reload_marker_path():
+    return FOLDER.get_local_dump_folder_file(SPARC_RELOAD_MARKER_FILE)
+
+
+
+def _has_recent_sparc_reload():
+    marker_path = _get_sparc_reload_marker_path()
+    if not marker_path or not os.path.exists(marker_path):
+        return False
+    try:
+        with io.open(marker_path, "r", encoding="utf-8") as marker_file:
+            content = marker_file.read().strip()
+            if not content:
+                return False
+            last_timestamp = float(content)
+    except Exception as e:
+        print("Failed to read Sparc reload marker: {}".format(str(e)))
+        return False
+    
+    elapsed = time.time() - last_timestamp
+    return elapsed < SPARC_RELOAD_COOLDOWN_SECONDS
+
+
+def _record_sparc_reload_timestamp():
+    marker_path = _get_sparc_reload_marker_path()
+    if not marker_path:
+        return
+    try:
+        with io.open(marker_path, "w", encoding="utf-8") as marker_file:
+            marker_file.write(str(time.time()))
+    except Exception as e:
+        print("Failed to write Sparc reload marker: {}".format(str(e)))
 
 
 # =============================================================================
@@ -494,6 +534,8 @@ def doc_synced(doc):
         NOTIFICATION.messenger("Document {} has finished syncing.".format(doc.Title))
 
     warn_revit_session_too_long()
+    reload_sparc_exterior(doc)
+
     return
 
     update_project_2314(doc)
@@ -513,6 +555,88 @@ def doc_synced(doc):
 # =============================================================================
 # MAIN EXECUTION
 # =============================================================================
+
+
+
+def reload_sparc_exterior(doc):
+    if doc.Title.lower() != "sparc_a_ea_cuny_building":
+        return
+    if _has_recent_sparc_reload():
+        msg = "Skipping Sparc exterior reload - last successful reload occurred within the past hour."
+
+        NOTIFICATION.messenger(msg)
+        return
+
+    all_revit_link_types = DB.FilteredElementCollector(doc).OfClass(DB.RevitLinkType).ToElements()
+    if not all_revit_link_types:
+
+        return
+    exterior_link_type = None
+    
+    for revit_link_type in all_revit_link_types:
+        param = revit_link_type.LookupParameter("Type Name")
+        link_name = param.AsString() if param else None
+        normalized_name = (link_name or "").strip().lower()
+        if normalized_name.endswith(".rvt"):
+            normalized_name = normalized_name[:-4]
+        if not normalized_name:
+            continue
+        if normalized_name == SPARC_TARGET_LINK_NAME:
+            exterior_link_type = revit_link_type
+            break
+    if not exterior_link_type:
+        print("Sparc reload skipped: could not find link type named 'sparc_a_ea_exterior'.")
+        return
+    if not REVIT_SELECTION.is_changable(exterior_link_type):
+        owner = REVIT_SELECTION.get_owner(exterior_link_type)
+        msg = "Cannot reload Sparc exterior link - element is owned by '{}'".format(owner or "Unknown")
+        print(msg)
+        NOTIFICATION.messenger(msg)
+        return
+
+    def _try_local_reload(link_type):
+        try:
+            if hasattr(link_type, "LocallyUnloaded") and not link_type.LocallyUnloaded:
+                link_type.UnloadLocally(None)
+            if hasattr(link_type, "RevertLocalUnloadStatus"):
+                link_type.RevertLocalUnloadStatus()
+                print("Sparc exterior link local reload succeeded.")
+                return True
+        except Exception as local_error:
+            print("Local reload failed: {}".format(local_error))
+        return False
+    
+    def _try_global_reload(link_type):
+        try:
+            link_type.Reload()
+            print("Sparc exterior link global reload succeeded.")
+            return True
+        except Exception as global_error:
+            try:
+                import traceback
+                tb = traceback.format_exc()
+            except Exception:
+                tb = None
+            print("Error reloading sparc exterior globally: {}".format(global_error))
+            if tb:
+                print(tb)
+        return False
+    
+    reloaded = False
+    if REVIT_SELECTION.is_changable(exterior_link_type):
+        reloaded = _try_local_reload(exterior_link_type)
+        if not reloaded:
+            reloaded = _try_global_reload(exterior_link_type)
+    else:
+        reloaded = _try_global_reload(exterior_link_type)
+    
+    if reloaded:
+        _record_sparc_reload_timestamp()
+    else:
+        print("Sparc exterior link reload failed after local and global attempts.")
+
+    
+
 
 if __name__ == "__main__":
     doc_synced(DOC)
