@@ -210,3 +210,7 @@ def get_nyu_layer_info(category_name):
     
     # If category_name is a string, try to find by human name
     return NYU_LAYER_MAPPING.get(category_name, NYU_LAYER_MAPPING["DEFAULT"])
+
+
+if __name__ == "__main__":
+    pass

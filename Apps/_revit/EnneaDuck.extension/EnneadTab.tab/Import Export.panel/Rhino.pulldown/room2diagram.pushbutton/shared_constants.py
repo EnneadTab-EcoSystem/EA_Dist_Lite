@@ -28,4 +28,9 @@ class ExportMethod:
     """Enum-like class for export methods."""
     RHINO = "Rhino"
     REVIT = "Revit"
+
+
+if __name__ == "__main__":
+    pass
+
     

@@ -92,3 +92,6 @@ except Exception as e:
     import traceback
     output.print_code(traceback.format_exc())
 
+if __name__ == "__main__":
+    pass
+

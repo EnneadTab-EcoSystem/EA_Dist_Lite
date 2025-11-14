@@ -229,3 +229,8 @@ class RhinoProcess(BaseProcessor):
         except Exception as e:
             print("Error in Rhino processing: {}".format(str(e)))
             return False
+
+
+if __name__ == "__main__":
+    pass
+

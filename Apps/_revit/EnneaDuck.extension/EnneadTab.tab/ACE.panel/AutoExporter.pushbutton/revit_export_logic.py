@@ -901,3 +901,6 @@ def run_all_exports(doc, job_id=None, use_staging=True, heartbeat_callback=None)
         log("Export error: {}".format(str(e)), is_error=True)
         raise
 
+
+if __name__ == "__main__":
+    pass

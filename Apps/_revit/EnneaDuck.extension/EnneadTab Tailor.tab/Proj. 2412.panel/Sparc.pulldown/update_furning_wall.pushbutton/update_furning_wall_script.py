@@ -17,7 +17,7 @@ proDUCKtion.validify()
 from pyrevit import forms
 
 from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION
-from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_SELECTION
+from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FORMS, REVIT_SELECTION
 from Autodesk.Revit import DB  # pyright: ignore
 
 from furring_constants import (
@@ -43,6 +43,22 @@ from furring_element_ops import (
 
 UIDOC = REVIT_APPLICATION.get_uidoc()
 DOC = REVIT_APPLICATION.get_doc()
+
+
+def _confirm_furring_workset():
+    main_text = "This tool edits elements stored in workset \"FurringContent\"."
+    sub_text = (
+        "Make sure you have taken ownership of the entire workset before running.\n\n"
+        "Do you want to continue?"
+    )
+    result = REVIT_FORMS.dialogue(
+        title="FurringContent Workset Ownership",
+        main_text=main_text,
+        sub_text=sub_text,
+        options=["Yes, continue", "No, cancel"],
+        icon="warning",
+    )
+    return result == "Yes, continue"
 
 
 def _format_panel_family_label(family_name, type_name):
@@ -94,6 +110,10 @@ def _coerce_element_id_sequence(value):
 @ERROR_HANDLE.try_catch_error()
 def update_furning_wall(doc):
     printed_ids = set()
+
+    if not _confirm_furring_workset():
+        NOTIFICATION.messenger("Update cancelled. Acquire \"FurringContent\" workset ownership first.")
+        return
 
     selected_panel_families = _select_target_panel_families()
     if not selected_panel_families:

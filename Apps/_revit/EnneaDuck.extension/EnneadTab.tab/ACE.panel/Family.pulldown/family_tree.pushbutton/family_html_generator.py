@@ -145,3 +145,7 @@ class FamilyTreeHTMLGenerator:
         )
         
         return html
+
+
+if __name__ == "__main__":
+    pass

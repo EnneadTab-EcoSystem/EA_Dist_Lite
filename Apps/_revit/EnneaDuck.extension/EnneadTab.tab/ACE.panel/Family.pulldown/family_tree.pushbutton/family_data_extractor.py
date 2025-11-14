@@ -1088,3 +1088,6 @@ class FamilyDataExtractor:
                 pass
         self.docs_to_close = []
 
+
+if __name__ == "__main__":
+    pass

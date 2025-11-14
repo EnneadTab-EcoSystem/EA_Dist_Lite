@@ -1132,3 +1132,8 @@ class BaseProcessor:
                 return False
             except:
                 return False
+
+
+if __name__ == "__main__":
+    pass
+

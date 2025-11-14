@@ -170,3 +170,7 @@ def run_post_export_tasks(export_results, pim_number, project_name, model_name, 
             "tasks_completed": [],
             "error": str(e)
         }
+
+
+if __name__ == "__main__":
+    pass
