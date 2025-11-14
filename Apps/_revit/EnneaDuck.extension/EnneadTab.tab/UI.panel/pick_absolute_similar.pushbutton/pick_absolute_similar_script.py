@@ -47,7 +47,7 @@ def is_instance_absolute_similar_with_sample(instance, sample, picked_parameter_
         except:
             print (traceback.format_exc())
             return False
-        return True
+    return True
 
 
 @LOG.log(__file__, __title__)

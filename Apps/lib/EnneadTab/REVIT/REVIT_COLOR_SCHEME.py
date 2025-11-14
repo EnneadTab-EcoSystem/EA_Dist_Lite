@@ -198,7 +198,7 @@ def get_color_schemes_by_name(scheme_name, doc = DOC):
         doc (Document): The Revit document to query. Defaults to active document
     """
     color_schemes = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_ColorFillSchema).WhereElementIsNotElementType().ToElements()
-    color_schemes = filter(lambda x: x.Name == scheme_name, color_schemes)
+    color_schemes = [x for x in color_schemes if x.Name == scheme_name]
     return color_schemes    
     
 
@@ -226,8 +226,16 @@ def get_color_scheme_by_name(scheme_name, doc = DOC):
     
     return color_schemes[0]
 
-def pick_color_scheme(doc = DOC, title = "Select the color scheme", button_name = "Select", multiselect = False):
+def pick_color_scheme(doc = DOC,
+                      title = "Select the color scheme",
+                      button_name = "Select",
+                      multiselect = False,
+                      return_scheme = False):
     """Displays UI for selecting color schemes.
+    
+    If a color scheme is tied to an Area Scheme, the display text will be
+    formatted as "[AreaScheme] ColorScheme". Otherwise only the color scheme
+    name is shown. The returned value always remains the color scheme name.
     
     Args:
         doc (Document): The Revit document to query. Defaults to active document
@@ -236,13 +244,49 @@ def pick_color_scheme(doc = DOC, title = "Select the color scheme", button_name 
         multiselect (bool): Allow multiple selection. Defaults to False
         
     Returns:
-        str/list: Selected scheme name(s) or None if canceled
+        str/ColorFillScheme or list: Selected name(s) (default) or scheme object(s)
     """
     from pyrevit import forms
-    color_schemes = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_ColorFillSchema).WhereElementIsNotElementType().ToElements()
-    return forms.SelectFromList.show([x.Name for x in color_schemes], multiselect=multiselect, title=title, button_name=button_name)
 
-def pick_color_schemes(doc = DOC, title = "Select the color scheme", button_name = "Select"):
+    def _get_area_scheme_prefix(color_scheme, doc):
+        try:
+            area_scheme_id = color_scheme.AreaSchemeId
+        except AttributeError:
+            return None
+        if not area_scheme_id or area_scheme_id == DB.ElementId.InvalidElementId:
+            return None
+        area_scheme = doc.GetElement(area_scheme_id)
+        if not area_scheme:
+            return None
+        return area_scheme.Name
+
+    class ColorSchemeOption(forms.TemplateListItem):
+        def __init__(self, scheme, doc, return_scheme):
+            if return_scheme:
+                self.item = scheme
+            else:
+                self.item = scheme.Name
+            area_scheme_name = _get_area_scheme_prefix(scheme, doc)
+            if area_scheme_name:
+                self._display_name = "[{}] {}".format(area_scheme_name, scheme.Name)
+            else:
+                self._display_name = scheme.Name
+
+        @property
+        def name(self):
+            return self._display_name
+
+    color_schemes = DB.FilteredElementCollector(doc)\
+                        .OfCategory(DB.BuiltInCategory.OST_ColorFillSchema)\
+                        .WhereElementIsNotElementType()\
+                        .ToElements()
+    options = [ColorSchemeOption(x, doc, return_scheme) for x in sorted(color_schemes, key=lambda s: s.Name)]
+    return forms.SelectFromList.show(options, multiselect=multiselect, title=title, button_name=button_name)
+
+def pick_color_schemes(doc = DOC,
+                       title = "Select the color scheme",
+                       button_name = "Select",
+                       return_scheme = False):
     """Wrapper for picking multiple color schemes.
     
     Args:
@@ -251,9 +295,9 @@ def pick_color_schemes(doc = DOC, title = "Select the color scheme", button_name
         button_name (str): Button text. Defaults to "Select"
         
     Returns:
-        list: Selected scheme names or None if canceled
+        list: Selected names (default) or scheme objects, or None if canceled
     """
-    return pick_color_scheme(doc, title, button_name, True)
+    return pick_color_scheme(doc, title, button_name, True, return_scheme)
 
 def load_color_template(doc, naming_map, excel_path, is_remove_unused = False):
     """Updates color schemes from office template excel file.
