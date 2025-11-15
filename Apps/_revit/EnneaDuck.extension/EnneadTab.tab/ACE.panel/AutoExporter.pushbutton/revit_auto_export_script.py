@@ -233,18 +233,13 @@ def open_and_activate_doc(doc_name, model_data, heartbeat_callback=None):
     if heartbeat_callback:
         heartbeat_callback("2.2", "Cloud path created successfully")
     
-    # Setup open options - detach and preserve worksets
+    # Setup open options - match standard "open doc silently" behavior (no detach, default worksets)
     if heartbeat_callback:
-        heartbeat_callback("2.3", "Configuring open options (detached, audit, all worksets)")
+        heartbeat_callback("2.3", "Configuring open options (standard open behavior)")
     
     open_options = DB.OpenOptions()
-    open_options.DetachFromCentralOption = DB.DetachFromCentralOption.DetachAndPreserveWorksets
-    open_options.SetOpenWorksetsConfiguration(
-        DB.WorksetConfiguration(DB.WorksetConfigurationOption.OpenAllWorksets)
-    )
-    open_options.Audit = True
     
-    print("Opening document (detached, audit, all worksets)...")
+    print("Opening document using standard options (no detach)...")
     print("  This may take several minutes for large cloud models...")
     
     if heartbeat_callback:
