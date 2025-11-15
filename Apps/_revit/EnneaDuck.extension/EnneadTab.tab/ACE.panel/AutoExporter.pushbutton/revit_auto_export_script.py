@@ -295,6 +295,155 @@ def open_and_activate_doc(doc_name, model_data, heartbeat_callback=None):
             return None
 
 
+def _log_link_guard(message, exc=None):
+    """Standardized logging for link guard diagnostics."""
+    if exc:
+        print("[LinkGuard] {} | {}".format(message, exc))
+    else:
+        print("[LinkGuard] {}".format(message))
+
+
+def _get_link_type_name(link_type):
+    """Return a readable Revit link type name."""
+    try:
+        param = link_type.get_Parameter(DB.BuiltInParameter.SYMBOL_NAME_PARAM)
+        if param:
+            value = param.AsString()
+            if value:
+                return value
+    except Exception as param_error:
+        _log_link_guard("Failed reading link type parameter for name fallback", param_error)
+    
+    try:
+        return link_type.Name
+    except Exception as name_error:
+        _log_link_guard("Failed reading link type Name property", name_error)
+    
+    try:
+        element_id = getattr(link_type, "Id", None)
+        if element_id:
+            id_value = None
+            
+            if hasattr(element_id, "Value"):
+                try:
+                    id_value = element_id.Value
+                except Exception as value_error:
+                    _log_link_guard("Failed reading ElementId.Value for link type name", value_error)
+                    id_value = None
+            
+            if id_value is None and hasattr(element_id, "IntegerValue"):
+                try:
+                    id_value = element_id.IntegerValue
+                except Exception as int_error:
+                    _log_link_guard("Failed reading ElementId.IntegerValue for link type name", int_error)
+                    id_value = None
+            
+            if id_value is not None:
+                return "RevitLinkType-{}".format(id_value)
+    except Exception as id_error:
+        _log_link_guard("Failed building link type fallback name from ElementId", id_error)
+    
+    return "RevitLinkType"
+
+
+def _attempt_reload_link_type(doc, link_type, link_name):
+    """Reload a single Revit link type inside a transaction."""
+    transaction = DB.Transaction(doc, "AutoExporter - reload link [{}]".format(link_name))
+    transaction.Start()
+    try:
+        link_type.Reload()
+        transaction.Commit()
+    except Exception:
+        try:
+            transaction.RollBack()
+        except Exception as rollback_error:
+            _log_link_guard("Transaction rollback failed after link reload error", rollback_error)
+        raise
+
+
+def _wait_for_link_to_load(doc, link_type, deadline, poll_interval=5):
+    """Wait until a link reports as loaded or deadline reached."""
+    while time.time() < deadline:
+        if DB.RevitLinkType.IsLoaded(doc, link_type.Id):
+            return True
+        time.sleep(poll_interval)
+    return DB.RevitLinkType.IsLoaded(doc, link_type.Id)
+
+
+def ensure_all_links_loaded(doc, timeout_minutes=10, heartbeat_callback=None):
+    """Ensure every Revit link type in the document is loaded before export."""
+    timeout_minutes = timeout_minutes or 0
+    if timeout_minutes <= 0:
+        timeout_minutes = 10
+    
+    link_types = list(DB.FilteredElementCollector(doc).OfClass(DB.RevitLinkType))
+    total_links = len(link_types)
+    
+    if total_links == 0:
+        if heartbeat_callback:
+            heartbeat_callback("3.1", "No Revit links found in document (nothing to reload)")
+        return {"total": 0, "already_loaded": 0, "reloaded": 0}
+    
+    already_loaded = []
+    reloaded = []
+    deadline = time.time() + (timeout_minutes * 60)
+    
+    if heartbeat_callback:
+        heartbeat_callback("3.1", "Checking {} Revit link(s) before export".format(total_links))
+    
+    for idx, link_type in enumerate(link_types):
+        link_name = _get_link_type_name(link_type)
+        stage = "3.{}".format(idx + 2)
+        
+        try:
+            is_loaded = DB.RevitLinkType.IsLoaded(doc, link_type.Id)
+        except Exception as state_error:
+            if heartbeat_callback:
+                heartbeat_callback(stage, "Unable to determine state for [{}]: {}".format(link_name, state_error), is_error=True)
+            raise
+        
+        if is_loaded:
+            already_loaded.append(link_name)
+            continue
+        
+        if heartbeat_callback:
+            heartbeat_callback(stage, "Reloading Revit link [{}] ({} of {})".format(link_name, idx + 1, total_links))
+        
+        try:
+            _attempt_reload_link_type(doc, link_type, link_name)
+        except Exception as reload_error:
+            error_msg = "Reload failed for [{}]: {}".format(link_name, reload_error)
+            if heartbeat_callback:
+                heartbeat_callback(stage, error_msg, is_error=True)
+            raise Exception(error_msg)
+        
+        if heartbeat_callback:
+            heartbeat_callback(stage, "Waiting for [{}] to finish loading".format(link_name))
+        
+        if not _wait_for_link_to_load(doc, link_type, deadline):
+            error_msg = "Link [{}] did not finish loading before timeout ({} min)".format(link_name, timeout_minutes)
+            if heartbeat_callback:
+                heartbeat_callback(stage, error_msg, is_error=True)
+            raise Exception(error_msg)
+        
+        reloaded.append(link_name)
+    
+    summary_msg = "Revit link check complete: {} total / {} already loaded / {} reloaded".format(
+        total_links,
+        len(already_loaded),
+        len(reloaded)
+    )
+    if heartbeat_callback:
+        heartbeat_callback("3.{}".format(total_links + 2), summary_msg)
+    print(summary_msg)
+    
+    return {
+        "total": total_links,
+        "already_loaded": len(already_loaded),
+        "reloaded": len(reloaded)
+    }
+
+
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def auto_export():
@@ -362,6 +511,19 @@ def auto_export():
             print("Extracted Document object from UIDocument")
         else:
             actual_doc = target_doc
+        
+        try:
+            ensure_all_links_loaded(
+                actual_doc,
+                timeout_minutes=10,
+                heartbeat_callback=write_heartbeat
+            )
+        except Exception as link_error:
+            error_msg = "Failed to load Revit links before export: {}".format(link_error)
+            write_heartbeat("3.9", error_msg, is_error=True)
+            write_job_status("failed", error=error_msg, traceback_info=traceback.format_exc())
+            print("ERROR: {}".format(error_msg))
+            return
         
         # Run exports
         write_heartbeat("4", "Starting exports")
