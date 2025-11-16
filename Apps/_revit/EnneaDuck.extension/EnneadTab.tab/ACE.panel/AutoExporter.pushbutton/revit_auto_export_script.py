@@ -347,17 +347,26 @@ def _get_link_type_name(link_type):
 
 
 def _attempt_reload_link_type(doc, link_type, link_name):
-    """Reload a single Revit link type inside a transaction."""
-    transaction = DB.Transaction(doc, "AutoExporter - reload link [{}]".format(link_name))
-    transaction.Start()
+    """Reload a single Revit link type.
+    
+    Note:
+        Some Revit environments do not allow link reload to be wrapped in an
+        explicit Transaction because Reload() manages its own internal
+        transaction. Attempting to wrap it can trigger errors like:
+        'Operation is not permitted when there is any open sub-transaction,
+        transaction, or transaction group.'
+        
+        To avoid nested transaction conflicts, call Reload() directly and let
+        Revit handle the transaction boundaries internally.
+    """
     try:
         link_type.Reload()
-        transaction.Commit()
-    except Exception:
-        try:
-            transaction.RollBack()
-        except Exception as rollback_error:
-            _log_link_guard("Transaction rollback failed after link reload error", rollback_error)
+    except Exception as reload_error:
+        # Surface the original error to the caller and log for diagnostics
+        _log_link_guard(
+            "Link reload failed for [{}]".format(link_name),
+            reload_error
+        )
         raise
 
 

@@ -172,6 +172,15 @@ def get_staging_root():
     """
     # Use C:/temp for staging (faster, avoids workspace clutter)
     staging_root = "C:/temp/autoexport_staging"
+    
+    # Ensure the staging root exists to avoid errors when creating subfolders
+    if not os.path.exists(staging_root):
+        try:
+            os.makedirs(staging_root)
+        except Exception:
+            # If creation fails, let downstream logic surface a clearer error
+            pass
+    
     return staging_root
 
 
