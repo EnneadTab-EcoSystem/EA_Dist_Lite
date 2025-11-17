@@ -587,6 +587,22 @@ def reload_sparc_exterior(doc):
     if not exterior_link_type:
         print("Sparc reload skipped: could not find link type named 'sparc_a_ea_exterior'.")
         return
+    
+    # Check if element is read-only
+    if getattr(exterior_link_type, "IsReadOnly", False):
+        msg = "Cannot reload Sparc exterior link - element is read-only (document may be read-only or element is in a read-only state)."
+        print(msg)
+        NOTIFICATION.messenger(msg)
+        return
+    
+    # Check if document is read-only by checking if it's a linked document
+    # Linked documents are typically read-only
+    if doc.IsLinked:
+        msg = "Cannot reload Sparc exterior link - current document is a linked document (read-only)."
+        print(msg)
+        NOTIFICATION.messenger(msg)
+        return
+    
     if not REVIT_SELECTION.is_changable(exterior_link_type):
         owner = REVIT_SELECTION.get_owner(exterior_link_type)
         msg = "Cannot reload Sparc exterior link - element is owned by '{}'".format(owner or "Unknown")
@@ -596,6 +612,10 @@ def reload_sparc_exterior(doc):
 
     def _try_local_reload(link_type):
         try:
+            # Check if element is read-only before attempting reload
+            if getattr(link_type, "IsReadOnly", False):
+                print("Local reload skipped: link type is read-only.")
+                return False
             if hasattr(link_type, "LocallyUnloaded") and not link_type.LocallyUnloaded:
                 link_type.UnloadLocally(None)
             if hasattr(link_type, "RevertLocalUnloadStatus"):
@@ -603,23 +623,35 @@ def reload_sparc_exterior(doc):
                 print("Sparc exterior link local reload succeeded.")
                 return True
         except Exception as local_error:
-            print("Local reload failed: {}".format(local_error))
+            error_msg = str(local_error)
+            if "read-only" in error_msg.lower() or "readonly" in error_msg.lower():
+                print("Local reload failed: The element is in a read-only document.")
+            else:
+                print("Local reload failed: {}".format(local_error))
         return False
     
     def _try_global_reload(link_type):
         try:
+            # Check if element is read-only before attempting reload
+            if getattr(link_type, "IsReadOnly", False):
+                print("Global reload skipped: link type is read-only.")
+                return False
             link_type.Reload()
             print("Sparc exterior link global reload succeeded.")
             return True
         except Exception as global_error:
-            try:
-                import traceback
-                tb = traceback.format_exc()
-            except Exception:
-                tb = None
-            print("Error reloading sparc exterior globally: {}".format(global_error))
-            if tb:
-                print(tb)
+            error_msg = str(global_error)
+            if "read-only" in error_msg.lower() or "readonly" in error_msg.lower():
+                print("Error reloading sparc exterior globally: The element is in a read-only document.")
+            else:
+                try:
+                    import traceback
+                    tb = traceback.format_exc()
+                except Exception:
+                    tb = None
+                print("Error reloading sparc exterior globally: {}".format(global_error))
+                if tb:
+                    print(tb)
         return False
     
     reloaded = False
