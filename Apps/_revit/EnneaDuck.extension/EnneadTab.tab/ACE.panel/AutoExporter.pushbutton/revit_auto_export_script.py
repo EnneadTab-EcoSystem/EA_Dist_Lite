@@ -346,8 +346,11 @@ def _get_link_type_name(link_type):
     return "RevitLinkType"
 
 
-def _attempt_reload_link_type(doc, link_type, link_name):
+def _attempt_reload_link_type(doc, link_type, link_name, heartbeat_callback=None, stage=None):
     """Reload a single Revit link type.
+    
+    For Revit 2024, tries local reload first (faster, more reliable for ACC links).
+    Falls back to global reload if local reload is not applicable.
     
     Note:
         Some Revit environments do not allow link reload to be wrapped in an
@@ -359,6 +362,44 @@ def _attempt_reload_link_type(doc, link_type, link_name):
         To avoid nested transaction conflicts, call Reload() directly and let
         Revit handle the transaction boundaries internally.
     """
+    revit_version = REVIT_APPLICATION.get_revit_version()
+    
+    # For Revit 2024, try local reload first (often faster and more reliable)
+    # This approach is based on the pattern in doc-synced.py reload_sparc_exterior()
+    if revit_version == "2024":
+        if heartbeat_callback and stage:
+            heartbeat_callback(stage, "Trying local reload first (Revit 2024) for [{}]".format(link_name))
+        
+        try:
+            # Try local reload first for Revit 2024
+            # If link is locally unloaded, revert the local unload status
+            if hasattr(link_type, "LocallyUnloaded") and link_type.LocallyUnloaded:
+                if hasattr(link_type, "RevertLocalUnloadStatus"):
+                    link_type.RevertLocalUnloadStatus()
+                    if heartbeat_callback and stage:
+                        heartbeat_callback(stage, "Local reload succeeded for [{}] (reverted local unload)".format(link_name))
+                    return
+            # If link is not locally unloaded but needs reloading, try unload locally then revert
+            # This forces a fresh reload via local mechanism
+            elif hasattr(link_type, "UnloadLocally") and hasattr(link_type, "RevertLocalUnloadStatus"):
+                link_type.UnloadLocally(None)
+                link_type.RevertLocalUnloadStatus()
+                if heartbeat_callback and stage:
+                    heartbeat_callback(stage, "Local reload succeeded for [{}] (unload+revert)".format(link_name))
+                return
+        except Exception as local_error:
+            # Local reload failed, fall through to global reload
+            if heartbeat_callback and stage:
+                heartbeat_callback(stage, "Local reload failed for [{}], trying global reload: {}".format(link_name, local_error))
+            _log_link_guard(
+                "Local reload failed for [{}], will try global reload".format(link_name),
+                local_error
+            )
+    
+    # Fallback: Try global reload (works for all versions)
+    if heartbeat_callback and stage and revit_version != "2024":
+        heartbeat_callback(stage, "Using global reload for [{}] (Revit {})".format(link_name, revit_version))
+    
     try:
         link_type.Reload()
     except Exception as reload_error:
@@ -370,12 +411,30 @@ def _attempt_reload_link_type(doc, link_type, link_name):
         raise
 
 
-def _wait_for_link_to_load(doc, link_type, deadline, poll_interval=5):
-    """Wait until a link reports as loaded or deadline reached."""
+def _wait_for_link_to_load(doc, link_type, deadline, poll_interval=5,
+                           heartbeat_callback=None, stage=None, link_name=None):
+    """Wait until a link reports as loaded or deadline reached.
+    
+    Adds periodic heartbeat messages so long waits are visible in logs and
+    so the orchestrator's activity-based timeout sees ongoing progress.
+    """
+    last_report_time = 0
+    
     while time.time() < deadline:
         if DB.RevitLinkType.IsLoaded(doc, link_type.Id):
             return True
+        
+        # Emit a heartbeat every ~30 seconds while waiting
+        if heartbeat_callback is not None and stage is not None and link_name is not None:
+            now = time.time()
+            if now - last_report_time >= 30:
+                elapsed_seconds = int(deadline - now)
+                msg = "Still waiting for [{}] to finish loading ({}s remaining)".format(link_name, elapsed_seconds)
+                heartbeat_callback(stage, msg)
+                last_report_time = now
+        
         time.sleep(poll_interval)
+    
     return DB.RevitLinkType.IsLoaded(doc, link_type.Id)
 
 
@@ -419,7 +478,7 @@ def ensure_all_links_loaded(doc, timeout_minutes=10, heartbeat_callback=None):
             heartbeat_callback(stage, "Reloading Revit link [{}] ({} of {})".format(link_name, idx + 1, total_links))
         
         try:
-            _attempt_reload_link_type(doc, link_type, link_name)
+            _attempt_reload_link_type(doc, link_type, link_name, heartbeat_callback=heartbeat_callback, stage=stage)
         except Exception as reload_error:
             error_msg = "Reload failed for [{}]: {}".format(link_name, reload_error)
             if heartbeat_callback:
@@ -429,7 +488,14 @@ def ensure_all_links_loaded(doc, timeout_minutes=10, heartbeat_callback=None):
         if heartbeat_callback:
             heartbeat_callback(stage, "Waiting for [{}] to finish loading".format(link_name))
         
-        if not _wait_for_link_to_load(doc, link_type, deadline):
+        if not _wait_for_link_to_load(
+            doc,
+            link_type,
+            deadline,
+            heartbeat_callback=heartbeat_callback,
+            stage=stage,
+            link_name=link_name
+        ):
             error_msg = "Link [{}] did not finish loading before timeout ({} min)".format(link_name, timeout_minutes)
             if heartbeat_callback:
                 heartbeat_callback(stage, error_msg, is_error=True)

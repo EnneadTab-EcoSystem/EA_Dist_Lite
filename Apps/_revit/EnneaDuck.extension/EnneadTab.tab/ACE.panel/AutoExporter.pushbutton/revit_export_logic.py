@@ -660,20 +660,26 @@ def export_jpg(doc, folder_paths, heartbeat_callback=None):
             export_options.FitDirection = DB.FitDirectionType.Horizontal
             
             # Map resolution DPI to ImageResolution enum
-            resolution_dpi = JPG_OPTIONS.get('resolution_dpi', 150)
-            if resolution_dpi == 72:
+            # Apply 2x resolution multiplier for higher quality exports
+            base_resolution_dpi = JPG_OPTIONS.get('resolution_dpi', 150)
+            resolution_dpi = base_resolution_dpi * 2  # 2x resolution for image exports
+            
+            if resolution_dpi <= 72:
                 export_options.ImageResolution = DB.ImageResolution.DPI_72
-            elif resolution_dpi == 150:
+            elif resolution_dpi <= 150:
                 export_options.ImageResolution = DB.ImageResolution.DPI_150
-            elif resolution_dpi == 300:
+            elif resolution_dpi <= 300:
                 export_options.ImageResolution = DB.ImageResolution.DPI_300
-            elif resolution_dpi == 600:
+            elif resolution_dpi <= 600:
                 export_options.ImageResolution = DB.ImageResolution.DPI_600
             else:
-                export_options.ImageResolution = DB.ImageResolution.DPI_150
+                # For resolutions > 600, use highest available (600)
+                export_options.ImageResolution = DB.ImageResolution.DPI_600
             
             export_options.ZoomType = DB.ZoomFitType.FitToPage
-            export_options.PixelSize = JPG_OPTIONS.get('pixel_size', 1920)
+            # Apply 2x pixel size multiplier for higher quality exports
+            base_pixel_size = JPG_OPTIONS.get('pixel_size', 1920)
+            export_options.PixelSize = base_pixel_size * 2  # 2x pixel size for image exports
             export_options.ExportRange = DB.ExportRange.SetOfViews
             
             # Set the views/sheets to export
