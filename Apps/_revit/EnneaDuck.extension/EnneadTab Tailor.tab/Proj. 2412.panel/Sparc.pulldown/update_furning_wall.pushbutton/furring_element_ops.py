@@ -9,8 +9,11 @@ from furring_constants import (
     PIER_MARKER_ORDER,
     ROOM_SEPARATOR_MARKER_ORDER,
     PANEL_SELECTION_FILTER_PREFIX,
+    ROOM_SEPARATION_FILTER_PREFIX,
     SILL_MARKER_ORDER,
-    SILL_WALL_HEIGHT,
+    SILL_WALL_HEIGHT_DEFAULT,
+    SILL_WALL_HEIGHT_RAISED,
+    SILL_WALL_HEIGHT_HIGHER,
     IGNORE_FURRING_PARAMETER,
 )
 
@@ -202,6 +205,16 @@ def build_panel_selection_filter_name(family_name, type_name):
     return "{0}__{1}__{2}".format(PANEL_SELECTION_FILTER_PREFIX, family_token, type_token)
 
 
+def build_room_separation_filter_name(family_name, type_name):
+    family_token = _sanitize_filter_token(family_name, "Unknown Family")
+    if type_name is None:
+        type_fallback = "All Types"
+    else:
+        type_fallback = "Unnamed Type"
+    type_token = _sanitize_filter_token(type_name, type_fallback)
+    return "{0}__{1}__{2}".format(ROOM_SEPARATION_FILTER_PREFIX, family_token, type_token)
+
+
 def delete_elements_in_selection_filter(doc, filter_name):
     selection_filter = REVIT_FILTER.get_selection_filter_by_name(doc, filter_name)
     if not selection_filter:
@@ -272,6 +285,18 @@ def get_wall_type_by_name(doc, type_name):
         if current_name == type_name:
             return wall_type
     return None
+
+
+def _calculate_sill_height(panel_record):
+    is_raised_higher = panel_record.get("is_sill_raised_higher")
+    is_raised = panel_record.get("is_sill_raised")
+    
+    if is_raised_higher is True:
+        return SILL_WALL_HEIGHT_HIGHER
+    elif is_raised is True:
+        return SILL_WALL_HEIGHT_RAISED
+    else:
+        return SILL_WALL_HEIGHT_DEFAULT
 
 
 def create_furring_walls(doc, panel_records, wall_type, host_level_map):
@@ -350,6 +375,7 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
                 "is_sill": False,
             })
 
+        sill_height = _calculate_sill_height(record)
         sill_marker_groups = record.get("sill_marker_groups") or []
         sill_segments_found = False
         if sill_marker_groups:
@@ -386,7 +412,7 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
                 segment_plans.append({
                     "panel_id": record["panel_unique_id"],
                     "host_level": host_level,
-                    "height": SILL_WALL_HEIGHT,
+                    "height": sill_height,
                     "points": sill_points,
                     "marker_order": SILL_MARKER_ORDER,
                     "prefix": prefix_value,
@@ -411,7 +437,7 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
                 segment_plans.append({
                     "panel_id": record["panel_unique_id"],
                     "host_level": host_level,
-                    "height": SILL_WALL_HEIGHT,
+                    "height": sill_height,
                     "points": sill_points,
                     "marker_order": SILL_MARKER_ORDER,
                     "prefix": None,
@@ -551,26 +577,17 @@ def create_room_separation_lines(doc, panel_records, host_level_map):
         valid_set_found = False
         for prefix_value, marker_map in marker_sets:
             ordered_entries = []
-            missing_key = None
             for marker_key in ROOM_SEPARATOR_MARKER_ORDER:
                 entry = marker_map.get(marker_key)
                 if entry is None or entry["point_host"] is None:
-                    missing_key = marker_key
-                    break
+                    continue
                 host_point = entry["point_host"]
                 adjusted_point = DB.XYZ(host_point.X, host_point.Y, host_level.ProjectElevation)
                 ordered_entries.append((marker_key, adjusted_point))
-            if missing_key is not None:
-                print("        Cannot create room line for panel {0}; missing host point for index {1}{2}.".format(
-                    record["panel_unique_id"],
-                    missing_key,
-                    _prefix_description(prefix_value),
-                ))
+            if len(ordered_entries) < 2:
                 if not debug_logged:
                     _log_room_marker_debug(record, marker_sets)
                     debug_logged = True
-                continue
-            if len(ordered_entries) < 2:
                 continue
             valid_set_found = True
             line_plans.append((record["panel_unique_id"], host_level, ordered_entries, prefix_value))

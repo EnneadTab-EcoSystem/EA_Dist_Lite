@@ -40,6 +40,7 @@ import json
 import time
 import subprocess
 import glob
+import argparse
 from datetime import datetime
 
 
@@ -396,6 +397,55 @@ def validate_all_configs(config_paths, logger):
             all_valid = False
     
     return (all_valid, validation_results)
+
+
+def parse_cli_args(argv=None):
+    """Parse command-line arguments for orchestrator control."""
+    parser = argparse.ArgumentParser(
+        description="AutoExporter Orchestrator",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument(
+        "--sparc",
+        action="store_true",
+        help="Only run configs for SPARC (filters by filename/project metadata)"
+    )
+    return parser.parse_args(argv)
+
+
+def filter_configs_by_flags(config_paths, cli_args, logger):
+    """Filter discovered configs based on CLI flags."""
+    filtered_paths = list(config_paths)
+    
+    if getattr(cli_args, "sparc", False):
+        logger.info("SPARC flag detected - filtering configs to SPARC-only jobs")
+        sparc_paths = []
+        for path in filtered_paths:
+            name = os.path.basename(path).lower()
+            if "sparc" in name or "2412" in name:
+                sparc_paths.append(path)
+                continue
+            
+            # Inspect project metadata as fallback
+            try:
+                with open(path, 'r') as cfg_file:
+                    cfg_data = json.load(cfg_file)
+                project_name = cfg_data.get('project', {}).get('project_name', '')
+                if project_name is None:
+                    project_name = ''
+                project_name_string = project_name if isinstance(project_name, str) else str(project_name)
+                if "sparc" in project_name_string.lower():
+                    sparc_paths.append(path)
+            except Exception as cfg_error:
+                logger.warning("  Could not inspect {} for SPARC metadata: {}".format(
+                    os.path.basename(path),
+                    cfg_error
+                ))
+        
+        filtered_paths = sparc_paths
+        logger.info("SPARC filter retained {} config(s)".format(len(filtered_paths)))
+    
+    return filtered_paths
 
 
 # =============================================================================
@@ -845,9 +895,11 @@ def process_job(config_path, logger):
 # MAIN ORCHESTRATOR
 # =============================================================================
 
-def run_orchestrator():
+def run_orchestrator(cli_args=None):
     """Main orchestrator function"""
     logger = OrchestratorLogger()
+    if cli_args is None:
+        cli_args = parse_cli_args()
     
     logger.info("AutoExporter Orchestrator Starting...")
     logger.info("Script directory: {}".format(SCRIPT_DIR))
@@ -893,6 +945,16 @@ def run_orchestrator():
         logger.info("Found {} config file(s)".format(len(config_paths)))
         for config_path in config_paths:
             logger.info("  - {}".format(os.path.basename(config_path)))
+        
+        config_paths = filter_configs_by_flags(config_paths, cli_args, logger)
+        if not config_paths:
+            logger.error("No config files matched the requested filters/flags")
+            return 1
+        
+        if getattr(cli_args, "sparc", False):
+            logger.info("SPARC filter active - configs to process:")
+            for config_path in config_paths:
+                logger.info("  * {}".format(os.path.basename(config_path)))
         
         # Validate all configs
         all_valid, _ = validate_all_configs(config_paths, logger)

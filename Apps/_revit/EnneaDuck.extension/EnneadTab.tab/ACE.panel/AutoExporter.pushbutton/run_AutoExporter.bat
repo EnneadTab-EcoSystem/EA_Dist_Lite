@@ -96,7 +96,7 @@ REM Run orchestrator
 echo Starting orchestrator...
 echo Lock file created: %LOCK_FILE%
 echo.
-"%PYTHON_EXE%" "%ORCHESTRATOR_SCRIPT%"
+"%PYTHON_EXE%" "%ORCHESTRATOR_SCRIPT%" %*
 
 REM Capture exit code
 set EXIT_CODE=%ERRORLEVEL%

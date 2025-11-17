@@ -364,6 +364,12 @@ def _attempt_reload_link_type(doc, link_type, link_name, heartbeat_callback=None
     """
     revit_version = REVIT_APPLICATION.get_revit_version()
     
+    _ensure_document_ready_for_link_reload(
+        doc,
+        heartbeat_callback=heartbeat_callback,
+        stage=stage
+    )
+    
     # For Revit 2024, try local reload first (often faster and more reliable)
     # This approach is based on the pattern in doc-synced.py reload_sparc_exterior()
     if revit_version == "2024":
@@ -411,6 +417,59 @@ def _attempt_reload_link_type(doc, link_type, link_name, heartbeat_callback=None
         raise
 
 
+def _ensure_document_ready_for_link_reload(doc, heartbeat_callback=None, stage=None, max_wait_seconds=60):
+    """Ensure document is not inside any open transaction before reloading links.
+    
+    Revit link reload operations start their own internal transactions. If the
+    document is still marked as modifiable (meaning some transaction is active),
+    Reload() can throw "Operation is not permitted when there is any open
+    sub-transaction, transaction, or transaction group." This helper tries to
+    close dangling transactions (typical when pyRevit left an EnsureInTransaction
+    session open) and, if needed, waits briefly for Revit to finish its work.
+    """
+    if doc is None:
+        return
+    
+    try:
+        transaction_manager = getattr(DB, "TransactionManager", None)
+        if transaction_manager is not None:
+            manager_instance = getattr(transaction_manager, "Instance", None)
+            if manager_instance is not None:
+                try:
+                    has_has_started = hasattr(manager_instance, "HasStarted")
+                    has_force_close = hasattr(manager_instance, "ForceCloseTransaction")
+                    
+                    if has_has_started and manager_instance.HasStarted() and has_force_close:
+                        manager_instance.ForceCloseTransaction()
+                        _log_link_guard("Force-closed dangling transaction before link reload")
+                    elif has_force_close:
+                        # Some hosts only expose ForceCloseTransaction without HasStarted
+                        manager_instance.ForceCloseTransaction()
+                        _log_link_guard("Force-closed transaction manager before link reload (no HasStarted)")
+                except Exception as tm_error:
+                    _log_link_guard("Failed to force-close transaction manager before link reload", tm_error)
+    except Exception as manager_error:
+        _log_link_guard("Transaction manager access failed before link reload", manager_error)
+    
+    if not hasattr(doc, "IsModifiable"):
+        return
+    
+    if not doc.IsModifiable:
+        return
+    
+    if heartbeat_callback and stage:
+        heartbeat_callback(stage, "Waiting for Revit to finish previous transaction before reloading links")
+    
+    wait_start = time.time()
+    while doc.IsModifiable and (time.time() - wait_start) < max_wait_seconds:
+        time.sleep(1)
+    
+    if doc.IsModifiable:
+        raise Exception(
+            "Document is still inside an active transaction after waiting {}s".format(max_wait_seconds)
+        )
+
+
 def _wait_for_link_to_load(doc, link_type, deadline, poll_interval=5,
                            heartbeat_callback=None, stage=None, link_name=None):
     """Wait until a link reports as loaded or deadline reached.
@@ -443,6 +502,12 @@ def ensure_all_links_loaded(doc, timeout_minutes=10, heartbeat_callback=None):
     timeout_minutes = timeout_minutes or 0
     if timeout_minutes <= 0:
         timeout_minutes = 10
+    
+    _ensure_document_ready_for_link_reload(
+        doc,
+        heartbeat_callback=heartbeat_callback,
+        stage="3.0"
+    )
     
     link_types = list(DB.FilteredElementCollector(doc).OfClass(DB.RevitLinkType))
     total_links = len(link_types)

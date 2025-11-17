@@ -14,6 +14,8 @@ from furring_constants import (
     PANEL_LOG_PREVIEW_LIMIT,
     ROOM_SEPARATOR_MARKER_ORDER,
     SILL_MARKER_ORDER,
+    SILL_RAISED_PARAMETER,
+    SILL_RAISED_HIGHER_PARAMETER,
     TARGET_PANEL_FAMILIES,
     IGNORE_FURRING_PARAMETER,
 )
@@ -186,6 +188,8 @@ def collect_panels_from_doc(source_doc, source_name, printed_ids, levels, transf
         ignore_furring_flag = get_parameter_bool(element, IGNORE_FURRING_PARAMETER, parameter=ignore_param)
         ignore_furring_raw = _get_parameter_raw_value(ignore_param)
         ignore_furring_storage = str(ignore_param.StorageType) if ignore_param is not None else None
+        is_sill_raised = get_parameter_bool(element, SILL_RAISED_PARAMETER)
+        is_sill_raised_higher = get_parameter_bool(element, SILL_RAISED_HIGHER_PARAMETER)
         primary_pier_markers = pier_marker_groups[0]["markers"] if pier_marker_groups else {}
         primary_room_markers = room_marker_groups[0]["markers"] if room_marker_groups else {}
         primary_sill_markers = sill_marker_groups[0]["markers"] if sill_marker_groups else {}
@@ -219,6 +223,8 @@ def collect_panels_from_doc(source_doc, source_name, printed_ids, levels, transf
             "ignore_furring_flag": ignore_furring_flag,
             "ignore_furring_raw": ignore_furring_raw,
             "ignore_furring_storage": ignore_furring_storage,
+            "is_sill_raised": is_sill_raised,
+            "is_sill_raised_higher": is_sill_raised_higher,
         }
         panel_records.append(panel_record)
         panel_logs.append(_format_panel_info(panel_record))

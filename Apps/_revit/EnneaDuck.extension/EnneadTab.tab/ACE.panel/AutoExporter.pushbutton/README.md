@@ -94,6 +94,12 @@ Example: `"C:\\Users\\{username}\\Documents\\Export"`
 
 Double-click `run_orchestrator.bat` to start processing all configs.
 
+Optional flags (pass after the batch file name):
+
+- `--sparc` – only process configs that target SPARC (filters by filename/project metadata)
+
+Example: `run_orchestrator.bat --sparc`
+
 ### Task Scheduler
 
 1. Open Windows Task Scheduler

@@ -32,6 +32,7 @@ from furring_panel_data import (
 )
 from furring_element_ops import (
     build_panel_selection_filter_name,
+    build_room_separation_filter_name,
     create_furring_walls,
     create_room_separation_lines,
     delete_elements_in_selection_filter,
@@ -216,12 +217,14 @@ def update_furning_wall(doc):
             if not records:
                 continue
             processed_sets += 1
-            filter_name = build_panel_selection_filter_name(family_name, type_name)
-            selection_set_examples.append((filter_name, family_name, type_name))
+            wall_filter_name = build_panel_selection_filter_name(family_name, type_name)
+            room_separation_filter_name = build_room_separation_filter_name(family_name, type_name)
+            selection_set_examples.append((wall_filter_name, room_separation_filter_name, family_name, type_name))
             label = _format_panel_family_label(family_name, type_name)
             if ENABLE_VERBOSE_LOGS:
                 print("Processing panel selection set: {0} ({1} panel record(s)).".format(label, len(records)))
-                print("    Selection set name: {0}".format(filter_name))
+                print("    Selection set name (walls): {0}".format(wall_filter_name))
+                print("    Selection set name (room lines): {0}".format(room_separation_filter_name))
             NOTIFICATION.messenger(
                 "Processing {0}/{1}: {2} ({3} panel record(s))".format(
                     processed_sets,
@@ -230,28 +233,38 @@ def update_furning_wall(doc):
                     len(records),
                 )
             )
-            deleted_total, deleted_walls, deleted_room_lines = delete_elements_in_selection_filter(doc, filter_name)
-            if deleted_total and ENABLE_VERBOSE_LOGS:
-                print("    Removed {0} existing element(s) from selection set (walls: {1}, room lines: {2}).".format(
-                    deleted_total,
+            deleted_total, deleted_walls, deleted_room_lines = delete_elements_in_selection_filter(doc, wall_filter_name)
+            deleted_room_total, deleted_room_walls, deleted_room_room_lines = delete_elements_in_selection_filter(doc, room_separation_filter_name)
+            total_deleted_from_wall_filter = deleted_total
+            total_deleted_from_room_filter = deleted_room_total
+            total_deleted_walls_from_filters = deleted_walls + deleted_room_walls
+            total_deleted_room_lines_from_filters = deleted_room_lines + deleted_room_room_lines
+            if (total_deleted_from_wall_filter or total_deleted_from_room_filter) and ENABLE_VERBOSE_LOGS:
+                print("    Removed {0} existing element(s) from wall selection set (walls: {1}, room lines: {2}).".format(
+                    total_deleted_from_wall_filter,
                     deleted_walls,
                     deleted_room_lines,
+                ))
+                print("    Removed {0} existing element(s) from room separation selection set (walls: {1}, room lines: {2}).".format(
+                    total_deleted_from_room_filter,
+                    deleted_room_walls,
+                    deleted_room_room_lines,
                 ))
             walls_created_count, wall_ids = create_furring_walls(doc, records, wall_type, host_level_map)
             room_created_count, room_line_ids = create_room_separation_lines(doc, records, host_level_map)
             total_created_walls += walls_created_count
             total_created_room_lines += room_created_count
-            total_deleted_elements += deleted_total
-            total_deleted_walls += deleted_walls
-            total_deleted_room_lines += deleted_room_lines
+            total_deleted_elements += total_deleted_from_wall_filter + total_deleted_from_room_filter
+            total_deleted_walls += total_deleted_walls_from_filters
+            total_deleted_room_lines += total_deleted_room_lines_from_filters
             processed_panels += len(records)
             wall_ids = _coerce_element_id_sequence(wall_ids)
             room_line_ids = _coerce_element_id_sequence(room_line_ids)
-            combined_ids = list(wall_ids)
-            combined_ids.extend(room_line_ids)
-            saved_count = update_panel_selection_filter(doc, filter_name, combined_ids)
+            saved_wall_count = update_panel_selection_filter(doc, wall_filter_name, wall_ids)
+            saved_room_count = update_panel_selection_filter(doc, room_separation_filter_name, room_line_ids)
             if ENABLE_VERBOSE_LOGS:
-                print("    Recorded {0} element(s) in selection set.".format(saved_count))
+                print("    Recorded {0} wall element(s) in wall selection set.".format(saved_wall_count))
+                print("    Recorded {0} room line element(s) in room separation selection set.".format(saved_room_count))
             NOTIFICATION.messenger(
                 "Completed {0}/{1}: {2}. Processed {3}/{4} panel record(s) overall.".format(
                     processed_sets,
@@ -281,9 +294,11 @@ def update_furning_wall(doc):
             )
         )
         if selection_set_examples:
-            example_name, example_family, example_type = selection_set_examples[0]
+            example_wall_name, example_room_name, example_family, example_type = selection_set_examples[0]
             example_label = _format_panel_family_label(example_family, example_type)
-            print("Example selection set for {0}: {1}".format(example_label, example_name))
+            print("Example selection sets for {0}:".format(example_label))
+            print("    Walls: {0}".format(example_wall_name))
+            print("    Room separation lines: {0}".format(example_room_name))
     finally:
         if transaction_state != "unknown":
             print("Update furring wall transaction {0}.".format(transaction_state))
