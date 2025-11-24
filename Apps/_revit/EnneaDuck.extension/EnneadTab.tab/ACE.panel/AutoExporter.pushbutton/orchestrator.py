@@ -4,34 +4,8 @@
 """
 AutoExporter Orchestrator
 
-A flexible orchestration system for automated Revit model exports.
-Discovers and processes multiple export configuration files sequentially,
-launching Revit for each config to perform exports and notifications.
-
-Features:
-- Auto-discovers all AutoExportConfig_*.json files in configs/ folder
-- Sequential job processing with comprehensive logging
-- Timeout protection (default 30 min per job, configurable)
-- Process cleanup between jobs (kills lingering Revit processes)
-- Pre-flight checks (disk space, pyRevit availability, config validation)
-- Continues processing on failure (logs errors, proceeds to next config)
-- Status tracking via JSON files for monitoring
-- Lock file prevents multiple concurrent instances
-- Exit codes for task scheduler integration
-
-Architecture:
-- Runs OUTSIDE Revit using CPython 3.9 (.venv environment)
-- Launches pyRevit to run scripts INSIDE Revit (IronPython 2.7)
-- Uses JSON files for inter-process communication (payload, status)
-
-Usage:
-1. Add config files to configs/ folder (AutoExportConfig_*.json)
-2. Run this script directly or via run_orchestrator.bat
-3. Monitor orchestrator_logs/ for execution details
-4. Check heartbeat/ logs for Revit script execution details
-
-Author: EnneadTab Development Team
-Version: 1.0
+Runs outside Revit (CPython 3.9). Discovers AutoExportConfig_*.json files and processes them sequentially.
+Launches pyRevit to run scripts inside Revit (IronPython 2.7). Uses JSON files for inter-process communication.
 """
 
 import os

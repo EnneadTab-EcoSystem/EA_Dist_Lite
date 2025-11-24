@@ -4,32 +4,11 @@
 """
 AutoExporter Revit Script
 
-Runs INSIDE Revit (IronPython 2.7) to perform automated model exports.
-Opens cloud models, exports files (PDF/DWG/JPG), sends notifications, and closes Revit.
-
-This script is launched by the orchestrator (runs outside Revit) via pyRevit CLI.
-Configuration is loaded from current_job_payload.json which specifies the active config file.
-
-Process:
-1. Read job payload to get active config
-2. Open cloud model specified in config (detached, audit, all worksets)
-3. Filter sheets based on export parameter
-4. Export to dated folders (PDF/DWG/JPG)
-5. Send email notification with export summary
-6. Write job status to current_job_status.json
-7. Close Revit cleanly
-
-Status Stages:
-- running: Script started
-- exporting: Performing file exports
-- post_export: Sending notifications
-- completed: Job finished successfully
-- failed: Error occurred (with error message)
-
-
+Runs inside Revit (IronPython 2.7). Opens cloud models, exports PDF/DWG/JPG, sends notifications, closes Revit.
+Launched by orchestrator via pyRevit CLI. Config loaded from current_job_payload.json.
 """
 
-__doc__ = "AutoExporter - Opens cloud model, exports files, sends notifications, closes Revit"
+__doc__ = "Open cloud model, export PDF/DWG/JPG, send notifications, close Revit"
 __title__ = "Amazing Auto Export"
 __context__ = "zero-doc"
 

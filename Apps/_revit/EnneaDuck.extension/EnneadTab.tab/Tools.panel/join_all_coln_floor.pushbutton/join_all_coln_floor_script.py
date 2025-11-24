@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = """Automates the tedious task of joining vertical and horizontal elements throughout your model.\n\nThis utility now allows you to select which categories to join:\n- Horizontal elements: multi-pick from Floor, Ceiling\n- Vertical elements: multi-pick from Column, Structural Column\n\nThe tool will join all selected vertical elements to all selected horizontal elements, and provide a detailed completion report of successful and failed joins."""
+__doc__ = "Join vertical and horizontal elements. Select categories to join (Floors/Ceilings to Columns/Structural Columns)."
 __title__ = "Join Selected\nElements"
 
 import proDUCKtion # pyright: ignore 

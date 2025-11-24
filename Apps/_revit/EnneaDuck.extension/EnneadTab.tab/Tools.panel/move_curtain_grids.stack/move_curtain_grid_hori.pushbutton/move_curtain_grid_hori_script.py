@@ -3,7 +3,7 @@
 
 
 
-__doc__ = "Horizontal curtain grid alignment wizard that saves hours of manual adjustments. This tool automatically snaps horizontal curtain grids to the nearest intersecting detail lines or level datums in elevation views. Perfect for aligning mullions with floor levels or coordinating with other building elements for a cleaner, more integrated facade design."
+__doc__ = "Align horizontal curtain grids to intersecting detail lines or level datums. Use in elevation views."
 __title__ = "Align H. Curtain Grid To Detail Lines/Levels(Elevation)"
 __youtube__ = "https://youtu.be/iiAy-Gxl5ZU"
 __tip__ = True

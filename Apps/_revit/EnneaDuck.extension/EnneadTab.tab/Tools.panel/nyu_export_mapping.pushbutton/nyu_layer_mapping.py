@@ -3,10 +3,10 @@
 
 """
 NYU CAD Layer Standards Mapping
-This module contains the mapping between Revit BuiltInCategory constants and NYU CAD layer standards.
-Based on the official NYU CAD Layer Standards table.
+Maps Revit BuiltInCategory constants to NYU CAD layer standards.
+Based on official NYU CAD Layer Standards table.
 
-For reference, see: https://www.revitapidocs.com/2026/ba1c5b30-242f-5fdc-8ea9-ec3b61e6e722.htm
+Revit API Reference: https://www.revitapidocs.com/2026/ba1c5b30-242f-5fdc-8ea9-ec3b61e6e722.htm
 """
 
 import traceback

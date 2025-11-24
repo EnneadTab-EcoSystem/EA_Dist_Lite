@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Export logic for NYU HQ Auto Export
-Handles folder structure creation and export operations
+Export logic for AutoExporter. Handles folder structure creation and export operations.
 """
 
 import os

@@ -1,13 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "PlaceHolder Documentation, To Be Updated."
-__title__ = "Transfer Color Scheme"
+__doc__ = "Copy entries, colors, and patterns from one Revit color fill scheme to another with optional overwrite prompts."
+__title__ = "Transfer\nColor Scheme"
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 
-from EnneadTab import ERROR_HANDLE, LOG
+from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_COLOR_SCHEME, REVIT_FORMS
 from Autodesk.Revit import DB # pyright: ignore 
 try:
@@ -22,6 +22,19 @@ except: # pylint: disable=bare-except
 
 UIDOC = REVIT_APPLICATION.get_uidoc()
 DOC = REVIT_APPLICATION.get_doc()
+
+
+def _element_id_value(element_id):
+    """Return integer value for ElementId across Revit versions."""
+    if not element_id:
+        return None
+    value = getattr(element_id, "IntegerValue", None)
+    if value is None and hasattr(element_id, "Value"):
+        try:
+            value = element_id.Value
+        except Exception:
+            value = None
+    return value
 
 
 @LOG.log(__file__, __title__)
@@ -58,7 +71,9 @@ def transfer_color_scheme(doc):
     stats = _copy_entries(source_scheme, destination_scheme, source_entries, destination_entries, override_matches)
     t.Commit()
 
-    LOGGER.info("Transferred color scheme entries: added {}, updated {}.".format(stats["added"], stats["updated"]))
+    message = "Transferred color scheme entries: added {}, updated {}.".format(stats["added"], stats["updated"])
+    LOGGER.info(message)
+    NOTIFICATION.messenger(main_text=message)
 
 
 
@@ -86,7 +101,7 @@ def _pick_color_schemes(doc):
 def _is_same_category(source_scheme, destination_scheme):
     if not source_scheme or not destination_scheme:
         return False
-    return source_scheme.CategoryId.IntegerValue == destination_scheme.CategoryId.IntegerValue
+    return _element_id_value(source_scheme.CategoryId) == _element_id_value(destination_scheme.CategoryId)
 
 
 def _find_conflicts(source_entries, destination_entries):
@@ -116,9 +131,21 @@ def _entry_key(entry):
         if getter:
             element_id = getter()
             if element_id:
-                return ("ELEMENTID", element_id.IntegerValue)
+                return ("ELEMENTID", _element_id_value(element_id))
         return ("ELEMENTID", None)
     return ("UNKNOWN", None)
+
+
+def _storage_type_to_key(storage_type):
+    if storage_type == DB.StorageType.String:
+        return "STRING"
+    if storage_type == DB.StorageType.Double:
+        return "DOUBLE"
+    if storage_type == DB.StorageType.Integer:
+        return "INTEGER"
+    if storage_type == DB.StorageType.ElementId:
+        return "ELEMENTID"
+    return "UNKNOWN"
 
 
 def _entry_label_from_key(key):
@@ -162,6 +189,9 @@ def _copy_entries(source_scheme, destination_scheme, source_entries, destination
 
     for source_entry in source_entries:
         key = _entry_key(source_entry)
+        if key and key[0] != _storage_type_to_key(storage_type):
+            _notify("Source entry storage type does not match destination scheme.\nPlease ensure both schemes use the same parameter type.")
+            continue
         existing_entry = destination_map.get(key)
         if existing_entry:
             if override_matches:

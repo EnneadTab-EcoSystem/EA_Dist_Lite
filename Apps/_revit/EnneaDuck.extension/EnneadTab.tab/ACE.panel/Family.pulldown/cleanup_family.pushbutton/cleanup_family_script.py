@@ -1,23 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = """Clean up selected families by purging unused elements and standardizing units.
-
-This script allows you to select multiple families from your project and automatically
-purge all unused elements from them. It walks through nested families recursively and can
-apply a consistent unit system (metric or imperial) to every processed family.
-
-Key Features:
-- Select multiple families from project
-- Purge all unused elements from each family
-- Recursively process all nested families
-- Optionally set family units to metric (millimeters) or imperial (feet-inches)
-- Save results to original paths when possible, with clear fallback messaging for read-only locations
-- Comprehensive progress reporting and error handling
-
-Note: 
-This operation may take some time for families with many nested levels.
-The script will save each family after cleanup and reload it back to the project, using the
+__doc__ = """Purge unused elements from selected families and optionally standardize units. Processes nested families recursively.
 EnneadTab dump folder when the original path is unavailable.
 """
 __title__ = "CleanUp\nFamily"

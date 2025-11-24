@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Professional export solution that handles multiple file formats and workflows. This comprehensive utility manages PDF, DWG, and JPG exports simultaneously with intelligent organization by prefix and file type. Features include email notifications with folder links, accurate time estimation, color/BW export control, revision-based filtering, and option to sync and close after completion. Perfect for meeting tight deadlines while maintaining project organization."
+__doc__ = "Export PDF, DWG, and JPG files organized by prefix and file type. Includes email notifications, time estimation, color/BW control, revision filtering, and sync options."
 __title__ = "Ennead\nExporter"
 __tip__ = True
 __is_popular__ = True

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Shared constants for room2diagram export functionality.
+Shared constants for room2diagram export.
 """
 
 from Autodesk.Revit import DB # pyright: ignore

@@ -1,27 +1,17 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+"""
+Family Tree Script
 
+Generate HTML visualization of family nesting structure with D3.js.
 
-__doc__ = """Family hierarchy visualization tool that reveals the complete nesting structure of complex Revit families. This utility generates an interactive HTML visualization with D3.js, showing parent-child relationships, parameter details, and parameter associations between families. Click any family node to see comprehensive parameter information including types, storage types, formulas, and values across all family types.
-
-Works in both Project and Family documents. In projects, you can select families to analyze.
-
-Features:
-- Preview images for all family types with dropdown selector
-- Parameters grouped by Revit parameter groups
-- Built-in vs user-created parameter detection (INVALID = user-created)
-- Material parameter identification
-- Animated flowing connections showing hierarchy
-- 40+ category colors with hot pink alert for unknown
-- Document units (feet, inches, millimeters)
-- Creator and last editor tracking
-- Shared vs standard family detection
-
-API References:
+Revit API References:
 - FamilyParameter: https://www.revitapidocs.com/2015/6175e974-870e-7fbc-3df7-46105f937a6e.htm
 - FamilyManager: https://www.revitapidocs.com/2015/1cc4fe6c-0e9f-7439-0021-32d2e06f4c33.htm
 """
+
+__doc__ = "Generate HTML visualization of family nesting structure with D3.js. Shows parent-child relationships and parameter details. Works in Project and Family documents."
 __title__ = "Family\nTree"
 __tip__ = True
 

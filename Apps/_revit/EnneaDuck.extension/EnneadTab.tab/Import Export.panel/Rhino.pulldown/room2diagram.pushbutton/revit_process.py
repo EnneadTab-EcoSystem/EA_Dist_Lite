@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RevitProcess module for handling Revit-specific processing in room2diagram export.
+Revit-specific processing for room2diagram export.
 """
 
 # ============================================================================

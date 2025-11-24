@@ -4,13 +4,10 @@
 """
 Shake All Tags
 
-Sometimes tags do not update after updating component information. This tool
-forces all tags on selected sheets to refresh by moving them slightly back
-and forth, which triggers Revit to regenerate the tag display and update
-the content.
+Force tags on selected sheets to refresh by moving them slightly to trigger regeneration.
 """
 
-__doc__ = "Shake All Tags - Force tag refresh by moving tags slightly to trigger regeneration"
+__doc__ = "Force tag refresh by moving tags slightly to trigger regeneration"
 __title__ = "Shake\nAll Tags"
 __tip__ = True
 

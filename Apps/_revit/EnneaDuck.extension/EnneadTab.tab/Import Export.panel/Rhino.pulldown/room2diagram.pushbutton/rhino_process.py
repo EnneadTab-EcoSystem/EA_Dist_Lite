@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """
-RhinoProcess module for handling Rhino-specific processing in room2diagram export.
+Rhino-specific processing for room2diagram export.
 """
 
 import clr  # pyright: ignore

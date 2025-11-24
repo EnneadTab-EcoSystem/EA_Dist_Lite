@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Convert area/room boundaries into loadable Revit mass families by using boundary segment curve loops to build mass extrusions in mass family, then load into project using internal coordinates like Block2Family."
+__doc__ = "Convert area/room boundaries to loadable Revit mass families using curve loops. Loads into project using internal coordinates."
 __title__ = "Area2Mass"
 
 import proDUCKtion # pyright: ignore 

@@ -202,26 +202,60 @@ def get_color_schemes_by_name(scheme_name, doc = DOC):
     return color_schemes    
     
 
-def get_color_scheme_by_name(scheme_name, doc = DOC):
+def _get_area_scheme_name(color_scheme, doc=DOC):
+    """Returns the associated Area Scheme name for a ColorFillScheme if available."""
+    try:
+        area_scheme_id = color_scheme.AreaSchemeId
+    except AttributeError:
+        return None
+    if not area_scheme_id or area_scheme_id == DB.ElementId.InvalidElementId:
+        return None
+    area_scheme = doc.GetElement(area_scheme_id) if doc else None
+    if not area_scheme:
+        return None
+    return area_scheme.Name
+
+
+def _parse_display_scheme_name(scheme_identifier):
+    """Parses display name of format '[AreaScheme] SchemeName'."""
+    if not scheme_identifier or scheme_identifier[0] != "[":
+        return None, scheme_identifier
+    closing_index = scheme_identifier.find("]")
+    if closing_index <= 1:
+        return None, scheme_identifier
+    area_scheme = scheme_identifier[1:closing_index]
+    scheme_name = scheme_identifier[closing_index + 1:].strip()
+    return area_scheme, scheme_name
+
+
+def get_color_scheme_by_name(scheme_identifier, doc = DOC):
     """Retrieves a color scheme by its name.
     
     Args:
-        scheme_name (str): Name of the color scheme to find
+        scheme_identifier (str or ColorFillScheme): Name (or display name) of the color scheme to find
         doc (Document): The Revit document to query. Defaults to active document
         
     Returns:
         ColorFillScheme: The matching color scheme, or None if not found
     """
+    if hasattr(scheme_identifier, "GetEntries"):
+        return scheme_identifier
+    if not scheme_identifier:
+        return None
+
+    area_prefix, scheme_name = _parse_display_scheme_name(scheme_identifier)
     color_schemes = get_color_schemes_by_name(scheme_name, doc)
+    if area_prefix:
+        color_schemes = [scheme for scheme in color_schemes if _get_area_scheme_name(scheme, doc) == area_prefix]
     if len(color_schemes)== 0:
-        print ("Cannot find the color scheme [{}].\nMaybe you renamed your color scheme recently? Talk to SZ for update.".format(scheme_name))
-        NOTIFICATION.messenger(main_text = "Cannot find the color scheme [{}].\nMaybe you renamed your color scheme recently? Talk to SZ for update.".format(scheme_name))
+        print ("Cannot find the color scheme [{}].\nMaybe you renamed your color scheme recently? Talk to SZ for update.".format(scheme_identifier))
+        NOTIFICATION.messenger(main_text = "Cannot find the color scheme [{}].\nMaybe you renamed your color scheme recently? Talk to SZ for update.".format(scheme_identifier))
         return
 
     
     if len(color_schemes) > 1 :
-        print ("Found more than one color scheme with the name [{}].\nNeed better naming.".format(scheme_name))
-        NOTIFICATION.messenger(main_text = "Found more than one color scheme with the name [{}].\nNeed better naming.".format(scheme_name))
+        print ("Found more than one color scheme with the name [{}].\nNeed better naming.".format(scheme_identifier))
+        NOTIFICATION.messenger(main_text = "Found more than one color scheme with the name [{}].\nNeed better naming.".format(scheme_identifier))
         return
     
     return color_schemes[0]
@@ -248,25 +282,17 @@ def pick_color_scheme(doc = DOC,
     """
     from pyrevit import forms
 
-    def _get_area_scheme_prefix(color_scheme, doc):
-        try:
-            area_scheme_id = color_scheme.AreaSchemeId
-        except AttributeError:
-            return None
-        if not area_scheme_id or area_scheme_id == DB.ElementId.InvalidElementId:
-            return None
-        area_scheme = doc.GetElement(area_scheme_id)
-        if not area_scheme:
-            return None
-        return area_scheme.Name
-
     class ColorSchemeOption(forms.TemplateListItem):
         def __init__(self, scheme, doc, return_scheme):
             if return_scheme:
                 self.item = scheme
             else:
-                self.item = scheme.Name
-            area_scheme_name = _get_area_scheme_prefix(scheme, doc)
+                area_scheme_name = _get_area_scheme_name(scheme, doc)
+                if area_scheme_name:
+                    self.item = "[{}] {}".format(area_scheme_name, scheme.Name)
+                else:
+                    self.item = scheme.Name
+            area_scheme_name = _get_area_scheme_name(scheme, doc)
             if area_scheme_name:
                 self._display_name = "[{}] {}".format(area_scheme_name, scheme.Name)
             else:
@@ -280,7 +306,8 @@ def pick_color_scheme(doc = DOC,
                         .OfCategory(DB.BuiltInCategory.OST_ColorFillSchema)\
                         .WhereElementIsNotElementType()\
                         .ToElements()
-    options = [ColorSchemeOption(x, doc, return_scheme) for x in sorted(color_schemes, key=lambda s: s.Name)]
+    options = [ColorSchemeOption(x, doc, return_scheme) for x in color_schemes]
+    options.sort(key=lambda opt: opt.name)
     return forms.SelectFromList.show(options, multiselect=multiselect, title=title, button_name=button_name)
 
 def pick_color_schemes(doc = DOC,

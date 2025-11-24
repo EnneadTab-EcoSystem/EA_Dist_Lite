@@ -4,7 +4,7 @@
 #pylint: disable=raise-missing-from
 
 
-__doc__ = "Comprehensive keynote management system that extends Revit's standard functionality. This powerful utility provides an intuitive interface for creating, editing, and organizing keynotes with additional features for categorization, search, batch operations, and translation capabilities. Perfect for maintaining consistent documentation standards and streamlining the keynoting workflow across complex projects."
+__doc__ = "Create, edit, and organize keynotes with categorization, search, batch operations, and translation."
 __title__ = "Keynote\nAssistant"
 __is_popular__ = True
 import os

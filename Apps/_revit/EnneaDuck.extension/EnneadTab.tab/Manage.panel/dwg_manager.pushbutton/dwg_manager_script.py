@@ -3,10 +3,7 @@
 
 
 
-__doc__ = """A simple window that help you manage DWG in the files. 
-You can find, select, zoom any dwgs with detailed infor on creator, view association, hidden status, workset, file path and file size. 
-
-For linked dwgs, you might also open file directly, open folder directly, and repath links to a selected folder."""
+__doc__ = "Manage DWG files. Find, select, zoom DWGs with creator, view association, hidden status, workset, path, and size info. For linked DWGs, open file/folder or repath links."
 
 __is_popular__ = True
 __title__ = "DWG\nManager"

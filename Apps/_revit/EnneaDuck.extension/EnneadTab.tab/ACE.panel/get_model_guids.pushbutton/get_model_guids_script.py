@@ -1,11 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 """
-Helper script to extract model_guid and project_guid from currently open Revit model.
-Run this with the target cloud model open to get the GUIDs needed for AutoExporter config.
+Extract model_guid and project_guid from currently open Revit cloud model for AutoExporter config.
 """
 
-__doc__ = "Extract model_guid and project_guid from currently open Revit cloud model. Use this to populate AutoExporter config files."
+__doc__ = "Extract model_guid and project_guid from currently open Revit cloud model for AutoExporter config."
 __title__ = "Get Model\nGUIDs"
 __author__ = "EnneadTab"
 

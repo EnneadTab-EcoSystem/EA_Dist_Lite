@@ -3,16 +3,14 @@
 
 """
 Family Data Extractor Module
-Collects all family, parameter, and association data from Revit family documents.
+Collects family, parameter, and association data from Revit family documents.
 
-Important Revit API References:
+Revit API References:
 - FamilyParameter: https://www.revitapidocs.com/2015/6175e974-870e-7fbc-3df7-46105f937a6e.htm
 - FamilyManager: https://www.revitapidocs.com/2015/1cc4fe6c-0e9f-7439-0021-32d2e06f4c33.htm
 
-Key Detection Logic:
-- Built-in parameters: BuiltInParameter.ToString() returns valid enum (e.g., "FAMILY_WIDTH_PARAM")
-- User-created parameters: BuiltInParameter.ToString() returns "INVALID"
-- INVALID = NOT built-in = User-Created
+Built-in parameters: BuiltInParameter.ToString() returns valid enum.
+User-created parameters: BuiltInParameter.ToString() returns "INVALID".
 """
 
 import sys
