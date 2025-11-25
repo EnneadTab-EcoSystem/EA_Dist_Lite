@@ -1,0 +1,1913 @@
+{
+  "status": "completed", 
+  "job_metadata": {
+    "project_name": "SPARC_A_EA_CUNY_Building", 
+    "model_path": "Autodesk Docs://2412_SPARC/SPARC_A_EA_CUNY_Building.rvt", 
+    "hub_name": null, 
+    "revit_version": "Autodesk Revit 2024", 
+    "health_metric_path": "C:\\Users\\szhang\\github\\HealthMetric\\RevitSlave-5.0\\revit_logic\\health_metric", 
+    "execution_time_seconds": 18.390000000000001, 
+    "model_name": "SPARC_A_EA_CUNY_Building", 
+    "job_id": "test_slave_20251125_112132", 
+    "timestamp": "2025-11-25T11:21:50.595000", 
+    "execution_time_readable": "18.4s"
+  }, 
+  "error": null, 
+  "export_data": null, 
+  "health_metric_result": {
+    "is_EnneadTab_Available": false, 
+    "timestamp": "2025-11-25T11:21:32.210000", 
+    "checks": {
+      "cad_files": {
+        "imported_dwgs": 11, 
+        "linked_dwgs": 42, 
+        "dwg_files": 53
+      }, 
+      "families": {
+        "non_parametric_families_creators": {
+          "creators": {
+            "Sha.Li2P4YA": 4, 
+            "Richard.zhuTQ4MV": 85, 
+            "Mia.TsiamisWXHXG": 34, 
+            "nicole.levine": 10, 
+            "paul.carey_Ennead": 6, 
+            "tpetersonZP5WJ": 19, 
+            "mariana.bravoGLG3V": 8, 
+            "zeyi.xuan_Ennead": 3
+          }, 
+          "last_editors": {
+            "Sha.Li2P4YA": 4, 
+            "Richard.zhuTQ4MV": 85, 
+            "Mia.TsiamisWXHXG": 34, 
+            "nicole.levine": 11, 
+            "paul.carey_Ennead": 6, 
+            "tpetersonZP5WJ": 18, 
+            "mariana.bravoGLG3V": 8, 
+            "zeyi.xuan_Ennead": 3
+          }
+        }, 
+        "unused_families_names": [], 
+        "non_parametric_families": 169, 
+        "unused_families_count": 0, 
+        "detail_components": 413, 
+        "generic_models_types": 62, 
+        "in_place_families_creators": {
+          "creators": {
+            "tpetersonZP5WJ": 6, 
+            "mariana.bravoGLG3V": 2, 
+            "Mia.TsiamisWXHXG": 1, 
+            "nicole.levine": 1
+          }, 
+          "last_editors": {
+            "tpetersonZP5WJ": 5, 
+            "mariana.bravoGLG3V": 2, 
+            "Mia.TsiamisWXHXG": 1, 
+            "nicole.levine": 2
+          }
+        }, 
+        "in_place_families": 10, 
+        "total_families": 529
+      }, 
+      "materials": {
+        "materials": 597
+      }, 
+      "linked_files": {
+        "linked_files_count": 9, 
+        "linked_files": [
+          {
+            "linked_file_name": "SPARC_A_EA_Exterior", 
+            "instance_name": "SPARC_A_EA_Exterior.rvt : 12 : location Internal", 
+            "loaded_status": "Hidden", 
+            "pinned_status": "Pinned"
+          }, 
+          {
+            "linked_file_name": "SPARC_FS_RG_CUNY_Food Service", 
+            "instance_name": "SPARC_FS_RG_CUNY_Food Service.rvt : 24 : location Internal", 
+            "loaded_status": "Hidden", 
+            "pinned_status": "Pinned"
+          }, 
+          {
+            "linked_file_name": "SPARC_FA_SE_NYCPS_Building", 
+            "instance_name": "SPARC_FA_SE_NYCPS_Building.rvt : 25 : location Internal", 
+            "loaded_status": "Hidden", 
+            "pinned_status": "Pinned"
+          }, 
+          {
+            "linked_file_name": "SPARC_FP_SE_NYCPS_Building", 
+            "instance_name": "SPARC_FP_SE_NYCPS_Building.rvt : 26 : location Internal", 
+            "loaded_status": "Hidden", 
+            "pinned_status": "Pinned"
+          }, 
+          {
+            "linked_file_name": "SPARC_M_SE_NYCPS_Building", 
+            "instance_name": "SPARC_M_SE_NYCPS_Building.rvt : 27 : location Internal", 
+            "loaded_status": "Hidden", 
+            "pinned_status": "Pinned"
+          }, 
+          {
+            "linked_file_name": "SPARC_E_SE_NYCPS_Building", 
+            "instance_name": "SPARC_E_SE_NYCPS_Building.rvt : 28 : location Internal", 
+            "loaded_status": "Hidden", 
+            "pinned_status": "Pinned"
+          }, 
+          {
+            "linked_file_name": "SPARC_P_SE_NYCPS_Building", 
+            "instance_name": "SPARC_P_SE_NYCPS_Building.rvt : 29 : location Internal", 
+            "loaded_status": "Hidden", 
+            "pinned_status": "Pinned"
+          }, 
+          {
+            "linked_file_name": "SPARC_P_SE_CUNY_Building", 
+            "instance_name": "SPARC_P_SE_CUNY_Building.rvt : 30 : location Internal", 
+            "loaded_status": "Hidden", 
+            "pinned_status": "Pinned"
+          }, 
+          {
+            "linked_file_name": "SPARC_FP_SE_CUNY_Building", 
+            "instance_name": "SPARC_FP_SE_CUNY_Building.rvt : 31 : location Internal", 
+            "loaded_status": "Hidden", 
+            "pinned_status": "Pinned"
+          }
+        ]
+      }, 
+      "file_size": {
+        "path_source": "accdocs", 
+        "file_path": "C:\\Users\\szhang\\DC\\ACCDocs\\Ennead Architects LLP\\2412_SPARC\\Project Files\\3_BIM\\Archive\\0_SD Models_Detached\\SPARC_A_EA_CUNY_Building.rvt", 
+        "file_size_bytes": 344211456, 
+        "file_size_mb": 328.26999999999998
+      }, 
+      "line_count": {
+        "model_lines_total": 12910, 
+        "model_lines_per_view": {}, 
+        "detail_lines_per_view": {
+          "JAMB DETAIL - FIRE RATED GLASS FRAME": 65, 
+          "STAIR A LEVEL 01": 8, 
+          "MEN'S AND WOMEN'S RESTROOM TYPICAL - W": 8, 
+          "Sill Detail - Ceramic Tile (Mud Set) / Concrete": 20, 
+          "D_ELEV_BLDG_NORTH NOTCH EAST": 15, 
+          "FLOOR PLAN - LEVEL 12 Copy 1": 6, 
+          "Patterns": 19, 
+          "CW-1/1A TYP SECTION": 289, 
+          "GWB Ceiling - Direct Hung Suspension": 16, 
+          "Level 17 - Penthouse Presentation Plan": 146, 
+          "Level 13 - Study Plan (ZX)": 216, 
+          "Level 15_RCP_GX": 1, 
+          "ENLARGED BUILDING ELEVATION - STOREFRONT SOUTH ELEVATION": 165, 
+          "Auditorium": 163, 
+          "Site - Property Line Coordination": 1, 
+          "Level 00.5 (Dock)": 4, 
+          "Level 07  4-Run 21' Height Stair Plan": 70, 
+          "Bathroom Layouts RZ CAD Export": 809, 
+          "ELEVATOR LOBBY 2ND FLOOR ELEVATION - S, TYPICAL": 40, 
+          "PC-1 TYP SECTION1": 247, 
+          "Sill Detail - Ceramic Tile (Mud Set) / Terrazzo (Surface Applied)": 31, 
+          "MEP Opening, Up To 8'-0\" - Plan": 7, 
+          "Key Plan": 34, 
+          "MP-1 AND WW-2 ENLARGED PLAN AT LEVEL 5": 413, 
+          "Level 05 Presentation Plan": 81, 
+          "GWB Rated Ceiling Suspension": 36, 
+          "Level 02 - Study Plan": 130, 
+          "Level 04 Presentation Plan": 80, 
+          "CW-2_TYPICAL PLAN": 833, 
+          "Level 01 - Study Plan (ZX)": 219, 
+          "Level 09 - Study Plan (ZX)": 81, 
+          "Level 03 Presentation Plan SL": 60, 
+          "CW-4 PLAN SOUTH SIDE": 51, 
+          "TYPICAL FLOOR WOMEN'S RESTROOM ELEVATION - S": 8, 
+          "REFLECTED CEILING PLAN - 4TH FLOOR": 6, 
+          "REFLECTED CEILING PLAN - 15TH FLOOR": 1, 
+          "Level 11 Presentation Plan": 87, 
+          "Fire Rated GWB Partition With Concrete Slab (Non-Rated Sim.)": 29, 
+          "WW-1 TYP SECTION Copy 1": 91, 
+          "Level 02 Presentation Plan SL": 76, 
+          "Level 00 (Pit)": 2, 
+          "Sill Detail - Stone / Concrete": 18, 
+          "Level 01 - Study Plan (PC)": 270, 
+          "STAIR A LEVEL 02": 4, 
+          "MP-1/WW-2 PLAN DETAIL": 768, 
+          "HEAD DETAIL - DOUBLE RABBET GWB DOUBLE EGRESS": 35, 
+          "GWB Ceiling - Reveal / Control Joint": 20, 
+          "CUNY Loading_Section 2": 18, 
+          "GWB Ceiling - Control Joint": 20, 
+          "D_ELEV_BLDG_SOUTH NOTCH EAST": 4, 
+          "C_Level 02": 66, 
+          "HEAD/SILL DETAIL (JAMB SIM.) - WINDOW": 75, 
+          "Partition Opening Framing, Up To 8'-0\" - Sill": 3, 
+          "Level 14 Presentation Plan": 1257, 
+          "Level 16 - Study": 93, 
+          "Level 06 Copy 1": 3, 
+          "W_Level 01": 1, 
+          "LEVEL 18 BULKHEAD-WEST": 26, 
+          "GWB Ceiling - Indirect Hung Suspension": 16, 
+          "TYPICAL FLOOR WOMEN'S RESTROOM ELEVATION - N": 8, 
+          "WW-1 TYP SECTION1": 365, 
+          "MP-1 AND WW-2 TYP SECTION": 179, 
+          "C_SECT_FUEL PUMP MEZZ": 1, 
+          "Level 06 Presentation Plan SL": 94, 
+          "D_SECT_E/W_3": 18, 
+          "Fire Rated GWB Partition Parallel To Deck Offset (Non-Rated Sim.)": 37, 
+          "Level 01 Presentation Plan Copy 1": 282, 
+          "Level 01 Presentation Plan Copy 3": 152, 
+          "JAMB DETAIL - DOUBLE RABBET GWB - FLUSH / 1-SIDE": 49, 
+          "Partition Fireblocking (Typical Elevation)": 37, 
+          "REFLECTED CEILING PLAN - 10TH FLOOR": 1, 
+          "FRAMELESS DOORS": 172, 
+          "Site - Presentation Plan": 11, 
+          "Sill Detail - Terrazzo (Surface Applied) / Stone": 40, 
+          "SECTION DETAIL @ UPPER CABINET OVER REFRIGERATOR": 64, 
+          "Level 13_RCP_GX": 2, 
+          "Fire Rated GWB Partition Parallel To Deck (Non-Rated Sim.)": 37, 
+          "Section 27": 19, 
+          "Section 28": 31, 
+          "CW-2 PLAN TYP": 524, 
+          "Level 01 - Study Plan": 142, 
+          "02_Symbols_Materials": 192, 
+          "Building Elevation - South Copy 1": 41, 
+          "Fire Rated GWB Partition At Beam Offset Large": 49, 
+          "MEP Opening, Up To 8'-0\" - Section": 3, 
+          "Flood Wall Sketch": 81, 
+          "HEAD DETAIL - POCKET DOOR": 40, 
+          "2009 ANSI PLUMBING STANDARDS": 1467, 
+          "JAMB DETAIL - DOUBLE EGRESS CMU": 97, 
+          "FLYBY PANEL-DOOR TO DOOR-DETAIL": 58, 
+          "HEAD DETAIL - DOUBLE ACTING DOOR": 35, 
+          "ENLARGED BUILDING ELEVATION - EAST ELEVATION": 34, 
+          "STAIR B LEVEL 01": 4, 
+          "SECTION DETAIL @ UPPER CABINET": 58, 
+          "D_ELEV_BLDG_EAST": 26, 
+          "SECTION DETAIL @ UPPER CABINET OPEN SHELVES W/ UNDER COUNTER LIGHT": 71, 
+          "SPECIALTY DOORS": 31, 
+          "Level 11 2-Run 16' height Stair Plan": 8, 
+          "Level 02 Presentation Plan Stair Option 1": 2, 
+          "Keyplan Copy 4": 184, 
+          "Level 02 Presentation Plan Stair Option 3": 2, 
+          "Level 02 Presentation Plan Stair Option 2": 2, 
+          "Level 09 Control Plan": 393, 
+          "D_ELEV_BLDG_NORTH NOTCH WEST": 11, 
+          "EA & DA - Level 01 - Building Footprint (Incl. Survey)": 99, 
+          "Dimension Style Reference": 20, 
+          "PCC-1 ENLARGED PLAN AT LEVEL 1": 657, 
+          "Elevation": 6, 
+          "Level 03 Control Plan": 462, 
+          "TOILET_TYPICAL FLOOR": 4, 
+          "ACT - Indirect Hung Soffit Thin": 57, 
+          "SECTION DETAIL @ LOWER CABINET W/ DRAWER": 59, 
+          "Sill Detail - Ceramic Tile (Thin Set) / Terrazzo (Surface Applied)": 17, 
+          "Level 01 Presentation Plan Stair Option 1": 36, 
+          "Core Study_Level 07": 109, 
+          "Level 01 Presentation Plan Stair Option 3": 36, 
+          "Level 01 Presentation Plan Stair Option 2": 36, 
+          "D_SECT_E/W 2": 36, 
+          "Bathroom Layouts RZ": 3572, 
+          "Sill Detail - Wood / Stone": 23, 
+          "SECTION DETAIL @ COUNTERTOP W/ DISHWASHER": 30, 
+          "REFLECTED CEILING PLAN - 9TH FLOOR": 1, 
+          "CW-3 WALL SECTION": 282, 
+          "Text Style Reference": 4, 
+          "00_Symbols": 98, 
+          "Soffit Framing Logitudinal Brace": 2, 
+          "Typical Ceiling Plan_Enlarged Office": 6, 
+          "EA & DA - Level 04 - Building Footprint": 28, 
+          "Level 01 - Study Plan - 26th ST (ZX)": 168, 
+          "HEAD DETAIL - CEILING MTD. SLIDER TRACK": 23, 
+          "Sill Detail - Resilient Flooring / Ceramic Tile (Thin Set)": 23, 
+          "Section 26": 24, 
+          "JAMB DETAIL - SINGLE RABBET CMU - OVERLAP": 36, 
+          "Partition Opening Framing, Up To 8'-0\" - Head": 7, 
+          "Keyplan": 185, 
+          "Sill Detail - Ceramic Tile (Thin Set) / Wood": 67, 
+          "Slab Study (ZX)": 14, 
+          "D_ELEV_BLDG_SOUTH_STRF Copy 1 Copy 1": 52, 
+          "Level 10_Plan_GX": 4, 
+          "Drafting 1": 53, 
+          "Level 15 Presentation Plan": 136, 
+          "Relocated Location": 162, 
+          "Sill Detail - Resilient Flooring / Stone": 21, 
+          "Sill Detail - Carpet / Concrete": 12, 
+          "JAMB DETAIL - SINGLE RABBET CMU - BUTT FRAME": 33, 
+          "STRUCTURAL GLASS DOORS": 116, 
+          "SECTION DETAIL @ UPPER CABINET W/ UNDER COUNTER LIGHT": 61, 
+          "Level 02 Presentation Plan": 94, 
+          "CW-3 ENLARGED PLAN LEVEL 8": 332, 
+          "Fire Rated Shaft Wall Partition At Stair - Interrupted Stud": 52, 
+          "Current Location": 107, 
+          "Auditorium 300 Seats (Faceted) - Section": 118, 
+          "D_SECT_BLDG_N/S 2": 43, 
+          "WW-1 TYP SECTION": 302, 
+          "Level 17 - Study": 1, 
+          "Section Roof Elevator E/W": 4, 
+          "HEAD DETAIL - FIRE RATED GLASS TRANSOM": 129, 
+          "REFLECTED CEILING PLAN - 12TH FLOOR": 1, 
+          "2 Sided,  2 Hr. Horiz. Shaft Wall Enclosure": 42, 
+          "CW-4 PLAN NORTH SIDE": 101, 
+          "Fire Rated Shaft Wall Partition At Duct- Continuous Stud": 53, 
+          "Typical Ceiling Plan_Enlarged Conference Room_Large": 5, 
+          "COORD PLAN L5": 2, 
+          "Sill Detail - Terrazzo (Surface Applied) / Wood": 32, 
+          "Fire Rated GWB Partition, Large Movement Perpendicular To Deck (Non-Rated Sim.)": 47, 
+          "REFLECTED CEILING PLAN - ROOF": 1, 
+          "Level 01 - Study Plan _ Loading Dock (ZX)": 165, 
+          "L1 & L2 LOBBY -EAST ELEVATION": 41, 
+          "Partition Opening Framing, 8'-1\" To 20'-0\" (3-5/8\" Min. Stud Width) - Head": 11, 
+          "Sill Detail - Resilient Flooring / Terrazzo (Surface Applied)": 8, 
+          "W_Level 02": 1, 
+          "JAMB DETAIL - CASED OPENING GWB (HEAD. SIM.)": 24, 
+          "Sill Detail - Carpet / Terrazzo (Recessed)": 15, 
+          "JAMB DETAIL - SINGLE RABBET GWB - FLUSH / 1-SIDE": 39, 
+          "Level 12 Presentation Plan": 107, 
+          "Building Elevation - East": 4, 
+          "Level 17 (RF) - Study Plan (PC)": 104, 
+          "Linestyles": 30, 
+          "BUILDING ELEVATIONS - SOUTH & WEST": 1, 
+          "Level 02 Presentation Plan - Split - Opt02": 177, 
+          "Level 02 Presentation Plan - Old Vault Layout": 147, 
+          "JAMB DETAIL - DOUBLE RABBET CMU - WRAP FRAME": 50, 
+          "EA & DA - Level 07 - Building Footprint": 10, 
+          "4 Sided, 2 Hr Horiz. Shaft Wall Enclosure": 63, 
+          "Sill Detail - Carpet / Stone": 33, 
+          "Level 13 Presentation Plan AHU Option 26x9": 130, 
+          "Level 01 4-Run 22' Height Stair Plan": 43, 
+          "REFLECTED CEILING PLAN - 14TH FLOOR": 1, 
+          "C_Level 03": 22, 
+          "Level 14  - Study Plan (ZX)": 101, 
+          "Level 03 - Study Plan (PC)": 59, 
+          "JAMB DETAIL - DOUBLE RABBET CONCRETE": 67, 
+          "CW-1_TYP PLAN": 834, 
+          "Section - Roof Elevator N/S": 144, 
+          "LEVEL 3 TERRACE MAIN ENTRY/EXIT SECTION": 118, 
+          "HEAD DETAIL - FLOATING TRANSOM": 32, 
+          "CURTAIN WALL 6 (CW-6) - SYSTEM (STOREFRONT)": 13, 
+          "D_ELEV_BLDG_SOUTH": 146, 
+          "L1 & L2 NORTH LOBBY ELEVATION": 123, 
+          "MEP Opening, Up To 4'-0\" Wide - Plan": 3, 
+          "D_Applications To Be Filed Separately": 1, 
+          "TYPICAL FLOOR ALL GENDER RESTROOM ELEVATION - N": 8, 
+          "JAMB DETAIL - SIDELIGHT": 24, 
+          "TYPICAL FLOOR ALL GENDER RESTROOM ELEVATION - E": 8, 
+          "Ground Floor Coordination": 134, 
+          "TYPICAL FLOOR ALL GENDER RESTROOM ELEVATION - W": 8, 
+          "MP-1 AND WW-2 TYP PLAN": 340, 
+          "TYPICAL FLOOR ALL GENDER RESTROOM ELEVATION - S": 8, 
+          "Level 14 Presentation Plan Machine room": 3, 
+          "D_SECT_BLDG_N/S 1A": 18, 
+          "Sill Detail - Terrazzo (Recessed) / Wood": 43, 
+          "BUILDING ELEVATIONS - NORTH & EAST": 1, 
+          "Level 06 - Study Plan (ZX)": 75, 
+          "TYPICAL FLOOR MEN'S RESTROOM ELEVATION - S": 8, 
+          "Level 07 Presentation Plan Stair Option 1": 89, 
+          "CURTAIN WALL 1 (CW-1) - SYSTEM": 2, 
+          "Level 07 Presentation Plan Stair Option 3": 89, 
+          "Level 07 Presentation Plan Stair Option 2": 89, 
+          "HEAD DETAIL - WALL MTD. SLIDER TRACK": 36, 
+          "Level 02 Presentation Plan - Adjacent - Opt01": 177, 
+          "Level 02 - Study Plan (RZ)": 95, 
+          "Fire Rated Shaft Wall Partition At Elev. - Continuous Stud": 57, 
+          "CORE-TOILETS-1ST & 2ND FLOORS": 1, 
+          "BULKHEAD-SOUTH": 5, 
+          "Level 01 Control Plan Copy 1": 587, 
+          "Level 07 - Study Plan (ZX)": 79, 
+          "C_SECT_1 & 2L": 5, 
+          "D_ELEV_BLDG_SOUTH_STRF Copy 1": 16, 
+          "LS_LEVEL 06": 4, 
+          "LS_LEVEL 05": 10, 
+          "LEVEL 2 ENLARGED ELEVATOR LOBBY, TYPICAL": 32, 
+          "JAMB DETAIL - DOUBLE RABBET GWB - FLUSH / 2-SIDE": 53, 
+          "Keyplan Copy 3": 263, 
+          "JAMB DETAIL - DOUBLE RABBET CMU - WRAP FRAME (GWB ON CMU)": 56, 
+          "D_ELEV_BLDG_SOUTH Enlarged CW-1": 7, 
+          "D_ELEV_BLDG_SOUTH Enlarged CW-3": 28, 
+          "LS_LEVEL 09": 14, 
+          "D_ELEV_BLDG_SOUTH Enlarged CW-4": 2, 
+          "ELEVATOR LOBBY 2ND FLOOR ELEVATION - N, TYPICAL": 52, 
+          "C_SECT_LOADING DOCK": 17, 
+          "Level 15 - Study Plan (ZX)": 101, 
+          "Level 13 Presentation Plan AHU Option 20x11": 130, 
+          "W_Level 07": 4, 
+          "E-W Section - Auditorium 300 Seats (Rectilinear) - Stepped": 101, 
+          "PCC-1 ENLARGED PLAN AT LEVEL 2": 434, 
+          "Elevation 1 - a": 4, 
+          "SILL DETAILS": 4, 
+          "JAMB DETAIL - SINGLE RABBET GWB - OVERLAP": 35, 
+          "BUILDING KEY PLAN": 184, 
+          "D_SECT_E/W 11": 18, 
+          "Level 06 Presentation Plan": 94, 
+          "Conc_Hand/Guardrail at Landing (Staggered)": 39, 
+          "REFLECTED CEILING PLAN - 1ST FLOOR": 23, 
+          "Sill Detail - Wood / Concrete": 16, 
+          "Fire Rated GWB Partition Perpendicular To Steel Beam (Non-Rated Sim.)": 28, 
+          "LEVEL 3 TERRACE MAIN ENTRY/EXIT PLAN": 167, 
+          "HEAD DETAIL - GWB TRANSOM": 94, 
+          "Sill Detail - Ceramic Tile (Mud Set) / Ceramic Tile (Mud Set)": 20, 
+          "SK_SCISSOR STAIR A/B": 1266, 
+          "Sill Detail - Wood / Wood": 10, 
+          "Keyplan Draftview": 104, 
+          "FLOOR PLAN - LEVEL 17": 8, 
+          "C_Level 04": 74, 
+          "FLOOR PLAN - LEVEL 15": 8, 
+          "FLOOR PLAN - LEVEL 14": 8, 
+          "FLOOR PLAN - LEVEL 13": 8, 
+          "FLOOR PLAN - LEVEL 12": 16, 
+          "00_Save to Central": 115, 
+          "GWB Ceiling / ACT Ceiling Transition": 30, 
+          "FLOOR PLAN - LEVEL 10": 9, 
+          "LIFE SAFETY PLANS": 7, 
+          "FLOOR PLAN - LEVEL 11": 8, 
+          "FLOOR PLAN - LEVEL 16": 8, 
+          "00_Save to Central1": 115, 
+          "D_ELEV_BLDG_SOUTH_STRF": 80, 
+          "JAMB DETAIL - DOUBLE RABBET GWB - OVERLAP": 45, 
+          "Level 01 Control Plan": 587, 
+          "Level 08_Plan_GX": 35, 
+          "Level 02 - Study Plan (ZX)": 50, 
+          "Sill Detail - Terrazzo (Surface Applied) /Concrete": 9, 
+          "Bathroom Layouts_Container": 109, 
+          "D_ELEV_BLDG_WEST": 31, 
+          "Section 25": 32, 
+          "E-W Section - Auditorium 300 Seats (Rectilinear) - Double Ramp": 93, 
+          "D_ELEV_BLDG_SOUTH_COVER SHEET": 16, 
+          "CW-4A SECTION NORTH FACADE": 60, 
+          "Level 10 - Study Plan (ZX)": 101, 
+          "REFLECTED CEILING PLAN - 7TH FLOOR": 1, 
+          "Level 16 Presentation Plan": 139, 
+          "Level 01 - Study Plan (ZX) Copy 1": 12, 
+          "REFLECTED CEILING PLAN - 16TH FLOOR": 1, 
+          "Conc_Hand/Guardrail - Typical Section": 20, 
+          "JAMB DETAIL - CUSTOM POST": 27, 
+          "Level 05 2-Run 18' Height Plan": 15, 
+          "C_Level 18 (PENTHOUSE MEZZ)": 4, 
+          "Elevation 4 - a": 4, 
+          "Level 05 Presentation Plan Copy 1": 84, 
+          "Level 11 - Study Plan (ZX)": 101, 
+          "SECTION DETAIL @ LOWER CABINET W/ DRAWERS": 27, 
+          "CW-3 ENLARGED PLAN LEVEL 6": 475, 
+          "JAMB DETAIL - HOLD OPEN": 48, 
+          "Conc_Hand/Guardrail at Stair Bottom": 42, 
+          "REFLECTED CEILING PLAN - 13TH FLOOR": 2, 
+          "Level 02 - Study Plan - Auditorium 500 Seats": 183, 
+          "Level 02 - Study Plan - Auditorium": 152, 
+          "Partition Types": 156, 
+          "N-S Section - Auditorium 500 Seats": 203, 
+          "Level 08-nl": 81, 
+          "Sill Detail - Ceramic Tile (Mud Set) / Stone": 17, 
+          "CW-3 TYP SECTION": 284, 
+          "Sill Detail - Resilient Flooring / Wood": 28, 
+          "Sill Detail - Carpet / Wood": 21, 
+          "ELEVATOR LOBBY 2ND FLOOR ELEVATION - E/W, TYPICAL": 8, 
+          "300 Auditorium (Rectilinear Ramped) - Plan 1": 451, 
+          "REFLECTED CEILING PLAN - 8TH FLOOR": 1, 
+          "HEAD DETAIL - DOUBLE RABBET CMU DOUBLE EGRESS": 34, 
+          "TYPICAL LAB ELEVATION": 8, 
+          "BUILDING ELEVATION LEVEL 6 ROOF TOP": 22, 
+          "D_ELEV_BLDG_NORTH CW-3 TYP": 1, 
+          "CW-5 PLAN LEVEL 1": 69, 
+          "CW-3_TYPICAL SECTION": 1024, 
+          "Fire Rated GWB Partition At Beam (Non-Rated Sim)": 49, 
+          "TOILET PLAN TYPICAL FLOOR": 4, 
+          "CW-1 TYP PLAN": 83, 
+          "Sill Detail - Terrazzo (Recessed) / Terrazzo (Recessed)": 12, 
+          "Sill Detail - Resilient Flooring / Ceramic Tile (Mud Set)": 44, 
+          "Typical Access Panel - Rated": 28, 
+          "Level 01 - Loading Option 01": 441, 
+          "Typical GWB Access Panel": 20, 
+          "JAMB DETAIL - DOUBLE ACTING DOOR": 35, 
+          "Fire Rated CMU Partition Perpendicular To Deck (Non-Rated Sim.)": 21, 
+          "TYPICAL FLOOR MEN'S RESTROOM ELEVATION - N": 8, 
+          "CABINET ANCHOR LOCATIONS": 48, 
+          "MP-1 AND WW-2 TYP SECTION 2": 181, 
+          "Sill Detail - Ceramic Tile (Thin Set) / Ceramic Tile (Thin Set)": 8, 
+          "Door Framing, 8'-0\" - Section At Base": 26, 
+          "Sill Detail - Terrazzo (Recessed) / Stone": 32, 
+          "2009 ANSI STANDARDS (DO NOT USE)": 1424, 
+          "REFLECTED CEILING PLAN - BULKHEAD": 1, 
+          "Fire Rated CMU Partition At Beam Offset": 48, 
+          "Conc_Hand/Guardrail - Typical Post Detail": 43, 
+          "CW-5_TYPICAL PLAN": 189, 
+          "CW-2 SECTION 2": 176, 
+          "Fire Rated GWB Partition At Beam Offset Small": 62, 
+          "Section 21": 11, 
+          "ACT - Indirect Hung Suspension": 20, 
+          "Level 01 - Study Plan (NL)": 59, 
+          "02_Symbols_Life Safety": 35, 
+          "JAMB DETAIL - GWB SIDELIGHT": 92, 
+          "ALUMINUM AND GLASS DOORS": 134, 
+          "JAMB DETAIL - SINGLE RABBET GWB - FLUSH / 2-SIDES": 43, 
+          "FLOOR PLAN - ROOF": 17, 
+          "Wall Framing - Suspended Headwall": 13, 
+          "Sill Detail - Ceramic Tile (Thin Set) / Stone": 12, 
+          "3 - c": 4, 
+          "Sill Detail - Ceramic Tile (Mud Set) / Terrazzo (Recessed)": 16, 
+          "SECTION THRU LAVATORY COUNTER": 70, 
+          "Elevation - 26th ST (ZX)": 117, 
+          "JAMB DETAIL - DOUBLE RABBET CMU - BUTT FRAME": 41, 
+          "Sill Detail - Ceramic Tile (Mud Set) / Wood": 51, 
+          "Level 05 - Study Plan": 1, 
+          "Sill Detail - Carpet / Carpet": 7, 
+          "D_Code Compliance Notes": 1, 
+          "ACT - Indirect Hung Soffit": 37, 
+          "D_ELEV_BLDG_EAST_STRF": 93, 
+          "HEAD DETAIL - PIVOT HEADER": 39, 
+          "REFLECTED CEILING PLAN - 3RD FLOOR": 5, 
+          "REFLECTED CEILING PLAN - 2ND FLOOR": 14, 
+          "FLOOR PLAN - BULKHEAD": 4, 
+          "HEAD DETAIL (JAMB & SILL SIM.) - LEAD LINED WINDOW": 53, 
+          "EA & DA - Level 13 - Building Footprint": 12, 
+          "LS_LEVEL 16": 1, 
+          "LS_LEVEL 17": 4, 
+          "LS_LEVEL 15": 4, 
+          "LS_LEVEL 12": 4, 
+          "LS_LEVEL 10": 5, 
+          "LS_LEVEL 11": 14, 
+          "Keyplan Copy 2": 184, 
+          "CW-1_TYICAL SECTION": 905, 
+          "Typical GWB Soffit": 31, 
+          "Soffit Framing With Single Hanger": 7, 
+          "Level 02 Presentation Plan Lobby 02": 184, 
+          "Podium Section": 2, 
+          "Sill Detail - Resilient Flooring / Carpet": 11, 
+          "SECTION DETAIL @ PANTRY TRASH PULL OUT CABINET": 53, 
+          "Site - Tax Lot B Sketch": 22, 
+          "W_Level 14": 78, 
+          "Sill Detail - Resilient Flooring / Resilient Flooring": 9, 
+          "FLYBY PANEL- DOOR TO GLASS-DETAIL": 62, 
+          "LEVEL 1 HIGH SCHOOL MAIN ENTRY/EXIT ELEVATION": 16, 
+          "Level 10_RCP_Enlarged Conf_GYP": 6, 
+          "D_Building Description": 16, 
+          "Level 01 - Property Line Coordination": 109, 
+          "L2 CAFE CORRIDOR OPEN COLLAB-SOUTH ELEVATION": 172, 
+          "Level 14 - Study": 1, 
+          "Partition Opening Framing, Up To 8'-0\" - Plan": 3, 
+          "CW-6 TYP SECTION HIGH SCHOOL MAIN ENTRY": 241, 
+          "Fire Rated Shaft Wall Partition At Duct (Non-Rated Sim) - Interrupted Stud": 50, 
+          "Site - ULURP Plan": 674, 
+          "300 Auditorium (Faceted) - Plan": 284, 
+          "Door Framing, 8'-0\" - Plan": 12, 
+          "Partition Opening Framing, 8'-1\" To 20'-0\" (3-5/8\" Min. Stud Width) - Plan": 11, 
+          "00_Abbreviations": 1, 
+          "Level 16 - Study Plan (PC)": 84, 
+          "SECTION DETAIL @ LOWER CABINET": 27, 
+          "FLOOR PLAN - LEVEL 09": 8, 
+          "FLOOR PLAN - LEVEL 07": 16, 
+          "C_Level 05": 28, 
+          "FLOOR PLAN - LEVEL 06": 53, 
+          "FLOOR PLAN - LEVEL 04": 5, 
+          "FLOOR PLAN - LEVEL 03": 5, 
+          "FLOOR PLAN - LEVEL 02": 45, 
+          "FLOOR PLAN - LEVEL 01": 79, 
+          "Fire Rated GWB Partition, Large Movement Parallel To Deck (Non-Rated Sim.)": 66, 
+          "Level 12 Control Plan": 481, 
+          "FLOOR PLAN - LEVEL 05": 25, 
+          "FLOOR PLAN - LEVEL 08": 8, 
+          "ALT STUDY 1": 106, 
+          "Level 03 Presentation Plan": 143, 
+          "CONNECTION DETAILS FOR CASEWORK": 66, 
+          "South Facade Section": 60, 
+          "N-S Section - Auditorium 500 Seats Copy 1": 203, 
+          "Level 08 - Study Plan": 2, 
+          "ACT - Indirect Hung Cove": 46, 
+          "Sill Detail - Resilient Flooring / Exposed Concrete": 9, 
+          "HEAD DETAIL - PATCH PLATE TRANSOM": 24, 
+          "CW-3_TYP PLAN": 1301, 
+          "HEAD DETAIL - HOLD OPEN": 38, 
+          "Filled Regions": 218, 
+          "Conc_Hand/Guardrail at Intermediate Landing": 71, 
+          "JAMB DETAIL - LEAD LINED DOOR": 48, 
+          "D_Demolition Notes  (NOT APPLICABLE FOR THIS PROJECT)": 1, 
+          "ACT - Direct Hung Suspension": 22, 
+          "CW-1 TYP PLAN - Callout 1": 8, 
+          "HEAD DETAIL - TUBE CHANNEL TRANSOM W/ OVERHEAD STRIKE": 34, 
+          "REFLECTED CEILING PLAN - 17TH FLOOR": 1, 
+          "Sill Detail - Terrazzo (Recessed) / Concrete": 20, 
+          "Sill Detail - Carpet / Ceramic Tile (Thin Set)": 14, 
+          "HEAD DETAIL - O.H. CLOSER HEADER": 39, 
+          "Level 08 Presentation Plan": 101, 
+          "Level 01 Presentation Plan SL": 183, 
+          "D_Fire Resistance Rated Construction": 1, 
+          "Partition Details": 657, 
+          "GWB 1 HR Rated Ceiling / Soffit": 16, 
+          "Control_Levels": 1, 
+          "Sill Detail - Ceramic Tile (Thin Set) / Terrazzo (Recessed)": 15, 
+          "CW-4 SECTION SOUTH FACADE": 103, 
+          "Level 02": 2, 
+          "EQUIPMENT SCHEDULE 1": 1, 
+          "ALUMINUM FRAMES": 91, 
+          "RCP Notes": 5, 
+          "D_ELEV_BLDG_NORTH": 454, 
+          "JAMB DETAIL - DOUBLE EGRESS GWB": 112, 
+          "D_ELEV_BLDG_NORTH ENLARGED EWS-1": 106, 
+          "JAMB DETAIL - GWB TYP.": 25, 
+          "D_ELEV_BLDG_SOUTH NOTCH WEST": 4, 
+          "PC-1 TYP SECTION": 164, 
+          "Fire Rated CMU Partition With Concrete Slab ( Non-Rated Sim.)": 21, 
+          "Sill Detail - Resilient Flooring / Terrazzo (Recessed)": 12, 
+          "HEAD DETAIL - TRANSOM/SIDELIGHT CHANNEL (JAMB SIM.)": 29, 
+          "CW-2 PLAN LEVEL 6": 448, 
+          "REFLECTED CEILING PLAN - 11TH FLOOR": 1, 
+          "Level 13 - Study Plan (PC)": 116, 
+          "PCC-1/MP-6 PLAN DTL AT INTERFACE": 271, 
+          "Level 01 - Study Plan - Auditorium 500 Seats": 269, 
+          "JAMB DETAIL - POCKET DOOR": 29, 
+          "ACT - Fascia": 24, 
+          "SECTION DETAIL @ LOWER CABINET W/ H/C ACCESSIBILITY": 64, 
+          "Level 01 Presentation Plan": 123, 
+          "HEAD DETAIL - FIRE RATED GLASS FRAME": 81, 
+          "HOLLOW METAL OR WOOD FRAMES": 102, 
+          "Level 08 - Study Plan (ZX)": 81, 
+          "Level 03 Presentation Plan Lobby 02": 124, 
+          "Sill Detail - Carpet / Ceramic Tile (Mud Set)": 26, 
+          "D_ELEV_BLDG_NORTH_STRF": 32, 
+          "L1 & L2 NORTH LOBBY ELEVATION Copy 1": 111, 
+          "C_Level 01": 70, 
+          "C_Level 11": 4, 
+          "FINISH SCHEDULE NOTES": 5, 
+          "CW-2 SECTION 1": 208, 
+          "Section 2": 2, 
+          "Sill Detail - Stone / Stone": 24, 
+          "Section 1": 2, 
+          "Section 6": 2, 
+          "SECTION DETAIL @ DISHWASHER MICROWAVE CABINET": 90, 
+          "HEAD DETAIL - CUSTOM BUILT-UP TRANSOM": 64, 
+          "Section 8": 195, 
+          "C_SECT_PENTHOUSE ROOF": 4, 
+          "REFLECTED CEILING PLAN - 5TH FLOOR": 5, 
+          "RCP Legend": 5, 
+          "TYPICAL OFFICE ELEVATION": 76, 
+          "Conc_Hand/Guardrail at Upper Landing": 59, 
+          "Conc_Hand/Guardrail at Landing (Aligned)": 35, 
+          "Sill Detail - Ceramic Tile (Thin Set) / Concrete": 18, 
+          "LEVEL 1 HIGH SCHOOL MAIN ENTRY/EXIT PLAN": 65, 
+          "Section 29": 12, 
+          "Site Plan": 203, 
+          "Sill Detail - Terrazzo (Surface Applied) / Terrazzo (Surface Applied)": 8, 
+          "Level 16 - Study Plan (ZX)": 105, 
+          "Fire Rated Shaft Wall Partition At Stair - Continuous Stud": 49, 
+          "CORE-PASSENGER ELEVATORS - TYPICAL FLOORS": 3, 
+          "CW-1/1A TYP SECTION - Callout 2": 33, 
+          "EA & DA - Level 01 - Building Footprint": 97, 
+          "D_General Demolition Notes (NOT APPLICABLE FOR THIS PROJECT)": 1, 
+          "MP-1 AND WW-2 ENLARGED PLAN AT LEVEL 1": 490, 
+          "HEAD DETAIL - LEAD LINED DOOR": 48, 
+          "GWB 2 HR. Rated Ceiling / Soffit": 16, 
+          "Level 10 Presentation Plan": 101, 
+          "Site Plan Working_RZ": 93, 
+          "_Save to Central": 115, 
+          "D_Special Inspecton Items": 1, 
+          "BULKHEAD-NORTH": 5, 
+          "CW-3 PLAN AT LEVEL 4": 40, 
+          "JAMB DETAIL - DOUBLE RABBET CMU/GWB": 46, 
+          "3 Sided, 2 Hr. Shaft Wall Enclosure At B.O. Shaft": 98, 
+          "TYPICAL SECTION THROUGH IGW-3": 131, 
+          "Relocated Location - Alt Location": 161, 
+          "Door Framing, 8'-0\" - Section": 16, 
+          "WINDOW TYPES": 176, 
+          "Typical GWB Lighting Cove 2": 37, 
+          "300 Auditorium (Rectilinear) - Plan 2": 468, 
+          "Level 07 Presentation Plan": 97, 
+          "Fire Rated Shaft Wall Partition At Elev. - Interrupted Stud": 49, 
+          "Typical Ceiling Plan_Enlarged Conference Room_Small": 6, 
+          "Level 08_RCP_GX": 1, 
+          "Site - Sea Wall": 11, 
+          "Partition Opening Framing, 8'-1\" To 20'-0\" (3-5/8\" Min. Stud Width) - Sill": 7, 
+          "Fire Rated GWB Partition Perpendicular To Deck (Non-Rated Sim.)": 29, 
+          "GWB Ceiling at Smoke Shield": 30, 
+          "MEN'S AND WOMEN'S RESTROOM TYPICAL - E": 8, 
+          "Level 09 Presentation Plan": 85, 
+          "HOLLOW METAL OR WOOD DOORS": 139, 
+          "D_ELEV_BLDG_WEST_STRF": 57, 
+          "C_Level 06": 13, 
+          "Level 05 - Study Plan (ZX)": 88, 
+          "LEVEL 18 BULKHEAD-EAST": 12, 
+          "HEAD DETAIL - TUBE CHANNEL TRANSOM": 23, 
+          "Level 13 Presentation Plan": 216, 
+          "L2 CAFE SEATING AREA-EAST ELEVATION": 11, 
+          "W_Level 05": 5, 
+          "Building Elevation - South": 101, 
+          "Level 02 - Study Plan - Auditorium (ZX) ALT": 210, 
+          "Sill Detail - Carpet / Terrazzo (Surface Applied)": 14, 
+          "LEVEL 3 TERRACE MAIN ENTRY/EXIT ELEVATION": 20, 
+          "TYPICAL SECTION THROUGH IGW-1/ IGW-2": 102, 
+          "Level 12 - Study Plan (ZX)": 103, 
+          "REFLECTED CEILING PLAN - 6TH FLOOR": 31, 
+          "ROOF MEZZ": 33, 
+          "CW-5 TYP SECTION": 69
+        }, 
+        "detail_lines_total": 54176, 
+        "top_detail_line_views": [
+          {
+            "view": "Bathroom Layouts RZ", 
+            "count": 3572
+          }, 
+          {
+            "view": "2009 ANSI PLUMBING STANDARDS", 
+            "count": 1467
+          }, 
+          {
+            "view": "2009 ANSI STANDARDS (DO NOT USE)", 
+            "count": 1424
+          }, 
+          {
+            "view": "CW-3_TYP PLAN", 
+            "count": 1301
+          }, 
+          {
+            "view": "SK_SCISSOR STAIR A/B", 
+            "count": 1266
+          }, 
+          {
+            "view": "Level 14 Presentation Plan", 
+            "count": 1257
+          }, 
+          {
+            "view": "CW-3_TYPICAL SECTION", 
+            "count": 1024
+          }, 
+          {
+            "view": "CW-1_TYICAL SECTION", 
+            "count": 905
+          }, 
+          {
+            "view": "CW-1_TYP PLAN", 
+            "count": 834
+          }, 
+          {
+            "view": "CW-2_TYPICAL PLAN", 
+            "count": 833
+          }
+        ]
+      }, 
+      "project_info": {
+        "is_EnneadTab_Available": false, 
+        "client_name": "NYCEDC", 
+        "project_number": "2412", 
+        "timestamp": "2025-11-25T11:21:34.303000", 
+        "project_name": "SPARC", 
+        "project_phases": [
+          "Existing", 
+          "New Construction"
+        ], 
+        "is_workshared": true, 
+        "document_title": "SPARC_A_EA_CUNY_Building", 
+        "worksets": {
+          "workset_details": [
+            {
+              "name": "Workset1", 
+              "creator": "mia.tsiamiswxhxg", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 42, 
+              "id": 0, 
+              "is_editable": false, 
+              "creator_count": 42, 
+              "owner": ""
+            }, 
+            {
+              "name": "0_Shared Levels & Grids", 
+              "creator": "mia.tsiamiswxhxg", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 63, 
+              "id": 182, 
+              "is_editable": false, 
+              "creator_count": 82, 
+              "owner": ""
+            }, 
+            {
+              "name": "1_Core", 
+              "creator": "anna.hehhw6u", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "anna.hehhw6u", 
+              "last_editor_count": 73, 
+              "id": 234, 
+              "is_editable": false, 
+              "creator_count": 72, 
+              "owner": ""
+            }, 
+            {
+              "name": "1_Exterior Walls", 
+              "creator": "tpetersonzp5wj", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "tpetersonzp5wj", 
+              "last_editor_count": 49, 
+              "id": 235, 
+              "is_editable": false, 
+              "creator_count": 59, 
+              "owner": ""
+            }, 
+            {
+              "name": "1_Interiors", 
+              "creator": "anna.hehhw6u", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "anna.hehhw6u", 
+              "last_editor_count": 36, 
+              "id": 391, 
+              "is_editable": false, 
+              "creator_count": 36, 
+              "owner": ""
+            }, 
+            {
+              "name": "2_RVT Links_A_EA_Building Levels & Datum", 
+              "creator": "mia.tsiamiswxhxg", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 1, 
+              "id": 394, 
+              "is_editable": false, 
+              "creator_count": 2, 
+              "owner": ""
+            }, 
+            {
+              "name": "0_References", 
+              "creator": "paul.carey_ennead", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "ekirkland@ennead.com", 
+              "last_editor_count": 35, 
+              "id": 419, 
+              "is_editable": false, 
+              "creator_count": 78, 
+              "owner": ""
+            }, 
+            {
+              "name": "1_FF&E", 
+              "creator": "mia.tsiamiswxhxg", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 2, 
+              "id": 420, 
+              "is_editable": false, 
+              "creator_count": 2, 
+              "owner": ""
+            }, 
+            {
+              "name": "1_Planning", 
+              "creator": "paul.carey_ennead", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "paul.carey_ennead", 
+              "last_editor_count": 100, 
+              "id": 421, 
+              "is_editable": false, 
+              "creator_count": 100, 
+              "owner": ""
+            }, 
+            {
+              "id": 422, 
+              "last_editor": "Unknown", 
+              "creator": "Unknown", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "owner": "", 
+              "is_editable": false, 
+              "name": "1_Site"
+            }, 
+            {
+              "name": "1_Structure", 
+              "creator": "paul.carey_ennead", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "paul.carey_ennead", 
+              "last_editor_count": 84, 
+              "id": 423, 
+              "is_editable": false, 
+              "creator_count": 99, 
+              "owner": ""
+            }, 
+            {
+              "name": "3_CAD Links", 
+              "creator": "richard.zhutq4mv", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "richard.zhutq4mv", 
+              "last_editor_count": 15, 
+              "id": 424, 
+              "is_editable": false, 
+              "creator_count": 16, 
+              "owner": ""
+            }, 
+            {
+              "id": 425, 
+              "last_editor": "Unknown", 
+              "creator": "Unknown", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "owner": "", 
+              "is_editable": false, 
+              "name": "4_Rendering"
+            }, 
+            {
+              "name": "4_Temp", 
+              "creator": "zeyi.xuan_ennead", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "zeyi.xuan_ennead", 
+              "last_editor_count": 3, 
+              "id": 426, 
+              "is_editable": false, 
+              "creator_count": 3, 
+              "owner": ""
+            }, 
+            {
+              "name": "2_RVT Links_A_DA_Site & Infrastructure", 
+              "creator": "paul.carey_ennead", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 1, 
+              "id": 1011, 
+              "is_editable": false, 
+              "creator_count": 1, 
+              "owner": ""
+            }, 
+            {
+              "name": "2_RVT Links_A_DA_NYCPS_Building", 
+              "creator": "paul.carey_ennead", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "gayatri.desai", 
+              "last_editor_count": 97, 
+              "id": 1023, 
+              "is_editable": false, 
+              "creator_count": 98, 
+              "owner": ""
+            }, 
+            {
+              "name": "2_RVT Links_M_BH_CUNY", 
+              "creator": "paul.carey_ennead", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "paul.carey_ennead", 
+              "last_editor_count": 47, 
+              "id": 2333, 
+              "is_editable": false, 
+              "creator_count": 47, 
+              "owner": ""
+            }, 
+            {
+              "name": "2_RVT Links_MEP_SE_NYCPS_Building", 
+              "creator": "mia.tsiamiswxhxg", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 10, 
+              "id": 2334, 
+              "is_editable": false, 
+              "creator_count": 10, 
+              "owner": ""
+            }, 
+            {
+              "name": "2_RVT Links_L_HL_Lighting", 
+              "creator": "mia.tsiamiswxhxg", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "nicole.levine", 
+              "last_editor_count": 18, 
+              "id": 2335, 
+              "is_editable": false, 
+              "creator_count": 38, 
+              "owner": ""
+            }, 
+            {
+              "name": "2_RVT Links_IT_SM_CUNY_Building", 
+              "creator": "mia.tsiamiswxhxg", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 4, 
+              "id": 2336, 
+              "is_editable": false, 
+              "creator_count": 5, 
+              "owner": ""
+            }, 
+            {
+              "name": "2_RVT Links_S_LE_Building", 
+              "creator": "mia.tsiamiswxhxg", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 3, 
+              "id": 2337, 
+              "is_editable": false, 
+              "creator_count": 3, 
+              "owner": ""
+            }, 
+            {
+              "name": "2_RVT Links_LP_JA_Lab", 
+              "creator": "mia.tsiamiswxhxg", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 5, 
+              "id": 3067, 
+              "is_editable": false, 
+              "creator_count": 5, 
+              "owner": ""
+            }, 
+            {
+              "name": "2_RVT Links_A_EA_CUNY_FF&E", 
+              "creator": "mia.tsiamiswxhxg", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 2, 
+              "id": 3164, 
+              "is_editable": false, 
+              "creator_count": 3, 
+              "owner": ""
+            }, 
+            {
+              "name": "2_RVT Links_PFP_SE_CUNY_Building", 
+              "creator": "mia.tsiamiswxhxg", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 7, 
+              "id": 3165, 
+              "is_editable": false, 
+              "creator_count": 7, 
+              "owner": ""
+            }, 
+            {
+              "name": "2_RVT Links_FP_SE_Building", 
+              "creator": "mia.tsiamiswxhxg", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 6, 
+              "id": 3166, 
+              "is_editable": false, 
+              "creator_count": 6, 
+              "owner": ""
+            }, 
+            {
+              "id": 3206, 
+              "last_editor": "Unknown", 
+              "creator": "Unknown", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "owner": "", 
+              "is_editable": false, 
+              "name": "2_RVT Links_A_DA_NYCPS_Building - Concept"
+            }, 
+            {
+              "name": "2_RVT Links_A_EA_Exterior", 
+              "creator": "paul.carey_ennead", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "paul.carey_ennead", 
+              "last_editor_count": 1, 
+              "id": 3207, 
+              "is_editable": false, 
+              "creator_count": 1, 
+              "owner": ""
+            }, 
+            {
+              "id": 4039, 
+              "last_editor": "Unknown", 
+              "creator": "Unknown", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "owner": "", 
+              "is_editable": false, 
+              "name": "3_CAD Links_Rhino Plans"
+            }, 
+            {
+              "name": "0_Zoning Envelope", 
+              "creator": "mia.tsiamiswxhxg", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 5, 
+              "id": 6123, 
+              "is_editable": false, 
+              "creator_count": 5, 
+              "owner": ""
+            }, 
+            {
+              "name": "2_RVT Links_E_BH_CUNY", 
+              "creator": "sha.li2p4ya", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "sha.li2p4ya", 
+              "last_editor_count": 74, 
+              "id": 7301, 
+              "is_editable": false, 
+              "creator_count": 74, 
+              "owner": ""
+            }, 
+            {
+              "name": "1_Ceiling", 
+              "creator": "gemma.xie", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "gemma.xie", 
+              "last_editor_count": 97, 
+              "id": 7324, 
+              "is_editable": false, 
+              "creator_count": 97, 
+              "owner": ""
+            }, 
+            {
+              "name": "1_Areas", 
+              "creator": "mariana.bravoglg3v", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 98, 
+              "id": 12795, 
+              "is_editable": false, 
+              "creator_count": 51, 
+              "owner": ""
+            }, 
+            {
+              "name": "1_FurringContent", 
+              "creator": "szhanggoodlooking", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "szhanggoodlooking", 
+              "last_editor_count": 100, 
+              "id": 14842, 
+              "is_editable": false, 
+              "creator_count": 100, 
+              "owner": ""
+            }, 
+            {
+              "name": "2_RVT Links_FS_RG_Food Service", 
+              "creator": "mia.tsiamiswxhxg", 
+              "kind": "UserWorkset", 
+              "is_open": true, 
+              "last_editor": "mia.tsiamiswxhxg", 
+              "last_editor_count": 3, 
+              "id": 15390, 
+              "is_editable": false, 
+              "creator_count": 3, 
+              "owner": ""
+            }
+          ], 
+          "user_worksets": 34, 
+          "workset_element_ownership": {
+            "2_RVT Links_IT_SM_CUNY_Building": {
+              "current_owners": {}, 
+              "creators": {
+                "mia.tsiamiswxhxg": 5
+              }, 
+              "last_editors": {
+                "zeyi.xuan_ennead": 1, 
+                "mia.tsiamiswxhxg": 4
+              }
+            }, 
+            "0_Zoning Envelope": {
+              "current_owners": {}, 
+              "creators": {
+                "mia.tsiamiswxhxg": 5
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 5
+              }
+            }, 
+            "2_RVT Links_A_DA_Site & Infrastructure": {
+              "current_owners": {}, 
+              "creators": {
+                "paul.carey_ennead": 1
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 1
+              }
+            }, 
+            "0_References": {
+              "current_owners": {}, 
+              "creators": {
+                "anna.hehhw6u": 2, 
+                "paul.carey_ennead": 78, 
+                "mariana.bravoglg3v": 17, 
+                "richard.zhutq4mv": 3
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 1, 
+                "richard.zhutq4mv": 23, 
+                "tpetersonzp5wj": 1, 
+                "mariana.bravoglg3v": 17, 
+                "paul.carey_ennead": 23, 
+                "ekirkland@ennead.com": 35
+              }
+            }, 
+            "2_RVT Links_PFP_SE_CUNY_Building": {
+              "current_owners": {}, 
+              "creators": {
+                "mia.tsiamiswxhxg": 7
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 7
+              }
+            }, 
+            "2_RVT Links_MEP_SE_NYCPS_Building": {
+              "current_owners": {}, 
+              "creators": {
+                "mia.tsiamiswxhxg": 10
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 10
+              }
+            }, 
+            "1_FF&E": {
+              "current_owners": {}, 
+              "creators": {
+                "mia.tsiamiswxhxg": 2
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 2
+              }
+            }, 
+            "2_RVT Links_FP_SE_Building": {
+              "current_owners": {}, 
+              "creators": {
+                "mia.tsiamiswxhxg": 6
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 6
+              }
+            }, 
+            "1_FurringContent": {
+              "current_owners": {}, 
+              "creators": {
+                "szhanggoodlooking": 100
+              }, 
+              "last_editors": {
+                "szhanggoodlooking": 100
+              }
+            }, 
+            "2_RVT Links_M_BH_CUNY": {
+              "current_owners": {}, 
+              "creators": {
+                "paul.carey_ennead": 47, 
+                "mia.tsiamiswxhxg": 5
+              }, 
+              "last_editors": {
+                "paul.carey_ennead": 47, 
+                "mia.tsiamiswxhxg": 5
+              }
+            }, 
+            "4_Temp": {
+              "current_owners": {}, 
+              "creators": {
+                "zeyi.xuan_ennead": 3
+              }, 
+              "last_editors": {
+                "zeyi.xuan_ennead": 3
+              }
+            }, 
+            "2_RVT Links_A_DA_NYCPS_Building": {
+              "current_owners": {}, 
+              "creators": {
+                "paul.carey_ennead": 98, 
+                "richard.zhutq4mv": 2
+              }, 
+              "last_editors": {
+                "gayatri.desai": 97, 
+                "paul.carey_ennead": 1, 
+                "richard.zhutq4mv": 2
+              }
+            }, 
+            "2_RVT Links_A_EA_Building Levels & Datum": {
+              "current_owners": {}, 
+              "creators": {
+                "mia.tsiamiswxhxg": 2
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 1, 
+                "richard.zhutq4mv": 1
+              }
+            }, 
+            "1_Areas": {
+              "current_owners": {}, 
+              "creators": {
+                "tpetersonzp5wj": 1, 
+                "anna.hehhw6u": 10, 
+                "mariana.bravoglg3v": 51, 
+                "paul.carey_ennead": 21, 
+                "ekirkland@ennead.com": 17
+              }, 
+              "last_editors": {
+                "ekirkland@ennead.com": 1, 
+                "tpetersonzp5wj": 1, 
+                "mia.tsiamiswxhxg": 98
+              }
+            }, 
+            "1_Interiors": {
+              "current_owners": {}, 
+              "creators": {
+                "zeyi.xuanh9az2": 3, 
+                "mia.tsiamiswxhxg": 23, 
+                "richard.zhutq4mv": 14, 
+                "zeyi.xuan_ennead": 1, 
+                "szhanggoodlooking": 7, 
+                "anna.hehhw6u": 36, 
+                "mariana.bravoglg3v": 16
+              }, 
+              "last_editors": {
+                "zeyi.xuanh9az2": 3, 
+                "mia.tsiamiswxhxg": 9, 
+                "richard.zhutq4mv": 34, 
+                "zeyi.xuan_ennead": 1, 
+                "szhanggoodlooking": 7, 
+                "anna.hehhw6u": 36, 
+                "mariana.bravoglg3v": 9, 
+                "sha.li2p4ya": 1
+              }
+            }, 
+            "1_Core": {
+              "current_owners": {}, 
+              "creators": {
+                "zeyi.xuanh9az2": 1, 
+                "paul.carey_ennead": 19, 
+                "zeyi.xuan_ennead": 8, 
+                "anna.hehhw6u": 72
+              }, 
+              "last_editors": {
+                "zeyi.xuanh9az2": 1, 
+                "paul.carey_ennead": 19, 
+                "zeyi.xuan_ennead": 7, 
+                "anna.hehhw6u": 73
+              }
+            }, 
+            "2_RVT Links_A_EA_Exterior": {
+              "current_owners": {}, 
+              "creators": {
+                "paul.carey_ennead": 1
+              }, 
+              "last_editors": {
+                "paul.carey_ennead": 1
+              }
+            }, 
+            "3_CAD Links": {
+              "current_owners": {}, 
+              "creators": {
+                "paul.carey_ennead": 1, 
+                "mariana.bravoglg3v": 1, 
+                "richard.zhutq4mv": 16
+              }, 
+              "last_editors": {
+                "paul.carey_ennead": 1, 
+                "tpetersonzp5wj": 1, 
+                "mariana.bravoglg3v": 1, 
+                "richard.zhutq4mv": 15
+              }
+            }, 
+            "1_Structure": {
+              "current_owners": {}, 
+              "creators": {
+                "paul.carey_ennead": 99, 
+                "richard.zhutq4mv": 1
+              }, 
+              "last_editors": {
+                "paul.carey_ennead": 84, 
+                "mia.tsiamiswxhxg": 15, 
+                "richard.zhutq4mv": 1
+              }
+            }, 
+            "2_RVT Links_FS_RG_Food Service": {
+              "current_owners": {}, 
+              "creators": {
+                "mia.tsiamiswxhxg": 3
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 3
+              }
+            }, 
+            "1_Ceiling": {
+              "current_owners": {}, 
+              "creators": {
+                "gemma.xie": 97, 
+                "nicole.levine": 3
+              }, 
+              "last_editors": {
+                "gemma.xie": 97, 
+                "nicole.levine": 3
+              }
+            }, 
+            "Workset1": {
+              "current_owners": {}, 
+              "creators": {
+                "mia.tsiamiswxhxg": 42
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 42
+              }
+            }, 
+            "2_RVT Links_S_LE_Building": {
+              "current_owners": {}, 
+              "creators": {
+                "mia.tsiamiswxhxg": 3
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 3
+              }
+            }, 
+            "2_RVT Links_L_HL_Lighting": {
+              "current_owners": {}, 
+              "creators": {
+                "mia.tsiamiswxhxg": 38
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 11, 
+                "mariana.bravoglg3v": 9, 
+                "nicole.levine": 18
+              }
+            }, 
+            "2_RVT Links_E_BH_CUNY": {
+              "current_owners": {}, 
+              "creators": {
+                "nicole.levine": 3, 
+                "mia.tsiamiswxhxg": 1, 
+                "richard.zhutq4mv": 18, 
+                "gemma.xie": 4, 
+                "sha.li2p4ya": 74
+              }, 
+              "last_editors": {
+                "nicole.levine": 3, 
+                "mia.tsiamiswxhxg": 1, 
+                "richard.zhutq4mv": 18, 
+                "gemma.xie": 4, 
+                "sha.li2p4ya": 74
+              }
+            }, 
+            "1_Planning": {
+              "current_owners": {}, 
+              "creators": {
+                "paul.carey_ennead": 100
+              }, 
+              "last_editors": {
+                "paul.carey_ennead": 100
+              }
+            }, 
+            "0_Shared Levels & Grids": {
+              "current_owners": {}, 
+              "creators": {
+                "paul.carey_ennead": 17, 
+                "mia.tsiamiswxhxg": 82, 
+                "zeyi.xuan_ennead": 1
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 63, 
+                "tpetersonzp5wj": 13, 
+                "szhanggoodlooking": 17, 
+                "sha.li2p4ya": 4, 
+                "mariana.bravoglg3v": 2, 
+                "paul.carey_ennead": 1
+              }
+            }, 
+            "2_RVT Links_A_EA_CUNY_FF&E": {
+              "current_owners": {}, 
+              "creators": {
+                "mia.tsiamiswxhxg": 3
+              }, 
+              "last_editors": {
+                "paul.carey_ennead": 1, 
+                "mia.tsiamiswxhxg": 2
+              }
+            }, 
+            "1_Exterior Walls": {
+              "current_owners": {}, 
+              "creators": {
+                "mia.tsiamiswxhxg": 1, 
+                "richard.zhutq4mv": 12, 
+                "tpetersonzp5wj": 59, 
+                "sha.li2p4ya": 23, 
+                "paul.carey_ennead": 5
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 2, 
+                "richard.zhutq4mv": 39, 
+                "tpetersonzp5wj": 49, 
+                "sha.li2p4ya": 6, 
+                "paul.carey_ennead": 4
+              }
+            }, 
+            "2_RVT Links_LP_JA_Lab": {
+              "current_owners": {}, 
+              "creators": {
+                "mia.tsiamiswxhxg": 5
+              }, 
+              "last_editors": {
+                "mia.tsiamiswxhxg": 5
+              }
+            }
+          }, 
+          "workset_names": [
+            "Workset1", 
+            "0_Shared Levels & Grids", 
+            "1_Core", 
+            "1_Exterior Walls", 
+            "1_Interiors", 
+            "2_RVT Links_A_EA_Building Levels & Datum", 
+            "0_References", 
+            "1_FF&E", 
+            "1_Planning", 
+            "1_Site", 
+            "1_Structure", 
+            "3_CAD Links", 
+            "4_Rendering", 
+            "4_Temp", 
+            "2_RVT Links_A_DA_Site & Infrastructure", 
+            "2_RVT Links_A_DA_NYCPS_Building", 
+            "2_RVT Links_M_BH_CUNY", 
+            "2_RVT Links_MEP_SE_NYCPS_Building", 
+            "2_RVT Links_L_HL_Lighting", 
+            "2_RVT Links_IT_SM_CUNY_Building", 
+            "2_RVT Links_S_LE_Building", 
+            "2_RVT Links_LP_JA_Lab", 
+            "2_RVT Links_A_EA_CUNY_FF&E", 
+            "2_RVT Links_PFP_SE_CUNY_Building", 
+            "2_RVT Links_FP_SE_Building", 
+            "2_RVT Links_A_DA_NYCPS_Building - Concept", 
+            "2_RVT Links_A_EA_Exterior", 
+            "3_CAD Links_Rhino Plans", 
+            "0_Zoning Envelope", 
+            "2_RVT Links_E_BH_CUNY", 
+            "1_Ceiling", 
+            "1_Areas", 
+            "1_FurringContent", 
+            "2_RVT Links_FS_RG_Food Service"
+          ], 
+          "total_worksets": 34, 
+          "workset_element_counts": {
+            "2_RVT Links_IT_SM_CUNY_Building": 5, 
+            "0_Zoning Envelope": 5, 
+            "2_RVT Links_A_DA_NYCPS_Building - Concept": 0, 
+            "2_RVT Links_A_DA_Site & Infrastructure": 1, 
+            "0_References": 138, 
+            "2_RVT Links_PFP_SE_CUNY_Building": 7, 
+            "2_RVT Links_MEP_SE_NYCPS_Building": 10, 
+            "1_FF&E": 2, 
+            "2_RVT Links_FP_SE_Building": 6, 
+            "1_FurringContent": 34816, 
+            "2_RVT Links_M_BH_CUNY": 52, 
+            "4_Temp": 3, 
+            "2_RVT Links_A_DA_NYCPS_Building": 4492, 
+            "2_RVT Links_A_EA_Building Levels & Datum": 2, 
+            "1_Areas": 667, 
+            "1_Interiors": 29524, 
+            "1_Core": 13832, 
+            "2_RVT Links_A_EA_Exterior": 1, 
+            "1_Site": 0, 
+            "3_CAD Links": 18, 
+            "1_Structure": 2560, 
+            "2_RVT Links_FS_RG_Food Service": 3, 
+            "1_Ceiling": 17201, 
+            "Workset1": 42, 
+            "4_Rendering": 0, 
+            "2_RVT Links_S_LE_Building": 3, 
+            "2_RVT Links_L_HL_Lighting": 38, 
+            "2_RVT Links_E_BH_CUNY": 105, 
+            "1_Planning": 4039, 
+            "0_Shared Levels & Grids": 121, 
+            "3_CAD Links_Rhino Plans": 0, 
+            "2_RVT Links_A_EA_CUNY_FF&E": 3, 
+            "1_Exterior Walls": 311, 
+            "2_RVT Links_LP_JA_Lab": 5
+          }, 
+          "workset_ownership": {}
+        }
+      }, 
+      "graphical_elements": {
+        "text_notes_all_caps": 0, 
+        "dimensions": 26482, 
+        "revision_clouds": 2, 
+        "line_patterns": 4053, 
+        "detail_lines": 54176, 
+        "text_notes_instances": 3058, 
+        "dimension_types": 31, 
+        "dimension_overrides": 331, 
+        "text_notes_types_solid_background": 0, 
+        "text_notes_width_factor_not_1": 0, 
+        "text_notes_types": 22
+      }, 
+      "views_sheets": {
+        "view_count_by_type": {
+          "DrawingSheet": 330, 
+          "ProjectBrowser": 1, 
+          "AreaPlan": 59, 
+          "Legend": 7, 
+          "DraftingView": 216, 
+          "SystemBrowser": 1, 
+          "CeilingPlan": 54, 
+          "Elevation": 117, 
+          "Section": 120, 
+          "ThreeD": 79, 
+          "Schedule": 388, 
+          "FloorPlan": 376, 
+          "EngineeringPlan": 1, 
+          "Detail": 5
+        }, 
+        "view_count_by_type_non_template": {
+          "DrawingSheet": 330, 
+          "ProjectBrowser": 1, 
+          "AreaPlan": 59, 
+          "Legend": 7, 
+          "DraftingView": 216, 
+          "SystemBrowser": 1, 
+          "CeilingPlan": 51, 
+          "Elevation": 100, 
+          "Section": 113, 
+          "ThreeD": 71, 
+          "Schedule": 386, 
+          "FloorPlan": 320, 
+          "EngineeringPlan": 1, 
+          "Detail": 1
+        }, 
+        "view_count_by_type_template": {
+          "CeilingPlan": 3, 
+          "Section": 7, 
+          "Elevation": 17, 
+          "ThreeD": 8, 
+          "Schedule": 2, 
+          "FloorPlan": 56, 
+          "Detail": 4
+        }, 
+        "schedules_not_on_sheets": 0, 
+        "views_not_on_sheets": 939, 
+        "total_sheets": 330, 
+        "total_views": 1754, 
+        "copied_views": 1657
+      }, 
+      "warnings": {
+        "warning_count_per_user": {
+          "by_last_editor": {
+            "nicole.levine": 31, 
+            "mia.tsiamiswxhxg": 18, 
+            "richard.zhutq4mv": 110, 
+            "zeyi.xuan_ennead": 13, 
+            "tpetersonzp5wj": 121, 
+            "szhanggoodlooking": 666, 
+            "gemma.xie": 108, 
+            "gayatri.desai": 1, 
+            "sha.li2p4ya": 26, 
+            "mariana.bravoglg3v": 342, 
+            "paul.carey_ennead": 23, 
+            "ekirkland@ennead.com": 158
+          }, 
+          "by_creator": {
+            "nicole.levine": 24, 
+            "mia.tsiamiswxhxg": 25, 
+            "richard.zhutq4mv": 141, 
+            "zeyi.xuan_ennead": 9, 
+            "tpetersonzp5wj": 124, 
+            "szhanggoodlooking": 655, 
+            "gemma.xie": 133, 
+            "sha.li2p4ya": 26, 
+            "mariana.bravoglg3v": 307, 
+            "paul.carey_ennead": 47, 
+            "ekirkland@ennead.com": 126
+          }
+        }, 
+        "critical_warning_count": 245, 
+        "warning_details_per_creator": {
+          "EKirkland@ennead.com": {
+            "Elements have duplicate \"Number\" values.": 9, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 18, 
+            "Highlighted room separation lines overlap. One of them may be ignored when Revit finds room boundaries. Delete one of the lines.": 3, 
+            "Insert conflicts with joined Wall.": 5, 
+            "Elements have duplicate \"Mark\" values.": 57, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 24, 
+            "Highlighted lines overlap. Lines may not form closed loops.": 10
+          }, 
+          "nicole.levine": {
+            "Elements have duplicate \"Type Mark\" values.": 6, 
+            "Highlighted floors overlap.": 1, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 2, 
+            "Elements have duplicate \"Mark\" values.": 8, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 5, 
+            "Line in Sketch is slightly off axis and may cause inaccuracies.": 2
+          }, 
+          "Mia.TsiamisWXHXG": {
+            "Highlighted floors overlap.": 2, 
+            "Elements have duplicate \"Name\" values.": 1, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 3, 
+            "Elements have duplicate \"Mark\" values.": 1, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 9, 
+            "Highlighted lines overlap. Lines may not form closed loops.": 9
+          }, 
+          "Richard.zhuTQ4MV": {
+            "Area separation line is slightly off axis and may cause inaccuracies.": 16, 
+            "Highlighted floors overlap.": 2, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 6, 
+            "Two elements were not automatically joined because one or both is not editable.": 1, 
+            "Elements have duplicate \"Mark\" values.": 30, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 26, 
+            "Highlighted lines overlap. Lines may not form closed loops.": 59, 
+            "Stair top end exceeds or cannot reach the top elevation of the stair. Add/remove risers at the top end by control or change the stair run's \"Relative Top Height\" parameter in the properties palette.": 1
+          }, 
+          "Sha.Li2P4YA": {
+            "No keynote value is assigned to the keynoted element in the link \"SPARC_A_EA_Exterior.rvt\". Open the linked model to assign a keynote value to the element.": 4, 
+            "Room separation line is slightly off axis and may cause inaccuracies.": 1, 
+            "Highlighted room separation lines overlap. One of them may be ignored when Revit finds room boundaries. Delete one of the lines.": 7, 
+            "Elements have duplicate \"Mark\" values.": 2, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 12
+          }, 
+          "szhangGOODLOOKING": {
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 74, 
+            "Highlighted room separation lines overlap. One of them may be ignored when Revit finds room boundaries. Delete one of the lines.": 581
+          }, 
+          "paul.carey_Ennead": {
+            "Area separation line is slightly off axis and may cause inaccuracies.": 5, 
+            "Elements have duplicate \"Name\" values.": 1, 
+            "Imported model is out of range.": 2, 
+            "Elements have duplicate \"Number\" values.": 6, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 3, 
+            "Highlighted room separation lines overlap. One of them may be ignored when Revit finds room boundaries. Delete one of the lines.": 1, 
+            "Elements have duplicate \"Mark\" values.": 1, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 9, 
+            "Highlighted lines overlap. Lines may not form closed loops.": 19
+          }, 
+          "mariana.bravoGLG3V": {
+            "Area separation line is slightly off axis and may cause inaccuracies.": 2, 
+            "Elements have duplicate \"Type Mark\" values.": 2, 
+            "Elements have duplicate \"Number\" values.": 6, 
+            "Room separation line is slightly off axis and may cause inaccuracies.": 2, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 32, 
+            "Highlighted room separation lines overlap. One of them may be ignored when Revit finds room boundaries. Delete one of the lines.": 10, 
+            "Insert conflicts with joined Wall.": 7, 
+            "Elements have duplicate \"Mark\" values.": 166, 
+            "Two elements were not automatically joined because one or both is not editable.": 2, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 58, 
+            "Highlighted lines overlap. Lines may not form closed loops.": 19, 
+            "The ramp is not long enough to reach the top constraint plus top offset.  Change the slope or increase the length of the ramp. ": 1
+          }, 
+          "zeyi.xuan_Ennead": {
+            "Property lines do not form a closed loop.  Area will not be computed.": 1, 
+            "Room separation line is slightly off axis and may cause inaccuracies.": 1, 
+            "Line in Sketch is slightly off axis and may cause inaccuracies.": 6, 
+            "The ramp is not long enough to reach the top constraint.  Change the slope or increase the length of the ramp. ": 1
+          }, 
+          "tpetersonZP5WJ": {
+            "Highlighted inserts overlap with other inserts or completely miss their hosts.": 2, 
+            "Elements have duplicate \"Type Mark\" values.": 1, 
+            "Highlighted floors overlap.": 5, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 26, 
+            "Two elements were not automatically joined because one or both is not editable.": 3, 
+            "Elements have duplicate \"Mark\" values.": 55, 
+            "The Actual Run Width of one or more runs is less than the Minimum Run Width specified in the stair type.": 1, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 13, 
+            "Highlighted lines overlap. Lines may not form closed loops.": 14, 
+            "Line in Sketch is slightly off axis and may cause inaccuracies.": 4
+          }, 
+          "Gemma.Xie": {
+            "Elements have duplicate \"Mark\" values.": 125, 
+            "There are identical instances in the same place. This will result in double counting in schedules.": 2, 
+            "Elements have duplicate \"Type Mark\" values.": 4, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 2
+          }
+        }, 
+        "warning_count": 812, 
+        "warning_categories": {
+          "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 46, 
+          "Room separation line is slightly off axis and may cause inaccuracies.": 4, 
+          "Elements have duplicate \"Mark\" values.": 219, 
+          "Highlighted floors overlap.": 5, 
+          "Highlighted inserts overlap with other inserts or completely miss their hosts.": 1, 
+          "The ramp is not long enough to reach the top constraint.  Change the slope or increase the length of the ramp. ": 1, 
+          "Imported model is out of range.": 2, 
+          "There are identical instances in the same place. This will result in double counting in schedules.": 1, 
+          "Line in Sketch is slightly off axis and may cause inaccuracies.": 6, 
+          "Highlighted room separation lines overlap. One of them may be ignored when Revit finds room boundaries. Delete one of the lines.": 301, 
+          "Property lines do not form a closed loop.  Area will not be computed.": 1, 
+          "Area separation line is slightly off axis and may cause inaccuracies.": 23, 
+          "Stair top end exceeds or cannot reach the top elevation of the stair. Add/remove risers at the top end by control or change the stair run's \"Relative Top Height\" parameter in the properties palette.": 1, 
+          "The ramp is not long enough to reach the top constraint plus top offset.  Change the slope or increase the length of the ramp. ": 1, 
+          "Highlighted lines overlap. Lines may not form closed loops.": 55, 
+          "Elements have duplicate \"Type Mark\" values.": 5, 
+          "Insert conflicts with joined Wall.": 6, 
+          "Elements have duplicate \"Name\" values.": 1, 
+          "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 115, 
+          "Elements have duplicate \"Number\" values.": 10, 
+          "Two elements were not automatically joined because one or both is not editable.": 3, 
+          "No keynote value is assigned to the keynoted element in the link \"SPARC_A_EA_Exterior.rvt\". Open the linked model to assign a keynote value to the element.": 4, 
+          "The Actual Run Width of one or more runs is less than the Minimum Run Width specified in the stair type.": 1
+        }, 
+        "warning_details_per_last_editor": {
+          "EKirkland@ennead.com": {
+            "Area separation line is slightly off axis and may cause inaccuracies.": 1, 
+            "Highlighted floors overlap.": 2, 
+            "The ramp is not long enough to reach the top constraint.  Change the slope or increase the length of the ramp. ": 1, 
+            "Elements have duplicate \"Number\" values.": 5, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 14, 
+            "Insert conflicts with joined Wall.": 4, 
+            "Elements have duplicate \"Mark\" values.": 97, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 17, 
+            "Highlighted lines overlap. Lines may not form closed loops.": 17
+          }, 
+          "Richard.zhuTQ4MV": {
+            "Area separation line is slightly off axis and may cause inaccuracies.": 13, 
+            "Highlighted floors overlap.": 1, 
+            "Room separation line is slightly off axis and may cause inaccuracies.": 1, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 5, 
+            "Highlighted room separation lines overlap. One of them may be ignored when Revit finds room boundaries. Delete one of the lines.": 2, 
+            "Elements have duplicate \"Mark\" values.": 11, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 12, 
+            "Highlighted lines overlap. Lines may not form closed loops.": 57, 
+            "Stair top end exceeds or cannot reach the top elevation of the stair. Add/remove risers at the top end by control or change the stair run's \"Relative Top Height\" parameter in the properties palette.": 1, 
+            "Property lines do not form a closed loop.  Area will not be computed.": 1, 
+            "Line in Sketch is slightly off axis and may cause inaccuracies.": 6
+          }, 
+          "Mia.TsiamisWXHXG": {
+            "Area separation line is slightly off axis and may cause inaccuracies.": 2, 
+            "Elements have duplicate \"Name\" values.": 1, 
+            "Elements have duplicate \"Number\" values.": 3, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 1, 
+            "Elements have duplicate \"Mark\" values.": 1, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 1, 
+            "Highlighted lines overlap. Lines may not form closed loops.": 9
+          }, 
+          "nicole.levine": {
+            "Elements have duplicate \"Type Mark\" values.": 10, 
+            "Elements have duplicate \"Number\" values.": 6, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 3, 
+            "Elements have duplicate \"Mark\" values.": 5, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 5, 
+            "Line in Sketch is slightly off axis and may cause inaccuracies.": 2
+          }, 
+          "szhangGOODLOOKING": {
+            "Elements have duplicate \"Mark\" values.": 2, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 84, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 6, 
+            "Highlighted room separation lines overlap. One of them may be ignored when Revit finds room boundaries. Delete one of the lines.": 574
+          }, 
+          "Sha.Li2P4YA": {
+            "Elements have duplicate \"Mark\" values.": 2, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 15, 
+            "Highlighted room separation lines overlap. One of them may be ignored when Revit finds room boundaries. Delete one of the lines.": 5, 
+            "No keynote value is assigned to the keynoted element in the link \"SPARC_A_EA_Exterior.rvt\". Open the linked model to assign a keynote value to the element.": 4
+          }, 
+          "paul.carey_Ennead": {
+            "Area separation line is slightly off axis and may cause inaccuracies.": 4, 
+            "Elements have duplicate \"Name\" values.": 1, 
+            "Imported model is out of range.": 1, 
+            "Elements have duplicate \"Mark\" values.": 1, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 6, 
+            "Highlighted lines overlap. Lines may not form closed loops.": 10
+          }, 
+          "gayatri.desai": {
+            "Imported model is out of range.": 1
+          }, 
+          "mariana.bravoGLG3V": {
+            "Area separation line is slightly off axis and may cause inaccuracies.": 2, 
+            "Elements have duplicate \"Type Mark\" values.": 3, 
+            "Highlighted floors overlap.": 1, 
+            "Elements have duplicate \"Number\" values.": 7, 
+            "Room separation line is slightly off axis and may cause inaccuracies.": 2, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 44, 
+            "Highlighted room separation lines overlap. One of them may be ignored when Revit finds room boundaries. Delete one of the lines.": 17, 
+            "Insert conflicts with joined Wall.": 8, 
+            "Elements have duplicate \"Mark\" values.": 162, 
+            "Two elements were not automatically joined because one or both is not editable.": 4, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 70, 
+            "Highlighted lines overlap. Lines may not form closed loops.": 21, 
+            "The ramp is not long enough to reach the top constraint plus top offset.  Change the slope or increase the length of the ramp. ": 1
+          }, 
+          "tpetersonZP5WJ": {
+            "Area separation line is slightly off axis and may cause inaccuracies.": 1, 
+            "Highlighted inserts overlap with other inserts or completely miss their hosts.": 2, 
+            "Highlighted floors overlap.": 4, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 17, 
+            "Two elements were not automatically joined because one or both is not editable.": 2, 
+            "Elements have duplicate \"Mark\" values.": 59, 
+            "The Actual Run Width of one or more runs is less than the Minimum Run Width specified in the stair type.": 1, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 15, 
+            "Highlighted lines overlap. Lines may not form closed loops.": 16, 
+            "Line in Sketch is slightly off axis and may cause inaccuracies.": 4
+          }, 
+          "zeyi.xuan_Ennead": {
+            "Highlighted floors overlap.": 2, 
+            "Room separation line is slightly off axis and may cause inaccuracies.": 1, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 1, 
+            "Highlighted room separation lines overlap. One of them may be ignored when Revit finds room boundaries. Delete one of the lines.": 4, 
+            "A wall and a room separation line overlap. One of them may be ignored when Revit finds room boundaries. Shorten or delete the room separation line to remove the overlap.": 5
+          }, 
+          "Gemma.Xie": {
+            "Elements have duplicate \"Mark\" values.": 105, 
+            "There are identical instances in the same place. This will result in double counting in schedules.": 2, 
+            "Highlighted walls overlap. One of them may be ignored when Revit finds room boundaries. Use Cut Geometry to embed one wall within the other.": 1
+          }
+        }
+      }, 
+      "filled_regions": {
+        "filled_regions": 2817, 
+        "filled_region_types": 0
+      }, 
+      "reference_planes": {
+        "reference_planes": 25, 
+        "reference_planes_no_name": 16
+      }, 
+      "rooms": {
+        "unbounded_rooms": 53, 
+        "unplaced_room_details": [
+          {
+            "number": "1502", 
+            "name": "SEWAGE EJECTORS", 
+            "level": "Level 01", 
+            "id": 
