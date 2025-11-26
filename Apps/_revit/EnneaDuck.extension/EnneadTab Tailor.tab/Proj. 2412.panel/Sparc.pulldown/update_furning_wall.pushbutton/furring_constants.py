@@ -7,9 +7,11 @@ TARGET_PANEL_FAMILIES = [
     ("EA_CW-3 (Wrap)", "Flat"),
     ("EA_CW-3 (Wrap)", "WW2"),
     ("EA_CW-4 (Reveal)", "Flat"),
-    ("EA_PC-1 (Precast)_refactor needed", "Flat"),
+    ("EA_PC-1 (Precast)", "Flat"),
+    ("EA_PC-1 (Precast)_Louver", "Flat"),
     ("EA_MP-1 (Podium)_Solid", "SD"),
     ("EA_MP-1 (Podium)_Glass", "SD"),
+    ("EA_MP-2 (PodiumThin)", "SD"),
 ]
 TARGET_LINK_TITLE = "SPARC_A_EA_Exterior"
 CHILD_FAMILY_NAME = "RefMarker"
