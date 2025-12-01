@@ -252,8 +252,66 @@ def export_pdf(view_or_sheet, file_name_naked, output_folder, is_color_by_sheet)
 
         #pdf_options.ExportPaperFormat = DB.ExportPaperFormat.Default
 
+        # Check if views on sheet are exportable before attempting export
+        non_exportable_views = []
+        try:
+            # Check if this is a sheet with views on it
+            if view_or_sheet.ViewType.ToString() == "DrawingSheet":
+                view_ids = view_or_sheet.GetAllPlacedViews()
+                for view_id in view_ids:
+                    view = doc.GetElement(view_id)
+                    if view:
+                        # Check if view can be printed/exported
+                        try:
+                            # Some view types cannot be exported (e.g., certain 3D views, schedules in some contexts)
+                            # Try to access CanBePrinted property if available
+                            if hasattr(view, 'CanBePrinted') and not view.CanBePrinted:
+                                non_exportable_views.append("{} ({})".format(view.Name, view.ViewType.ToString()))
+                        except:
+                            # If CanBePrinted is not available or throws error, check view type
+                            # Some view types are known to be non-exportable
+                            if view.ViewType.ToString() in ["Rendering", "Walkthrough"]:
+                                non_exportable_views.append("{} ({})".format(view.Name, view.ViewType.ToString()))
+            # If it's a view (not a sheet), check if the view itself is exportable
+            else:
+                try:
+                    if hasattr(view_or_sheet, 'CanBePrinted') and not view_or_sheet.CanBePrinted:
+                        non_exportable_views.append("{} ({})".format(view_or_sheet.Name, view_or_sheet.ViewType.ToString()))
+                except:
+                    # Check view type for known non-exportable types
+                    if view_or_sheet.ViewType.ToString() in ["Rendering", "Walkthrough"]:
+                        non_exportable_views.append("{} ({})".format(view_or_sheet.Name, view_or_sheet.ViewType.ToString()))
+        except Exception as e:
+            print("Warning: Could not check views for exportability: {}".format(str(e)))
 
-        doc.Export(output_folder, sheet_list, pdf_options)
+        # Attempt export with error handling
+        try:
+            doc.Export(output_folder, sheet_list, pdf_options)
+        except Exception as e:
+            error_msg = str(e)
+            if "not printable" in error_msg.lower() or "not exportable" in error_msg.lower() or "exportable" in error_msg.lower():
+                # Build detailed error message
+                if view_or_sheet.ViewType.ToString() == "DrawingSheet":
+                    item_info = "Sheet: {} ({})".format(view_or_sheet.SheetNumber, view_or_sheet.Name)
+                else:
+                    item_info = "View: {} ({})".format(view_or_sheet.Name, view_or_sheet.ViewType.ToString())
+                
+                if non_exportable_views:
+                    detailed_msg = "{} contains non-exportable views:\n  - {}".format(
+                        item_info, 
+                        "\n  - ".join(non_exportable_views)
+                    )
+                else:
+                    if view_or_sheet.ViewType.ToString() == "DrawingSheet":
+                        detailed_msg = "{} contains views that cannot be exported. This may be due to:\n  - 3D views with certain display modes\n  - Views with broken references\n  - Views that are not printable".format(item_info)
+                    else:
+                        detailed_msg = "{} cannot be exported. This may be due to:\n  - View type not supported for export\n  - View with broken references\n  - View that is not printable".format(item_info)
+                
+                print("PDF Export Error: {}".format(detailed_msg))
+                raise Exception("Cannot export PDF: {}\n\n{}".format(error_msg, detailed_msg))
+            else:
+                # Re-raise other exceptions
+                raise
         #print "$$$ end method 2"
 
 

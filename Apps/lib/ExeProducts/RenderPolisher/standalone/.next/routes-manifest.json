@@ -49,6 +49,12 @@
       "namedRegex": "^/_not\\-found(?:/)?$"
     },
     {
+      "page": "/api/heartbeat",
+      "regex": "^/api/heartbeat(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/heartbeat(?:/)?$"
+    },
+    {
       "page": "/api/nano",
       "regex": "^/api/nano(?:/)?$",
       "routeKeys": {},
