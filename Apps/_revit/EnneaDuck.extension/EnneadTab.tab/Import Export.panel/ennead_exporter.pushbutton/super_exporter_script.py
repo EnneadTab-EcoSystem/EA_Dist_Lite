@@ -849,7 +849,11 @@ class SuperExporter(REVIT_FORMS.EnneadTabModelessForm):
             if extension == ".pdf":
                 is_color_by_sheet = self.is_color_by_sheet
                 final_file = REVIT_EXPORT.export_pdf(view_or_sheet, raw_name, self.output_folder, is_color_by_sheet)
-                self.files_exported_for_this_issue.append(final_file)
+                # Only append if export was successful (not None)
+                if final_file is not None:
+                    self.files_exported_for_this_issue.append(final_file)
+                else:
+                    print("Export skipped for: {} - non-exportable views detected".format(preview_obj.format_name))
 
             if extension == ".dwg":
                 is_export_view_on_sheet = self.is_export_view_on_sheet

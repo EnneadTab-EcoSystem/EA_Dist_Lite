@@ -34,7 +34,6 @@ layout:
   - rename_nesting_family
   - duplicate_area_scheme
   - QAQC_AI
-  - keynote_assistant
   - monitor_link_status
   - sheet_tree
   - relationship_tree

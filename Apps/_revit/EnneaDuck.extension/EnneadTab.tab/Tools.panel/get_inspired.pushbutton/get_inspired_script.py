@@ -1,4 +1,4 @@
-"""Open Render Polisher website for enhancing and refining your renders!
+__doc__ = """Open Render Polisher website for enhancing and refining your renders!
 
 This tool opens the Render Polisher web application (https://render-polisher.vercel.app/) that helps you:
 - Polish and enhance render outputs
@@ -10,8 +10,11 @@ Perfect for visualization specialists looking to take their renders to the next 
 """
 
 __title__ = "GetInspired"
-__author__ = "EnneadTab"
 
+
+
+import proDUCKtion # pyright: ignore 
+proDUCKtion.validify()
 from EnneadTab import LOG, ERROR_HANDLE
 import webbrowser
 

@@ -46,6 +46,10 @@ except :
 
     pass
 
+class NonExportableViewsException(Exception):
+    """Custom exception for non-exportable views - used to skip export gracefully."""
+    pass
+
 def print_time(title, time_end, time_start, use_minutes = False):
     output = script.get_output()
     if not use_minutes:
@@ -107,10 +111,77 @@ def export_pdf(view_or_sheet, file_name_naked, output_folder, is_color_by_sheet)
         is_color_by_sheet (bool): Whether to use sheet-specific color settings
 
     Returns:
-        str: Name of exported PDF file
+        str: Name of exported PDF file if successful, None if export was skipped due to non-exportable views
     """
     doc = view_or_sheet.Document
 
+    # Check if views on sheet are exportable before attempting export
+    non_exportable_views = []
+    has_export_issue = False
+    try:
+        # Check if this is a sheet with views on it
+        if view_or_sheet.ViewType.ToString() == "DrawingSheet":
+            view_ids = view_or_sheet.GetAllPlacedViews()
+            for view_id in view_ids:
+                view = doc.GetElement(view_id)
+                if view:
+                    # Check if view can be printed/exported
+                    try:
+                        # Some view types cannot be exported (e.g., certain 3D views, schedules in some contexts)
+                        # Try to access CanBePrinted property if available
+                        if hasattr(view, 'CanBePrinted') and not view.CanBePrinted:
+                            non_exportable_views.append("{} ({})".format(view.Name, view.ViewType.ToString()))
+                            has_export_issue = True
+                    except:
+                        # If CanBePrinted is not available or throws error, check view type
+                        # Some view types are known to be non-exportable
+                        view_type_str = view.ViewType.ToString()
+                        if view_type_str in ["Rendering", "Walkthrough"]:
+                            non_exportable_views.append("{} ({})".format(view.Name, view_type_str))
+                            has_export_issue = True
+                        # Also check for invalid or broken views
+                        try:
+                            if not view.IsValidObject:
+                                non_exportable_views.append("{} ({}) - Invalid view".format(view.Name, view_type_str))
+                                has_export_issue = True
+                        except:
+                            pass
+        # If it's a view (not a sheet), check if the view itself is exportable
+        else:
+            try:
+                if hasattr(view_or_sheet, 'CanBePrinted') and not view_or_sheet.CanBePrinted:
+                    non_exportable_views.append("{} ({})".format(view_or_sheet.Name, view_or_sheet.ViewType.ToString()))
+                    has_export_issue = True
+            except:
+                # Check view type for known non-exportable types
+                view_type_str = view_or_sheet.ViewType.ToString()
+                if view_type_str in ["Rendering", "Walkthrough"]:
+                    non_exportable_views.append("{} ({})".format(view_or_sheet.Name, view_type_str))
+                    has_export_issue = True
+                # Check for invalid views
+                try:
+                    if not view_or_sheet.IsValidObject:
+                        non_exportable_views.append("{} ({}) - Invalid view".format(view_or_sheet.Name, view_type_str))
+                        has_export_issue = True
+                except:
+                    pass
+    except Exception as e:
+        print("Warning: Could not check views for exportability: {}".format(str(e)))
+
+    # If we detected non-exportable views, skip export gracefully
+    if has_export_issue and non_exportable_views:
+        if view_or_sheet.ViewType.ToString() == "DrawingSheet":
+            item_info = "Sheet: {} ({})".format(view_or_sheet.SheetNumber, view_or_sheet.Name)
+        else:
+            item_info = "View: {} ({})".format(view_or_sheet.Name, view_or_sheet.ViewType.ToString())
+        
+        warning_msg = "SKIPPED: {} contains non-exportable views:\n  - {}".format(
+            item_info, 
+            "\n  - ".join(non_exportable_views)
+        )
+        print("PDF Export Warning: {}".format(warning_msg))
+        # Return None to indicate export was skipped - calling code should handle this
+        return None
 
     def override_blue_lines():
         pass
@@ -252,70 +323,38 @@ def export_pdf(view_or_sheet, file_name_naked, output_folder, is_color_by_sheet)
 
         #pdf_options.ExportPaperFormat = DB.ExportPaperFormat.Default
 
-        # Check if views on sheet are exportable before attempting export
-        non_exportable_views = []
-        try:
-            # Check if this is a sheet with views on it
-            if view_or_sheet.ViewType.ToString() == "DrawingSheet":
-                view_ids = view_or_sheet.GetAllPlacedViews()
-                for view_id in view_ids:
-                    view = doc.GetElement(view_id)
-                    if view:
-                        # Check if view can be printed/exported
-                        try:
-                            # Some view types cannot be exported (e.g., certain 3D views, schedules in some contexts)
-                            # Try to access CanBePrinted property if available
-                            if hasattr(view, 'CanBePrinted') and not view.CanBePrinted:
-                                non_exportable_views.append("{} ({})".format(view.Name, view.ViewType.ToString()))
-                        except:
-                            # If CanBePrinted is not available or throws error, check view type
-                            # Some view types are known to be non-exportable
-                            if view.ViewType.ToString() in ["Rendering", "Walkthrough"]:
-                                non_exportable_views.append("{} ({})".format(view.Name, view.ViewType.ToString()))
-            # If it's a view (not a sheet), check if the view itself is exportable
-            else:
-                try:
-                    if hasattr(view_or_sheet, 'CanBePrinted') and not view_or_sheet.CanBePrinted:
-                        non_exportable_views.append("{} ({})".format(view_or_sheet.Name, view_or_sheet.ViewType.ToString()))
-                except:
-                    # Check view type for known non-exportable types
-                    if view_or_sheet.ViewType.ToString() in ["Rendering", "Walkthrough"]:
-                        non_exportable_views.append("{} ({})".format(view_or_sheet.Name, view_or_sheet.ViewType.ToString()))
-        except Exception as e:
-            print("Warning: Could not check views for exportability: {}".format(str(e)))
-
         # Attempt export with error handling
+        # Note: We check for non-exportable views before calling this function,
+        # but we still handle export failures here in case some cases are missed
         try:
             doc.Export(output_folder, sheet_list, pdf_options)
         except Exception as e:
             error_msg = str(e)
-            if "not printable" in error_msg.lower() or "not exportable" in error_msg.lower() or "exportable" in error_msg.lower():
+            # Check for non-exportable view errors
+            if "not printable" in error_msg.lower() or "not exportable" in error_msg.lower() or "exportable" in error_msg.lower() or "some of the views are not" in error_msg.lower():
                 # Build detailed error message
                 if view_or_sheet.ViewType.ToString() == "DrawingSheet":
                     item_info = "Sheet: {} ({})".format(view_or_sheet.SheetNumber, view_or_sheet.Name)
                 else:
                     item_info = "View: {} ({})".format(view_or_sheet.Name, view_or_sheet.ViewType.ToString())
                 
-                if non_exportable_views:
-                    detailed_msg = "{} contains non-exportable views:\n  - {}".format(
-                        item_info, 
-                        "\n  - ".join(non_exportable_views)
-                    )
-                else:
-                    if view_or_sheet.ViewType.ToString() == "DrawingSheet":
-                        detailed_msg = "{} contains views that cannot be exported. This may be due to:\n  - 3D views with certain display modes\n  - Views with broken references\n  - Views that are not printable".format(item_info)
-                    else:
-                        detailed_msg = "{} cannot be exported. This may be due to:\n  - View type not supported for export\n  - View with broken references\n  - View that is not printable".format(item_info)
+                detailed_msg = "SKIPPED: {} cannot be exported. This may be due to:\n  - Views with certain display modes\n  - Views with broken references\n  - Views that are not printable\n\nOriginal error: {}".format(item_info, error_msg)
                 
-                print("PDF Export Error: {}".format(detailed_msg))
-                raise Exception("Cannot export PDF: {}\n\n{}".format(error_msg, detailed_msg))
+                print("PDF Export Warning: {}".format(detailed_msg))
+                # Raise a custom exception that we'll catch in the outer function
+                raise NonExportableViewsException(detailed_msg)
             else:
-                # Re-raise other exceptions
+                # Re-raise other exceptions as they are unexpected
                 raise
         #print "$$$ end method 2"
 
-
-    pdf_method_2()
+    # Call pdf_method_2 and handle exceptions
+    try:
+        pdf_method_2()
+    except NonExportableViewsException:
+        # Export was skipped due to non-exportable views - return None gracefully
+        return None
+    
     return file_name_naked + ".pdf"
 
 
