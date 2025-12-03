@@ -48,10 +48,22 @@ def register_alias_set():
                     if not alias:
                         continue
 
-                    if rs.IsAlias(alias) and ENVIRONMENT.RHINO_FOLDER_KEYNAME not in exisitng_alias:
-                        #Skip setting alias for {} due to overlapping names, this is usually becasue user has setup their personal alias that happen to be same name as plugin ones
-                        continue
-
+                    # Determine the actual alias name that will be registered
+                    if alias == alias.upper():
+                        actual_alias = alias
+                    else:
+                        actual_alias = ENVIRONMENT.PLUGIN_ABBR + "_" + alias
+                    
+                    # Check if alias already exists
+                    if rs.IsAlias(actual_alias):
+                        existing_macro = rs.AliasMacro(actual_alias)
+                        # If it's already pointing to this script, skip
+                        if full_path in existing_macro:
+                            continue
+                        # If user has a personal alias (not EA_ prefixed) with same name, skip to avoid overwriting
+                        if ENVIRONMENT.PLUGIN_ABBR + "_" not in actual_alias:
+                            continue
+                        # For EA_ aliases, we'll update them if they point to a different script
 
                     script_content = '! _-RunPythonScript "{}"'.format(full_path)
                     if os.path.exists(full_path):
