@@ -1,4 +1,4 @@
-__doc__ = "Remove unplaced rooms and areas. Identify unbounded or redundant elements for review."
+__doc__ = "Remove unplaced rooms and areas from the project. Uses REVIT_SPATIAL_ELEMENT module to detect 'Not Placed' elements (Location is None). Also identifies unbounded or redundant elements (Area = 0) for review. Processes rooms by selected phase and areas across all phases."
 __title__ = "Remove Not Placed\nArea and Rooms"
 __tip__ = True
 __is_popular__ = True
@@ -7,7 +7,7 @@ from Autodesk.Revit import DB # pyright: ignore
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
-from EnneadTab.REVIT import REVIT_APPLICATION
+from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_SPATIAL_ELEMENT
 from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION
 uidoc = REVIT_APPLICATION.get_uidoc()
 doc = REVIT_APPLICATION.get_doc()
@@ -116,24 +116,36 @@ def main():
     3. Delete unplaced rooms in the selected phase
     4. Identify non-enclosed or redundant rooms
     5. Identify non-enclosed or redundant areas
-    6. Check for empty area departments
+    6. Display summary table
     """
     phase = select_phase()
     if not phase:
         return
 
-    delete_not_placed_areas()
-    delete_not_placed_rooms(phase)
-    find_non_close_or_redundent_room(phase)
-    find_non_close_or_redundent_area()
+    # Collect statistics from all operations
+    areas_deleted, negative_areas = delete_not_placed_areas()
+    rooms_deleted = delete_not_placed_rooms(phase)
+    non_enclosed_rooms = find_non_close_or_redundent_room(phase)
+    non_enclosed_areas = find_non_close_or_redundent_area()
     find_empty_area_department()
+
+    # Display summary table
+    display_summary_table(phase, areas_deleted, rooms_deleted, negative_areas, 
+                         non_enclosed_rooms, non_enclosed_areas)
 
     print("\n\nTool finished")
 
 def delete_not_placed_areas():
-    """Remove areas that have no location and zero area.
+    """Remove areas that have no location.
+    
+    Uses REVIT_SPATIAL_ELEMENT.get_element_status() to detect "Not Placed" areas.
+    An area is considered "Not Placed" if it has no Location (Location == None),
+    regardless of its Area value. This matches Revit's definition of unplaced areas.
     
     Also identifies and reports areas with negative area values without deleting them.
+    
+    Returns:
+        tuple: (deleted_count, negative_count) - Counts of deleted areas and negative areas found
     
     Results:
         - Removes unplaced areas from the project
@@ -146,10 +158,10 @@ def delete_not_placed_areas():
     count = 0
     nega_count = 0
     for area in all_areas:
-        if area.Location == None and area.Area == 0:
+        if REVIT_SPATIAL_ELEMENT.get_element_status(area) == "Not Placed":
             doc.Delete(area.Id)
-            continue
             count += 1
+            continue
 
         if area.Area < 0:
             area_scheme_name = area.AreaScheme.Name if area.AreaScheme else "N/A"
@@ -167,13 +179,22 @@ def delete_not_placed_areas():
 
     if nega_count > 0:
         NOTIFICATION.messenger(main_text = "{} negative area in projects".format(nega_count))
+    
+    return (count, nega_count)
 
 
 def delete_not_placed_rooms(phase):
-    """Remove rooms in the specified phase that have no location and zero area.
+    """Remove rooms in the specified phase that have no location.
+    
+    Uses REVIT_SPATIAL_ELEMENT.get_element_status() to detect "Not Placed" rooms.
+    A room is considered "Not Placed" if it has no Location (Location == None),
+    regardless of its Area value. This matches Revit's definition of unplaced rooms.
     
     Args:
         phase (DB.Phase): The phase to process rooms in
+        
+    Returns:
+        int: Count of deleted rooms
         
     Results:
         - Removes unplaced rooms from the project
@@ -184,7 +205,7 @@ def delete_not_placed_rooms(phase):
     t.Start()
     count = 0
     for room in all_rooms:
-        if room.Location == None and room.Area == 0:
+        if REVIT_SPATIAL_ELEMENT.get_element_status(room) == "Not Placed":
             doc.Delete(room.Id)
             count += 1
     t.Commit()
@@ -193,6 +214,8 @@ def delete_not_placed_rooms(phase):
         output.insert_divider()
         print("*"*100)
         NOTIFICATION.messenger(main_text = "{} not placed rooms are removed from project.".format(count))
+    
+    return count
 
 
 def find_non_close_or_redundent_room(phase):
@@ -202,6 +225,9 @@ def find_non_close_or_redundent_room(phase):
     
     Args:
         phase (DB.Phase): The phase to inspect rooms in
+        
+    Returns:
+        int: Count of non-enclosed/redundant rooms found
         
     Results:
         - Reports count of non-enclosed/redundant rooms
@@ -230,6 +256,8 @@ def find_non_close_or_redundent_room(phase):
                                                                                                                             output.linkify(room.Id, title = "Select Room")))
     else:
         NOTIFICATION.messenger(main_text = "no non-enclose or redundent Room found.")
+    
+    return count
 
 
 def find_non_close_or_redundent_area():
@@ -237,6 +265,9 @@ def find_non_close_or_redundent_area():
     
     These areas are identified by having zero area but still existing in the model.
     
+    Returns:
+        int: Count of non-enclosed/redundant areas found
+        
     Results:
         - Reports count of non-enclosed/redundant areas
         - Lists detailed information for manual inspection
@@ -265,6 +296,8 @@ def find_non_close_or_redundent_area():
                                                                                                                                             output.linkify(area.Id, title = "Select Area")))
     else:
         NOTIFICATION.messenger(main_text = "no non-enclose or redundent area found.")
+    
+    return count
 
 
 def find_empty_area_department():
@@ -293,6 +326,51 @@ def find_empty_area_department():
         NOTIFICATION.messenger(main_text = "{} area has empty area department value in gross buiilding area scheme. See output window for detail".format(count), icon = "warning")
     else:
         NOTIFICATION.messenger(main_text = "no empty area department value found")
+
+
+def display_summary_table(phase, areas_deleted, rooms_deleted, negative_areas, 
+                         non_enclosed_rooms, non_enclosed_areas):
+    """Display a formatted summary table of all operations.
+    
+    Args:
+        phase (DB.Phase): The phase that was processed
+        areas_deleted (int): Number of areas deleted
+        rooms_deleted (int): Number of rooms deleted
+        negative_areas (int): Number of negative areas found
+        non_enclosed_rooms (int): Number of non-enclosed/redundant rooms found
+        non_enclosed_areas (int): Number of non-enclosed/redundant areas found
+    """
+    output.insert_divider()
+    output.print_md("## 📊 Summary Report")
+    output.print_md("**Phase Processed:** {}".format(phase.Name))
+    
+    # Prepare table data
+    table_data = [
+        ["Areas Deleted (Not Placed)", areas_deleted, "✅ Removed" if areas_deleted > 0 else "✅ None"],
+        ["Rooms Deleted (Not Placed)", rooms_deleted, "✅ Removed" if rooms_deleted > 0 else "✅ None"],
+        ["Negative Areas Found", negative_areas, "⚠️ Review" if negative_areas > 0 else "✅ None"],
+        ["Non-Enclosed/Redundant Rooms", non_enclosed_rooms, "⚠️ Review" if non_enclosed_rooms > 0 else "✅ None"],
+        ["Non-Enclosed/Redundant Areas", non_enclosed_areas, "⚠️ Review" if non_enclosed_areas > 0 else "✅ None"],
+    ]
+    
+    # Calculate totals
+    total_deleted = areas_deleted + rooms_deleted
+    total_issues = negative_areas + non_enclosed_rooms + non_enclosed_areas
+    
+    # Add summary row
+    table_data.append([
+        "**TOTAL**",
+        "**{}**".format(total_deleted + total_issues),
+        "**{} deleted, {} issues**".format(total_deleted, total_issues)
+    ])
+    
+    output.print_table(
+        table_data=table_data,
+        title="Remove Not Placed Area and Rooms - Summary",
+        columns=["Operation", "Count", "Status"],
+        formats=['', '{}', ''],
+        last_line_style='font-weight:bold;font-size:1.1em;background-color:#f0f0f0;'
+    )
 
 
 if __name__ == "__main__":
