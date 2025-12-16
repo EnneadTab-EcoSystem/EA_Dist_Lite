@@ -1,6 +1,6 @@
-__doc__ = """Open Render Polisher website for enhancing and refining your renders!
+__doc__ = """Open e.AI rendering website for enhancing and refining your renders!
 
-This tool opens the Render Polisher web application (https://render-polisher.vercel.app/) that helps you:
+This tool opens the e.AI web application (https://enneadtab.com/rendering/home) that helps you:
 - Polish and enhance render outputs
 - Apply post-processing effects
 - Refine render quality and appearance
@@ -21,7 +21,7 @@ import webbrowser
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def get_inspired():
-    url = "https://render-polisher.vercel.app/"
+    url = "https://enneadtab.com/rendering/home"
     webbrowser.open(url)
     print("Opening {} in browser...".format(url))
 
