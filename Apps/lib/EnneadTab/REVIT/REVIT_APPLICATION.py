@@ -345,6 +345,27 @@ def run_picked_command():
 # ------------------------------------------------------------------------------
 
 
+def _safe_region_attr(attr_name, fallback_literal):
+    """Safely read a CloudRegion* attribute from ModelPathUtils.
+
+    Older Revit builds might not define all region constants. To keep this
+    module importable across versions, we silently fall back to a simple
+    string literal when the attribute is missing.
+    """
+    try:
+        return getattr(DB.ModelPathUtils, attr_name)
+    except Exception:
+        # Silent fallback for backwards compatibility
+        return fallback_literal
+
+
+# Canonical literals used throughout this module. These will always be defined,
+# even if the corresponding Autodesk constants are missing on a given Revit.
+_CLOUD_REGION_US = _safe_region_attr("CloudRegionUS", "US")
+_CLOUD_REGION_EMEA = _safe_region_attr("CloudRegionEMEA", "EMEA")
+_CLOUD_REGION_APAC = _safe_region_attr("CloudRegionAPAC", "APAC")
+
+
 def _collect_available_cloud_regions():
     """Return a list of all CloudRegion* static strings supported by this Revit.
 
@@ -359,20 +380,21 @@ def _collect_available_cloud_regions():
             continue
     # Ensure deterministic order (US first, then the rest alphabetically)
     regions.sort()
-    if DB.ModelPathUtils.CloudRegionUS in regions:
-        regions.remove(DB.ModelPathUtils.CloudRegionUS)
-        regions.insert(0, DB.ModelPathUtils.CloudRegionUS)
+    if _CLOUD_REGION_US in regions:
+        regions.remove(_CLOUD_REGION_US)
+        regions.insert(0, _CLOUD_REGION_US)
     return regions
 
 
 _REGION_LITERALS = {
-    "US": DB.ModelPathUtils.CloudRegionUS,
-    "EMEA": DB.ModelPathUtils.CloudRegionEMEA
+    "US": _CLOUD_REGION_US,
+    "EMEA": _CLOUD_REGION_EMEA
 }
 
-# Dynamically add APAC if available
+# Dynamically add APAC if available on this Revit; otherwise the
+# _CLOUD_REGION_APAC fallback still works if someone explicitly asks for APAC.
 if hasattr(DB.ModelPathUtils, "CloudRegionAPAC"):
-    _REGION_LITERALS["APAC"] = getattr(DB.ModelPathUtils, "CloudRegionAPAC")
+    _REGION_LITERALS["APAC"] = _CLOUD_REGION_APAC
 
 
 def convert_region(region_text):
@@ -388,7 +410,7 @@ def convert_region(region_text):
     """
     if not region_text:
         # Default to US
-        return DB.ModelPathUtils.CloudRegionUS
+        return _CLOUD_REGION_US
 
     upper = str(region_text).strip().upper()
     return _REGION_LITERALS.get(upper, region_text)
@@ -400,9 +422,9 @@ def get_known_regions():
     regions = list(set(_collect_available_cloud_regions()) | set(_REGION_LITERALS.values()))
     # Keep ordering stable – US first, then alpha
     regions.sort()
-    if DB.ModelPathUtils.CloudRegionUS in regions:
-        regions.remove(DB.ModelPathUtils.CloudRegionUS)
-        regions.insert(0, DB.ModelPathUtils.CloudRegionUS)
+    if _CLOUD_REGION_US in regions:
+        regions.remove(_CLOUD_REGION_US)
+        regions.insert(0, _CLOUD_REGION_US)
     return regions
 
 
