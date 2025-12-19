@@ -8,8 +8,7 @@ layout:
   - Worksets
   - Family RePath
   - Project Starter
-  - Excel2ColorScheme
-  - export_color_scheme
+  - ColorScheme
   - export_filled_region_types
   - ">>>"
   - List_Legend and Schedule
@@ -26,7 +25,6 @@ layout:
   - check_phase_mapping
   - check_view_link
   - smart_egress_path
-  - color_scheme_to_filled_region_types
   - repath_dwg_drive_letter
   - merge_ost
   - revision_cloud_color_manager
@@ -42,4 +40,3 @@ layout:
   - visulize_door_room_calc_pt
   - change_family_category
   - AutoExporter
-  - transfer_color_scheme
