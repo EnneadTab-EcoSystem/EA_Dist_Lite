@@ -1,6 +1,6 @@
 {
-  "config_file": "AutoExportConfig_EA_UCSC_IIRB_A_Building.json",
-  "config_path": "C:\\Users\\szhang\\github\\EnneadTab-OS\\Apps\\_revit\\EnneaDuck.extension\\EnneadTab.tab\\ACE.panel\\AutoExporter.pushbutton\\configs\\AutoExportConfig_EA_UCSC_IIRB_A_Building.json",
-  "job_id": "20251218_195734_2001.00_UCSC_Thimann_IIRB",
-  "started_at": "2025-12-18 19:57:34"
+  "config_file": "AutoExportConfig_EA_UCSC_IIRB_A_Building_Alternate.json",
+  "config_path": "C:\\Users\\szhang\\github\\EnneadTab-OS\\Apps\\_revit\\EnneaDuck.extension\\EnneadTab.tab\\ACE.panel\\AutoExporter.pushbutton\\configs\\AutoExportConfig_EA_UCSC_IIRB_A_Building_Alternate.json",
+  "job_id": "20251218_203250_2001.00_UCSC_Thimann_IIRB",
+  "started_at": "2025-12-18 20:32:50"
 }
