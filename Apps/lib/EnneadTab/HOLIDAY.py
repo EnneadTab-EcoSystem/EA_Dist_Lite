@@ -18,6 +18,7 @@ import SOUND
 import ENVIRONMENT
 import NOTIFICATION
 import OUTPUT
+import DATA_FILE
 from __init__ import dream
 
 # Python 2/3 compatibility
@@ -25,6 +26,77 @@ try:
     basestring  # Python 2 # pyright: ignore
 except NameError:
     basestring = str  # Python 3
+
+
+def _get_holiday_name(greeting_func):
+    """Map holiday greeting function to a unique holiday identifier string.
+    
+    Args:
+        greeting_func: The greeting function object
+        
+    Returns:
+        str: Holiday identifier string (e.g., "christmas", "chinese_new_year")
+    """
+    # Map function names to holiday identifiers (works with forward references)
+    # Using __name__ attribute for compatibility with IronPython 2.7
+    name_map = {
+        "greeting_chinese_new_year": "chinese_new_year",
+        "greeting_mid_moon": "mid_autumn",
+        "greeting_xmas": "christmas",
+        "greeting_pi": "pi_day",
+        "greeting_april_fools": "april_fools",
+        "greeting_may_force": "may_force",
+        "greeting_halloween": "halloween"
+    }
+    
+    func_name = getattr(greeting_func, "__name__", "unknown")
+    return name_map.get(func_name, "unknown")
+
+
+def _was_greeting_shown_this_year(holiday_name):
+    """Check if a holiday greeting was already shown this year.
+    
+    Args:
+        holiday_name (str): Holiday identifier string
+        
+    Returns:
+        bool: True if greeting was shown this year, False otherwise
+    """
+    try:
+        tracking_data = DATA_FILE.get_data("holiday_greeting_tracking", is_local=True)
+        if not isinstance(tracking_data, dict):
+            return False
+        
+        current_year = datetime.datetime.now().year
+        stored_year = tracking_data.get(holiday_name)
+        
+        if stored_year is None:
+            return False
+        
+        return stored_year == current_year
+    except Exception:
+        return False
+
+
+def _mark_greeting_shown(holiday_name):
+    """Mark a holiday greeting as shown for the current year.
+    
+    Args:
+        holiday_name (str): Holiday identifier string
+    """
+    try:
+        tracking_data = DATA_FILE.get_data("holiday_greeting_tracking", is_local=True)
+        if not isinstance(tracking_data, dict):
+            tracking_data = dict()
+        
+        current_year = datetime.datetime.now().year
+        tracking_data[holiday_name] = current_year
+        
+        DATA_FILE.set_data(tracking_data, "holiday_greeting_tracking", is_local=True)
+    except Exception:
+        # Silently fail if tracking cannot be saved
+        pass
+
 
 class HolidayDateChecker:
     """Utility class to check holiday dates for any year."""
@@ -214,7 +286,10 @@ def festival_greeting():
     # Check each holiday and display greeting if date is valid
     for (start, end), greeting_func in holiday_checks:
         if start and checker.is_valid_date(start, end):
-            greeting_func()
+            holiday_name = _get_holiday_name(greeting_func)
+            if not _was_greeting_shown_this_year(holiday_name):
+                greeting_func()
+                _mark_greeting_shown(holiday_name)
             return
 
     # ramdon print dream

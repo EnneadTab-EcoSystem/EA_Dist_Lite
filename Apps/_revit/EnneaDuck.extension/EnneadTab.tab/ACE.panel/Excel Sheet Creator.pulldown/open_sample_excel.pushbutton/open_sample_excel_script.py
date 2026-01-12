@@ -11,12 +11,13 @@ __context__ = "zero-doc"
 __tip__ = True
 
 from pyrevit import script #
+import os
 
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 from EnneadTab.REVIT import REVIT_APPLICATION
-from EnneadTab import ERROR_HANDLE, EXE, FOLDER, ENVIRONMENT, LOG
+from EnneadTab import ERROR_HANDLE, EXE, FOLDER, LOG
 uidoc = REVIT_APPLICATION.get_uidoc()
 doc = REVIT_APPLICATION.get_doc()
 
@@ -26,9 +27,8 @@ doc = REVIT_APPLICATION.get_doc()
 @ERROR_HANDLE.try_catch_error()
 def open_sample_excel():
     
-    excel_path = "{}\EnneadTab.tab\ACE.panel\Project Starter.pushbutton\Make Sheet With Excel.xls".format(ENVIRONMENT.REVIT_PRIMARY_EXTENSION)
-    copy = FOLDER.copy_file_to_local_dump_folder(excel_path,
-                                                "Sample Sheet Creation Data.xls")
+    excel_path = os.path.join(os.path.dirname(__file__), "Sample Sheet Creation Data.xlsx")
+    copy = FOLDER.copy_file_to_local_dump_folder(excel_path)
     EXE.try_open_app(copy)
 
 

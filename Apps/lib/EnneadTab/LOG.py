@@ -40,9 +40,18 @@ LOG_FILE_NAME = "log_{}".format(USER.USER_NAME)
 # Google Form field IDs for usage logging
 USAGE_LOG_FORM_FIELDS = {
     'entry.333183173': 'environment',     # Environment field
-    'entry.1318607272': 'function_name',  # FunctionName field  
+    'entry.1318607272': 'function_name',  # FunctionName field
     'entry.1785264643': 'result',         # Result field
 }
+
+# Optional Google Form field ID for username.
+# To enable username logging to Google Form:
+#   1. Add a new "Short answer" question to your usage Google Form (e.g. "Username").
+#   2. Get the entry ID (looks like 'entry.123456789') from a pre-filled URL.
+#   3. Set USERNAME_FIELD_ID below to that value.
+#
+# If this stays as None, username will NOT be sent to Google Form.
+USERNAME_FIELD_ID = 'entry.1927078224'  # Username field ID from Google Form
 
 
 def _build_usage_form_data(environment, function_name, result):
@@ -53,14 +62,27 @@ def _build_usage_form_data(environment, function_name, result):
         function_name (str): The name of the function that was executed
         result (str): The result of the function execution
         
+    Note:
+        Username is added automatically if USERNAME_FIELD_ID is configured.
+        
     Returns:
         dict: Form data dictionary with field IDs and values
     """
-    return {
+    form_data = {
         'entry.333183173': environment,     # Environment field
         'entry.1318607272': function_name,  # FunctionName field  
         'entry.1785264643': result,         # Result field
     }
+
+    # Optionally include username if a field ID has been configured
+    try:
+        if USERNAME_FIELD_ID:
+            form_data[USERNAME_FIELD_ID] = USER.USER_NAME
+    except Exception:
+        # Never let username resolution break logging
+        pass
+
+    return form_data
 
 
 @contextmanager

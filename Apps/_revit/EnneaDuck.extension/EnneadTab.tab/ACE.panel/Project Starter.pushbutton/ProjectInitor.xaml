@@ -203,52 +203,8 @@
                     </TabItem>
                     <TabItem Header="Create Sheets From Excel"  Background="{x:Null}">
                         <StackPanel>
-                            <TextBlock Text="Fill the sample excel about all the new sheets to add. The data will be read from the following header. Only line marked with 'YES' will be accorded so you can use other row for comments and notes. Please also note if Chinese translation is expected, please save the excel in correct extension." 
-                                       TextWrapping="Wrap" MaxWidth="330"/>
-                            
-                            <Separator/>
-
-                            <Grid Margin="20" Width="300">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <Grid.RowDefinitions>
-                                    <RowDefinition/>
-                                    <RowDefinition/>
-                                    <RowDefinition/>
-                                    <RowDefinition/>
-                                    <RowDefinition/>
-                                    <RowDefinition/>
-
-                                </Grid.RowDefinitions>
-                                <TextBlock Text="Parameter:" Grid.Column="0" Grid.Row="0" FontWeight="Bold" />
-                                <TextBlock Text="Column Header Letter In Excel:" TextWrapping="Wrap" Grid.Column="1" Grid.Row="0" FontWeight="Bold"/>
-                                
-                                <TextBlock Text="Sheet Group Prefix:" Grid.Column="0" Grid.Row="1" Visibility="Hidden"/>
-                                <TextBox  x:Name ="excel_header_sheet_group_prefix" Grid.Column="1" Grid.Row="1" Text="B" HorizontalContentAlignment="Center" Visibility="Hidden"/>
-                                
-                                
-                                <TextBlock Text="Sheet Group:" Grid.Column="0" Grid.Row="2"/>
-                                <TextBox  x:Name ="excel_header_sheet_group_name" Grid.Column="1" Grid.Row="2" Text="C" HorizontalContentAlignment="Center"/>
-                                <TextBlock Text="Sheet Number:" Grid.Column="0" Grid.Row="3"/>
-                                <TextBox x:Name ="excel_header_sheet_number" Grid.Column="1" Grid.Row="3" Text="D" HorizontalContentAlignment="Center"/>
-                                <TextBlock Text="Sheet Name:" Grid.Column="0" Grid.Row="4"/>
-                                <TextBox x:Name ="excel_header_sheet_name" Grid.Column="1" Grid.Row="4" Text="F" HorizontalContentAlignment="Center"/>
-                                <TextBlock Text="Sheet Translation:" Grid.Column="0" Grid.Row="5"/>
-                                <TextBox x:Name ="excel_header_translation" Grid.Column="1" Grid.Row="5" Text="G" HorizontalContentAlignment="Center"/>
-
-
-
-                            </Grid>
-
-                            <Separator/>
-
-
-                            <Button Content="Create Sheets From Excel" Click="create_sheet_from_excel_click" HorizontalAlignment="Center"/>
-                            <Separator/>
-                            <TextBlock Text="If you are not sure what format to follow, use below sample excel to prepare your sheet data.." TextWrapping="Wrap" HorizontalAlignment="Center"/>
-                            <Button Content="Open Sample Excel" Click="open_sample_excel_click" HorizontalAlignment="Center"/>
+                            <TextBlock Text="Please use the dedicated 'Create Sheets By Excel' button from the 'Excel Sheet Creator' pulldown in the ACE panel." 
+                                       TextWrapping="Wrap" MaxWidth="400" Margin="20" HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
                         </StackPanel>
 

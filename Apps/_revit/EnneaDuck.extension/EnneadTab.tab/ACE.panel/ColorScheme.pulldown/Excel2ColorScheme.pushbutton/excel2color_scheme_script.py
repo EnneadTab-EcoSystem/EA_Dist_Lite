@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 __doc__ = "Update a Revit color scheme from an Excel file where each row defines a value and its color."
-__title__ = "Excel2\nColorScheme"
+__title__ = "Excel2ColorScheme"
 
 
 import proDUCKtion  # pyright: ignore

@@ -7,16 +7,14 @@
 layout:
   - Worksets
   - Family RePath
-  - Project Starter
   - ColorScheme
+  - Family
   - export_filled_region_types
   - ">>>"
   - List_Legend and Schedule
   - Excel Sheet Creator
   - CollectTextures
-  - Family
   - inspect_local_graphic_override
-  - list_family
   - transfer_parameter_data
   - update_DOB_page
   - check_formula
@@ -28,7 +26,6 @@ layout:
   - repath_dwg_drive_letter
   - merge_ost
   - revision_cloud_color_manager
-  - batch_fix_family_name
   - wall_type_diagram
   - rename_nesting_family
   - duplicate_area_scheme
@@ -38,5 +35,5 @@ layout:
   - relationship_tree
   - property_line_from_excel
   - visulize_door_room_calc_pt
-  - change_family_category
   - AutoExporter
+  - Project Starter

@@ -14,11 +14,22 @@ from pyrevit import script #
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 from EnneadTab.REVIT import REVIT_APPLICATION
-from EnneadTab import NOTIFICATION, ERROR_HANDLE, EXCEL, LOG
+from EnneadTab import NOTIFICATION, ERROR_HANDLE, LOG
 from Autodesk.Revit import DB # pyright: ignore 
 # from Autodesk.Revit import UI # pyright: ignore
 uidoc = REVIT_APPLICATION.get_uidoc()
 doc = REVIT_APPLICATION.get_doc()
+
+# Import helper functions
+from excel_sheet_helper import (
+    read_excel_data,
+    find_filter_column,
+    find_sheet_number_column,
+    parse_excel_data,
+    filter_data_by_yes,
+    extract_sheet_numbers,
+    create_sheet_from_row_data
+)
         
 
 
@@ -33,6 +44,8 @@ def is_new_sheet_number_ok(new_sheet_numbers):
     if intersection:
         print ("The following sheet numbers are already in use: {}".format(intersection))
 
+        NOTIFICATION.messenger(main_text="You have {} sheet numbers that are already in use. Please check the sheet numbers and try again.".format(len(intersection)))
+
         return False
     return True
     
@@ -40,56 +53,64 @@ def is_new_sheet_number_ok(new_sheet_numbers):
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def excel_sheet_creator():
-    excel_path = forms.pick_excel_file(title="Where is the excel that has the new sheet data?")   
-    # this is the sample excel for reference. 
-    # excel_path = r"J:\2306\2_Record\2023-07-31 SD Submission\SD Sheetlist_REV00.xlsx"
+    """Main orchestrator function for creating sheets from Excel data."""
+    # Configuration
+    HEADER_ROW = 4  # Headers are in row 4 (1-based)
+    WORKSHEET_NAME = "SheetList"
     
-    # Check if user cancelled the file picker
+    # Step 1: Get Excel file path
+    excel_path = forms.pick_excel_file(title="Where is the excel that has the new sheet data?")   
+    
     if not excel_path:
         print("No Excel file selected. Operation cancelled.")
         return
     
-    data = EXCEL.read_data_from_excel(excel_path, worksheet = "Sheet1")
-    if not data:
-        NOTIFICATION.messenger(main_text = "Cannot open this excel")
+    # Step 2: Read and parse Excel data
+    raw_data, header_map = read_excel_data(excel_path, WORKSHEET_NAME, HEADER_ROW)
+    if not raw_data or not header_map:
         return
-    data = [x for x in data if x[0] == "YES"]
-    # print (data)
-    new_sheet_numbers = [x[3] for x in data]
+    
+    # Step 3: Find filter column (for "YES" values)
+    filter_column = find_filter_column(header_map)
+    
+    # Step 4: Find Sheet Number column
+    sheet_number_col, sheet_number_header = find_sheet_number_column(header_map)
+    if sheet_number_col is None:
+        NOTIFICATION.messenger(main_text="Cannot find 'Sheet Number' column in excel headers.")
+        return
+    
+    # Step 5: Parse Excel data into structured format
+    parsed_data = parse_excel_data(raw_data, sheet_number_header, HEADER_ROW)
+    
+    # Step 6: Filter data to only include rows marked with "YES"
+    filtered_data = filter_data_by_yes(raw_data, parsed_data, filter_column, sheet_number_col, HEADER_ROW)
+    if not filtered_data:
+        NOTIFICATION.messenger(main_text="No rows found with 'YES' in filter column, or no valid sheet numbers found.")
+        return
+    
+    # Step 7: Extract sheet numbers for validation
+    new_sheet_numbers = extract_sheet_numbers(filtered_data, sheet_number_header)
     if not is_new_sheet_number_ok(new_sheet_numbers):
         return
 
-    titleblock_type_id = forms.select_titleblocks(title = "Pick the titleblock that will be used for the new sheets.")
+    # Step 8: Get titleblock selection
+    titleblock_type_id = forms.select_titleblocks(title="Pick the titleblock that will be used for the new sheets.")
     if not titleblock_type_id:
         return
     
-    # print titleblock_type_id
+    # Step 9: Create sheets in transaction
     t = DB.Transaction(doc, __title__)
     t.Start()
-    for creation_data in data:
-        print (creation_data)
-        sheet = DB.ViewSheet.Create(doc, titleblock_type_id)
-
-        # check if the sheet number is already in use
-        if creation_data[3].strip() == "" or creation_data[3] == None:
-            print ("Sheet number is empty")
-            continue
-        else:
-            sheet_number = creation_data[3]
-
-        if creation_data[5].strip() == "" or creation_data[5] == None:
-            sheet_name = "Unnamed Sheet"
-        else:
-            sheet_name = creation_data[5]
-
-        sheet.SheetNumber = sheet_number
-        sheet.LookupParameter("Sheet Name").Set(sheet_name)
-
-        try:
-            sheet.LookupParameter("Sheet_$Group").Set(creation_data[2])
-        except:
-            pass
-    t.Commit()
+    try:
+        for row_data in filtered_data:
+            print(row_data)
+            sheet = create_sheet_from_row_data(doc, row_data, titleblock_type_id, sheet_number_header)
+            if sheet is None:
+                continue
+        t.Commit()
+    except Exception as e:
+        t.RollBack()
+        raise e
 
 
 ################## main code below #####################

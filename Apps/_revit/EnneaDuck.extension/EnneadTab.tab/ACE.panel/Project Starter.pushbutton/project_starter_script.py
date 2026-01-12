@@ -22,7 +22,7 @@ from pyrevit import script #
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 from EnneadTab.REVIT import REVIT_APPLICATION
-from EnneadTab import ENVIRONMENT, USER, NOTIFICATION,  ERROR_HANDLE, EXCEL, FOLDER, IMAGE, LOG
+from EnneadTab import ENVIRONMENT, USER, NOTIFICATION,  ERROR_HANDLE, FOLDER, IMAGE, LOG
 import traceback
 from Autodesk.Revit import DB # pyright: ignore 
 import random
@@ -94,8 +94,7 @@ class ProjectInitor(WPFWindow):
 
     def pre_actions(self):
 
-        self.func_list = [("module_func_excel_sheet","excel_sheet_creator"),
-                     ("module_func_create_worksets","create_worksets"),
+        self.func_list = [("module_func_create_worksets","create_worksets"),
                      ("module_func_workshare","enable_workshare"),
                      ("module_func_proj_info","set_proj_info"),
                      ("module_func_create_levels","create_levels")]
@@ -204,42 +203,7 @@ class ProjectInitor(WPFWindow):
 
     @ERROR_HANDLE.try_catch_error()
     def create_sheet_from_excel_click(self, sender, e):
-        # chaneg this to a path picker UI, also allow samepl excel to open
-        # excel_path = forms.pick_excel_file(title="Where is the excel thjat has the new sheet data?")   
-        excel_path = forms.pick_file(title="Where is the excel that has the new sheet data?",
-                                     files_filter='Excel Workbook (*.xlsx)|*.xlsx|'
-                                                '(If contain Chinese)Excel 97-2003 Workbook|*.xls')   
-
-        if not excel_path:
-            return
-        # this is the sample excel for reference. 
-        # excel_path = r"J:\2306\2_Record\2023-07-31 SD Submission\SD Sheetlist_REV00.xlsx"
-        
-        
-        #  change this to a dropdown menu
-        all_worksheet_names = EXCEL.get_all_worksheets(excel_path)
-        worksheet_name = forms.SelectFromList.show(all_worksheet_names, multiselect = False, title = "Which worksheet contains the new sheet data?")
-        if not worksheet_name:
-            return
-        
-        def letter_to_index(letter):
-            return ord(letter.lower()) - ord('a')
-        
- 
-        
-        data_map = {"sheet_number": letter_to_index(self.excel_header_sheet_number.Text),
-                    "sheet_name": letter_to_index(self.excel_header_sheet_name.Text),
-                    "translation":letter_to_index(self.excel_header_translation.Text),
-                    "sheet_group": letter_to_index(self.excel_header_sheet_group_name.Text)}
-        
-        handler, ext_event = self.get_handler_event_by_keyword("excel")
-        handler.kwargs = self.doc, excel_path, worksheet_name , data_map
-        ext_event.Raise()
-        res = handler.OUT
-        if res:
-            self.debug_textbox.Text = res
-        else:
-            self.debug_textbox.Text = "Debug Output:"
+        NOTIFICATION.messenger(main_text="This functionality has been moved to the dedicated 'Create Sheets By Excel' button. Please use that button from the Excel Sheet Creator pulldown in the ACE panel.")
 
     @ERROR_HANDLE.try_catch_error()
     def open_sample_excel_click(self, sender, e):
