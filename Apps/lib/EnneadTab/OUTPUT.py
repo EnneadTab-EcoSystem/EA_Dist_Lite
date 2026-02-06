@@ -595,10 +595,12 @@ class Output:
             # Default case: full width with maintained aspect ratio
             return "<img src='file://{}' style='width: 100%; height: auto;'>".format(input)
             
-        # Handle hyperlinks
-
-        if isinstance(input, str) and "http" in input:
-            return "<a href='{}' target='_blank' class='custom_link'>{}</a>".format(input, input)
+        # Handle hyperlinks (http/https and file://)
+        if isinstance(input, str):
+            if "http" in input:
+                return "<a href='{}' target='_blank' class='custom_link'>{}</a>".format(input, input)
+            if input.startswith("file://"):
+                return "<a href='{}' target='_blank' class='custom_link'>Open file</a>".format(input)
             
         return str(input).replace("\n", "<br>")
 
