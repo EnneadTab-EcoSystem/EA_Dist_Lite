@@ -145,7 +145,7 @@ APPS = [
         "shortcut_name": "AboutMe_ComputerInfo_Silent",
         "description": "AboutMe_ComputerInfo_Silent",
         "task_type": TaskType.STARTUP,
-        "active": True
+        "active": False
     }
 ]
 
@@ -407,6 +407,7 @@ def purge_powershell_folder():
 
 
 def about_me():
+    return
     try:
         EXE.try_open_app("AboutMe_ComputerInfo_Silent", safe_open=True)
     except Exception as e:
@@ -478,4 +479,5 @@ run_system_checks()
 if __name__ == "__main__":
     about_me()
     # from REVIT import REVIT_ACC # type: ignore
+
     # REVIT_ACC.get_ACC_summary_data(show_progress=True)
