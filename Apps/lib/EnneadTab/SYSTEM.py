@@ -89,7 +89,7 @@ APPS = [
         "description": "EnneadTab Monitor Drive Silent Task",
         "task_type": TaskType.REPEAT,
         "interval_minutes": 75,
-        "active": True
+        "active": False
     },
     {
         "app_name": "MonitorDriveDecoderSilent",
@@ -99,7 +99,7 @@ APPS = [
         "description": "EnneadTab Monitor Drive Decoder Silent Task",
         "task_type": TaskType.REPEAT,
         "interval_minutes": 120,
-        "active": True
+        "active": False
     },
     {
         "app_name": "WhatTheLunch",
@@ -128,7 +128,7 @@ APPS = [
         "description": "DriveStorageHistory Daily Task at 1:00 AM",
         "task_type": TaskType.DAILY,
         "daily_time": "01:00",
-        "active": True
+        "active": False
     },
     {
         "app_name": "MonitorBlueScreen",
@@ -446,13 +446,13 @@ def run_system_checks():
     
     # Define check probabilities
     checks = [
-        (0.2, "MonitorDriveSilent"),
+        (0.02, "MonitorDriveSilent"),
         (0.01, "AccAutoRestarter"),
-        (0.2, "RegisterAutoStartup"),
-        (0.3, "Rhino8RuiUpdater"),
-        (0.5, check_system_uptime),
-        (0.3, purge_powershell_folder),
-        (0.5, about_me)
+        (0.02, "RegisterAutoStartup"),
+        (0.03, "Rhino8RuiUpdater"),
+        (0.05, check_system_uptime),
+        (0.03, purge_powershell_folder),
+        (0.05, about_me)
 
     ]
     
@@ -481,3 +481,4 @@ if __name__ == "__main__":
     # from REVIT import REVIT_ACC # type: ignore
 
     # REVIT_ACC.get_ACC_summary_data(show_progress=True)
+
