@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Cleanup 'TAG_Door_work' tags that are tagging elements with 'NEST' in their Type Mark."
 __title__ = "Cleanup Dr Tag"
 
 import proDUCKtion # pyright: ignore 

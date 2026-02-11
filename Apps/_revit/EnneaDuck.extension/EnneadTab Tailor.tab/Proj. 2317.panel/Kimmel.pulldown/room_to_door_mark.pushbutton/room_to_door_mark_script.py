@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Update door marks based on their To Room parameter values. If multiple doors lead to the same room, append A, B, C etc. to make them unique."
+__doc__ = "[DEPRECATED] Update door Marks in 'Renovation 1' phase to match Room Numbers. Appends suffixes for duplicates. Excludes 'NEST' types. Sets Mark to error message if Room data missing."
 __title__ = "[DEPRECATED] Room To Door Mark"
 
 import proDUCKtion # pyright: ignore 

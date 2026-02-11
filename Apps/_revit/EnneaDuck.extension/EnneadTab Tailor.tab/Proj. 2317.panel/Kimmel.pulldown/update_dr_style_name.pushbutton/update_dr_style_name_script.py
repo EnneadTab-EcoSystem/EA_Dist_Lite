@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Copy 'Door Style' parameter value to '_internal_note' parameter for all doors in the project."
 __title__ = "Update Dr Style Name"
 
 import proDUCKtion # pyright: ignore 

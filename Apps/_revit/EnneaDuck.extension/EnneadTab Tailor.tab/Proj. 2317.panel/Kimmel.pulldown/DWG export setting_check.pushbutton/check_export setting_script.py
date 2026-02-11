@@ -1,4 +1,4 @@
-__doc__ = """check NYU CAD export layer mapping rule"""
+__doc__ = "Display detailed Layer Mapping table for a selected DWG Export Setting."
 __title__ = "Check DWG Export Layer Mapping"
 __tip__ = True
 from pyrevit import forms, script
