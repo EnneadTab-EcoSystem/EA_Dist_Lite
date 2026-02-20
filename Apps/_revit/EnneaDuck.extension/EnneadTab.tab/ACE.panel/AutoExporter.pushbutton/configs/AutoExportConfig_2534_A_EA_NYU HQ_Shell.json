@@ -55,9 +55,9 @@
   "schedule": {
     "monday": false,
     "tuesday": false,
-    "wednesday": true,
+    "wednesday": false,
     "thursday": false,
-    "friday": true,
+    "friday": false,
     "saturday": false,
     "sunday": false
   }

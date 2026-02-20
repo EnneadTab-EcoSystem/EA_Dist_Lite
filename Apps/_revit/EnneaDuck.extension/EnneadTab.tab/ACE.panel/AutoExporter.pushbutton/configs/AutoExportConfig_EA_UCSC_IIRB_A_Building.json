@@ -54,10 +54,10 @@
   },
   "schedule": {
     "monday": false,
-    "tuesday": true,
+    "tuesday": false,
     "wednesday": false,
     "thursday": false,
-    "friday": true,
+    "friday": false,
     "saturday": false,
     "sunday": false
   }

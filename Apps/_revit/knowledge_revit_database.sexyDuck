@@ -2816,6 +2816,15 @@
         "tab": "Tools",
         "tab_icon": null
     },
+    "EnneadTab.tab\\Tools.panel\\Sync All.pulldown\\Sync and Quit.pushbutton\\sync_and_quit_script.py": {
+        "alias": "Sync and Quit",
+        "doc": "Sync all open projects with central, then quit Revit. One-click end-of-day: sync every open document, close them, and exit Revit. Use when you are done for the day and want to leave nothing open.",
+        "icon": "EnneadTab.tab\\Tools.panel\\Sync All.pulldown\\Sync and Quit.pushbutton\\icon.png",
+        "is_popular": true,
+        "script": "EnneadTab.tab\\Tools.panel\\Sync All.pulldown\\Sync and Quit.pushbutton\\sync_and_quit_script.py",
+        "tab": "Tools",
+        "tab_icon": null
+    },
     "EnneadTab.tab\\Tools.panel\\Sync All.pulldown\\sync all projects.pushbutton\\sycn all proj_script.py": {
         "alias": "Sync All Open Proj",
         "doc": "Project synchronization tool that keeps all your work up-to-date with a single click. This utility automatically synchronizes every open Revit project with its central file while keeping them open for continued work. Perfect for regular syncing throughout the day to prevent data loss and ensure changes are visible to your team.",

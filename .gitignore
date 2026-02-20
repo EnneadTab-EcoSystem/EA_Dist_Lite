@@ -224,3 +224,7 @@ longest_paths.json
 **/monitor_area.pushbutton/*.json
 !**/monitor_area.pushbutton/hardware_cache.json
 !**/monitor_area.pushbutton/config.json
+
+
+
+Apps/generate_zodiacs.py

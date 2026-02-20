@@ -6,4 +6,5 @@
 layout:
   - sync all projects
   - sync all projects and close
+  - Sync and Quit
   - see you later

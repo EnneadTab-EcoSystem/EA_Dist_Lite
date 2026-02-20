@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # https://python-holidays.readthedocs.io/en/latest/index.html
 
 """
@@ -214,6 +215,132 @@ class HolidayDateChecker:
             datetime.date(year, 10, 30),
             datetime.date(year, 10, 31)
         )
+    @staticmethod
+    def _get_nth_weekday_of_month(year, month, weekday_index, n):
+        """
+        Get the date of the nth occurrence of a weekday in a month.
+        weekday_index: 0=Mon, 6=Sun
+        n: 1=1st, 2=2nd, ... -1=last
+        """
+        if n > 0:
+            date = datetime.date(year, month, 1)
+            while date.weekday() != weekday_index:
+                date += datetime.timedelta(days=1)
+            date += datetime.timedelta(weeks=n-1)
+        else:
+            if month == 12:
+                next_month = datetime.date(year + 1, 1, 1)
+            else:
+                next_month = datetime.date(year, month + 1, 1)
+            date = next_month - datetime.timedelta(days=1)
+            while date.weekday() != weekday_index:
+                date -= datetime.timedelta(days=1)
+            date -= datetime.timedelta(weeks=(-n)-1)
+            
+        if date.month != month:
+            return None
+        return date
+
+    @staticmethod
+    def get_dragon_boat_dates(year):
+        """Get Dragon Boat Festival dates."""
+        dates = {
+            2024: datetime.date(2024, 6, 10),
+            2025: datetime.date(2025, 5, 31),
+            2026: datetime.date(2026, 6, 19),
+            2027: datetime.date(2027, 6, 9),
+            2028: datetime.date(2028, 5, 28),
+            2029: datetime.date(2029, 6, 16),
+            2030: datetime.date(2030, 6, 5),
+            2031: datetime.date(2031, 6, 24),
+            2032: datetime.date(2032, 6, 12),
+            2033: datetime.date(2033, 5, 31),
+            2034: datetime.date(2034, 6, 19),
+            2035: datetime.date(2035, 6, 10),
+            2036: datetime.date(2036, 5, 30),
+            2037: datetime.date(2037, 6, 18),
+            2038: datetime.date(2038, 6, 7),
+            2039: datetime.date(2039, 6, 27),
+            2040: datetime.date(2040, 6, 15),
+            2041: datetime.date(2041, 6, 3),
+            2042: datetime.date(2042, 6, 23),
+            2043: datetime.date(2043, 6, 12),
+            2044: datetime.date(2044, 5, 31),
+            2045: datetime.date(2045, 6, 19)
+        }
+        d = dates.get(year)
+        if d:
+            return (d, d)
+        return (None, None)
+
+    @staticmethod
+    def get_donut_day_dates(year):
+        """1st Friday of June."""
+        d = HolidayDateChecker._get_nth_weekday_of_month(year, 6, 4, 1) # 4=Fri
+        return (d, d)
+
+    @staticmethod
+    def get_hot_dog_day_dates(year):
+        """3rd Wednesday of July."""
+        d = HolidayDateChecker._get_nth_weekday_of_month(year, 7, 2, 3) # 2=Wed
+        return (d, d)
+
+    @staticmethod
+    def get_ice_cream_day_dates(year):
+        """3rd Sunday of July."""
+        d = HolidayDateChecker._get_nth_weekday_of_month(year, 7, 6, 3) # 6=Sun
+        return (d, d)
+
+
+
+    @staticmethod
+    def get_pirate_day_dates(year):
+        """September 19."""
+        return (datetime.date(year, 9, 19), datetime.date(year, 9, 19))
+
+
+
+    @staticmethod
+    def get_towel_day_dates(year):
+        """May 25."""
+        return (datetime.date(year, 5, 25), datetime.date(year, 5, 25))
+
+
+
+    @staticmethod
+    def get_ufo_day_dates(year):
+        """July 2."""
+        return (datetime.date(year, 7, 2), datetime.date(year, 7, 2))
+
+    @staticmethod
+    def get_coffee_day_dates(year):
+        """September 29."""
+        return (datetime.date(year, 9, 29), datetime.date(year, 9, 29))
+
+    @staticmethod
+    def get_pizza_day_dates(year):
+        """February 9."""
+        return (datetime.date(year, 2, 9), datetime.date(year, 2, 9))
+
+    @staticmethod
+    def get_duckie_day_dates(year):
+        """January 13."""
+        return (datetime.date(year, 1, 13), datetime.date(year, 1, 13))
+
+    @staticmethod
+    def get_mario_day_dates(year):
+        """March 10."""
+        return (datetime.date(year, 3, 10), datetime.date(year, 3, 10))
+
+    @staticmethod
+    def get_hobbit_day_dates(year):
+        """September 22."""
+        return (datetime.date(year, 9, 22), datetime.date(year, 9, 22))
+
+    @staticmethod
+    def get_ninja_day_dates(year):
+        """December 5."""
+        return (datetime.date(year, 12, 5), datetime.date(year, 12, 5))
 
 
 def display_greeting(image_name, title_text="Greeting from EnneadTab", 
@@ -280,7 +407,25 @@ def festival_greeting():
         # Star Wars Day
         (checker.get_may_force_dates(year), greeting_may_force),
         # Halloween
-        (checker.get_halloween_dates(year), greeting_halloween)
+        (checker.get_halloween_dates(year), greeting_halloween),
+        
+        # New Holidays
+        (checker.get_dragon_boat_dates(year), greeting_dragon_boat),
+        (checker.get_donut_day_dates(year), greeting_donut),
+        (checker.get_hot_dog_day_dates(year), greeting_hot_dog),
+        (checker.get_ice_cream_day_dates(year), greeting_ice_cream),
+
+        (checker.get_pirate_day_dates(year), greeting_pirate),
+
+        (checker.get_towel_day_dates(year), greeting_towel),
+
+        (checker.get_ufo_day_dates(year), greeting_ufo),
+        (checker.get_coffee_day_dates(year), greeting_coffee),
+        (checker.get_pizza_day_dates(year), greeting_pizza),
+        (checker.get_duckie_day_dates(year), greeting_duckie),
+        (checker.get_mario_day_dates(year), greeting_mario),
+        (checker.get_hobbit_day_dates(year), greeting_hobbit),
+        (checker.get_ninja_day_dates(year), greeting_ninja)
     ]
     
     # Check each holiday and display greeting if date is valid
@@ -377,31 +522,48 @@ def greeting_chinese_new_year():
     
     if not start or not HolidayDateChecker.is_valid_date(start, end):
         return
-    
-    # All available dragon year images
-    dragon_images = [
-        "YEAR OF DRAGON_1.png",
-        "YEAR OF DRAGON_2.png",
-        "YEAR OF DRAGON_3.png",
-        "YEAR OF DRAGON_4.png",
-        "YEAR OF DRAGON_5.png",
-        "YEAR OF DRAGON_6.png"
+
+    # Zodiac animals in order (0=Monkey, 1=Rooster, etc. for year % 12)
+    # The sequence starting from 0 AD (Monkey) is:
+    # 0: Monkey, 1: Rooster, 2: Dog, 3: Pig, 4: Rat, 5: Ox, 
+    # 6: Tiger, 7: Rabbit, 8: Dragon, 9: Snake, 10: Horse, 11: Goat
+    zodiacs = [
+        "MONKEY", "ROOSTER", "DOG", "PIG", "RAT", "OX",
+        "TIGER", "RABBIT", "DRAGON", "SNAKE", "HORSE", "GOAT"
     ]
     
-    # For 2023, display the rabbit image instead
-    if year == 2023:
-        display_greeting(
-            image_name="YEAR OF BUNNY.png",
-            title_text="Happy Chinese New Year!",
-            sound_file="holiday_chinese_new_year.wav"  # Updated to use the correct holiday sound file
-        )
-    else:
-        # Use the list of dragon images for random selection
-        display_greeting(
-            image_name=dragon_images,
-            title_text="Happy Chinese New Year!",
-            sound_file="holiday_chinese_new_year.wav"  # Updated to use the correct holiday sound file
-        )
+    zodiac_index = year % 12
+    zodiac_name = zodiacs[zodiac_index]
+    
+    # Handle Rabbit/Bunny alias
+    if zodiac_name == "RABBIT":
+        # Check if BUNNY exists, otherwise default to RABBIT
+        # (Current asset is holiday_YEAR OF BUNNY.png)
+        zodiac_name = "BUNNY" 
+
+    # Look for images matching "holiday_YEAR OF [ZODIAC]*.png"
+    # normalize name for search
+    search_name = "YEAR OF {}".format(zodiac_name)
+    
+    import glob
+    image_folder = ENVIRONMENT.IMAGE_FOLDER
+    pattern = os.path.join(image_folder, "holiday_{}*.png".format(search_name))
+    found_images = glob.glob(pattern)
+    
+    # Extract just the filenames
+    valid_images = [os.path.basename(f) for f in found_images]
+    
+    if not valid_images:
+        # Fallback if no specific image found
+        # Maybe use a generic "Happy New Year" or just log warning?
+        # For now, let's just return to avoid crashing
+        return
+        
+    display_greeting(
+        image_name=valid_images,
+        title_text="Happy Chinese New Year: Year of the {}!".format(zodiac_name.title()),
+        sound_file="holiday_chinese_new_year.wav"
+    )
 
 
 def greeting_mid_moon():
@@ -466,6 +628,152 @@ def greeting_halloween():
         title_text="Happy Halloween!",
         sound_file="sound_effect_duck.wav",
         md_text="## Trick or Treat! The EnneadTab duck is here to spook you!"
+    )
+
+
+def greeting_dragon_boat():
+    """Display Dragon Boat Festival greeting."""
+    year = datetime.datetime.now().year
+    start, end = HolidayDateChecker.get_dragon_boat_dates(year)
+    if not HolidayDateChecker.is_valid_date(start, end): return
+    display_greeting(
+        image_name="holiday_dragon_boat.jpg",
+        title_text="Happy Dragon Boat Festival!",
+        md_text="## Eating Zongzi and racing boats!"
+    )
+
+def greeting_donut():
+    """Display National Donut Day greeting."""
+    year = datetime.datetime.now().year
+    start, end = HolidayDateChecker.get_donut_day_dates(year)
+    if not HolidayDateChecker.is_valid_date(start, end): return
+    display_greeting(
+        image_name="holiday_donut.jpg",
+        title_text="Happy National Donut Day!",
+        sound_file="sound_effect_mario_powerup.wav"
+    )
+
+def greeting_hot_dog():
+    """Display National Hot Dog Day greeting."""
+    year = datetime.datetime.now().year
+    start, end = HolidayDateChecker.get_hot_dog_day_dates(year)
+    if not HolidayDateChecker.is_valid_date(start, end): return
+    display_greeting(
+        image_name="holiday_hot_dog.jpg",
+        title_text="Happy National Hot Dog Day!"
+    )
+
+def greeting_ice_cream():
+    """Display National Ice Cream Day greeting."""
+    year = datetime.datetime.now().year
+    start, end = HolidayDateChecker.get_ice_cream_day_dates(year)
+    if not HolidayDateChecker.is_valid_date(start, end): return
+    display_greeting(
+        image_name="holiday_ice_cream.jpg",
+        title_text="Happy National Ice Cream Day!",
+        sound_file="sound_effect_happy_bell.wav"
+    )
+
+
+
+def greeting_pirate():
+    """Display Talk Like a Pirate Day greeting."""
+    year = datetime.datetime.now().year
+    start, end = HolidayDateChecker.get_pirate_day_dates(year)
+    if not HolidayDateChecker.is_valid_date(start, end): return
+    display_greeting(
+        image_name="holiday_pirate.jpg",
+        title_text="Ahoy! It's Talk Like a Pirate Day!",
+        md_text="## Arrr matey!"
+    )
+
+
+
+def greeting_towel():
+    """Display Towel Day greeting."""
+    year = datetime.datetime.now().year
+    start, end = HolidayDateChecker.get_towel_day_dates(year)
+    if not HolidayDateChecker.is_valid_date(start, end): return
+    display_greeting(
+        image_name="holiday_towel.jpg",
+        title_text="Happy Towel Day! Don't Panic."
+    )
+
+
+
+def greeting_ufo():
+    """Display World UFO Day greeting."""
+    year = datetime.datetime.now().year
+    start, end = HolidayDateChecker.get_ufo_day_dates(year)
+    if not HolidayDateChecker.is_valid_date(start, end): return
+    display_greeting(
+        image_name="holiday_ufo.jpg",
+        title_text="Happy World UFO Day! (Roswell Tribute)",
+        md_text="## The truth is out there."
+    )
+
+def greeting_coffee():
+    """Display National Coffee Day greeting."""
+    year = datetime.datetime.now().year
+    start, end = HolidayDateChecker.get_coffee_day_dates(year)
+    if not HolidayDateChecker.is_valid_date(start, end): return
+    display_greeting(
+        image_name="holiday_coffee.jpg",
+        title_text="Happy National Coffee Day!"
+    )
+
+def greeting_pizza():
+    """Display National Pizza Day greeting."""
+    year = datetime.datetime.now().year
+    start, end = HolidayDateChecker.get_pizza_day_dates(year)
+    if not HolidayDateChecker.is_valid_date(start, end): return
+    display_greeting(
+        image_name="holiday_pizza.jpg",
+        title_text="Happy National Pizza Day!"
+    )
+
+def greeting_duckie():
+    """Display Rubber Duckie Day greeting."""
+    year = datetime.datetime.now().year
+    start, end = HolidayDateChecker.get_duckie_day_dates(year)
+    if not HolidayDateChecker.is_valid_date(start, end): return
+    display_greeting(
+        image_name=["duck.png", "duck_pop_green_bg.png"],
+        title_text="Happy Rubber Duckie Day!",
+        sound_file="sound_effect_duck.wav"
+    )
+
+def greeting_mario():
+    """Display Mario Day greeting."""
+    year = datetime.datetime.now().year
+    start, end = HolidayDateChecker.get_mario_day_dates(year)
+    if not HolidayDateChecker.is_valid_date(start, end): return
+    display_greeting(
+        image_name="holiday_mario.jpg",
+        title_text="It's Mario Day! (Mar10)",
+        sound_file="sound_effect_mario_powerup.wav"
+    )
+
+def greeting_hobbit():
+    """Display Hobbit Day greeting."""
+    year = datetime.datetime.now().year
+    start, end = HolidayDateChecker.get_hobbit_day_dates(year)
+    if not HolidayDateChecker.is_valid_date(start, end): return
+    display_greeting(
+        image_name="holiday_hobbit.jpg",
+        title_text="Happy Hobbit Day!",
+        md_text="## In a hole in the ground there lived a hobbit..."
+    )
+
+def greeting_ninja():
+    """Display Day of the Ninja greeting."""
+    year = datetime.datetime.now().year
+    start, end = HolidayDateChecker.get_ninja_day_dates(year)
+    if not HolidayDateChecker.is_valid_date(start, end): return
+    display_greeting(
+        image_name="holiday_ninja.jpg",
+        title_text="Happy Day of the Ninja!",
+        md_text="## ..."
     )
 
 
