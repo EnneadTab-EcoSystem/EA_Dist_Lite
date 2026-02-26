@@ -25,16 +25,10 @@ DOC = REVIT_APPLICATION.get_doc()
 
 
 def _element_id_value(element_id):
-    """Return integer value for ElementId across Revit versions."""
+    """Return integer value for ElementId across Revit versions. Uses shared REVIT_APPLICATION helper."""
     if not element_id:
         return None
-    value = getattr(element_id, "IntegerValue", None)
-    if value is None and hasattr(element_id, "Value"):
-        try:
-            value = element_id.Value
-        except Exception:
-            value = None
-    return value
+    return REVIT_APPLICATION.get_element_id_value(element_id)
 
 
 @LOG.log(__file__, __title__)

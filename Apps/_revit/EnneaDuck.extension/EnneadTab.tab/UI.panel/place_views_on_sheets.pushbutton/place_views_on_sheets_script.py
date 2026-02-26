@@ -33,7 +33,7 @@ def save_current_view_state(doc):
         from EnneadTab import DATA_FILE, NOTIFICATION # pyright: ignore
         
         all_views = DB.FilteredElementCollector(doc).OfClass(DB.View).WhereElementIsNotElementType().ToElements()
-        all_view_ids = [view.Id.IntegerValue for view in all_views]
+        all_view_ids = [REVIT_APPLICATION.get_element_id_value(view.Id) for view in all_views]
         DATA_FILE.set_data({"all_views": all_view_ids}, "all_current_views")
         NOTIFICATION.messenger("View state saved with {} views".format(len(all_view_ids)))
     except Exception as e:
@@ -48,7 +48,7 @@ class ViewsMonitorForm(WPFWindow):
         """Wrapper for sheet objects"""
         def __init__(self, sheet):
             self.sheet = sheet
-            self.Id = sheet.Id.IntegerValue
+            self.Id = REVIT_APPLICATION.get_element_id_value(sheet.Id)
             self.Name = "{} - {}".format(sheet.SheetNumber, sheet.Name)
         
         def __repr__(self):
@@ -58,7 +58,7 @@ class ViewsMonitorForm(WPFWindow):
         """Wrapper for scope box objects"""
         def __init__(self, scope_box):
             self.scope_box = scope_box
-            self.Id = scope_box.Id.IntegerValue
+            self.Id = REVIT_APPLICATION.get_element_id_value(scope_box.Id)
             self.Name = scope_box.Name
         
         def __repr__(self):
@@ -68,7 +68,7 @@ class ViewsMonitorForm(WPFWindow):
         """Wrapper for view template objects"""
         def __init__(self, template):
             self.template = template
-            self.Id = template.Id.IntegerValue
+            self.Id = REVIT_APPLICATION.get_element_id_value(template.Id)
             self.Name = template.Name
         
         def __repr__(self):
@@ -86,7 +86,7 @@ class ViewsMonitorForm(WPFWindow):
                 self.doc = doc
                 self.parent = parent_class  # Store reference to the parent class
                 self.Name = view.Name
-                self.Id = view.Id.IntegerValue
+                self.Id = REVIT_APPLICATION.get_element_id_value(view.Id)
                 self.ViewType = str(view.ViewType)
                 
                 # Sheet information
@@ -128,7 +128,7 @@ class ViewsMonitorForm(WPFWindow):
                     
                     # Find the matching SheetItem in the list
                     for sheet_item in self._all_sheets:
-                        if sheet_item.Id == sheet.Id.IntegerValue:
+                        if sheet_item.Id == REVIT_APPLICATION.get_element_id_value(sheet.Id):
                             self._selected_sheet = sheet_item
                             break
                     
@@ -149,7 +149,7 @@ class ViewsMonitorForm(WPFWindow):
                 scope_box = self.doc.GetElement(current_scope_box_id)
                 if scope_box:
                     for sb_item in self._all_scope_boxes:
-                        if sb_item.Id == scope_box.Id.IntegerValue:
+                        if sb_item.Id == REVIT_APPLICATION.get_element_id_value(scope_box.Id):
                             self._selected_scope_box = sb_item
                             break
             
@@ -164,7 +164,7 @@ class ViewsMonitorForm(WPFWindow):
                 template = self.doc.GetElement(current_template_id)
                 if template:
                     for t_item in self._all_view_templates:
-                        if t_item.Id == template.Id.IntegerValue:
+                        if t_item.Id == REVIT_APPLICATION.get_element_id_value(template.Id):
                             self._selected_view_template = t_item
                             break
         
@@ -221,7 +221,7 @@ class ViewsMonitorForm(WPFWindow):
             """Get the current view template ID assigned to this view"""
             from Autodesk.Revit import DB # pyright: ignore
             
-            if self.view.ViewTemplateId and self.view.ViewTemplateId.IntegerValue != -1:
+            if self.view.ViewTemplateId and REVIT_APPLICATION.get_element_id_value(self.view.ViewTemplateId) != -1:
                 return self.view.ViewTemplateId
             return None
         
@@ -354,7 +354,7 @@ class ViewsMonitorForm(WPFWindow):
                 return []
 
             all_views = DB.FilteredElementCollector(doc).OfClass(DB.View).WhereElementIsNotElementType().ToElements()
-            return [x for x in all_views if x.Id.IntegerValue not in data["all_views"]]
+            return [x for x in all_views if REVIT_APPLICATION.get_element_id_value(x.Id) not in data["all_views"]]
         except Exception as e:
             NOTIFICATION.messenger("Error getting new views: {}".format(str(e)))
             ERROR_HANDLE.print_traceback()

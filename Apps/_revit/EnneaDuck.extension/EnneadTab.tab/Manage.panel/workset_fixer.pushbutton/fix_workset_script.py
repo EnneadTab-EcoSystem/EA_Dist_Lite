@@ -33,25 +33,6 @@ uidoc = REVIT_APPLICATION.get_uidoc()
 doc = REVIT_APPLICATION.get_doc()
 __persistentengine__ = True
 
-def get_element_id_value(element_id):
-    """
-    Get the integer value from an ElementId, handling both old and new Revit API versions.
-    
-    Args:
-        element_id: ElementId object
-        
-    Returns:
-        int: The integer value of the ElementId
-    """
-    try:
-        # Try new API first (Revit 2021+)
-        return element_id.Value
-    except AttributeError:
-        # Fall back to old API (Revit 2020 and earlier)
-        return element_id.IntegerValue
-
-
-
 
 
 def get_element_workset(element):
@@ -67,8 +48,8 @@ def change_workset(element, target_workset) :
 
     #curent_workset_id = element.Parameters[DB.BuiltInParameter.ELEM_PARTITION_PARAM].AsElementId().IntegerValue
 
-    curent_workset_id = get_element_id_value(get_element_workset(element).Id)
-    if curent_workset_id == get_element_id_value(target_workset.Id)  :
+    curent_workset_id = REVIT_APPLICATION.get_element_id_value(get_element_workset(element).Id)
+    if curent_workset_id == REVIT_APPLICATION.get_element_id_value(target_workset.Id)  :
         return False,False,None
     
 
@@ -83,13 +64,13 @@ def change_workset(element, target_workset) :
         return True, True, log
 
     """
-    if get_element_id_value(element.GroupId) != -1 and element.DesignOption:
+    if REVIT_APPLICATION.get_element_id_value(element.GroupId) != -1 and element.DesignOption:
         # group in design option
         log = "[Group in Design Option] The element is in group '{}' and design option '{}'. -->{}\nYou may use 'Go To Element' while that group and design option is in edit mode.\n\n ".format(output.linkify(element.GroupId, title = "Go To Group"),element.DesignOption.Name, output.linkify(element.Id, title = "Go To Element"))
         return True, True, log
     """
 
-    if get_element_id_value(element.GroupId) != -1: #-1 means not in group
+    if REVIT_APPLICATION.get_element_id_value(element.GroupId) != -1: #-1 means not in group
         if element.DesignOption:
             log = "[Group in Design Option] The element is in group '{}' and design option '{}'. -->{}\nYou may use 'Go To Element' while that group and design option is in edit mode.\n\n ".format(output.linkify(element.GroupId, title = "Go To Group"),element.DesignOption.Name, output.linkify(element.Id, title = "Go To Element"))
             return True, True, log
@@ -114,7 +95,7 @@ def change_workset(element, target_workset) :
                 
             # print (output.linkify(element.Id))
             return True, True, "[Read Only] The workset is read only."
-        para.Set(get_element_id_value(target_workset.Id))
+        para.Set(REVIT_APPLICATION.get_element_id_value(target_workset.Id))
     except Exception as e:
         print("Skipping workset change for element [{}] becasue {}".format(output.linkify(element.Id, title = "Go To Element"), e))
     log = None
@@ -125,7 +106,7 @@ def is_match_wall(my_wall, claimer):
     """this func is to deal with FaceWall class. Becasue wall by face object has no WallType attr"""
     if hasattr(my_wall, "WallType"):
 
-        if get_element_id_value(my_wall.WallType.Id) == get_element_id_value(claimer.Id):
+        if REVIT_APPLICATION.get_element_id_value(my_wall.WallType.Id) == REVIT_APPLICATION.get_element_id_value(claimer.Id):
             return True
         else:
             return False
@@ -133,7 +114,7 @@ def is_match_wall(my_wall, claimer):
 
     # for para in my_wall.Parameters:
     #     print para.Definition.Name
-    if get_element_id_value(my_wall.LookupParameter("Type").AsElementId()) == get_element_id_value(claimer.Id):
+    if REVIT_APPLICATION.get_element_id_value(my_wall.LookupParameter("Type").AsElementId()) == REVIT_APPLICATION.get_element_id_value(claimer.Id):
         return True
     else:
         return False
@@ -155,7 +136,7 @@ def get_all_of_this(claimer):
     else:
         if hasattr(claimer, "IsFoundationSlab"):
             all_elements = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_Floors).WhereElementIsNotElementType().ToElements()
-            all_elements = [x for x in all_elements if get_element_id_value(x.FloorType.Id) == get_element_id_value(claimer.Id)]
+            all_elements = [x for x in all_elements if REVIT_APPLICATION.get_element_id_value(x.FloorType.Id) == REVIT_APPLICATION.get_element_id_value(claimer.Id)]
         else:
             all_elements = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_Walls).WhereElementIsNotElementType().ToElements()
             all_elements = [x for x in all_elements if is_match_wall(x, claimer)]

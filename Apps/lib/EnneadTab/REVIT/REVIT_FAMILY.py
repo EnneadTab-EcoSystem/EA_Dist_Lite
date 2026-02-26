@@ -306,7 +306,9 @@ def is_family_editable(family_or_family_name, doc=None):
                 DB.BuiltInCategory.OST_DetailComponents,
                 DB.BuiltInCategory.OST_AnnotationSymbols
             ]
-            return family.FamilyCategory.Id.IntegerValue in [cat.IntegerValue for cat in editable_categories]
+            fam_cat_val = REVIT_APPLICATION.get_element_id_value(family.FamilyCategory.Id)
+            editable_vals = [REVIT_APPLICATION.get_element_id_value(cat.Id) for cat in editable_categories]
+            return fam_cat_val in editable_vals
         
         return False
         

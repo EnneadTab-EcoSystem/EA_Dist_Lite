@@ -172,8 +172,8 @@ class who_did_that_ModelessForm(WPFWindow):
     
             self.selection = []
             for x in selection_ids:
-
-                self.selection.append(doc.GetElement(DB.ElementId(x.IntegerValue)))
+                eid_val = REVIT_APPLICATION.get_element_id_value(x)
+                self.selection.append(doc.GetElement(DB.ElementId(eid_val)))
 
             self.update_selection_info()
             

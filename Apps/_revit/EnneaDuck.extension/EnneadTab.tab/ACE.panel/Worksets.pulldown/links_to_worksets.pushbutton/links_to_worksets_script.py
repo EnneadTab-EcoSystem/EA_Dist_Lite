@@ -37,11 +37,11 @@ def links_to_worksets():
         link_workset = link.get_Parameter(DB.BuiltInParameter.ELEM_PARTITION_PARAM)
         if existing_workset_id is None:
             new_workset = DB.Workset.Create(doc, workset_name)
-            link_type_workset.Set(new_workset.Id.IntegerValue)
-            link_workset.Set(new_workset.Id.IntegerValue)
+            link_type_workset.Set(REVIT_APPLICATION.get_element_id_value(new_workset.Id))
+            link_workset.Set(REVIT_APPLICATION.get_element_id_value(new_workset.Id))
         else:
-            link_type_workset.Set(existing_workset_id.IntegerValue)
-            link_workset.Set(existing_workset_id.IntegerValue)
+            link_type_workset.Set(REVIT_APPLICATION.get_element_id_value(existing_workset_id))
+            link_workset.Set(REVIT_APPLICATION.get_element_id_value(existing_workset_id))
         t.Commit()
 
     pin_element_by_category(DB.BuiltInCategory.OST_RvtLinks)

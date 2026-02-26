@@ -670,8 +670,8 @@ def get_panel_location_map(panels):
     for wall in walls:
         temp_dict = {}
         
-        temp_dict["u_order"] = [x.IntegerValue for x in wall.CurtainGrid.GetUGridLineIds()]
-        temp_dict["v_order"] = [x.IntegerValue for x in wall.CurtainGrid.GetVGridLineIds()]
+        temp_dict["u_order"] = [REVIT_APPLICATION.get_element_id_value(x) for x in wall.CurtainGrid.GetUGridLineIds()]
+        temp_dict["v_order"] = [REVIT_APPLICATION.get_element_id_value(x) for x in wall.CurtainGrid.GetVGridLineIds()]
         wall_dict[wall.Id] = temp_dict
             
     
@@ -684,8 +684,10 @@ def get_panel_location_map(panels):
         panel.GetRefGridLines (u_grid_id, v_grid_id)
 
         
-        u_order = wall_dict[panel.Host.Id]["u_order"].index(u_grid_id.IntegerValue) + 1 if u_grid_id.IntegerValue != -1 else 0
-        v_order = wall_dict[panel.Host.Id]["v_order"].index(v_grid_id.IntegerValue) + 1 if v_grid_id.IntegerValue != -1 else 0
+        u_val = REVIT_APPLICATION.get_element_id_value(u_grid_id)
+        v_val = REVIT_APPLICATION.get_element_id_value(v_grid_id)
+        u_order = wall_dict[panel.Host.Id]["u_order"].index(u_val) + 1 if u_val != -1 else 0
+        v_order = wall_dict[panel.Host.Id]["v_order"].index(v_val) + 1 if v_val != -1 else 0
         
         panel_location_map[panel.Id] = (u_order,v_order)
         

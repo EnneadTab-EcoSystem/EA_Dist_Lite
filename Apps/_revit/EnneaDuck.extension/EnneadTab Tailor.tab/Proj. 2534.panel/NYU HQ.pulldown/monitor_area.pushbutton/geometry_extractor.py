@@ -203,12 +203,9 @@ def extract_area_geometry(area_element, department=None, program_type=None,
     if geometry_data is None:
         return None
     
-    # Get element ID
-    try:
-        element_id = area_element.Id.IntegerValue
-    except AttributeError:
-        # Revit 2024+ uses Value instead of IntegerValue
-        element_id = area_element.Id.Value
+    # Get element ID (Revit 2024+ uses Value, older use IntegerValue)
+    from EnneadTab.REVIT import REVIT_APPLICATION
+    element_id = REVIT_APPLICATION.get_element_id_value(area_element.Id)
     
     # Build complete data structure
     complete_data = {

@@ -15,6 +15,7 @@ import traceback
 
 
 from EnneadTab import ERROR_HANDLE, DATA_FILE, USER, FOLDER
+from EnneadTab.REVIT import REVIT_APPLICATION
 
 # Safe import of REVIT_CATEGORY - handle CPython mode compatibility
 try:
@@ -859,10 +860,10 @@ class TemplateDataCollector:
                         if hasattr(param, 'Definition') and param.Definition and hasattr(param.Definition, 'Name'):
                             param_name = param.Definition.Name
                         else:
-                            # Fallback: try to get name from parameter itself
-                            param_name = str(param.Id.IntegerValue)
+                            # Fallback: try to get name from parameter itself (Value for 2024+, IntegerValue for older)
+                            param_name = str(REVIT_APPLICATION.get_element_id_value(param.Id))
                     except:
-                        param_name = "Parameter_{}".format(param.Id.IntegerValue)
+                        param_name = "Parameter_{}".format(REVIT_APPLICATION.get_element_id_value(param.Id))
                     
                     # Debug: Check if parameter ID is in non-controlled list
                     is_controlled = param.Id not in param_ids
@@ -947,7 +948,8 @@ class TemplateDataCollector:
         """Convert ElementId parameter to readable text."""
         try:
             element_id = param.AsElementId()
-            if not element_id or element_id.IntegerValue == -1:
+            eid_val = REVIT_APPLICATION.get_element_id_value(element_id) if element_id else -1
+            if not element_id or eid_val == -1:
                 return "None"
             
             try:
@@ -955,9 +957,9 @@ class TemplateDataCollector:
                 if element and hasattr(element, 'Name'):
                     return element.Name
                 else:
-                    return str(element_id.IntegerValue)
+                    return str(eid_val)
             except Exception:
-                return str(element_id.IntegerValue)
+                return str(eid_val)
         except Exception as e:
             return "Error: ElementId conversion failed - {}".format(str(e)[:30])
     

@@ -92,7 +92,7 @@ def transfer_templates(templates, src_doc, dest_docs, use_prefix):
 def get_elevation_marker(doc, elevation_view):
     all_markers = DB.FilteredElementCollector(doc).OfClass(DB.ElevationMarker ).ToElements()
     for marker in all_markers:
-        if marker.GetViewId() == elevation_view.Id.IntegerValue:
+        if marker.GetViewId() == REVIT_APPLICATION.get_element_id_value(elevation_view.Id):
             return marker
 
 @ERROR_HANDLE.try_catch_error()

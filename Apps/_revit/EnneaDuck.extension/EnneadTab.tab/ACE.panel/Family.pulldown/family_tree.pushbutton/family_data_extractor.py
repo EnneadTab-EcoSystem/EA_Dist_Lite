@@ -18,6 +18,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))))
 
 from Autodesk.Revit import DB # pyright: ignore
+from EnneadTab.REVIT import REVIT_APPLICATION
 
 
 class FamilyDataExtractor:
@@ -121,19 +122,18 @@ class FamilyDataExtractor:
         is_purgeable = False
         
         if parent_doc is not None and nested_family_obj is not None:
-            # OPTIMIZED: Use IntegerValue for set-based lookup (best practice from codebase)
             try:
                 # Get all family instances in parent document
                 all_instances = DB.FilteredElementCollector(parent_doc).OfClass(DB.FamilyInstance).ToElements()
                 
-                # Count instances of this specific nested family
-                nested_family_id = nested_family_obj.Id.IntegerValue
+                # Count instances of this specific nested family (use shared helper for ElementId)
+                nested_family_id = REVIT_APPLICATION.get_element_id_value(nested_family_obj.Id)
                 instance_count = 0
                 
                 for inst in all_instances:
                     try:
                         if inst.Symbol and inst.Symbol.Family:
-                            if inst.Symbol.Family.Id.IntegerValue == nested_family_id:
+                            if REVIT_APPLICATION.get_element_id_value(inst.Symbol.Family.Id) == nested_family_id:
                                 instance_count += 1
                     except:
                         continue
@@ -367,15 +367,15 @@ class FamilyDataExtractor:
                 value = family_doc.FamilyManager.Get(family_param)
                 
                 # For material parameters, get the material name
-                if is_material and isinstance(value, DB.ElementId) and value.IntegerValue > 0:
+                if is_material and isinstance(value, DB.ElementId) and REVIT_APPLICATION.get_element_id_value(value) > 0:
                     try:
                         material = family_doc.GetElement(value)
                         if material:
                             value_string = "{} (Material)".format(material.Name)
                         else:
-                            value_string = "Element ID: {}".format(value.IntegerValue)
+                            value_string = "Element ID: {}".format(REVIT_APPLICATION.get_element_id_value(value))
                     except:
-                        value_string = "Element ID: {}".format(value.IntegerValue)
+                        value_string = "Element ID: {}".format(REVIT_APPLICATION.get_element_id_value(value))
                 else:
                     value_string = self._format_parameter_value(value, family_param)
                 

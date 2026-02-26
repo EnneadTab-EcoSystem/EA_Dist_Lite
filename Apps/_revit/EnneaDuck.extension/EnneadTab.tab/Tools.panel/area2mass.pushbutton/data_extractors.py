@@ -5,6 +5,7 @@
 
 from Autodesk.Revit import DB # pyright: ignore 
 from EnneadTab import ERROR_HANDLE
+from EnneadTab.REVIT import REVIT_APPLICATION
 
 # Global constants for mass family naming
 MASS_FAMILY_PREFIX = "Space2Mass_"
@@ -98,11 +99,7 @@ class ElementInfoExtractor:
         if hasattr(self.spatial_element, 'Level'):
             level = self.spatial_element.Level
             if level:
-                # Use Value property for Revit 2024+, fallback to IntegerValue for older versions
-                try:
-                    level_id = level.Id.Value
-                except AttributeError:
-                    level_id = level.Id.IntegerValue
+                level_id = REVIT_APPLICATION.get_element_id_value(level.Id)
                 return {
                     'name': level.Name,
                     'id': level_id,

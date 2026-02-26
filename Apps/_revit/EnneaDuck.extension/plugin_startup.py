@@ -361,11 +361,10 @@ def selection_owner_checker(sender, args):
         return
 
     doc = args.GetDocument ()
+    from EnneadTab.REVIT import REVIT_APPLICATION
     for x in selection_ids:
-        try:
-            element = doc.GetElement(DB.ElementId(x.Value))
-        except:
-            element = doc.GetElement(DB.ElementId(x.IntegerValue)) # this is kept for backward compability
+        eid_val = REVIT_APPLICATION.get_element_id_value(x)
+        element = doc.GetElement(DB.ElementId(eid_val))
 
         if element.Category and element.Category.Name == "Views":
             continue

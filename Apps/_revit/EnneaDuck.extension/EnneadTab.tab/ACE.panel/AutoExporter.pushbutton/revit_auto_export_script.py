@@ -301,24 +301,11 @@ def _get_link_type_name(link_type):
     try:
         element_id = getattr(link_type, "Id", None)
         if element_id:
-            id_value = None
-            
-            if hasattr(element_id, "Value"):
-                try:
-                    id_value = element_id.Value
-                except Exception as value_error:
-                    _log_link_guard("Failed reading ElementId.Value for link type name", value_error)
-                    id_value = None
-            
-            if id_value is None and hasattr(element_id, "IntegerValue"):
-                try:
-                    id_value = element_id.IntegerValue
-                except Exception as int_error:
-                    _log_link_guard("Failed reading ElementId.IntegerValue for link type name", int_error)
-                    id_value = None
-            
-            if id_value is not None:
+            try:
+                id_value = REVIT_APPLICATION.get_element_id_value(element_id)
                 return "RevitLinkType-{}".format(id_value)
+            except Exception as id_error:
+                _log_link_guard("Failed building link type fallback name from ElementId", id_error)
     except Exception as id_error:
         _log_link_guard("Failed building link type fallback name from ElementId", id_error)
     

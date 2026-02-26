@@ -2,6 +2,7 @@
 
 from pyrevit import revit, DB
 from pyrevit import forms
+from EnneadTab.REVIT import REVIT_APPLICATION
 from pyrevit import script
 from pyrevit.framework import List
 from pyrevit.revit.db import query
@@ -20,15 +21,15 @@ def update_sheet_revisions(revisions, sheets=None, state=True):
     if revisions:
         # get sheets if not available
         for sheet in sheets or query.get_sheets(doc=doc):
-            addrevs = set([x.IntegerValue
+            addrevs = set([REVIT_APPLICATION.get_element_id_value(x)
                            for x in sheet.GetAdditionalRevisionIds()])
             for rev in revisions:
                 # skip issued revisions
-
+                rev_id = REVIT_APPLICATION.get_element_id_value(rev.Id)
                 if state:
-                    addrevs.add(rev.Id.IntegerValue)
-                elif rev.Id.IntegerValue in addrevs:
-                    addrevs.remove(rev.Id.IntegerValue)
+                    addrevs.add(rev_id)
+                elif rev_id in addrevs:
+                    addrevs.remove(rev_id)
 
             rev_elids = [DB.ElementId(x) for x in addrevs]
             sheet.SetAdditionalRevisionIds(List[DB.ElementId](rev_elids))

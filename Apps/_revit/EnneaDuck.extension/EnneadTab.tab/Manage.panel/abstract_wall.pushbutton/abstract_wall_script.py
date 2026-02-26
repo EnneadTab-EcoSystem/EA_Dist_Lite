@@ -253,7 +253,7 @@ class Solution:
             retreived_detail_line = doc.GetElement(detail_line_unique_id)
             if retreived_detail_line is None:
                 continue
-            if retreived_detail_line.OwnerViewId.IntegerValue  == doc.ActiveView.Id.IntegerValue :
+            if REVIT_APPLICATION.get_element_id_value(retreived_detail_line.OwnerViewId) == REVIT_APPLICATION.get_element_id_value(doc.ActiveView.Id):
                 continue
                 
             self.deletable_detail_lines.append(doc.GetElement(detail_line_unique_id))

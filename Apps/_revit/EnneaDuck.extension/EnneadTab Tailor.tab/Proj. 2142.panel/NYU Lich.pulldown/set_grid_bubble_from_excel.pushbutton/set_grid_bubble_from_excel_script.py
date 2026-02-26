@@ -512,8 +512,9 @@ def _apply_grid_bubble_and_extent(view, ref_view, view_name, excel_row, output, 
 
 
 def _process_one_view(view_name, level_name, excel_row, ref_views_resolved, output, skip_curve_errors=False, apply_extent=True):
-    """Validate target view, apply grid bubble and optionally extent (and leader). Returns (view, curve_skipped_count). Raises on error."""
+    """Validate target view, apply grid visibility from SOT, then grid bubble and optionally extent (and leader). Returns (view, curve_skipped_count). Raises on error."""
     view, ref_view = _validate_target_view(view_name, level_name, ref_views_resolved, output)
+    _apply_grid_visibility(view, ref_view, view_name, output)
     skipped = _apply_grid_bubble_and_extent(
         view, ref_view, view_name, excel_row, output,
         skip_curve_errors=skip_curve_errors, apply_extent=apply_extent)

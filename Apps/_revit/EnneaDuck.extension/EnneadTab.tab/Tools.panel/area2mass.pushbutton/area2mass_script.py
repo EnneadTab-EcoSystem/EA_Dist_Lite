@@ -263,11 +263,7 @@ class Area2MassConverter:
             try:
                 nm = s.Name
             except:
-                # Use Value property for Revit 2024+, fallback to IntegerValue for older versions
-                try:
-                    nm = str(s.Id.Value)
-                except AttributeError:
-                    nm = str(s.Id.IntegerValue)
+                nm = str(REVIT_APPLICATION.get_element_id_value(s.Id))
             opts.append(nm)
             name_map[nm] = s
 
@@ -418,11 +414,7 @@ class Area2MassConverter:
         # Build family name per spec
         level_name = self._sanitize_name_component((element_info.get('level') or {}).get('name') if element_info else None)
         department = self._sanitize_name_component(element_info.get('department') if element_info else None)
-        # Use Value property for Revit 2024+, fallback to IntegerValue for older versions
-        try:
-            element_id_str = str(element.Id.Value)
-        except AttributeError:
-            element_id_str = str(element.Id.IntegerValue)
+        element_id_str = str(REVIT_APPLICATION.get_element_id_value(element.Id))
         if element_type == "Area":
             scheme_name = self._sanitize_name_component(getattr(element.AreaScheme, 'Name', None))
             family_name_with_id = "AreaMass_{}_{}_{}_{}".format(scheme_name, level_name, department, element_id_str)

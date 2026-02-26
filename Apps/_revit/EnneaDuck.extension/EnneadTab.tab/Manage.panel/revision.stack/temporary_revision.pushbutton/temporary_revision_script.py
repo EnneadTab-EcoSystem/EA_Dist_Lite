@@ -44,7 +44,7 @@ class TemporaryRevisionManager(object):
                 rev_num = getattr(self.item, 'RevisionNumber', None)
                 desc = getattr(self.item, 'Description', '')
                 if rev_num is None:
-                    return str(self.item.Id.IntegerValue)
+                    return str(REVIT_APPLICATION.get_element_id_value(self.item.Id))
                 return "{} - {}".format(rev_num, desc)
 
         if self.mode == "hide":

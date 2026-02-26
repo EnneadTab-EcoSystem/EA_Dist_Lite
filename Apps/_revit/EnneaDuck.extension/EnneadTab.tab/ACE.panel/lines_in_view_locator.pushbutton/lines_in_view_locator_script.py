@@ -37,10 +37,10 @@ def process_line_type():
     lines = DB.FilteredElementCollector(DOC).OfCategory(DB.BuiltInCategory.OST_Lines).WhereElementIsNotElementType().ToElements()
     for line in lines:
         if line.CurveElementType.ToString() == "DetailCurve":
-            view_id_int = line.OwnerViewId.IntegerValue
+            view_id_int = REVIT_APPLICATION.get_element_id_value(line.OwnerViewId)
             detail_lines[view_id_int] += 1
         if line.CurveElementType.ToString() == "ModelCurve":
-            workset_id_int = line.WorksetId.IntegerValue
+            workset_id_int = REVIT_APPLICATION.get_element_id_value(line.WorksetId)
             model_lines[workset_id_int] += 1
 
     # print detail line table    

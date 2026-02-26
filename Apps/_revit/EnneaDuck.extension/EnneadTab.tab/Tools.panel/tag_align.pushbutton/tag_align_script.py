@@ -181,12 +181,7 @@ class TagAligner(WPFWindow):
 
 
         selection_ids = list(args.GetSelectedElements ())
-        #print selection_ids
-        #for x in selection_ids:
-            #print x.IntegerValue
-            #print doc.GetElement(DB.ElementId(x.IntegerValue))
-        #return selection_ids
-        selection = [doc.GetElement(DB.ElementId(x.IntegerValue)) for x in selection_ids]
+        selection = [doc.GetElement(DB.ElementId(REVIT_APPLICATION.get_element_id_value(x))) for x in selection_ids]
         #print 999
         #print selection
         note = ""

@@ -352,7 +352,7 @@ def should_skip_element_for_displacement(element):
             return True
         
         # Skip elements that are part of groups
-        if hasattr(element, 'GroupId') and element.GroupId and element.GroupId.IntegerValue != -1:
+        if hasattr(element, 'GroupId') and element.GroupId and REVIT_APPLICATION.get_element_id_value(element.GroupId) != -1:
             return True
         
         # Skip elements that are hosted on other elements
@@ -391,7 +391,7 @@ def group_elements_by_level(doc, elements, levels):
             level_param = element.get_Parameter(DB.BuiltInParameter.FAMILY_LEVEL_PARAM)
             if level_param:
                 level_id = level_param.AsElementId()
-                if level_id.IntegerValue != -1:
+                if REVIT_APPLICATION.get_element_id_value(level_id) != -1:
                     level = doc.GetElement(level_id)
                     if level in elements_by_level:
                         elements_by_level[level].append(element)
@@ -471,7 +471,7 @@ def check_element_movability(element):
             return "Element is pinned"
         
         # Check if element is part of a group
-        if element.GroupId and element.GroupId.IntegerValue != -1:
+        if element.GroupId and REVIT_APPLICATION.get_element_id_value(element.GroupId) != -1:
             return "Element is part of a group"
         
         # Check if element is hosted

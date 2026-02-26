@@ -78,6 +78,13 @@ def get_doc():
     """
     return getattr(get_uidoc(), 'Document', None)
 
+def get_element_id_value(element_id):
+    """Return int/long for an ElementId. Revit 2024+ uses .Value, older use .IntegerValue."""
+    try:
+        return element_id.IntegerValue
+    except AttributeError:
+        return element_id.Value
+
 def get_active_view():
     """Get the currently active view in Revit.
     
