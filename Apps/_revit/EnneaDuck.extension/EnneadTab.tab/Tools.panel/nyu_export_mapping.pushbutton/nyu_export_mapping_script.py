@@ -10,6 +10,8 @@ __tip__ = True
 
 from pyrevit import forms, script
 from Autodesk.Revit import DB # pyright: ignore
+import os
+from datetime import datetime
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
@@ -19,11 +21,28 @@ from EnneadTab import NOTIFICATION, ERROR_HANDLE, LOG
 # Import NYU layer mapping
 from nyu_layer_mapping import get_nyu_layer_info, NYU_LAYER_MAPPING
 
+# Fallback layer from NYU ref table only (General - annotation text)
+FALLBACK_LAYER = "G-ANNO-TEXT"
+FALLBACK_COLOR = 7
+
+def is_import_or_link_layer(category_name):
+    """True if this key is from linked/imported CAD (e.g. layer name from .dwg/.sat)."""
+    if not category_name or not isinstance(category_name, str):
+        return False
+    name_lower = category_name.lower()
+    return (name_lower.endswith(".dwg") or name_lower.endswith(".dxf") or
+            name_lower.endswith(".sat") or name_lower.endswith(".dgn"))
+
 uidoc = REVIT_APPLICATION.get_uidoc()
 doc = REVIT_APPLICATION.get_doc()
 
-def get_category_layer_settings(category_name, doc):
-    """Get NYU layer settings for a given category name"""
+def get_category_layer_settings(category_name, doc, unmapped_list=None):
+    """Get NYU layer settings for a given category name.
+    If unmapped_list is provided, append category_name when falling back to default.
+    Linked/imported CAD layers (.dwg, .dxf, .sat) go to G-ANNO-TEXT and are not reported as unmapped."""
+    # Linked/imported CAD layers: use ref-table fallback, do not add to unmapped list
+    if is_import_or_link_layer(category_name):
+        return {"layer_name": FALLBACK_LAYER, "color_number": FALLBACK_COLOR}
     # Try to find by human name in our mapping
     nyu_info = get_nyu_layer_info(category_name)
     
@@ -44,10 +63,9 @@ def get_category_layer_settings(category_name, doc):
     
     # Return layer settings
     if nyu_info == NYU_LAYER_MAPPING["DEFAULT"]:
-        return {
-            "layer_name": category_name.upper(),
-            "color_number": 7  # Default color for unmapped categories
-        }
+        if unmapped_list is not None:
+            unmapped_list.append(category_name)
+        return {"layer_name": FALLBACK_LAYER, "color_number": FALLBACK_COLOR}
     else:
         return {
             "layer_name": nyu_info["dwg_layer"],
@@ -55,8 +73,10 @@ def get_category_layer_settings(category_name, doc):
         }
 
 def collect_parent_category_settings(existing_layer_table, doc):
-    """Collect layer settings for all parent categories"""
+    """Collect layer settings for all parent categories.
+    Returns (parent_category_settings dict, unmapped_category_names list)."""
     parent_category_settings = {}
+    unmapped_categories = []
     
     for export_layer_key in existing_layer_table.GetKeys():
         category_name = export_layer_key.CategoryName
@@ -64,10 +84,10 @@ def collect_parent_category_settings(existing_layer_table, doc):
         
         # Only process parent categories (no subcategory name)
         if not subcategory_name:
-            settings = get_category_layer_settings(category_name, doc)
+            settings = get_category_layer_settings(category_name, doc, unmapped_list=unmapped_categories)
             parent_category_settings[category_name] = settings
     
-    return parent_category_settings
+    return parent_category_settings, unmapped_categories
 
 def create_nyu_layer_table(existing_layer_table, parent_category_settings):
     """Create a new layer table with NYU standards applied"""
@@ -80,11 +100,11 @@ def create_nyu_layer_table(existing_layer_table, parent_category_settings):
         if category_name in parent_category_settings:
             settings = parent_category_settings[category_name]
         else:
-            # Fallback if parent category not found
-            settings = {
-                "layer_name": category_name.upper(),
-                "color_number": 7
-            }
+            # Fallback if parent category not found (e.g. import/link layers)
+            if is_import_or_link_layer(category_name):
+                settings = {"layer_name": FALLBACK_LAYER, "color_number": FALLBACK_COLOR}
+            else:
+                settings = {"layer_name": FALLBACK_LAYER, "color_number": FALLBACK_COLOR}
         
         # Create new layer info
         new_layer_info = DB.ExportLayerInfo()
@@ -115,8 +135,8 @@ def apply_nyu_layer_mapping_to_setting(sel_setting, doc):
     existing_option = sel_setting.GetDWGExportOptions()
     existing_layer_table = existing_option.GetExportLayerTable()
     
-    # Collect parent category settings
-    parent_category_settings = collect_parent_category_settings(existing_layer_table, doc)
+    # Collect parent category settings and unmapped categories
+    parent_category_settings, unmapped_categories = collect_parent_category_settings(existing_layer_table, doc)
     
     # Create new layer table with NYU standards
     new_export_layer_table = create_nyu_layer_table(existing_layer_table, parent_category_settings)
@@ -141,7 +161,7 @@ def apply_nyu_layer_mapping_to_setting(sel_setting, doc):
     sel_setting.Name = old_name
     t.Commit()
     
-    return old_name
+    return old_name, unmapped_categories
 
 def get_dwg_export_settings(doc):
     """Get all existing DWG export settings from the document"""
@@ -162,7 +182,41 @@ def select_dwg_settings(existing_dwg_settings):
 
 def process_nyu_mapping(sel_setting):
     """Legacy function for backward compatibility"""
-    return apply_nyu_layer_mapping_to_setting(sel_setting, doc)
+    name, _ = apply_nyu_layer_mapping_to_setting(sel_setting, doc)
+    return name
+
+def get_log_path():
+    """Log file path next to this script."""
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(script_dir, "nyu_export_mapping.log")
+
+def write_log(processed_settings, all_unmapped, error_msg=None):
+    """Append one run to log file next to script."""
+    log_path = get_log_path()
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    doc_title = doc.Title if doc else "?"
+    lines = [
+        "",
+        "---",
+        "[{}] doc: {}".format(ts, doc_title),
+    ]
+    if error_msg:
+        lines.append("  ERROR: {}".format(error_msg))
+    else:
+        lines.append("  Settings applied: {}".format(", ".join(processed_settings)))
+        if all_unmapped:
+            lines.append("  Unmapped categories (used G-ANNO-TEXT):")
+            for cat in sorted(all_unmapped):
+                lines.append("    - {}".format(cat))
+        else:
+            lines.append("  Unmapped: none")
+    lines.append("")
+    text = "\n".join(lines)
+    try:
+        with open(log_path, "a") as f:
+            f.write(text)
+    except Exception as e:
+        print("Could not write log to {}: {}".format(log_path, e))
 
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
@@ -187,14 +241,20 @@ def main():
     
     # Process each selected setting
     processed_settings = []
+    all_unmapped = set()
     TG = DB.TransactionGroup(doc, "Apply NYU Export Mapping")
     TG.Start()
     
     try:
         for setting in sel_settings:
-            setting_name = apply_nyu_layer_mapping_to_setting(setting, doc)
+            setting_name, unmapped = apply_nyu_layer_mapping_to_setting(setting, doc)
             processed_settings.append(setting_name)
+            for cat in unmapped:
+                all_unmapped.add(cat)
         TG.Assimilate()
+        
+        # Write log next to script
+        write_log(processed_settings, all_unmapped)
         
         # Show success message
         if len(processed_settings) == 1:
@@ -205,11 +265,22 @@ def main():
         
         NOTIFICATION.messenger(main_text=message)
         
+        # Show categories not in mapping so user can update nyu_layer_mapping.py
+        if all_unmapped:
+            unmapped_sorted = sorted(all_unmapped)
+            unmapped_text = "\n".join(unmapped_sorted)
+            report = "Categories not in NYU mapping (used G-ANNO-TEXT).\nAdd these to nyu_layer_mapping.py raw_mapping_data to customize:\n\n" + unmapped_text
+            print(report)
+            print("Log written to: {}".format(get_log_path()))
+        
     except Exception as e:
         TG.RollBack()
         print("Error applying NYU export mapping: {}".format(e))
+        write_log(processed_settings, all_unmapped, error_msg=str(e))
 
 if __name__ == "__main__":
     output = script.get_output()
     output.close_others()
     main()
+    # Keep output open so user can read unmapped categories list (5 min)
+    output.self_destruct(300)
