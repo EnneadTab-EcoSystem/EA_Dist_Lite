@@ -4,7 +4,7 @@ import io
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
-from EnneadTab import VERSION_CONTROL, ERROR_HANDLE, LOG, DATA_FILE, TIME, USER, DUCK, CONFIG, FOLDER, TIMESHEET
+from EnneadTab import VERSION_CONTROL, ERROR_HANDLE, LOG, DATA_FILE, TIME, USER, DUCK, CONFIG, FOLDER, TIMESHEET, ENVIRONMENT
 from EnneadTab.REVIT import REVIT_FORMS, REVIT_SELECTION, REVIT_EVENT, REVIT_SYNC
 
 __title__ = "Doc Syncing Hook"
@@ -131,8 +131,10 @@ def _get_or_create_queue_file(log_file):
 def check_sync_queue(doc):
     """Check if document sync should proceed based on queue status.
 
-    Silently writes to EnneadTab-DB API for data collection (Phase 1).
-    File-based queue remains the sole source of truth for user decisions.
+    Priority order:
+    1. EnneadTab-DB API (primary) - if reachable, drives all decisions
+    2. File-based queue (fallback) - only if API fails AND L drive is available
+    3. Allow sync (no enforcement) - if both API and L drive are unavailable
 
     Args:
         doc: Revit Document object to check sync status for
@@ -152,18 +154,73 @@ def check_sync_queue(doc):
 
     user_name = USER.USER_NAME
 
-    # === SILENT API DUAL-WRITE (Phase 1: no user-facing changes) ===
-    # API call runs silently in background for data collection.
-    # File-based queue remains the sole source of truth for user decisions.
+    # === PRIMARY: EnneadTab-DB API ===
+    api_result = None
     try:
         api_result = REVIT_SYNC.api_request_sync(doc)
-        if api_result is not None:
-            ERROR_HANDLE.print_note("Sync queue API responded: allowed={}".format(api_result.get("allowed")))
     except Exception as e:
-        ERROR_HANDLE.print_note("Sync queue API silent write failed: {}".format(e))
+        ERROR_HANDLE.print_note("Sync queue API request failed: {}".format(e))
 
-    # === FILE-BASED PATH (drives all user-facing behavior) ===
+    if api_result is not None:
+        ERROR_HANDLE.print_note("Sync queue API responded: allowed={}".format(api_result.get("allowed")))
+        return _check_sync_queue_api_based(doc, user_name, api_result)
+
+    # === FALLBACK: File-based queue (only if L drive is available) ===
+    ERROR_HANDLE.print_note("Sync queue API unreachable, checking fallback...")
+    if ENVIRONMENT.IS_OFFLINE_MODE:
+        ERROR_HANDLE.print_note("L drive unavailable, no queue enforcement possible. Allowing sync.")
+        return True
+
     return _check_sync_queue_file_based(doc, user_name)
+
+
+def _check_sync_queue_api_based(doc, user_name, api_result):
+    """Handle sync queue decision using EnneadTab-DB API response.
+
+    Args:
+        doc: Revit Document object
+        user_name: Current username
+        api_result: Dict with "allowed", "queue", "dashboard_url"
+
+    Returns:
+        bool: True if sync can proceed, False if cancelled
+    """
+    if api_result.get("allowed", True):
+        return True
+
+    queue = api_result.get("queue", [])
+    dashboard_url = api_result.get("dashboard_url", "")
+
+    queue_lines = []
+    for entry in queue:
+        queue_lines.append("\n  - {}".format(entry.get("username", "unknown")))
+    current_queue = "Current Sync Queue:" + "".join(queue_lines)
+    if dashboard_url:
+        current_queue += "\n\nDashboard: {}".format(dashboard_url)
+    current_queue += QUEUE_DIALOG_FOOTER
+
+    opts = [
+        ["I will join the waitlist and sync later.(Click 'Close' when you see Revit Sync Fail on next step, it just means the sync has been cancelled. You still hold position on the waitlist.)", "Resume working and try syncing later.(+ $50 EA Coins)"],
+        ["I don't care! Sync me now!", "Jump in line will make other people who are syncing has to wait longer.(- $100 EA Coins for every position cut line)"]
+    ]
+    res = REVIT_FORMS.dialogue(
+        main_text="There are other people queuing before you, do you want to resume working and try sync later?\n\nYour name has been added to the wait list even if you cancel current sync.\n\n[You are also welcomed to save local while waiting.]",
+        sub_text=current_queue,
+        options=opts
+    )
+
+    if res == opts[1][0]:
+        REVIT_SYNC.api_prioritize_sync(doc)
+        return True
+
+    EXEC_PARAMS.event_args.Cancel()
+    if CONFIG.get_setting("toggle_bt_is_duck_allowed", False):
+        DUCK.quack()
+    try:
+        doc.Save()
+    except Exception as e:
+        ERROR_HANDLE.print_note("Warning: Could not save local copy: {}".format(str(e)))
+    return False
 
 
 def _check_sync_queue_file_based(doc, user_name):

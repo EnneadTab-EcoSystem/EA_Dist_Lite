@@ -429,48 +429,58 @@ def update_area_tracking(doc):
 def update_sync_queue(doc):
     """Remove current user from sync queue after successful sync.
 
-    Calls EnneadTab-DB API first (fire-and-forget), then cleans
-    file-based queue for backward compatibility.
+    Priority order:
+    1. EnneadTab-DB API (primary) - notifies next user via API response
+    2. File-based queue (fallback) - only if API fails AND L drive is available
     """
     if REVIT_EVENT.is_sync_cancelled():
         return
 
-    # === API PATH (fire-and-forget) ===
-    api_result = REVIT_SYNC.api_complete_sync(doc)
+    # === PRIMARY: EnneadTab-DB API ===
+    api_result = None
+    try:
+        api_result = REVIT_SYNC.api_complete_sync(doc)
+    except Exception as e:
+        ERROR_HANDLE.print_note("Sync queue API complete failed: {}".format(e))
+
     if api_result is not None:
         ERROR_HANDLE.print_note("Sync queue API: complete sync reported success={}".format(
             api_result.get("success")))
+        _notify_next_user_from_api(doc, api_result)
 
-    # === FILE-BASED PATH (dual-write cleanup) ===
-    log_file = FOLDER.get_shared_dump_folder_file("SYNC_QUEUE_{}".format(doc.Title))
-
-    if not os.path.exists(log_file):
-        with io.open(log_file, "w", encoding="utf-8"):  # if not existing then create
-            pass
-
-    queue = DATA_FILE.get_list(log_file)
-    OUT = []
-
-    for item in queue:
-        if USER.USER_NAME in item:
-            # this step remove current user name from any place in wait list, either beginging or last
-            continue
-        OUT.append(item)
-
-    if not DATA_FILE.set_list(OUT, log_file):
-        NOTIFICATION.messenger("Your account have no access to write in DB folder.")
+        # Also clean file-based queue if L drive is available (keep in sync during transition)
+        if not ENVIRONMENT.IS_OFFLINE_MODE:
+            _clean_file_based_queue(doc)
         return
 
+    # === FALLBACK: File-based queue (only if L drive is available) ===
+    ERROR_HANDLE.print_note("Sync queue API unreachable for completion, checking fallback...")
+    if ENVIRONMENT.IS_OFFLINE_MODE:
+        ERROR_HANDLE.print_note("L drive unavailable, skipping file-based queue cleanup.")
+        return
+
+    _complete_file_based_queue(doc)
+
+
+def _notify_next_user_from_api(doc, api_result):
+    """Notify the next user in queue based on API response.
+
+    Args:
+        doc: Revit Document object
+        api_result: Dict with "success", "queue" from API
+    """
     if REVIT_EVENT.is_sync_queue_disabled():
-        # when  gloabl sync queue disabled, dont want to see dialogue, but still want to clear name from log file
         return
 
-    if len(OUT) == 0:
+    queue = api_result.get("queue", [])
+    if not queue:
         return
+
     try:
-        next_user = OUT[0].split("]")[-1]
-        # next user found!! if this step can pass
-    except Exception as e:
+        next_user = queue[0].get("username", "")
+        if not next_user:
+            return
+    except Exception:
         return
 
     EMAIL.email(
@@ -481,10 +491,69 @@ def update_sync_queue(doc):
     )
 
     REVIT_FORMS.notification(
-        main_text="[{}]\nshould sync next.".format(next_user), 
-        sub_text="Expect slight network lag between SH/NY server to transfer waitlist file.", 
-        window_width=500, 
-        window_height=400, 
+        main_text="[{}]\nshould sync next.".format(next_user),
+        sub_text="Queue managed by EnneadTab-DB.",
+        window_width=500,
+        window_height=400,
+        self_destruct=15
+    )
+
+
+def _clean_file_based_queue(doc):
+    """Silently remove current user from file-based queue (transition cleanup)."""
+    try:
+        log_file = FOLDER.get_shared_dump_folder_file("SYNC_QUEUE_{}".format(doc.Title))
+        if not os.path.exists(log_file):
+            return
+        queue = DATA_FILE.get_list(log_file)
+        OUT = [item for item in queue if USER.USER_NAME not in item]
+        DATA_FILE.set_list(OUT, log_file)
+    except Exception as e:
+        ERROR_HANDLE.print_note("File-based queue cleanup failed: {}".format(e))
+
+
+def _complete_file_based_queue(doc):
+    """Full file-based queue completion with next-user notification (fallback path)."""
+    log_file = FOLDER.get_shared_dump_folder_file("SYNC_QUEUE_{}".format(doc.Title))
+
+    if not os.path.exists(log_file):
+        with io.open(log_file, "w", encoding="utf-8"):
+            pass
+
+    queue = DATA_FILE.get_list(log_file)
+    OUT = []
+
+    for item in queue:
+        if USER.USER_NAME in item:
+            continue
+        OUT.append(item)
+
+    if not DATA_FILE.set_list(OUT, log_file):
+        NOTIFICATION.messenger("Your account have no access to write in DB folder.")
+        return
+
+    if REVIT_EVENT.is_sync_queue_disabled():
+        return
+
+    if len(OUT) == 0:
+        return
+    try:
+        next_user = OUT[0].split("]")[-1]
+    except Exception:
+        return
+
+    EMAIL.email(
+        receiver_email_list="{}@ennead.com".format(next_user),
+        subject="Your Turn To Sync!",
+        body="Hi there, it is your turn to sync <{}>!".format(doc.Title),
+        body_image_link_list=[IMAGE.get_image_path_by_name("meme_you_sync_first.jpg")]
+    )
+
+    REVIT_FORMS.notification(
+        main_text="[{}]\nshould sync next.".format(next_user),
+        sub_text="Expect slight network lag between SH/NY server to transfer waitlist file.",
+        window_width=500,
+        window_height=400,
         self_destruct=15
     )
 
