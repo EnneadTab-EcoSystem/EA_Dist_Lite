@@ -21,6 +21,156 @@ import REVIT_FORMS, REVIT_VIEW, REVIT_EVENT
 from EnneadTab import CONFIG, EXE, DATA_FILE, NOTIFICATION, SPEAK
 
 import time
+import json
+
+# Sync Queue API configuration
+SYNC_QUEUE_API_BASE = "https://enneadtab.com/db/api/revit-sync"
+SYNC_QUEUE_API_TIMEOUT_MS = 5000
+
+def _api_post(endpoint, data):
+    """POST JSON to EnneadTab-DB sync queue API.
+
+    Uses System.Net.WebClient (CLR) for IronPython 2.7 compatibility.
+
+    Args:
+        endpoint: API path, e.g. "/request"
+        data: Dict to serialize as JSON body
+
+    Returns:
+        dict or None: Parsed response, or None on any failure
+    """
+    try:
+        import clr
+        clr.AddReference("System")
+        from System.Net import WebClient
+        from System.Text import Encoding
+
+        client = WebClient()
+        client.Headers.Add("Content-Type", "application/json")
+        client.Encoding = Encoding.UTF8
+
+        url = "{}{}".format(SYNC_QUEUE_API_BASE, endpoint)
+        body = json.dumps(data)
+        response = client.UploadString(url, "POST", body)
+        return json.loads(response)
+    except Exception as e:
+        ERROR_HANDLE.print_note("Sync queue API call failed ({}): {}".format(endpoint, e))
+        return None
+
+
+def _api_get(endpoint, params=None):
+    """GET from EnneadTab-DB sync queue API.
+
+    Args:
+        endpoint: API path, e.g. "/status"
+        params: Dict of query parameters
+
+    Returns:
+        dict or None: Parsed response, or None on any failure
+    """
+    try:
+        import clr
+        clr.AddReference("System")
+        from System.Net import WebClient
+        from System.Text import Encoding
+
+        client = WebClient()
+        client.Encoding = Encoding.UTF8
+
+        url = "{}{}".format(SYNC_QUEUE_API_BASE, endpoint)
+        if params:
+            query_parts = ["{}={}".format(k, v) for k, v in params.items()]
+            url = "{}?{}".format(url, "&".join(query_parts))
+
+        response = client.DownloadString(url)
+        return json.loads(response)
+    except Exception as e:
+        ERROR_HANDLE.print_note("Sync queue API GET failed ({}): {}".format(endpoint, e))
+        return None
+
+
+def get_model_guid(doc):
+    """Extract a stable identifier for the Revit central model.
+
+    Tries GetWorksharingCentralModelPath first (works for workshared models).
+    Falls back to doc.Title if central path is unavailable.
+
+    Args:
+        doc: Revit Document object
+
+    Returns:
+        str: Model GUID string, or doc.Title as fallback
+    """
+    try:
+        central_path = doc.GetWorksharingCentralModelPath()
+        if central_path:
+            from Autodesk.Revit.DB import ModelPathUtils
+            path_str = ModelPathUtils.ConvertModelPathToUserVisiblePath(central_path)
+            if path_str:
+                return path_str
+    except Exception as e:
+        ERROR_HANDLE.print_note("Could not get central model path: {}".format(e))
+
+    return doc.Title
+
+
+def api_request_sync(doc):
+    """Request sync permission from EnneadTab-DB API.
+
+    Joins the queue or refreshes heartbeat. Returns API response
+    with allowed status, or None if API is unreachable.
+
+    Args:
+        doc: Revit Document object
+
+    Returns:
+        dict or None: {"allowed": bool, "queue": [...], "dashboard_url": str}
+    """
+    from EnneadTab import USER, ENVIRONMENT
+    model_guid = get_model_guid(doc)
+    data = {
+        "model_guid": model_guid,
+        "model_name": doc.Title,
+        "username": USER.USER_NAME,
+        "machine_name": ENVIRONMENT.get_computer_name()
+    }
+    return _api_post("/request", data)
+
+
+def api_complete_sync(doc):
+    """Notify EnneadTab-DB that sync is complete. Remove from queue.
+
+    Args:
+        doc: Revit Document object
+
+    Returns:
+        dict or None: {"success": bool, "found": bool, "queue": [...]}
+    """
+    from EnneadTab import USER
+    model_guid = get_model_guid(doc)
+    data = {
+        "model_guid": model_guid,
+        "username": USER.USER_NAME
+    }
+    return _api_post("/complete", data)
+
+
+def api_prioritize_sync(doc):
+    """Move current user to front of queue (cut in line).
+
+    Args:
+        doc: Revit Document object
+
+    Returns:
+        dict or None: {"success": bool, "queue": [...]}
+    """
+    from EnneadTab import USER
+    model_guid = get_model_guid(doc)
+    data = {
+        "model_guid": model_guid,
+        "username": USER.USER_NAME
+    }
+    return _api_post("/prioritize", data)
 
 
 SYNC_MONITOR_FILE = "last_sync_record_data"

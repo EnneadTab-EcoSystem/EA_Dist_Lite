@@ -427,10 +427,21 @@ def update_area_tracking(doc):
 # =============================================================================
 
 def update_sync_queue(doc):
-    # dont need to do anything if pre-sycn chech was cancelled,
+    """Remove current user from sync queue after successful sync.
+
+    Calls EnneadTab-DB API first (fire-and-forget), then cleans
+    file-based queue for backward compatibility.
+    """
     if REVIT_EVENT.is_sync_cancelled():
         return
 
+    # === API PATH (fire-and-forget) ===
+    api_result = REVIT_SYNC.api_complete_sync(doc)
+    if api_result is not None:
+        ERROR_HANDLE.print_note("Sync queue API: complete sync reported success={}".format(
+            api_result.get("success")))
+
+    # === FILE-BASED PATH (dual-write cleanup) ===
     log_file = FOLDER.get_shared_dump_folder_file("SYNC_QUEUE_{}".format(doc.Title))
 
     if not os.path.exists(log_file):

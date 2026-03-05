@@ -5,7 +5,7 @@ import io
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 from EnneadTab import VERSION_CONTROL, ERROR_HANDLE, LOG, DATA_FILE, TIME, USER, DUCK, CONFIG, FOLDER, TIMESHEET
-from EnneadTab.REVIT import REVIT_FORMS, REVIT_SELECTION, REVIT_EVENT
+from EnneadTab.REVIT import REVIT_FORMS, REVIT_SELECTION, REVIT_EVENT, REVIT_SYNC
 
 __title__ = "Doc Syncing Hook"
 DOC = EXEC_PARAMS.event_args.Document
@@ -130,68 +130,79 @@ def _get_or_create_queue_file(log_file):
 
 def check_sync_queue(doc):
     """Check if document sync should proceed based on queue status.
-    
-    Manages a sync queue system to prevent multiple users from syncing simultaneously.
-    Projects in SYNC_QUEUE_IGNORE_LIST bypass the queue entirely.
-    
+
+    Silently writes to EnneadTab-DB API for data collection (Phase 1).
+    File-based queue remains the sole source of truth for user decisions.
+
     Args:
         doc: Revit Document object to check sync status for
-        
+
     Returns:
-        bool: True if sync can proceed, False if sync has been cancelled/stopped
+        bool: True if sync can proceed, False if cancelled
     """
-    # Validate document
     if not doc:
         ERROR_HANDLE.print_note("Error: check_sync_queue received None document")
-        can_proceed_sync = True
-        return can_proceed_sync
-    
-    # Check if project should bypass queue
+        return True
+
     if _is_project_ignored(doc.Title, SYNC_QUEUE_IGNORE_LIST):
-        can_proceed_sync = True
-        return can_proceed_sync
-    
-    # Get queue file and ensure it exists
+        return True
+
+    if REVIT_EVENT.is_sync_queue_disabled():
+        return True
+
+    user_name = USER.USER_NAME
+
+    # === SILENT API DUAL-WRITE (Phase 1: no user-facing changes) ===
+    # API call runs silently in background for data collection.
+    # File-based queue remains the sole source of truth for user decisions.
+    try:
+        api_result = REVIT_SYNC.api_request_sync(doc)
+        if api_result is not None:
+            ERROR_HANDLE.print_note("Sync queue API responded: allowed={}".format(api_result.get("allowed")))
+    except Exception as e:
+        ERROR_HANDLE.print_note("Sync queue API silent write failed: {}".format(e))
+
+    # === FILE-BASED PATH (drives all user-facing behavior) ===
+    return _check_sync_queue_file_based(doc, user_name)
+
+
+def _check_sync_queue_file_based(doc, user_name):
+    """Original file-based sync queue check (fallback path).
+
+    Args:
+        doc: Revit Document object
+        user_name: Current username
+
+    Returns:
+        bool: True if sync can proceed, False if cancelled
+    """
     log_file = FOLDER.get_shared_dump_folder_file("SYNC_QUEUE_{}".format(doc.Title))
     if not _get_or_create_queue_file(log_file):
-        # Cannot access queue file, allow sync to proceed
         ERROR_HANDLE.print_note("Cannot access sync queue file, allowing sync to proceed")
-        can_proceed_sync = True
-        return can_proceed_sync
-    
-    # Load and clean queue
+        return True
+
     try:
         queue = DATA_FILE.get_list(log_file)
     except Exception as e:
         ERROR_HANDLE.print_note("Error reading queue file: {}".format(str(e)))
-        can_proceed_sync = True
-        return can_proceed_sync
-    
+        return True
+
     wait_num = len(queue)
     queue = _cleanup_old_queue_records(queue)
-    
-    # Add current user to queue if needed
-    time = TIME.get_formatted_current_time()
-    user_name = USER.USER_NAME
-    queue, was_added = _add_user_to_queue_if_needed(queue, user_name, time)
-    
-    # Save updated queue if user was added
+
+    timestamp = TIME.get_formatted_current_time()
+    queue, was_added = _add_user_to_queue_if_needed(queue, user_name, timestamp)
+
     if was_added:
         try:
             DATA_FILE.set_list(queue, log_file)
         except Exception as e:
-            # Cannot write to queue file (e.g., SH cannot write to L drive)
             ERROR_HANDLE.print_note("Warning: Cannot write to queue file: {}".format(str(e)))
-            can_proceed_sync = True
-            return can_proceed_sync
-    
-    # Check if user can proceed with sync
-    if wait_num == 0 or user_name in queue[0] or REVIT_EVENT.is_sync_queue_disabled():
-        # No one on wait list, or user is first in line, or queue is globally disabled
-        can_proceed_sync = True
-        return can_proceed_sync
-    
-    # User must wait - show dialog
+            return True
+
+    if wait_num == 0 or user_name in queue[0]:
+        return True
+
     current_queue = _build_queue_dialog_text(queue)
     opts = [
         ["I will join the waitlist and sync later.(Click 'Close' when you see Revit Sync Fail on next step, it just means the sync has been cancelled. You still hold position on the waitlist.)", "Resume working and try syncing later.(+ $50 EA Coins)"],
@@ -202,27 +213,18 @@ def check_sync_queue(doc):
         sub_text=current_queue,
         options=opts
     )
-    
+
     if res == opts[1][0]:
-        # User chose to cut in line
-        can_proceed_sync = True
-        return can_proceed_sync
-    
-    # User chose to wait - cancel sync
+        return True
+
     EXEC_PARAMS.event_args.Cancel()
-    
-    # Play duck sound if enabled
     if CONFIG.get_setting("toggle_bt_is_duck_allowed", False):
         DUCK.quack()
-    
-    # Save local copy
     try:
         doc.Save()
     except Exception as e:
         ERROR_HANDLE.print_note("Warning: Could not save local copy: {}".format(str(e)))
-    
-    can_proceed_sync = False
-    return can_proceed_sync
+    return False
 
 
 
