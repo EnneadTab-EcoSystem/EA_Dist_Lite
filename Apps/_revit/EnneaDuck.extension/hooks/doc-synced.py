@@ -438,10 +438,11 @@ def update_sync_queue(doc):
 
     # === PRIMARY: EnneadTab-DB API ===
     api_result = None
-    try:
-        api_result = REVIT_SYNC.api_complete_sync(doc)
-    except Exception as e:
-        ERROR_HANDLE.print_note("Sync queue API complete failed: {}".format(e))
+    if hasattr(REVIT_SYNC, "api_complete_sync"):
+        try:
+            api_result = REVIT_SYNC.api_complete_sync(doc)
+        except Exception as e:
+            ERROR_HANDLE.print_note("Sync queue API complete failed: {}".format(e))
 
     if api_result is not None:
         ERROR_HANDLE.print_note("Sync queue API: complete sync reported success={}".format(
