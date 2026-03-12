@@ -214,6 +214,10 @@ test_*.py
 *_temp.*
 *_test.*
 
+# AutoDist state files (machine-local, publish status shared via GitHub Gist)
+DarkSide/publish_history.json
+DarkSide/scheduler_state.json
+
 # Auto-generated analysis files
 longest_paths.json
 

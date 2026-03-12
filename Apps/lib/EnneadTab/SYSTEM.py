@@ -181,19 +181,35 @@ def alert_missing_schedule_update():
     if not USER.IS_DEVELOPER:
         return
 
-    # Construct file path that works for both IronPython and CPython
-    history_filename = "publish_history.json"
-    history = os.path.join(ENVIRONMENT.ROOT, "DarkSide", history_filename)
-    
-    if not os.path.exists(history):
-        return
-    
+    GIST_RAW_URL = "https://gist.githubusercontent.com/zsenarchitect/d6b5a9f9ac831bb7ad1a4b32dad9c647/raw/publish_status.json"
+
+    # Try fetching from gist first, fall back to local file
+    data = None
     try:
-        with open(history, "r") as f:
-            data = json.load(f)
-    except Exception as e:
-        ERROR_HANDLE.print_note("Error reading publish history: {}".format(e))
-        return
+        import urllib2
+        response = urllib2.urlopen(GIST_RAW_URL, timeout=5)
+        data = json.loads(response.read())
+    except ImportError:
+        try:
+            from urllib.request import urlopen
+            response = urlopen(GIST_RAW_URL, timeout=5)
+            data = json.loads(response.read().decode("utf-8"))
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+    # Fall back to local file if gist fetch failed
+    if data is None:
+        history = os.path.join(ENVIRONMENT.ROOT, "DarkSide", "publish_history.json")
+        if not os.path.exists(history):
+            return
+        try:
+            with open(history, "r") as f:
+                data = json.load(f)
+        except Exception as e:
+            ERROR_HANDLE.print_note("Error reading publish history: {}".format(e))
+            return
     
     # Get runs data and check if it exists
     runs = data.get("runs", [])
