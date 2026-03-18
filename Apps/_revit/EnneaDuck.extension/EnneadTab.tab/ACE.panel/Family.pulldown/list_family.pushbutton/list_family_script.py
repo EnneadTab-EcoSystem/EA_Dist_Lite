@@ -1215,13 +1215,16 @@ class List3DFamily(ListFamily):
         
     def _create_new_view(self, view_type, view_name):
         """Creates new view based on type"""
+        # Get level before starting transaction to avoid nested transaction error
+        if view_type != "Use 3D view":
+            new_level = Deployer.get_internal_dump_level_externally()
+
         t = DB.Transaction(self.doc, "Make new view: {}".format(view_name))
         t.Start()
-        
+
         if view_type == "Use 3D view":
             view = DB.View3D.CreateIsometric(self.doc, REVIT_VIEW.get_default_view_type("3d").Id)
         else:
-            new_level = Deployer.get_internal_dump_level_externally()
             view = DB.ViewPlan.Create(self.doc, REVIT_VIEW.get_default_view_type("plan").Id, new_level.Id)
         
         view.Name = view_name
