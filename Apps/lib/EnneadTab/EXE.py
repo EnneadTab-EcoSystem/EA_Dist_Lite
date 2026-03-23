@@ -81,31 +81,39 @@ def open_document_file(file_path):
         return False
 
 def locate_executable(exe_name):
-    """Locate an executable in the standard EnneadTab locations.
-    
+    """Locate an executable or batch launcher in the standard EnneadTab locations.
+
+    Searches for .bat first (lightweight Python launcher), then .exe (compiled).
+    This allows gradual migration from compiled EXEs to .bat launchers without
+    changing any callers.
+
     Args:
         exe_name (str): Name of the executable without extension.
-        
+
     Returns:
-        str: Path to the executable if found, None otherwise.
+        str: Path to the executable/batch file if found, None otherwise.
     """
-    exe_name = exe_name.replace(".exe", "")
-    
-    # Check product folder
-    exe_path = ENVIRONMENT.EXE_PRODUCT_FOLDER + "\\{}.exe".format(exe_name)
-    if os.path.exists(exe_path):
-        return exe_path
-        
-    # Check standalone folder
-    exe_path = ENVIRONMENT.STAND_ALONE_FOLDER + "\\{}.exe".format(exe_name)
-    if os.path.exists(exe_path):
-        return exe_path
-        
-    # Check foldered exe in product folder
-    foldered_exe = ENVIRONMENT.EXE_PRODUCT_FOLDER + "\\{0}\\{0}.exe".format(exe_name)
-    if os.path.exists(foldered_exe):
-        return foldered_exe
-        
+    exe_name = exe_name.replace(".exe", "").replace(".bat", "")
+
+    # Search order: .bat first (preferred — no recompilation needed), then .exe
+    extensions = [".bat", ".exe"]
+
+    for ext in extensions:
+        # Check product folder
+        path = ENVIRONMENT.EXE_PRODUCT_FOLDER + "\\{}{}".format(exe_name, ext)
+        if os.path.exists(path):
+            return path
+
+        # Check standalone folder
+        path = ENVIRONMENT.STAND_ALONE_FOLDER + "\\{}{}".format(exe_name, ext)
+        if os.path.exists(path):
+            return path
+
+        # Check foldered variant in product folder
+        path = ENVIRONMENT.EXE_PRODUCT_FOLDER + "\\{0}\\{0}{1}".format(exe_name, ext)
+        if os.path.exists(path):
+            return path
+
     return None
 
 def create_temporary_copy(exe_path, exe_name):
