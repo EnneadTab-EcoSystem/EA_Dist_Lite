@@ -23,7 +23,6 @@ __title__ = "List\nFamilies"
 __tip__ = True
 
 
-import os
 import time
 import traceback
 from pyrevit import script
@@ -35,8 +34,7 @@ from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FILTER
 from EnneadTab import ERROR_HANDLE, LOG, SAMPLE_FILE
 from EnneadTab.REVIT import REVIT_SELECTION, REVIT_VIEW, REVIT_FAMILY, REVIT_FORMS,REVIT_SYNC
 from Autodesk.Revit import DB # pyright: ignore
-# from rpw.db import family 
-# from Autodesk.Revit import UI # pyright: ignore
+import family_browser
 
 # View and level naming constants
 FAMILY_DUMP_2D_DUMP_VIEW = "{}_2D_Item_Dump".format(ENVIRONMENT.PLUGIN_NAME)
@@ -74,11 +72,12 @@ class Deployer:
             families: List of families to deploy
             tag_family: Optional tag family for labeling instances
         """
-        tag_family = None# Force turn to None during debugging
         self.doc = REVIT_APPLICATION.get_doc()
         self.uidoc = REVIT_APPLICATION.get_uidoc()
         self.view = view
         self.families = families
+        self._cached_model_text_elements = None
+        self._host_cache = {}
         if self.doc.ActiveView.Id != self.view.Id:
             self.uidoc.ActiveView = view
         
@@ -145,12 +144,12 @@ class Deployer:
         Returns:
             DB.TextNoteType: Text note type
         """
-        pass
         all_text_types = DB.FilteredElementCollector(self.doc).OfClass(DB.TextNoteType).WhereElementIsElementType().ToElements()
-        for label_text_type in all_text_types:
-            if label_text_type.LookupParameter("Type Name").AsString() == "Label":
-                return label_text_type
-
+        label_text_type = None
+        for text_type in all_text_types:
+            if text_type.LookupParameter("Type Name").AsString() == "Label":
+                label_text_type = text_type
+                break
 
         if not label_text_type:
             t = DB.Transaction(self.doc, "Create Label Text Type")
@@ -169,15 +168,19 @@ class Deployer:
     
     def _get_model_text_elements(self):
         """Gets or creates model text elements needed for labeling.
-        
+
         Returns:
             tuple: (sample_model_text, label_text_type) or (None, None) if failed
         """
+        if self._cached_model_text_elements is not None:
+            return self._cached_model_text_elements
+
         # Get sample model text
         sample_model_text = DB.FilteredElementCollector(self.doc).OfClass(DB.ModelText).FirstElement()
         if not sample_model_text:
             print ("No sample model text found, you need to have at least 1 model text in the document otherwise you will see no labeling. Please please please.")
-            return None, None
+            self._cached_model_text_elements = (None, None)
+            return self._cached_model_text_elements
 
         # Get or create label text type
         all_text_types = DB.FilteredElementCollector(self.doc).OfClass(DB.ModelTextType).ToElements()
@@ -203,7 +206,8 @@ class Deployer:
         label_text_type.LookupParameter("Text Size").Set(1)
         t.Commit()
         
-        return sample_model_text, label_text_type
+        self._cached_model_text_elements = (sample_model_text, label_text_type)
+        return self._cached_model_text_elements
 
     def add_label_text(self, family):
         if self.view.ViewType == DB.ViewType.DraftingView:
@@ -211,7 +215,8 @@ class Deployer:
         else:
             new_title = self._add_label_text_3d(family)
 
-        self.item_collection.append(new_title)
+        if new_title is not None:
+            self.item_collection.append(new_title)
 
     def _add_label_text_2d(self, family):
         """Adds descriptive text label for a family in a drafting view.
@@ -332,18 +337,13 @@ class Deployer:
                         .WhereElementIsNotElementType()\
                         .ToElements()
 
-        # print ("purging {} elements of category {}".format(len(elements), category_or_class))
-        if category_or_class == DB.BuiltInCategory.OST_TextNotes:
-            for element in elements:
-                self.doc.Delete(element.Id)
-            return
-
-        
         for element in elements:
             try:
                 comment = element.LookupParameter("Comments").AsString()
+                if not comment:
+                    continue
                 should_delete = False
-                
+
                 if comparison_type == "equals":
                     should_delete = (comment == comment_value)
                 elif comparison_type == "startswith":
@@ -370,18 +370,18 @@ class Deployer:
         """if we are getting a new category, we need to reset the x position and add a new header"""
         if not hasattr(self, "header_x"):
             self.header_x = 0
-            self.current_category_header = family.FamilyCategory.Name
+            self.current_category_header = family.FamilyCategory.Name if family.FamilyCategory else "Unknown Category"
             self.max_label_width = -1
             self.row_width = 0
             self.max_row_width = -1
             self.item_collection = []
 
-        if family.FamilyCategory.Name != self.current_category_header:
+        if (family.FamilyCategory.Name if family.FamilyCategory else "Unknown Category") != self.current_category_header:
             self.save_item_collection()
             self.header_x += self.max_label_width + 30 + self.max_row_width # ideally it should be using current label max widht with previous row max width, but , well, i am not care enough to improve that yet. Just using mahic 10 and hope for the best
             self.pointer = DB.XYZ(self.header_x, 0, self.pointer.Z)
-            self.current_category_header = family.FamilyCategory.Name
-            
+            self.current_category_header = family.FamilyCategory.Name if family.FamilyCategory else "Unknown Category"
+
 
         return True
 
@@ -576,7 +576,7 @@ class Deployer:
             instance.LookupParameter("Comments").Set(INTERNAL_COMMENT)
             t.Commit()
         except Exception as e:
-            instance.LookupParameter("Comments").Set(INTERNAL_COMMENT)
+            pass
 
     def _get_instance_size(self, instance):
         t = DB.Transaction(self.doc, "Isolate Element To Zoom and get size")
@@ -718,18 +718,21 @@ class Deployer:
         """Gets existing or creates new host wall"""
         self.is_need_host_wall = True # set this to true so later can try to retreive same wall during wall length secure
 
-        
+        wall_comment = "{}_{}".format(FAMILY_DUMP_WALL_COMMENT, family.Name)
+        cache_key = "wall_" + wall_comment
+        if cache_key in self._host_cache:
+            return self._host_cache[cache_key]
+
         walls = DB.FilteredElementCollector(self.doc)\
                  .OfCategory(DB.BuiltInCategory.OST_Walls)\
                  .WhereElementIsNotElementType()\
                  .ToElements()
-                 
-        wall_comment = "{}_{}".format(FAMILY_DUMP_WALL_COMMENT, family.Name)
-        
+
         for wall in walls:
             if wall.LookupParameter("Comments").AsString() == wall_comment:
+                self._host_cache[cache_key] = wall
                 return wall
-                
+
         t = DB.Transaction(self.doc, "Create Host Wall")
         t.Start()
         line = DB.Line.CreateBound(self.pointer.Add(DB.XYZ(-3, 0, 0)),
@@ -742,19 +745,24 @@ class Deployer:
         wall.LookupParameter("Unconnected Height").Set(15)
         wall.Flip()
         t.Commit()
+        self._host_cache[cache_key] = wall
         return wall
 
     def _get_or_create_host_ceiling(self, family):
         """Gets existing or creates new host ceiling"""
+        ceiling_comment = "{}_{}".format(FAMILY_DUMP_CEILING_COMMENT, family.Name)
+        cache_key = "ceiling_" + ceiling_comment
+        if cache_key in self._host_cache:
+            return self._host_cache[cache_key]
+
         ceilings = DB.FilteredElementCollector(self.doc)\
                     .OfCategory(DB.BuiltInCategory.OST_Ceilings)\
                     .WhereElementIsNotElementType()\
                     .ToElements()
-                    
-        ceiling_comment = "{}_{}".format(FAMILY_DUMP_CEILING_COMMENT, family.Name)
-        
+
         for ceiling in ceilings:
             if ceiling.LookupParameter("Comments").AsString() == ceiling_comment:
+                self._host_cache[cache_key] = ceiling
                 return ceiling
                 
         t = DB.Transaction(self.doc, "Create Host Ceiling")
@@ -800,82 +808,94 @@ class Deployer:
         ceiling.LookupParameter("Comments").Set(ceiling_comment)
         ceiling.LookupParameter("Height Offset From Level").Set(10)
         t.Commit()
+        self._host_cache[cache_key] = ceiling
         return ceiling
 
     def _get_or_create_host_roof(self, family):
         """Gets or creates a roof for hosting family instances
-        
+
         Args:
             family: Family requiring roof host
-            
+
         Returns:
             DB.RoofBase: The host roof
         """
+        roof_comment = "{}_{}".format(FAMILY_DUMP_ROOF_COMMENT, family.Name)
+        cache_key = "roof_" + roof_comment
+        if cache_key in self._host_cache:
+            return self._host_cache[cache_key]
+
         roofs = DB.FilteredElementCollector(self.doc)\
                  .OfCategory(DB.BuiltInCategory.OST_Roofs)\
                  .WhereElementIsNotElementType()\
                  .ToElements()
-                 
-        roof_comment = "{}_{}".format(FAMILY_DUMP_ROOF_COMMENT, family.Name)
-        
+
         for roof in roofs:
             if roof.LookupParameter("Comments").AsString() == roof_comment:
+                self._host_cache[cache_key] = roof
                 return roof
-                
+
         t = DB.Transaction(self.doc, "Create Host Roof")
         t.Start()
-        
+
         # Get default roof type
-        roof_type_id = DB.FilteredElementCollector(self.doc)\
+        roof_type = self.doc.GetElement(DB.FilteredElementCollector(self.doc)\
                         .OfCategory(DB.BuiltInCategory.OST_Roofs)\
                         .WhereElementIsElementType()\
-                        .FirstElementId()
-        
+                        .FirstElementId())
+
         # Create roof footprint
         level = self.get_internal_dump_level()
         short_side = 5
         long_side = 10
-        
+
         points = [
             self.pointer.Add(DB.XYZ(-short_side, -short_side, self.pointer.Z)),
             self.pointer.Add(DB.XYZ(long_side, -short_side, self.pointer.Z)),
             self.pointer.Add(DB.XYZ(long_side, short_side, self.pointer.Z)),
             self.pointer.Add(DB.XYZ(-short_side, short_side, self.pointer.Z))
         ]
-        
+
         curves = []
         for i in range(len(points)):
             next_i = (i + 1) % len(points)
             line = DB.Line.CreateBound(points[i], points[next_i])
             curves.append(line)
-            
+
         curve_array = DB.CurveArray()
         for curve in curves:
             curve_array.Append(curve)
-            
-        roof = self.doc.Create.NewFootPrintRoof(curve_array, 
-                                              level, 
-                                              roof_type_id, 
-                                              DATA_CONVERSION.list_to_system_list([level.Id]))
-                                              
+
+        # NewFootPrintRoof takes a ModelCurveArray as output param, not ElementId list
+        footprint_curves = DB.ModelCurveArray()
+        roof = self.doc.Create.NewFootPrintRoof(curve_array,
+                                              level,
+                                              roof_type,
+                                              footprint_curves)
+
         roof.LookupParameter("Comments").Set(roof_comment)
         t.Commit()
+        self._host_cache[cache_key] = roof
         return roof
 
     def _get_or_create_host_floor(self, family):
         """Gets or creates a floor for hosting family instances
-        
+
         Args:
             family: Family requiring floor host"""
+        floor_comment = "{}_{}".format(FAMILY_DUMP_FLOOR_COMMENT, family.Name)
+        cache_key = "floor_" + floor_comment
+        if cache_key in self._host_cache:
+            return self._host_cache[cache_key]
+
         floors = DB.FilteredElementCollector(self.doc)\
                  .OfCategory(DB.BuiltInCategory.OST_Floors)\
                  .WhereElementIsNotElementType()\
                  .ToElements()
-                 
-        floor_comment = "{}_{}".format(FAMILY_DUMP_FLOOR_COMMENT, family.Name)
-        
+
         for floor in floors:
             if floor.LookupParameter("Comments").AsString() == floor_comment:
+                self._host_cache[cache_key] = floor
                 return floor
                 
         t = DB.Transaction(self.doc, "Create Host Floor")
@@ -914,6 +934,7 @@ class Deployer:
                               
         floor.LookupParameter("Comments").Set(floor_comment)
         t.Commit()
+        self._host_cache[cache_key] = floor
         return floor
 
 
@@ -979,17 +1000,23 @@ class Deployer:
 
     @staticmethod
     def get_internal_dump_level_externally():
+        if hasattr(Deployer, '_cached_dump_level') and Deployer._cached_dump_level is not None:
+            if Deployer._cached_dump_level.IsValidObject:
+                return Deployer._cached_dump_level
+
         doc = REVIT_APPLICATION.get_doc()
         all_levels = DB.FilteredElementCollector(doc).OfClass(DB.Level).ToElements()
         for level in all_levels:
             if level.Name == FAMILY_DUMP_LEVEL:
+                Deployer._cached_dump_level = level
                 return level
-                
+
         t = DB.Transaction(doc, "Create Internal Level")
         t.Start()
         new_level = DB.Level.Create(doc, 0)
         new_level.Name = FAMILY_DUMP_LEVEL
         t.Commit()
+        Deployer._cached_dump_level = new_level
         return new_level
         
 
@@ -1079,27 +1106,31 @@ class ListFamily:
         
     def run(self):
         """Main execution method for family listing.
-        
+
         Orchestrates the process of getting families, creating/getting views,
-        and deploying families through the Deployer class.
-        
+        and deploying families through the Deployer class. Also launches an
+        interactive HTML browser for searching and comparing families.
+
         Returns:
             None
         """
         families = self._get_families()
         if not families:
             return
-            
+
+        # Launch interactive browser so user can explore while Revit deploys
+        family_browser.launch_family_browser(families)
+
         view = self.get_or_create_view()
         if not view:
             return
-            
+
         self.uidoc.ActiveView = view
         self._change_view_group(view)
-        
+
         tag_family = self.get_tag_family()
         Deployer(view, families, tag_family)
-        
+
         NOTIFICATION.messenger("Families listed at view: {}".format(view.Name))
 
     def _change_view_group(self, view):
@@ -1164,7 +1195,7 @@ class List2DFamily(ListFamily):
         tag_family = REVIT_FAMILY.get_family_by_name(family_name, load_path_if_not_exist=tag_family_path)
         if not tag_family:
             NOTIFICATION.messenger("Warning: Tag family '{}' not found and could not be loaded. Proceeding without tags.".format(family_name))
-        return None  # to be fixed later
+        return tag_family
 
 
 class List3DFamily(ListFamily):
