@@ -12,10 +12,34 @@ root_folder = os.path.abspath((os.path.dirname(os.path.dirname(os.path.abspath(_
 sys.path.append(root_folder)
 
 try:
-    import FOLDER, SAMPLE_FILE, ERROR_HANDLE
-except Exception as e:
-    ERROR_HANDLE.print_note("REVIT_APPLICATION.py: Error importing Revit modules")
-    ERROR_HANDLE.print_note(traceback.format_exc())
+    import FOLDER
+except Exception:
+    FOLDER = None
+    print("REVIT_APPLICATION.py: Failed to import FOLDER")
+    print(traceback.format_exc())
+
+try:
+    import SAMPLE_FILE
+except Exception:
+    SAMPLE_FILE = None
+    print("REVIT_APPLICATION.py: Failed to import SAMPLE_FILE")
+    print(traceback.format_exc())
+
+try:
+    import ERROR_HANDLE
+except Exception:
+    ERROR_HANDLE = None
+    print("REVIT_APPLICATION.py: Failed to import ERROR_HANDLE")
+    print(traceback.format_exc())
+
+# Fallback logger to avoid cascading NameError/AttributeError on startup.
+if ERROR_HANDLE is None:
+    class _ERROR_HANDLE_FALLBACK(object):
+        @staticmethod
+        def print_note(message):
+            print(message)
+
+    ERROR_HANDLE = _ERROR_HANDLE_FALLBACK()
 
 
 def get_revit_version():
@@ -111,7 +135,13 @@ def switch_away_from_family(family_name_to_avoid):
 
 def open_safety_doc_family():
     """Open a safety family document for closing operations."""
+    if SAMPLE_FILE is None or FOLDER is None:
+        ERROR_HANDLE.print_note("open_safety_doc_family skipped: SAMPLE_FILE/FOLDER not available")
+        return
     filepath = SAMPLE_FILE.get_file("Closing Safety Doc.rfa")
+    if not filepath:
+        ERROR_HANDLE.print_note("open_safety_doc_family skipped: safety family path not found")
+        return
     safe_family = FOLDER.copy_file_to_local_dump_folder(filepath, ignore_warning=True)
     open_and_active_project(safe_family)
 

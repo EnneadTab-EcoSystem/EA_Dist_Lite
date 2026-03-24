@@ -419,6 +419,16 @@ def try_catch_error(is_silent=False, is_pass = False):
                 except Exception as e:
                     pass
 
+                try:
+                    send_error_to_error_dump(
+                        error_message=error,
+                        func_name=func.__name__,
+                        user_name=USER.USER_NAME if USER else "unknown",
+                        is_silent=is_silent
+                    )
+                except Exception as e:
+                    pass
+
                 if not is_silent:
                     try:
                         error_file = FOLDER.get_local_dump_folder_file("error_general_log.txt")
@@ -480,6 +490,94 @@ def try_catch_error(is_silent=False, is_pass = False):
         error_wrapper.original_function = func
         return error_wrapper
     return decorator
+
+def send_error_to_error_dump(error_message, func_name, user_name, is_silent=False):
+    """Send error to the universal ErrorDump service at enneadtab.com.
+
+    Public endpoint — no API key needed. Fires and forgets with a 5s timeout.
+    Compatible with IronPython 2.7, CPython 2.7, and CPython 3.x.
+
+    Args:
+        error_message (str): The error traceback or message
+        func_name (str): Name of the function that threw
+        user_name (str): Windows username
+        is_silent (bool): Whether this was a silent error
+    """
+    import json
+    import os
+
+    # Detect environment
+    env = "terminal"
+    try:
+        if ENVIRONMENT is not None:
+            if ENVIRONMENT.IS_REVIT_ENVIRONMENT:
+                env = "revit"
+            elif ENVIRONMENT.IS_RHINO_ENVIRONMENT:
+                env = "rhino"
+    except Exception:
+        pass
+
+    # Build context with available metadata
+    context = {
+        "is_silent": is_silent,
+        "computer_name": os.environ.get("COMPUTERNAME", "unknown"),
+    }
+    try:
+        if ENVIRONMENT is not None:
+            if hasattr(ENVIRONMENT, "get_revit_version"):
+                context["revit_version"] = str(ENVIRONMENT.get_revit_version())
+            if hasattr(ENVIRONMENT, "get_pyrevit_version"):
+                context["pyrevit_version"] = str(ENVIRONMENT.get_pyrevit_version())
+    except Exception:
+        pass
+
+    payload = json.dumps({
+        "source_app": "EnneadTab-OS",
+        "environment": env,
+        "error_message": str(error_message)[:5000],
+        "stack_trace": str(error_message)[:10000],
+        "function_name": str(func_name),
+        "user_name": str(user_name),
+        "machine_name": os.environ.get("COMPUTERNAME", "unknown"),
+        "context": context,
+    })
+
+    url = "https://enneadtab.com/error-dump/api/ingest"
+    headers = {"Content-Type": "application/json"}
+
+    # Try urllib.request (CPython 3.x)
+    try:
+        import urllib.request
+        req = urllib.request.Request(url, data=payload.encode("utf-8"), headers=headers)
+        urllib.request.urlopen(req, timeout=5)
+        return
+    except ImportError:
+        pass
+    except Exception:
+        pass
+
+    # Try urllib2 (IronPython 2.7 / CPython 2.7)
+    try:
+        import urllib2
+        req = urllib2.Request(url, data=payload.encode("utf-8"), headers=headers)
+        urllib2.urlopen(req, timeout=5)
+        return
+    except ImportError:
+        pass
+    except Exception:
+        pass
+
+    # Try urllib3 (if available in Revit venv)
+    try:
+        import urllib3
+        http = urllib3.PoolManager()
+        http.request("POST", url, body=payload.encode("utf-8"), headers=headers, timeout=5.0)
+        return
+    except ImportError:
+        pass
+    except Exception:
+        pass
+
 
 def send_error_to_google_form(error, func_name, user_name):
     """Send error information to Google Form for automated error tracking.
