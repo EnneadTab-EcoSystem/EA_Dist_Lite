@@ -1,5 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
+import os
+import sys
+
+# Ensure parent lib/EnneadTab is on sys.path for sibling imports
+_root = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _root not in sys.path:
+    sys.path.append(_root)
+
 import ERROR_HANDLE
 import REVIT_APPLICATION
 try:
@@ -26,11 +34,37 @@ import json
 # Sync Queue API configuration
 SYNC_QUEUE_API_BASE = "https://enneadtab.com/db/api/revit-sync"
 SYNC_QUEUE_API_TIMEOUT_MS = 5000
+SYNC_QUEUE_API_MAX_RETRIES = 2
+
+
+def _create_web_request(url, method="GET"):
+    """Create a WebRequest with timeout configured.
+
+    System.Net.WebClient does not expose a timeout property,
+    so we use HttpWebRequest directly for proper timeout control.
+
+    Args:
+        url: Full URL string
+        method: HTTP method (GET or POST)
+
+    Returns:
+        System.Net.HttpWebRequest with timeout set
+    """
+    import clr
+    clr.AddReference("System")
+    from System.Net import WebRequest
+
+    request = WebRequest.Create(url)
+    request.Method = method
+    request.Timeout = SYNC_QUEUE_API_TIMEOUT_MS
+    return request
+
 
 def _api_post(endpoint, data):
     """POST JSON to EnneadTab-DB sync queue API.
 
-    Uses System.Net.WebClient (CLR) for IronPython 2.7 compatibility.
+    Uses System.Net.HttpWebRequest for IronPython 2.7 compatibility
+    with proper timeout. Retries once on transient failure (500, timeout).
 
     Args:
         endpoint: API path, e.g. "/request"
@@ -39,23 +73,42 @@ def _api_post(endpoint, data):
     Returns:
         dict or None: Parsed response, or None on any failure
     """
-    try:
-        import clr
-        clr.AddReference("System")
-        from System.Net import WebClient
-        from System.Text import Encoding
+    import clr
+    clr.AddReference("System")
+    from System.Text import Encoding
+    from System.IO import StreamReader, StreamWriter
 
-        client = WebClient()
-        client.Headers.Add("Content-Type", "application/json")
-        client.Encoding = Encoding.UTF8
+    url = "{}{}".format(SYNC_QUEUE_API_BASE, endpoint)
+    body = json.dumps(data)
+    body_bytes = Encoding.UTF8.GetBytes(body)
 
-        url = "{}{}".format(SYNC_QUEUE_API_BASE, endpoint)
-        body = json.dumps(data)
-        response = client.UploadString(url, "POST", body)
-        return json.loads(response)
-    except Exception as e:
-        ERROR_HANDLE.print_note("Sync queue API call failed ({}): {}".format(endpoint, e))
-        return None
+    last_error = None
+    for attempt in range(SYNC_QUEUE_API_MAX_RETRIES):
+        try:
+            request = _create_web_request(url, "POST")
+            request.ContentType = "application/json"
+            request.ContentLength = len(body_bytes)
+
+            stream = request.GetRequestStream()
+            stream.Write(body_bytes, 0, len(body_bytes))
+            stream.Close()
+
+            response = request.GetResponse()
+            reader = StreamReader(response.GetResponseStream(), Encoding.UTF8)
+            text = reader.ReadToEnd()
+            reader.Close()
+            response.Close()
+            return json.loads(text)
+        except Exception as e:
+            last_error = e
+            error_str = str(e)
+            is_retryable = "(500)" in error_str or "timed out" in error_str.lower() or "timeout" in error_str.lower()
+            if not is_retryable or attempt == SYNC_QUEUE_API_MAX_RETRIES - 1:
+                break
+            time.sleep(1)
+
+    ERROR_HANDLE.print_note("Sync queue API call failed ({}): {}".format(endpoint, last_error))
+    return None
 
 
 def _api_get(endpoint, params=None):
@@ -68,25 +121,36 @@ def _api_get(endpoint, params=None):
     Returns:
         dict or None: Parsed response, or None on any failure
     """
-    try:
-        import clr
-        clr.AddReference("System")
-        from System.Net import WebClient
-        from System.Text import Encoding
+    import clr
+    clr.AddReference("System")
+    from System.Text import Encoding
+    from System.IO import StreamReader
 
-        client = WebClient()
-        client.Encoding = Encoding.UTF8
+    url = "{}{}".format(SYNC_QUEUE_API_BASE, endpoint)
+    if params:
+        query_parts = ["{}={}".format(k, v) for k, v in params.items()]
+        url = "{}?{}".format(url, "&".join(query_parts))
 
-        url = "{}{}".format(SYNC_QUEUE_API_BASE, endpoint)
-        if params:
-            query_parts = ["{}={}".format(k, v) for k, v in params.items()]
-            url = "{}?{}".format(url, "&".join(query_parts))
+    last_error = None
+    for attempt in range(SYNC_QUEUE_API_MAX_RETRIES):
+        try:
+            request = _create_web_request(url, "GET")
+            response = request.GetResponse()
+            reader = StreamReader(response.GetResponseStream(), Encoding.UTF8)
+            text = reader.ReadToEnd()
+            reader.Close()
+            response.Close()
+            return json.loads(text)
+        except Exception as e:
+            last_error = e
+            error_str = str(e)
+            is_retryable = "(500)" in error_str or "timed out" in error_str.lower() or "timeout" in error_str.lower()
+            if not is_retryable or attempt == SYNC_QUEUE_API_MAX_RETRIES - 1:
+                break
+            time.sleep(1)
 
-        response = client.DownloadString(url)
-        return json.loads(response)
-    except Exception as e:
-        ERROR_HANDLE.print_note("Sync queue API GET failed ({}): {}".format(endpoint, e))
-        return None
+    ERROR_HANDLE.print_note("Sync queue API GET failed ({}): {}".format(endpoint, last_error))
+    return None
 
 
 def get_model_guid(doc):

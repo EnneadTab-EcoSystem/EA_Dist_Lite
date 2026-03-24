@@ -15,6 +15,13 @@ except:
     
 import os
 from EnneadTab import ERROR_HANDLE
+import sys
+
+# Ensure parent lib/EnneadTab is on sys.path for sibling imports
+_root = os.path.abspath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if _root not in sys.path:
+    sys.path.append(_root)
+
 import NOTIFICATION
 import FOLDER 
 import REVIT_SELECTION

@@ -8,7 +8,7 @@ from Autodesk.Revit import DB # pyright: ignore
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 from EnneadTab import NOTIFICATION, TIMESHEET, ERROR_HANDLE, EMAIL, NOTIFICATION, USER, FOLDER, DATA_FILE, ENVIRONMENT, SOUND, SPEAK
-from EnneadTab.REVIT import REVIT_HISTORY, REVIT_EXTERNAL_FILE, REVIT_FORMS, REVIT_SYNC, REVIT_EVENT, REVIT_APPLICATION, REVIT_METRIC
+from EnneadTab.REVIT import REVIT_HISTORY, REVIT_EXTERNAL_FILE, REVIT_FORMS, REVIT_SYNC, REVIT_EVENT, REVIT_APPLICATION
 from pyrevit import forms, script
 from pyrevit import EXEC_PARAMS
 from pyrevit.coreutils import envvars
@@ -16,33 +16,32 @@ from pyrevit.coreutils import ribbon
 
 JOB_ID = os.environ.get("ACC_JOB_ID")
 
-def handle_acc_slave(doc):
-    print("handle_acc_slave called in doc-opened.py")
+def handle_bim_runner_job(doc):
+    ERROR_HANDLE.print_note("handle_bim_runner_job called in doc-opened.py")
     if not JOB_ID:
         # Not an automated job
         return
     job_file = "ACC_JOB_{}".format(JOB_ID)
     job_record = DATA_FILE.get_data(job_file)
     if not job_record:
-        print("Job record not found: {}".format(job_file))
+        ERROR_HANDLE.print_note("Job record not found: {}".format(job_file))
         return
     if job_record.get("state") != "PROCESSING":
-        print("Job {} in unexpected state {}".format(JOB_ID, job_record.get("state")))
+        ERROR_HANDLE.print_note("Job {} in unexpected state {}".format(JOB_ID, job_record.get("state")))
         return
 
-    print("Processing document: {}".format(doc.Title))
+    ERROR_HANDLE.print_note("Processing document: {}".format(doc.Title))
     try:
-        # Place your real processing logic here
-        sample_note = "{} have been handled nicely by acc slave".format(doc.Title)
+        sample_note = "{} processed by BimRunner".format(doc.Title)
         DATA_FILE.set_data({"note": sample_note}, "ACC_PROJECT_RUNNER_JOB_PROOF_OF_WORK_{}".format(doc.Title))
         job_record["state"] = "SUCCESS"
     except Exception as e:
-        print("Error in handle_acc_slave: {}".format(e))
+        ERROR_HANDLE.print_note("Error in handle_bim_runner_job: {}".format(e))
         job_record["state"] = "FAILED_PROCESSING"
     finally:
         DATA_FILE.set_data(job_record, job_file)
 
-    print("Syncing and closing Revit...")
+    ERROR_HANDLE.print_note("Syncing and closing Revit...")
     REVIT_SYNC.sync_and_close()
     REVIT_APPLICATION.close_revit_app()
     print("Revit closed")
@@ -463,11 +462,8 @@ def main():
         check_group_usage(doc)
         log_time_sheet(doc)
 
-        if ENVIRONMENT.get_computer_name() == "CXU" or USER.IS_DEVELOPER:
-            REVIT_METRIC.RevitMetric(doc).update_metric()
-
-        if USER.IS_DEVELOPER:   
-            handle_acc_slave(doc)
+        if USER.IS_DEVELOPER:
+            handle_bim_runner_job(doc)
 
         if USER.IS_DEVELOPER:
             NOTIFICATION.messenger(main_text = "Doc opened: {}".format(doc.Title))

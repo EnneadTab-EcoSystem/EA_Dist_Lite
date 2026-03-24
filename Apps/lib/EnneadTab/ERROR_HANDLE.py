@@ -542,7 +542,7 @@ def send_error_to_error_dump(error_message, func_name, user_name, is_silent=Fals
         "context": context,
     })
 
-    url = "https://enneadtab.com/error-dump/api/ingest"
+    url = "https://error-dump-ennead-projects.vercel.app/error-dump/api/ingest"
     headers = {"Content-Type": "application/json"}
 
     # Try urllib.request (CPython 3.x)

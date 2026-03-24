@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 __doc__ = "Remove unplaced rooms and areas from the project. Uses REVIT_SPATIAL_ELEMENT module to detect 'Not Placed' elements (Location is None). Also identifies unbounded or redundant elements (Area = 0) for review. Processes rooms by selected phase and areas across all phases."
 __title__ = "Remove Not Placed\nArea and Rooms"
 __tip__ = True

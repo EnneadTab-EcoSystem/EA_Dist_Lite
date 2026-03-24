@@ -445,8 +445,8 @@ def register_context_menu():
 
 
 
-def handle_acc_slave_job():
-    """Handle ACC job based on job_id passed from external orchestrator.
+def handle_bim_runner_job():
+    """Handle BimRunner job based on job_id passed from external orchestrator.
 
     Reads job record, attempts to open the cloud model, and updates state.
     No f-strings are used to keep compatibility with older Python versions.
@@ -530,7 +530,7 @@ def handle_acc_slave_job():
 def EnneadTab_startup():
     # Run ACC automation only in developer sessions for now
     if USER.IS_DEVELOPER:
-        handle_acc_slave_job()
+        handle_bim_runner_job()
 
     # Additional developer-specific behaviour can go here
 

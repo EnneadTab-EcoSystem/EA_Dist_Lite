@@ -1,4 +1,5 @@
 #! python3
+# -*- coding: utf-8 -*-
 # r: openai
 # r: requests
 # -*- coding: utf-8 -*-

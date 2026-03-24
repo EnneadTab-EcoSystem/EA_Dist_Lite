@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Run apps from the EnneadTab app library.
 
 This module provides functionality to safely execute applications from the EnneadTab library,
@@ -95,7 +96,7 @@ def locate_executable(exe_name):
     """
     exe_name = exe_name.replace(".exe", "").replace(".bat", "")
 
-    # Search order: .bat first (preferred — no recompilation needed), then .exe
+    # Search order: .bat first (preferred - no recompilation needed), then .exe
     extensions = [".bat", ".exe"]
 
     for ext in extensions:

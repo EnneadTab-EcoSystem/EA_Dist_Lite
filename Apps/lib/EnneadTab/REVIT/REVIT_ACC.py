@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 _api_help_website = "https://aps.autodesk.com/en/docs/bim360/v1/reference/http/"
 
 """

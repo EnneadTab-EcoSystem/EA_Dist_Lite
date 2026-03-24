@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Entry script to publish configured Revit cloud models via Autodesk APS commands.
 
