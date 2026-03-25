@@ -350,7 +350,7 @@ def update_instances(file, use_UV_projection):
     t = DB.Transaction(doc, __title__)
     t.Start()
     block_name = get_block_name_from_data_file(file)
-    exisitng_instances = REVIT_FAMILY.get_family_instances_by_family_name_and_type_name(family_name=block_name, type_name=block_name, doc=doc)
+    exisitng_instances = REVIT_FAMILY.get_family_instances_by_family_name_and_type_name(family_name=block_name, type_name=block_name, doc=doc) or []
     exisitng_instances_map = {x.LookupParameter("Rhino_Id").AsString(): x for x in exisitng_instances}
     
     data = DATA_FILE.get_data(file)
