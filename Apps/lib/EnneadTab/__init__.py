@@ -173,7 +173,9 @@ def initialize_package():
             # Store the module reference for namespace exposure
             base_name = module[:-3] if module.endswith('.py') else module
             try:
-                imported_modules[base_name] = sys.modules.get("{}.{}".format(__package_name__, base_name))
+                mod = sys.modules.get("{}.{}".format(__package_name__, base_name))
+                if mod is not None:
+                    imported_modules[base_name] = mod
             except:
                 pass
     

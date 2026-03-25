@@ -346,6 +346,9 @@ def LEGACY_update_working_view_name(doc):
 
 def run_legacy_updates(doc):
     """Run all the deprecated update functions - they're old but gold!"""
+    if MODULE_HELPER is None:
+        print("Warning: MODULE_HELPER not available, skipping legacy updates")
+        return
     LEGACY_update_DOB_numbering(doc)
     LEGACY_update_sheet_name(doc)
     LEGACY_update_working_view_name(doc)
@@ -473,6 +476,9 @@ def _notify_next_user_from_api(doc, api_result):
     if REVIT_EVENT.is_sync_queue_disabled():
         return
 
+    if not EMAIL:
+        return
+
     queue = api_result.get("queue", [])
     if not queue:
         return
@@ -482,6 +488,10 @@ def _notify_next_user_from_api(doc, api_result):
         if not next_user:
             return
     except Exception:
+        return
+
+    if EMAIL is None:
+        ERROR_HANDLE.print_note("EMAIL module not available, skipping sync queue notification.")
         return
 
     EMAIL.email(
@@ -541,6 +551,10 @@ def _complete_file_based_queue(doc):
     try:
         next_user = OUT[0].split("]")[-1]
     except Exception:
+        return
+
+    if EMAIL is None:
+        ERROR_HANDLE.print_note("EMAIL module not available, skipping sync queue notification.")
         return
 
     EMAIL.email(

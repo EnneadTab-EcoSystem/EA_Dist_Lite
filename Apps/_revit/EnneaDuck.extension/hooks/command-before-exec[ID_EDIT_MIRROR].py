@@ -20,7 +20,8 @@ def main():
         if not x.Category:
             continue
         if "group" in x.Category.Name.lower():
-            NOTIFICATION.messenger("Mirroring group might lead to corrupted group later.")
+            if NOTIFICATION:
+                NOTIFICATION.messenger("Mirroring group might lead to corrupted group later.")
             return
  
 ############################

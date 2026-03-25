@@ -32,7 +32,8 @@ def main():
     rs.Command("{}_Activate{}".format(ENVIRONMENT.PLUGIN_ABBR, ENVIRONMENT.PLUGIN_NAME))
     RHINO_ALIAS.register_shortcut("F12", "{}_SearchCommand".format(ENVIRONMENT.PLUGIN_ABBR))
     
-    NOTIFICATION.messenger(main_text = "Startup Script Completed")
+    if NOTIFICATION is not None:
+        NOTIFICATION.messenger(main_text = "Startup Script Completed")
 
     DOCUMENTATION.tip_of_day()
 

@@ -25,7 +25,8 @@ def similar_blocks():
 
     orginal_blocks = rs.GetObjects("Select block instances to isolate", filter = 4096, preselect = True)
     if not orginal_blocks:
-        NOTIFICATION.messenger("No block instances selected.")
+        if NOTIFICATION:
+            NOTIFICATION.messenger("No block instances selected.")
         return
     rs.EnableRedraw(False)
     block_names = [rs.BlockInstanceName(x) for x in orginal_blocks]
