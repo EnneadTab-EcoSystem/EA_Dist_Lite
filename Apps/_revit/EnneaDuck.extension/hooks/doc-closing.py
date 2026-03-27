@@ -28,7 +28,7 @@ def main():
     remove_last_sync_data_file(doc)
     update_pyrevit()
 
-    if random.random() < 0.1:
+    if random.random() < 0.1 and VERSION_CONTROL is not None:
         VERSION_CONTROL.update_dist_repo()
 
 
