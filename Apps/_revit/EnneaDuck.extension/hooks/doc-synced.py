@@ -420,9 +420,14 @@ def update_area_tracking(doc):
             ENVIRONMENT.REVIT_PRIMARY_EXTENSION)
         ref_module = imp.load_source("dgsf_chart", fullpath)
         ref_module.dgsf_chart_update(doc, show_log=False)
-    except Exception as e:
-        print("Error during area tracking update: {}".format(str(e)))
-        ERROR_HANDLE.print_note("Area tracking update failed: {}".format(str(e)))
+    except:
+        try:
+            import traceback
+            msg = traceback.format_exc()
+        except:
+            msg = "unknown error"
+        print("Error during area tracking update: {}".format(msg))
+        ERROR_HANDLE.print_note("Area tracking update failed: {}".format(msg))
 
 
 # =============================================================================

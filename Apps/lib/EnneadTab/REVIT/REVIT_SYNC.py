@@ -153,29 +153,84 @@ def _api_get(endpoint, params=None):
     return None
 
 
+def _hash_path_to_guid(path):
+    """Hash a file path into a deterministic GUID-like string.
+
+    Uses djb2 algorithm matching server-side normalizeModelGuid() in EnneadTab-DB
+    so that hashed IDs are consistent across client and server.
+
+    Args:
+        path: File path string to hash
+
+    Returns:
+        str: Deterministic ID in format "path-{hash}-{clean_name}"
+    """
+    # 2026-04-01: Must use ADD variant (h * 33 + ord) to match server-side
+    # normalizeModelGuid() in EnneadTab-DB/schemas.ts. XOR variant produces
+    # different hashes for the same input.
+    h = 5381
+    for ch in path:
+        h = ((h * 33) + ord(ch)) & 0xFFFFFFFF
+    hex_str = format(h, '08x')
+    # Clean filename for readability
+    name = os.path.splitext(os.path.basename(path))[0]
+    clean = ''.join(c if c.isalnum() else '_' for c in name)
+    clean = '_'.join(p for p in clean.split('_') if p)[:50]
+    return "path-{}-{}".format(hex_str, clean)
+
+
+# 2026-04-01: Fixed to return actual GUID instead of model path.
+# Previously returned user-visible central model path (e.g. "Autodesk Docs://..."),
+# which is not a stable identifier. Now returns a real GUID for both cloud-based
+# (BIM 360/ACC) and server-based (Revit Server) central models, falling back to
+# a deterministic djb2 hash of the path for local workshared or non-workshared models.
 def get_model_guid(doc):
     """Extract a stable identifier for the Revit central model.
 
-    Tries GetWorksharingCentralModelPath first (works for workshared models).
-    Falls back to doc.Title if central path is unavailable.
+    Priority:
+        1. Cloud model GUID via GetCloudModelPath (BIM 360/ACC/Autodesk Docs)
+        2. Server-based GUID via WorksharingCentralGUID (Revit Server)
+        3. Deterministic hash of the central model path
+        4. Deterministic hash of doc.Title
 
     Args:
         doc: Revit Document object
 
     Returns:
-        str: Model GUID string, or doc.Title as fallback
+        str: A GUID string or deterministic hash ID
     """
+    # 1. Cloud-based models (BIM 360 / ACC / Autodesk Docs) — Revit 2019+
+    try:
+        if hasattr(doc, 'IsModelInCloud') and doc.IsModelInCloud:
+            cloud_path = doc.GetCloudModelPath()
+            if cloud_path:
+                model_guid = str(cloud_path.GetModelGUID())
+                if model_guid and model_guid != "00000000-0000-0000-0000-000000000000":
+                    return model_guid
+    except Exception:
+        pass  # Older Revit versions without cloud support
+
+    # 2. Server-based central models (Revit Server)
+    try:
+        guid = doc.WorksharingCentralGUID
+        if guid and str(guid) != "00000000-0000-0000-0000-000000000000":
+            return str(guid)
+    except Exception:
+        pass  # Older Revit versions or non-workshared models
+
+    # 3. Fall back to hashing the central model path (local workshared)
     try:
         central_path = doc.GetWorksharingCentralModelPath()
         if central_path:
             from Autodesk.Revit.DB import ModelPathUtils
             path_str = ModelPathUtils.ConvertModelPathToUserVisiblePath(central_path)
             if path_str:
-                return path_str
+                return _hash_path_to_guid(path_str)
     except Exception as e:
         ERROR_HANDLE.print_note("Could not get central model path: {}".format(e))
 
-    return doc.Title
+    # 4. Last resort: hash the document title (non-workshared)
+    return _hash_path_to_guid(doc.Title)
 
 
 def api_request_sync(doc):
@@ -375,7 +430,8 @@ def start_monitor():
     if is_hate_sync_monitor():
         return
 
-    EXE.try_open_app("LastSyncMonitor")
+    if EXE is not None:
+        EXE.try_open_app("LastSyncMonitor")
 
 
 

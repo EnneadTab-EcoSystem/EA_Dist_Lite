@@ -480,7 +480,7 @@ def try_catch_error(is_silent=False, is_pass = False):
                         output.insert_divider()
                         output.plot()
 
-                if is_revit_environment() and not is_silent and NOTIFICATION is not None:
+                if is_revit_environment() and not is_silent and NOTIFICATION is not None and hasattr(NOTIFICATION, 'messenger'):
                     NOTIFICATION.messenger(
                         "!Critical Warning, close all Revit UI window from " + plugin_name + " and reach to Sen Zhang.")
                 

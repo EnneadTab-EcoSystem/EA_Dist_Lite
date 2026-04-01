@@ -103,11 +103,12 @@ def get_doc():
     return getattr(get_uidoc(), 'Document', None)
 
 def get_element_id_value(element_id):
-    """Return int/long for an ElementId. Revit 2024+ uses .Value, older use .IntegerValue."""
+    """Return Python int for an ElementId. Revit 2024+ uses .Value, older use .IntegerValue.
+    Always returns plain int (IronPython long is not JSON serializable)."""
     try:
-        return element_id.IntegerValue
+        return int(element_id.IntegerValue)
     except AttributeError:
-        return element_id.Value
+        return int(element_id.Value)
 
 def get_active_view():
     """Get the currently active view in Revit.
