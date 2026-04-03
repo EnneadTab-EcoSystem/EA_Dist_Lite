@@ -31,6 +31,59 @@ DARKER_BACKGROUND = 70,70,70
 PRIMARY_TEXT = 218,232,253
 
 
+__mcp_tools__ = [
+    {
+        "function": "darken_color",
+        "description": "Darken an RGB color by a given amount (0-1).",
+        "args": [
+            {"name": "color", "type": "list", "description": "RGB color as [r, g, b] with values 0-255"},
+            {"name": "amount", "type": "float", "description": "Amount to darken (0.0 to 1.0)"}
+        ],
+        "returns": "list of 3 ints representing the darkened RGB color"
+    },
+    {
+        "function": "lighten_color",
+        "description": "Lighten an RGB color by a given amount (0-1).",
+        "args": [
+            {"name": "color", "type": "list", "description": "RGB color as [r, g, b] with values 0-255"},
+            {"name": "amount", "type": "float", "description": "Amount to lighten (0.0 to 1.0)"}
+        ],
+        "returns": "list of 3 ints representing the lightened RGB color"
+    },
+    {
+        "function": "rgb_to_hex",
+        "description": "Convert an RGB tuple to a hex color string.",
+        "args": [
+            {"name": "rgb_tuple", "type": "list", "description": "RGB color as [r, g, b] with values 0-255"}
+        ],
+        "returns": "str hex color string like '#ff00aa'"
+    },
+    {
+        "function": "hex_to_rgb",
+        "description": "Convert a hex color string to an RGB tuple.",
+        "args": [
+            {"name": "hex_str", "type": "str", "description": "Hex color string like '#ff00aa' or 'ff00aa'"}
+        ],
+        "returns": "list of 3 ints [r, g, b]"
+    },
+    {
+        "function": "decimal_to_rgb",
+        "description": "Convert a decimal color integer to an RGB tuple.",
+        "args": [
+            {"name": "decimal_color", "type": "int", "description": "Decimal color value"}
+        ],
+        "returns": "list of 3 ints [r, g, b]"
+    },
+    {
+        "function": "rgb_to_autocad_color_number",
+        "description": "Convert an RGB color to an AutoCAD color index number (1-255).",
+        "args": [
+            {"name": "rgb_tuple", "type": "list", "description": "RGB color as [r, g, b] with values 0-255"}
+        ],
+        "returns": "int AutoCAD color number (1-255)"
+    },
+]
+
 import ENVIRONMENT
 if ENVIRONMENT.IS_REVIT_ENVIRONMENT:
     from Autodesk.Revit.DB import Color as DB_Color # pyright: ignore

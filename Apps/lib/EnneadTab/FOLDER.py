@@ -14,6 +14,50 @@ Key Features:
 Compatible with Python 2.7 and Python 3.x
 """
 
+__mcp_tools__ = [
+    {
+        "function": "get_local_dump_folder_file",
+        "description": "Get the full path for a file in the local EA dump folder.",
+        "args": [
+            {"name": "file_name", "type": "str", "description": "Name of the file (extension optional, defaults to plugin extension)"}
+        ],
+        "returns": "str full path in the local dump folder"
+    },
+    {
+        "function": "get_shared_dump_folder_file",
+        "description": "Get the full path for a file in the shared dump folder.",
+        "args": [
+            {"name": "file_name", "type": "str", "description": "Name of the file including extension"}
+        ],
+        "returns": "str full path in the shared dump folder"
+    },
+    {
+        "function": "get_file_name_from_path",
+        "description": "Extract the filename from a full file path.",
+        "args": [
+            {"name": "file_path", "type": "str", "description": "Full path to the file"},
+            {"name": "include_extension", "type": "bool", "description": "Whether to include the file extension. Defaults to True."}
+        ],
+        "returns": "str extracted filename"
+    },
+    {
+        "function": "get_file_extension_from_path",
+        "description": "Extract the file extension (including dot) from a file path.",
+        "args": [
+            {"name": "file_path", "type": "str", "description": "Full path to the file"}
+        ],
+        "returns": "str file extension like '.txt'"
+    },
+    {
+        "function": "secure_legal_file_name",
+        "description": "Sanitize a filename by replacing illegal characters with safe alternatives.",
+        "args": [
+            {"name": "file_name", "type": "str", "description": "Original filename to sanitize"}
+        ],
+        "returns": "str sanitized filename safe for all operating systems"
+    },
+]
+
 import time
 import os
 import traceback

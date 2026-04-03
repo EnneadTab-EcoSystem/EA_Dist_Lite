@@ -19,6 +19,54 @@ Note:
     and temporary file management to prevent data corruption.
 """
 
+__mcp_tools__ = [
+    {
+        "function": "get_data",
+        "description": "Retrieve data from a JSON file by name or full path. Returns the file contents as a dictionary.",
+        "args": [
+            {"name": "file_name_or_full_path", "type": "str", "description": "Filename or full path to the JSON file"},
+            {"name": "is_local", "type": "bool", "description": "Use local dump folder (True) or shared (False). Defaults to True."}
+        ],
+        "returns": "dict with the file contents"
+    },
+    {
+        "function": "set_data",
+        "description": "Save a dictionary to a JSON file by name or full path.",
+        "args": [
+            {"name": "data_dict", "type": "dict", "description": "Dictionary to save"},
+            {"name": "file_name_or_full_path", "type": "str", "description": "Filename or full path"},
+            {"name": "is_local", "type": "bool", "description": "Use local dump folder (True) or shared (False). Defaults to True."}
+        ],
+        "returns": "bool True if save successful"
+    },
+    {
+        "function": "get_sticky",
+        "description": "Retrieve persistent sticky data by name. Returns the stored value or a default.",
+        "args": [
+            {"name": "sticky_name", "type": "str", "description": "Identifier for the sticky data"},
+            {"name": "default_value_if_no_sticky", "type": "str", "description": "Default value if sticky not found. Defaults to None."}
+        ],
+        "returns": "the stored sticky value, or the default"
+    },
+    {
+        "function": "set_sticky",
+        "description": "Save persistent sticky data that persists across sessions.",
+        "args": [
+            {"name": "sticky_name", "type": "str", "description": "Identifier for the sticky data"},
+            {"name": "value_to_write", "type": "str", "description": "Value to store"}
+        ],
+        "returns": "bool True if save successful"
+    },
+    {
+        "function": "pretty_print_dict",
+        "description": "Return a formatted JSON string of a dictionary for display.",
+        "args": [
+            {"name": "data_dict", "type": "dict", "description": "Dictionary to format"}
+        ],
+        "returns": "None (prints to stdout)"
+    },
+]
+
 import sys
 
 import json

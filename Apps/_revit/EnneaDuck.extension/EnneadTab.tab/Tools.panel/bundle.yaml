@@ -12,7 +12,8 @@ layout:
   - tag_align
   - toggle content_UI 
   - batch_cut
-  - translate_AI 
+  - translate_AI
+  - mcp_server
   - generic_healthcare_tool
   - ">>>" 
   - nyu_export_mapping
