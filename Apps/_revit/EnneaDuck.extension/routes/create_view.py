@@ -42,7 +42,7 @@ def _find_level(doc, level_name):
 
 
 def register_create_view_routes(api):
-    @api.route("/enneadtab/create-view/", methods=["POST"])
+    @api.route("/create-view/", methods=["POST"])
     def create_view(doc, request):
         if not doc:
             return routes.make_response(

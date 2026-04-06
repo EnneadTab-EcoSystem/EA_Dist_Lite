@@ -7,7 +7,7 @@ from Autodesk.Revit import DB
 
 
 def register_create_sheet_routes(api):
-    @api.route("/enneadtab/create-sheet/", methods=["POST"])
+    @api.route("/create-sheet/", methods=["POST"])
     def create_sheet(doc, request):
         if not doc:
             return routes.make_response(

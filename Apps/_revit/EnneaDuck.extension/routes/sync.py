@@ -5,7 +5,7 @@ from Autodesk.Revit import DB
 
 
 def register_sync_routes(api):
-    @api.route("/enneadtab/sync-with-central/", methods=["POST"])
+    @api.route("/sync-with-central/", methods=["POST"])
     def sync_with_central(doc, request):
         if not doc:
             return routes.make_response(

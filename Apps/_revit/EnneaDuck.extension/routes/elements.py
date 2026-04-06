@@ -25,7 +25,7 @@ def _find_builtin_category(category_name):
 
 
 def register_element_routes(api):
-    @api.route("/enneadtab/elements/", methods=["GET"])
+    @api.route("/elements/", methods=["GET"])
     def get_elements(doc, request):
         if not doc:
             return routes.make_response(

@@ -525,9 +525,115 @@ def handle_bim_runner_job():
 
 
 
+def _auto_start_mcp_server():
+    """Auto-restart MCP Server if it was running in the previous session.
+
+    Runs in a background thread with a delay to let pyRevit Routes fully
+    initialize before we try to detect the port.
+    """
+    def _delayed_start():
+        import time
+        import subprocess as sp
+        import socket
+
+        time.sleep(8)  # wait for Routes server to be ready
+
+        try:
+            state = DATA_FILE.get_data("mcp_server_state")
+            if not state or not state.get("running"):
+                return
+
+            # Find the Routes port from serverinfo pickle
+            port = state.get("port", 48884)
+
+            # Verify Routes is actually listening
+            try:
+                s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                s.settimeout(2)
+                s.connect(("localhost", port))
+                s.close()
+            except Exception:
+                return
+
+            # Find Python 3
+            python_cmd = None
+            for cmd in ["python", "python3", "py"]:
+                try:
+                    result = sp.check_output(
+                        [cmd, "--version"],
+                        stderr=sp.STDOUT
+                    )
+                    if "Python 3" in result.decode("utf-8", errors="replace"):
+                        python_cmd = cmd
+                        break
+                except Exception:
+                    continue
+            if not python_cmd:
+                return
+
+            # Find mcp_server directory
+            current = os.path.dirname(os.path.abspath(__file__))
+            engine_dir = ""
+            for _ in range(10):
+                candidate = os.path.join(current, "Apps", "_engine", "mcp_server")
+                if os.path.isdir(candidate):
+                    engine_dir = os.path.dirname(candidate)
+                    break
+                current = os.path.dirname(current)
+            if not engine_dir:
+                return
+
+            DETACHED = 0x00000008
+            proc = sp.Popen(
+                [python_cmd, "-m", "mcp_server", "--app", "revit",
+                 "--port", str(port), "--web"],
+                cwd=engine_dir,
+                creationflags=DETACHED,
+                stdout=sp.PIPE,
+                stderr=sp.PIPE
+            )
+            DATA_FILE.set_data(
+                {"pid": proc.pid, "running": True, "port": port},
+                "mcp_server_state"
+            )
+        except Exception:
+            pass
+
+    thread = threading.Thread(target=_delayed_start)
+    thread.daemon = True
+    thread.start()
+
+
+def _register_mcp_routes():
+    """Register EnneadTab MCP API routes on the pyRevit Routes server.
+
+    pyRevit does NOT auto-discover routes/ directories in extensions.
+    Routes must be registered from code that executes during startup.
+    """
+    try:
+        from pyrevit import routes
+
+        # Add routes directory to sys.path so imports work
+        routes_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "routes")
+        if os.path.isdir(routes_dir) and routes_dir not in sys.path:
+            sys.path.insert(0, routes_dir)
+
+        from startup import api  # pyright: ignore
+        # startup.py creates the API and registers all route handlers
+        # by importing and calling register_*_routes(api)
+        if USER.IS_DEVELOPER:
+            print("MCP Routes registered: {}".format(api.name))
+    except Exception as e:
+        if USER.IS_DEVELOPER:
+            print("MCP Routes registration failed: {}".format(e))
+
+
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error(is_silent=True)
 def EnneadTab_startup():
+    # Register MCP Routes API (must happen during startup, before Routes server starts)
+    _register_mcp_routes()
+
     # Run ACC automation only in developer sessions for now
     if USER.IS_DEVELOPER:
         handle_bim_runner_job()
@@ -598,6 +704,9 @@ def EnneadTab_startup():
     purge_dump_folder_families()
 
     auto_open_temp_file_on_virtual7()
+
+    # Auto-restart MCP Server if it was running last session
+    _auto_start_mcp_server()
 
     if USER.IS_DEVELOPER:
         NOTIFICATION.messenger(main_text = "[Developer Only] startup run ok.")

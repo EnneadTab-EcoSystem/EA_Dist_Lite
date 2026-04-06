@@ -10,7 +10,7 @@ from StringIO import StringIO
 
 
 def register_execute_code_routes(api):
-    @api.route("/enneadtab/execute-code/", methods=["POST"])
+    @api.route("/execute-code/", methods=["POST"])
     def execute_code(doc, request):
         if not doc:
             return routes.make_response(

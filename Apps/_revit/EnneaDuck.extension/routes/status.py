@@ -4,7 +4,7 @@ from pyrevit import routes, revit, HOST_APP
 
 
 def register_status_routes(api):
-    @api.route("/enneadtab/status/", methods=["GET"])
+    @api.route("/status/", methods=["GET"])
     def get_status(doc, request):
         result = {
             "app": "Revit",

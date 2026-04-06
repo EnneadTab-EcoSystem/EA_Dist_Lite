@@ -5,7 +5,7 @@ from Autodesk.Revit import DB
 
 
 def register_family_routes(api):
-    @api.route("/enneadtab/families/", methods=["GET"])
+    @api.route("/families/", methods=["GET"])
     def get_families(doc, request):
         if not doc:
             return routes.make_response(

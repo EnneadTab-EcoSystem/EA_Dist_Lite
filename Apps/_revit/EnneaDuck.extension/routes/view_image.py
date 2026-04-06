@@ -13,7 +13,7 @@ except ImportError:
 
 
 def register_view_image_routes(api):
-    @api.route("/enneadtab/view-image/", methods=["GET"])
+    @api.route("/view-image/", methods=["GET"])
     def get_view_image(doc, request):
         if not doc:
             return routes.make_response(

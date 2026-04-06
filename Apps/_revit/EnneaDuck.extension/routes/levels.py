@@ -5,7 +5,7 @@ from Autodesk.Revit import DB
 
 
 def register_level_routes(api):
-    @api.route("/enneadtab/levels/", methods=["GET"])
+    @api.route("/levels/", methods=["GET"])
     def get_levels(doc, request):
         if not doc:
             return routes.make_response(

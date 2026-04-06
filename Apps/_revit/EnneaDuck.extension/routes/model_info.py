@@ -5,7 +5,7 @@ from Autodesk.Revit import DB
 
 
 def register_model_info_routes(api):
-    @api.route("/enneadtab/model-info/", methods=["GET"])
+    @api.route("/model-info/", methods=["GET"])
     def get_model_info(doc, request):
         if not doc:
             return routes.make_response(

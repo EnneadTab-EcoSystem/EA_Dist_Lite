@@ -68,7 +68,7 @@ def _scan_modules():
 
 
 def register_enneadtab_tools_routes(api):
-    @api.route("/enneadtab/tools/", methods=["GET"])
+    @api.route("/tools/", methods=["GET"])
     def list_tools(doc, request):
         tools = _scan_modules()
         total = sum(len(v) for v in tools.values())
@@ -78,7 +78,7 @@ def register_enneadtab_tools_routes(api):
             "modules": tools,
         })
 
-    @api.route("/enneadtab/run-tool/", methods=["POST"])
+    @api.route("/run-tool/", methods=["POST"])
     def run_tool(doc, request):
         if not doc:
             return routes.make_response(

@@ -5,7 +5,7 @@ Creates the API instance and imports all route modules.
 """
 from pyrevit import routes
 
-api = routes.API("enneadtab_mcp")
+api = routes.API("enneadtab")
 
 from status import register_status_routes
 from model_info import register_model_info_routes

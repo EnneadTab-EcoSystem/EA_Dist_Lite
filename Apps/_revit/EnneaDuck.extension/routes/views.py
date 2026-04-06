@@ -5,7 +5,7 @@ from Autodesk.Revit import DB
 
 
 def register_view_routes(api):
-    @api.route("/enneadtab/views/", methods=["GET"])
+    @api.route("/views/", methods=["GET"])
     def get_views(doc, request):
         if not doc:
             return routes.make_response(

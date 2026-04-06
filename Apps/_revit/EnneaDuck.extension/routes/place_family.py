@@ -36,7 +36,7 @@ def _find_level(doc, level_name):
 
 
 def register_place_family_routes(api):
-    @api.route("/enneadtab/place-family/", methods=["POST"])
+    @api.route("/place-family/", methods=["POST"])
     def place_family(doc, request):
         if not doc:
             return routes.make_response(

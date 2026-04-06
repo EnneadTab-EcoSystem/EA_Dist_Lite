@@ -8,7 +8,7 @@ from Autodesk.Revit import DB
 
 def register_element_set_param_routes(api):
     @api.route(
-        "/enneadtab/element/<element_id>/set-parameter/", methods=["POST"]
+        "/element/<element_id>/set-parameter/", methods=["POST"]
     )
     def set_element_param(doc, request, element_id):
         if not doc:

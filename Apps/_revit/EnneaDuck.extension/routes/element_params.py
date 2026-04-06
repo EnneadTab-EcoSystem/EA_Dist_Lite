@@ -22,7 +22,7 @@ def _get_param_value(param):
 
 
 def register_element_params_routes(api):
-    @api.route("/enneadtab/element/<element_id>/parameters/", methods=["GET"])
+    @api.route("/element/<element_id>/parameters/", methods=["GET"])
     def get_element_params(doc, request, element_id):
         if not doc:
             return routes.make_response(
