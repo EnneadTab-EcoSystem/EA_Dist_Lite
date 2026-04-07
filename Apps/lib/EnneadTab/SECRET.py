@@ -24,38 +24,6 @@ def get_acc_key_data():
     return data
 
 
-def get_openai_api_key(app_name):
-    """Returns the API key for the specified app.
-    Accepted keys:
-    "EnneadTabAPI"
-    # "chatgpt_api_key"
-    # "translator_api_key"
-    # "reporter_api_key"
-    # "clone_helper"
-    # "miro_oauth"
-
-    Args:
-        app_name (string): The name of the app to get the API key for.
-
-    Returns:
-        string: The API key for the specified app.
-    """
-    api_key_file = "EA_API_KEY.secret"
-    L_drive_file_path = os.path.join(ENVIRONMENT.DB_FOLDER, api_key_file)
-    if ENVIRONMENT.IS_OFFLINE_MODE:
-        data = DATA_FILE.get_data(api_key_file)
-        if not data:
-            NOTIFICATION.messenger("API key file not found, do you have L drive connection?")
-    else:
-        data = DATA_FILE.get_data(L_drive_file_path)
-
-    
-    # Try to get value from specified app_name first, fallback to any key if not found
-    for key in data:
-        if key == app_name:
-            return data[key]
-    return next(iter(data.values()), None)
-
 
 def get_dev_info(developer_name, key):
     """Get developer information from the secret file.
@@ -91,14 +59,7 @@ def get_dev_dict():
 def unit_test():
     """Unit test for the SECRET module."""
     import pprint
-    
-    app_names = [
-        "EnneadTabAPI"
-    ]
 
-    print("######### API KEY TEST #########")
-    for app_name in app_names:
-        print("{name}: {key}".format(name=app_name, key=get_openai_api_key(app_name)))
     print("######### DEV DICT TEST #########")
     pprint.pprint(get_dev_dict())
     print("######### DEV INFO TEST #########")

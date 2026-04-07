@@ -1,6 +1,5 @@
 #! python3
 
-# r: openai
 import rhinoscriptsyntax as rs
 import sys
 from typing import Optional
@@ -18,15 +17,13 @@ except ImportError:
     import imp
     HAS_IMPORTLIB = False
 
-from openai import OpenAI
-
 def add_path():
     """Add Rhino's Python search paths to sys.path."""
     for path in rs.SearchPathList():
         sys.path.append(path)
 
 add_path()
-from EnneadTab import FOLDER, SECRET, NOTIFICATION, DATA_FILE, SOUND, ERROR_HANDLE
+from EnneadTab import FOLDER, NOTIFICATION, DATA_FILE, SOUND, ERROR_HANDLE, AUTH, AI
 
 __title__ = "Text2Script"
 __doc__ = """Utility script to convert text to script using AI.
@@ -42,18 +39,17 @@ Features:
 """
 
 class TextToScriptConverter:
-    """Converts natural language requests into executable Rhino Python scripts using OpenAI."""
-    
+    """Converts natural language requests into executable Rhino Python scripts using EnneadTab AI proxy."""
+
     def __init__(self):
-        """Initialize the converter with API key and configuration."""
+        """Initialize the converter with configuration."""
         self.max_attempts = 5
-        self.api_key = SECRET.get_openai_api_key("EnneadTabAPI")
-        self.client = OpenAI(api_key=self.api_key)
+        self.token = None  # lazy init via AUTH
         self.temp_filepath = FOLDER.get_local_dump_folder_file("text2script_TEMP.py")
         self.preset = self._get_system_preset()
         
     def _get_system_preset(self) -> str:
-        """Get the system preset for OpenAI API."""
+        """Get the system preset for AI code generation."""
         return """
         You are a specialized Python code generator for Rhino 8, focused on creating executable scripts.
         
@@ -89,23 +85,18 @@ class TextToScriptConverter:
         """
     
     def check_api_quota(self) -> bool:
-        """Check if OpenAI API key is valid.
-        
+        """Check if EnneadTab auth token is valid.
+
         Returns:
-            bool: True if API key is valid, False otherwise
+            bool: True if token is valid, False otherwise
         """
-        try:
-            self.client.models.list()
-            print("Your API key is valid and ready to use.")
+        token = AUTH.get_token()
+        if token:
+            self.token = token
+            print("Authentication successful. Ready to use.")
             return True
-        except Exception as e:
-            error_str = str(e)
-            if "401" in error_str or "authentication" in error_str.lower():
-                message = "Your API key appears to be invalid or expired."
-            else:
-                message = f"Error checking API key: {error_str}"
-            
-            rs.MessageBox(message, title="OpenAI API Status")
+        else:
+            rs.MessageBox("Authentication failed. Please sign in to use AI features.", title="EnneadTab Auth Status")
             return False
 
     def get_user_request(self) -> Optional[str]:
@@ -138,34 +129,30 @@ class TextToScriptConverter:
             Exception: For other generation errors
         """
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4-turbo-preview",
-                messages=[
-                    {"role": "system", "content": self.preset},
-                    {"role": "user", "content": request}
-                ],
+            response_text = AI.chat(
+                messages=[{"role": "user", "content": request}],
+                system_prompt=self.preset,
                 temperature=0.2
             )
-            generated_code = response.choices[0].message.content
+            if not response_text:
+                raise ValueError("AI returned empty response")
 
             # Clean up code formatting
-            generated_code = self._clean_code_formatting(generated_code)
-            
+            generated_code = self._clean_code_formatting(response_text)
+
             if not generated_code or generated_code.strip() == "":
                 raise ValueError("AI returned empty response")
-                
+
             # Ensure proper code structure
             generated_code = self._ensure_code_structure(generated_code)
-            
+
             return generated_code.strip()
-            
+
+        except ValueError:
+            raise
         except Exception as e:
-            error_str = str(e)
-            if "429" in error_str or "quota" in error_str.lower() or "insufficient_quota" in error_str:
-                raise ValueError("OpenAI quota exceeded - Please check your account")
-            else:
-                rs.MessageBox(f"Failed to generate code: {error_str}")
-                raise
+            rs.MessageBox(f"Failed to generate code: {str(e)}")
+            raise
 
     def _clean_code_formatting(self, code: str) -> str:
         """Clean up code formatting by removing markdown wrappers."""
@@ -334,7 +321,7 @@ class TextToScriptConverter:
                     break
                     
                 except ValueError as e:
-                    if "OpenAI quota exceeded" in str(e):
+                    if "AI returned empty response" in str(e):
                         return
                 
                 except Exception as e:
@@ -367,7 +354,7 @@ def text2script() -> None:
 
 @ERROR_HANDLE.try_catch_error()
 def text2script_left() -> None:
-    """Standalone function to check OpenAI API key validity."""
+    """Standalone function to check auth and run text2script."""
     converter = TextToScriptConverter()
     if converter.check_api_quota():
         converter.run()

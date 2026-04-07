@@ -414,6 +414,10 @@ def try_catch_error(is_silent=False, is_pass = False):
                 except Exception as e:
                     print_note("Cannot send email: {}".format(get_alternative_traceback()))
 
+                # DEPRECATED 2026-04-06: Google Form error logging scheduled for removal by 2026-04-30.
+                # ErrorDump API (below) is the replacement — confirmed receiving end-user errors
+                # from multiple machines (szhang, nicole.levine, Han.Isozen, yhuang) since 2026-03-27.
+                # Retire this call once we verify no one on the team still reads the Google Sheet.
                 try:
                     send_error_to_google_form(error, func.__name__, USER.USER_NAME)
                 except Exception as e:
@@ -580,11 +584,12 @@ def send_error_to_error_dump(error_message, func_name, user_name, is_silent=Fals
 
 
 def send_error_to_google_form(error, func_name, user_name):
-    """Send error information to Google Form for automated error tracking.
+    """DEPRECATED 2026-04-06: Scheduled for removal by 2026-04-30.
 
-    Sends error details to a Google Form for automated error tracking and analysis.
-    Form includes error message, function name, and user information.
-    
+    Use send_error_to_error_dump() instead. ErrorDump API provides deduplication,
+    auto-classification, queryable dashboard, and 5s timeout (vs 30s here).
+
+    Send error information to Google Form for automated error tracking.
     Automatically detects the best available HTTP library based on environment:
     - Rhino: Uses urllib2/urllib (IronPython 2.7 style)
     - Revit: Uses urllib3 (if available)

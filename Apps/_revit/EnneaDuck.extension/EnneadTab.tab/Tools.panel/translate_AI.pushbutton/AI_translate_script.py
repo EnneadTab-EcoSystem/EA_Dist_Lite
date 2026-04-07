@@ -24,7 +24,7 @@ import difflib
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
-from EnneadTab import ERROR_HANDLE, EXE, SECRET, JOKE, ENVIRONMENT, NOTIFICATION, DATA_FILE, FOLDER, SOUND, LOG
+from EnneadTab import ERROR_HANDLE, EXE, AUTH, JOKE, ENVIRONMENT, NOTIFICATION, DATA_FILE, FOLDER, SOUND, LOG
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FORMS
 
 uidoc = REVIT_APPLICATION.get_uidoc()
@@ -136,7 +136,7 @@ class AiTranslator(WPFWindow):
 
         self.title_text.Text = "EnneadTab AI Translator"
 
-        self.sub_text.Text = "Use openAI to translate sheet names from English to Chinese and apply changes to Revit.\n使用 openAI 将图纸名称从英文翻译成中文，并将更改应用到 Revit。"
+        self.sub_text.Text = "Translate sheet names from English to Chinese and apply changes to Revit.\n将图纸名称从英文翻译成中文，并将更改应用到 Revit。"
 
 
         self.instruction_step_text.Text = "\t-Step 1:\n\n\t-Step 2:\n\t-Step 3:\n\n\n\t-Step 4:"
@@ -483,7 +483,10 @@ class AiTranslator(WPFWindow):
     #@ERROR_HANDLE.try_catch_error()
     def fire_AI_translator(self, new_prompt, request_count):
 
-        session_token = SECRET.get_openai_api_key("EnneadTabAPI")
+        session_token = AUTH.get_token()
+        if not session_token:
+            self.debug_textbox.Text = "Authentication required. Please sign in."
+            return None
 
 
 
