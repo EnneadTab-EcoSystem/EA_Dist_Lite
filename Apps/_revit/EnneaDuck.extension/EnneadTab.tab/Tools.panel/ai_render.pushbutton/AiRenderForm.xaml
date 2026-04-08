@@ -1,0 +1,106 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="EnneadTab"
+        Foreground="#000"
+        Margin="0"
+        SizeToContent="WidthAndHeight"
+        ShowInTaskbar="True"
+        BorderThickness="0"
+        Background="{x:Null}"
+        WindowStartupLocation="CenterScreen"
+        ScrollViewer.VerticalScrollBarVisibility="Disabled"
+        HorizontalContentAlignment="Center"
+        UseLayoutRounding="False"
+        FontFamily="RomanD"
+        AllowsTransparency="True"
+        WindowStyle="None"
+        MouseLeftButtonDown="mouse_down_main_panel"
+        Cursor="ScrollAll">
+    <Window.Resources>
+        <SolidColorBrush x:Key="TextColor" Color="#FFDAE8FD"/>
+        <SolidColorBrush x:Key="AccentColor" Color="#f39c12"/>
+        <SolidColorBrush x:Key="PanelColor" Color="#FF464646"/>
+        <Style TargetType="{x:Type TextBlock}">
+            <Setter Property="Foreground" Value="{StaticResource TextColor}"/>
+        </Style>
+        <Style TargetType="{x:Type Button}">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Background" Value="{StaticResource TextColor}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource PanelColor}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="10,0,10,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10"
+                                Margin="5"
+                                Height="25"
+                                SnapsToDevicePixels="true">
+                            <ContentPresenter Name="Presenter"
+                                              Margin="{TemplateBinding Padding}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              RecognizesAccessKey="True"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentColor}" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Border BorderThickness="1" CornerRadius="15" Margin="20">
+        <Border.Background>
+            <SolidColorBrush Color="#FF464646" Opacity="1"/>
+        </Border.Background>
+        <Border.Effect>
+            <DropShadowEffect Color="#FFFFE59C" BlurRadius="15" Opacity="0.8"/>
+        </Border.Effect>
+        <Grid Margin="20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="50"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Image Grid.Column="0" Height="100" x:Name="logo_img"
+                   VerticalAlignment="Bottom" HorizontalAlignment="Left"/>
+            <StackPanel Margin="0,20,0,0" Grid.Column="1">
+                <TextBlock x:Name="title_text" Text="EnneaDuck: AI View Render"
+                           Foreground="#FFFFE59C" FontSize="18" FontWeight="Bold"/>
+                <TextBlock x:Name="sub_text" Text="" Foreground="#FFCBCBCB"
+                           TextWrapping="Wrap" MaxWidth="450" HorizontalAlignment="Left"/>
+
+                <Separator Margin="0,10"/>
+
+                <TextBlock Text="Rendering Style:" Margin="0,5,0,2"/>
+                <ComboBox x:Name="cb_style" HorizontalAlignment="Stretch"
+                          SelectionChanged="style_changed"/>
+
+                <TextBlock Text="Prompt (edit or write your own):" Margin="0,10,0,2"/>
+                <TextBox x:Name="tbox_prompt" Height="60" TextWrapping="Wrap"
+                         AcceptsReturn="True" MaxWidth="450"/>
+
+                <Separator Margin="0,10"/>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Content="Send to AI" Click="render_Click" Margin="5"/>
+                    <Button Content="Close" Click="close_Click" Margin="5"/>
+                </StackPanel>
+
+                <TextBlock x:Name="debug_textbox" Text="Ready."
+                           Foreground="#FFCBCBCB" Margin="0,10,0,0" TextWrapping="Wrap"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

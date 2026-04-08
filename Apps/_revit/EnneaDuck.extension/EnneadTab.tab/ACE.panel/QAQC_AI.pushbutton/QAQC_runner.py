@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import time
 
 from pyrevit import script
@@ -429,8 +430,9 @@ class QAQC:
             .OfClass(DB.ReferencePlane)
             .ToElements()
         )
-        # only get ref planes whoes workset is not read-only. Then we are geting the ref for project, not ref in the family.
-        all_ref_planes = [x for x in all_ref_planes if not x.LookupParameter("Workset").IsReadOnly]
+        # only get ref planes whose workset is not read-only. Then we are getting the ref for project, not ref in the family.
+        # 2026-04-08: guard against None - LookupParameter returns None in non-workshared models
+        all_ref_planes = [x for x in all_ref_planes if x.LookupParameter("Workset") is not None and not x.LookupParameter("Workset").IsReadOnly]
         
         
         self.LOG("Reference Plane Report: {} total reference planes.".format(

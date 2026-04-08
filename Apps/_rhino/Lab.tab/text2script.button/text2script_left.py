@@ -90,7 +90,7 @@ class TextToScriptConverter:
         Returns:
             bool: True if token is valid, False otherwise
         """
-        token = AUTH.get_token()
+        token = AUTH.get_token_blocking()
         if token:
             self.token = token
             print("Authentication successful. Ready to use.")

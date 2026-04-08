@@ -3,7 +3,7 @@
 
 
 
-__doc__ = "Intelligent translation assistant for your Revit project. Seamlessly translate sheet names, view names, and project text elements between languages. The AI-powered engine handles context-appropriate translations with approval workflow to ensure accuracy before implementation."
+__doc__ = "Multi-language translation assistant for your Revit project. Translate sheet names and view names between 10 languages (Chinese, Japanese, Korean, Spanish, French, Italian, German, Portuguese, Arabic, and more). Uses architecture-specific terminology with structured AI output and approval workflow before applying changes."
 __title__ = "AI\nTranslate"
 __post_link__ = "https://ei.ennead.com/_layouts/15/Updates/ViewPost.aspx?ItemID=29679"
 __youtube__ = "https://youtu.be/7dlOneO2Mts"
@@ -24,8 +24,18 @@ import difflib
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
-from EnneadTab import ERROR_HANDLE, EXE, AUTH, JOKE, ENVIRONMENT, NOTIFICATION, DATA_FILE, FOLDER, SOUND, LOG
+from EnneadTab import ERROR_HANDLE, AUTH, AI, JOKE, ENVIRONMENT, NOTIFICATION, DATA_FILE, FOLDER, SOUND, LOG
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FORMS
+
+# .NET HTTP for reliable HTTPS from IronPython (urllib2 SSL is broken)
+import clr # pyright: ignore
+clr.AddReference("System") # pyright: ignore
+import json
+
+
+
+
+
 
 uidoc = REVIT_APPLICATION.get_uidoc()
 doc = REVIT_APPLICATION.get_doc()
@@ -136,12 +146,11 @@ class AiTranslator(WPFWindow):
 
         self.title_text.Text = "EnneadTab AI Translator"
 
-        self.sub_text.Text = "Translate sheet names from English to Chinese and apply changes to Revit.\n将图纸名称从英文翻译成中文，并将更改应用到 Revit。"
-
+        self.sub_text.Text = "Translate sheet names and apply changes to Revit."
 
         self.instruction_step_text.Text = "\t-Step 1:\n\n\t-Step 2:\n\t-Step 3:\n\n\n\t-Step 4:"
 
-        self.instruction_text.Text = "Pick sheets. For performance reason, please limit the amount of sheets to translate.\n(Recommending less than 100 sheets.)\nTranslate sheets.\nMake edits to the results by editing in the table if needed. When you are happy with some or all the result, click 'approve' checkbox to lock this version. Once approved, the Chinese part will not change if you try to run translate again.\nApply approved translation to Revit."
+        self.instruction_text.Text = "Pick sheets. For performance reason, please limit the amount of sheets to translate.\n(Recommending less than 100 sheets.)\nTranslate sheets.\nMake edits to the results by editing in the table if needed. When you are happy with some or all the result, click 'approve' checkbox to lock this version. Once approved, the translation will not change if you try to run translate again.\nApply approved translation to Revit."
 
         self.Title = self.title_text.Text
 
@@ -149,6 +158,26 @@ class AiTranslator(WPFWindow):
         self.translation_para_name.Text = "MC_$Translate"
         self.radial_bt_do_sheets.IsChecked = True
         self.mode = "Sheets"
+
+        # Language selector
+        self.LANGUAGES = [
+            ("Chinese (Simplified)", "zh-CN"),
+            ("Chinese (Traditional)", "zh-TW"),
+            ("Japanese", "ja"),
+            ("Korean", "ko"),
+            ("Spanish", "es"),
+            ("French", "fr"),
+            ("Italian", "it"),
+            ("German", "de"),
+            ("Portuguese", "pt"),
+            ("Arabic", "ar"),
+        ]
+        for display_name, _ in self.LANGUAGES:
+            self.language_selector.Items.Add(display_name)
+        self.language_selector.SelectedIndex = 0  # Default: Chinese (Simplified)
+        self.target_language_code = "zh-CN"
+        self.target_language_name = "Chinese (Simplified)"
+
         self.update_category_header()
 
         self.Show()
@@ -251,61 +280,29 @@ class AiTranslator(WPFWindow):
         self.data_grid.ItemsSource = temp
 
         """real"""
-        new_prompt = ""
         lookup_map = []
 
         for item in self.data_grid.ItemsSource:
             if not item.is_approved:
-                new_prompt += "\n{} >> ?".format(item.english_name)
                 lookup_map.append(item.english_name)
-
 
         if len(lookup_map) == 0:
             self.debug_textbox.Text = "There is nothing to translate."
             REVIT_FORMS.notification(main_text = "There is nothing to translate.", sub_text = "Everything is approved.")
             return
 
-        result = self.fire_AI_translator(new_prompt, len(lookup_map))
+        # 2026-04-08: Use structured JSON output instead of >> parsing.
+        # Send list of English names, get back {english: translation} dict.
+        result = self.fire_AI_translator(lookup_map, len(lookup_map))
 
-
-        #print "%%%%%%%%%%%%%%%%%%%%"
-        #print lookup_map
-        #print result
         if not result:
             return
-        """
-        result should be long string xxxx>aaaa\nyyyyy>>bbb\n
-        """
-        data = dict()
+
+        # result is a dict {english_name: translation}
+        data = result
         self.recent_translation = ["##Below are the recent translations, you can pick to copy-paste into the Translator Table."]
-        #print "===========   start to diguest  ======="
-        index = 0
-        for line in result.split("\n"):
-            line = line.replace("Translator:", "")
-            print (line)
-            if ">>" not in line:
-                continue
-
-            try:
-                english, chinese = line.split(">>")
-            except:
-                continue
-            
-            # add backup   translation
-            self.recent_translation.append(chinese.lstrip())
-            
-            
-            english, chinese = english.strip(), chinese.strip()
-            if english == chinese:
-                data[lookup_map[index]] = chinese
-            elif english.replace(" ", "") == chinese.replace(" ", ""):
-                data[lookup_map[index]] = chinese
-            elif difflib.SequenceMatcher(None, english, chinese).ratio() > 0.8:
-                data[lookup_map[index]] = chinese
-            else:
-                data[english] = chinese
-            index += 1
-
+        for v in data.values():
+            self.recent_translation.append(v)
 
         temp = []
         failed_count = 0
@@ -314,19 +311,19 @@ class AiTranslator(WPFWindow):
             if item.is_approved:
                 temp.append(item)
             else:
-                if data.has_key(item.english_name):
-                    item.chinese_name = data[item.english_name]
-                    temp.append(DataGridObj(item.id, item.chinese_name))
+                translation = data.get(item.english_name)
+                if translation:
+                    temp.append(DataGridObj(item.id, translation))
                     success_count += 1
                 else:
-                    print ("---Cannot find this key {}".format(item.english_name))
+                    print ("---Cannot find translation for: {}".format(item.english_name))
                     temp.append(DataGridObj(item.id, "Skipped Translation"))
                     failed_count += 1
 
         self.data_grid.ItemsSource = temp
         if failed_count:
-            self.debug_textbox.Text = "It seems some of the items are not translated, you can ask to translate again.\nNote: It might be helpful to limit the amount of translation by approving as you iterate."
-            REVIT_FORMS.notification(main_text = "Translation success = {}\nTranslation skipped = {}\nDon't worry.".format(success_count, failed_count), sub_text = "You can ask to translate again.\nThis time, it might be helpful to limit the amount of translation by approving the ones you like so far as you iterate. This put less pressure on the AI.")
+            self.debug_textbox.Text = "Some items were not translated. You can try again.\nTip: Approve the ones you like to reduce batch size."
+            REVIT_FORMS.notification(main_text = "Translation success = {}\nTranslation skipped = {}".format(success_count, failed_count), sub_text = "You can ask to translate again.\nApprove the ones you like so far to reduce batch size.")
 
 
     @ERROR_HANDLE.try_catch_error()
@@ -382,6 +379,17 @@ class AiTranslator(WPFWindow):
 
     def unapprove_selected_Click(self, sender, e):
         self.change_approve_selected(as_approve = False)
+
+    @ERROR_HANDLE.try_catch_error()
+    def language_changed(self, sender, e):
+        idx = self.language_selector.SelectedIndex
+        if idx < 0 or idx >= len(self.LANGUAGES):
+            return
+        self.target_language_name, self.target_language_code = self.LANGUAGES[idx]
+        # Update column header
+        self.translation_column.Header = "{} (Editable in Table)".format(self.target_language_name)
+        # Show/hide sample translation settings (only useful for Chinese)
+        is_chinese = self.target_language_code in ("zh-CN", "zh-TW")
 
     def change_approve_selected(self, as_approve):
 
@@ -482,99 +490,114 @@ class AiTranslator(WPFWindow):
 
     #@ERROR_HANDLE.try_catch_error()
     def fire_AI_translator(self, new_prompt, request_count):
+        """Call EnneadTab AI proxy via .NET HttpWebRequest (IronPython HTTPS).
 
+        # 2026-04-08: Uses .NET System.Net.HttpWebRequest for reliable HTTPS
+        # from IronPython. Python urllib2 SSL is broken in IronPython 2.7.
+        # Calls enneadtab.com/api/ai/desktop-chat with Gemini backend.
+        """
         session_token = AUTH.get_token()
         if not session_token:
-            self.debug_textbox.Text = "Authentication required. Please sign in."
-            return None
+            if not AUTH.is_auth_in_progress():
+                AUTH.request_auth()
+            # Wait for browser auth to complete (polling file cache)
+            max_wait = 120
+            elapsed = 0
+            while elapsed < max_wait:
+                self.debug_textbox.Text = "Waiting for browser sign-in... {}s/{}s".format(elapsed, max_wait)
+                time.sleep(1)
+                elapsed += 1
+                session_token = AUTH.get_token()
+                if session_token:
+                    break
+            if not session_token:
+                self.debug_textbox.Text = "Sign-in timed out. Please try again."
+                return None
 
-
-
-        human_name = "You: "
-        #print human_name
-
-        data_file_name = "AiTranslate"
-        #print file_name
-
- 
-
-
-        data = dict()
-        data["ai_name"] = "EA_Translator: "
-        data["human_name"] = human_name
-        data["session_token"] = session_token
-        data["max_tokens"] = 1500
-
-
+        # Build sample translations for context
+        target_lang = self.target_language_name
         sample_translate = ""
 
-        if True:
-            samples = self.get_sample_translation_dict()
-            for key,value in samples.items():
-                if key == "xxx":
-                    continue
-                sample_translate += "\n{} >> {}".format(key, value)
+        # Use built-in samples for the selected language
+        lang_samples = self.get_sample_translation_dict_for_language(self.target_language_code)
+        for key, value in lang_samples.items():
+            if key == "xxx":
+                continue
+            sample_translate += "\n{} >> {}".format(key, value)
 
         if self.is_including_user_sample.IsChecked:
             user_samples = self.get_sample_translation_dict_from_user()
-            for key,value in user_samples.items():
-                sample_translate += "\n{} >> {}".format(key, value)
+            if user_samples:
+                for key, value in user_samples.items():
+                    sample_translate += "\n{} >> {}".format(key, value)
 
-        data["key_prompt"] = u"The following is a human and translator conversation for translating professional architecture drawings names from English to Chinese. The translator is called 'Translator'. The format used here is 'English >> 中文翻译'. Here are some examples:\n{}\nPlease return the results as similar format as the 'English >> 中文翻译'\n\n\n".format(sample_translate)
-        data["conversation_history"] = "{} Human: Contents to translate as below:\n{}".format(data["key_prompt"], new_prompt)
-        data["direction"] = "input"
+        mode_context = u"SHEET NAMES (title block text)" if self.mode == "Sheets" else u"VIEW NAMES (plan/section/elevation/detail view titles in the project browser)"
+        arch_context = (
+            u"You are an expert architectural translator working for an international architecture firm. "
+            u"You are translating {} from Autodesk Revit. ".format(mode_context)
+            + u"These are NOT general text -- they are standardized terms used in the AEC (Architecture, Engineering, Construction) industry. "
+            u"Use the OFFICIAL architectural terminology that licensed architects and engineers in the target country would use on real construction document sets. "
+            u"Key terms: 'SECTION' = a cut-through view of a building (not a generic 'part'). "
+            u"'ELEVATION' = exterior face view of a building. 'REFLECTED CEILING PLAN' = looking up at the ceiling, drawn as if reflected in a mirror on the floor. "
+            u"'SYSTEM DRAWINGS' = curtain wall or facade assembly details. 'PARTITION' = interior wall dividing spaces. "
+            u"'SLAB EDGE' = floor slab perimeter detail. 'RCP' = Reflected Ceiling Plan. "
+            u"Level names like 'LEVEL 1', 'BASEMENT', 'MEZZANINE', 'ROOF' should use the local architectural convention. "
+            u"Building codes references ('FIRE COMPARTMENT', 'REFUGE FLOOR', 'EGRESS') should use the target country's building code terminology. "
+            u"Prioritize industry-standard terms over literal word-for-word translation. "
+            u"If the target language has an established convention (e.g. JIS for Japanese, KS for Korean, DIN for German, NF for French), follow it."
+        )
+        json_instruction = (
+            u"Return a JSON object where each key is the original English name and "
+            u"the value is the translation. Example: "
+            u'{{"FLOOR PLAN": "...", "ROOF PLAN": "..."}}'
+        )
+        if sample_translate:
+            system_prompt = u"{}\n\nTranslate from English to {}. Reference examples:\n{}\n\n{}".format(arch_context, target_lang, sample_translate, json_instruction)
+        else:
+            system_prompt = u"{}\n\nTranslate from English to {}.\n\n{}".format(arch_context, target_lang, json_instruction)
 
-        #print data["conversation_history"]
+        # Send as JSON list for clean structured input
+        user_message = json.dumps(new_prompt, ensure_ascii=True)
 
+        self.debug_textbox.Text = "Sending translation request..."
 
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_message}
+        ]
 
+        try:
+            ai_response = AI.chat_with_token(session_token, messages, temperature=0.3, json_mode=True)
+        except AI.AIRequestError as e:
+            error_msg = str(e)
+            print("Translation error: {}".format(error_msg))
 
-        DATA_FILE.set_data(data, data_file_name)
+            if e.status_code == 401:
+                AUTH.clear_token()
+                self.debug_textbox.Text = "Token expired. Please try translating again."
+                return None
 
-        run_exe()
+            self.debug_textbox.Text = "Cannot get response from the EnneadTab Server."
+            REVIT_FORMS.notification(
+                main_text="AI translation failed.",
+                sub_text="Error: {}\n\nConsider reducing the number of things to translate.".format(error_msg)
+            )
+            return None
 
+        # Parse structured JSON response
+        try:
+            data = json.loads(ai_response)
+            if not isinstance(data, dict):
+                raise ValueError("Expected JSON object, got {}".format(type(data)))
+        except Exception as e:
+            print("Failed to parse JSON response: {}".format(e))
+            print("Raw response: {}".format(ai_response))
+            self.debug_textbox.Text = "Translation response was not in expected format. Try again."
+            return None
 
-        max_attempt = 90
-        attempt = 0
-        output.set_width(100)
-        output.set_height(100)
-        while True:
-            print (attempt)
-            if attempt % 5 == 0:
-                try:
-                    loading_message = "\n{}".format(JOKE.random_loading_message())
-                except Exception as e:
-                    print (e)
-                    loading_message = ""
-            self.debug_textbox.Text =  "{}s/{}s Thinking{}Max thinking time {} seconds.{}".format(attempt, max_attempt, attempt * ".", max_attempt, loading_message)
-
-            if attempt >= max_attempt:
-                self.debug_textbox.Text = "Cannot get response from the EnneadTab Server."
-                REVIT_FORMS.notification(main_text = "AI translation times out. The number of translation exceed allowed number.", sub_text = "Current translation request = {}\n\nConsider reducing the number of things to translate.".format(request_count))
-                break
-            attempt += 1
-            time.sleep(1)
-            try:
-                record = DATA_FILE.get_data(data_file_name)
-            except Exception as e:
-                print (e)
-
-            
-            if record.get("direction") == "output":
-                #print record["conversation_history"].split(record["key_prompt"])[-1]
-                #print "Figured out!!!!!!!!!!!!!!"
-                SOUND.play_sound("sound_effect_popup_msg3.wav")
-                self.debug_textbox.Text = "Translation finished. AI thinking time = {}s".format(attempt)
-                #print "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-                #print record["conversation_history"]
-                #print "^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^"
-                output.set_width(500)
-                output.set_height(800)
-                ai_response = record.get("response")
-                if not ai_response:
-                    return record["conversation_history"].split(new_prompt)[-1]
-                else:
-                    return ai_response
+        SOUND.play_sound("sound_effect_popup_msg3.wav")
+        self.debug_textbox.Text = "Translation finished. {} items translated.".format(len(data))
+        return data
 
     def get_sample_translation_dict_from_user(self, use_predefined = True):
         if use_predefined and hasattr(self, "user_samples"):
@@ -588,6 +611,57 @@ class AiTranslator(WPFWindow):
             if item.is_approved and len(item.chinese_name) != 0:
                 samples[item.english_name] = item.chinese_name
         return samples
+
+
+    def get_sample_translation_dict_for_language(self, lang_code):
+        """Get sample translations for the selected language.
+
+        For Chinese (zh-CN), returns the full existing sample dict.
+        For CJK languages (zh-TW, ja, ko), returns Unicode-escaped samples.
+        For Latin/Arabic languages, no samples needed -- Gemini handles them
+        natively without examples. Avoids IronPython Unicode source encoding issues.
+        """
+        if lang_code == "zh-CN":
+            return self.get_sample_translation_dict()
+        if lang_code == "zh-TW":
+            samples = dict()
+            samples["SITE PLAN"] = u"\u5834\u5730\u5e73\u9762\u5716"
+            samples["FLOOR PLAN"] = u"\u5e73\u9762\u5716"
+            samples["ROOF PLAN"] = u"\u5c4b\u9802\u5e73\u9762\u5716"
+            samples["REFLECTED CEILING PLAN"] = u"\u53cd\u5c04\u5929\u82b1\u5e73\u9762\u5716"
+            samples["BUILDING ELEVATIONS"] = u"\u5efa\u7bc9\u7acb\u9762\u5716"
+            samples["BUILDING SECTIONS"] = u"\u5efa\u7bc9\u5256\u9762\u5716"
+            samples["COVER SHEET"] = u"\u5c01\u9762"
+            samples["DRAWING LIST"] = u"\u5716\u7d19\u76ee\u9304"
+            samples["DETAIL"] = u"\u8a73\u5716"
+            return samples
+        if lang_code == "ja":
+            samples = dict()
+            samples["SITE PLAN"] = u"\u914d\u7f6e\u56f3"
+            samples["FLOOR PLAN"] = u"\u5e73\u9762\u56f3"
+            samples["ROOF PLAN"] = u"\u5c4b\u6839\u4f0f\u56f3"
+            samples["REFLECTED CEILING PLAN"] = u"\u5929\u4e95\u4f0f\u56f3"
+            samples["BUILDING ELEVATIONS"] = u"\u7acb\u9762\u56f3"
+            samples["BUILDING SECTIONS"] = u"\u65ad\u9762\u56f3"
+            samples["COVER SHEET"] = u"\u8868\u7d19"
+            samples["DRAWING LIST"] = u"\u56f3\u9762\u30ea\u30b9\u30c8"
+            samples["DETAIL"] = u"\u8a73\u7d30\u56f3"
+            return samples
+        if lang_code == "ko":
+            samples = dict()
+            samples["SITE PLAN"] = u"\ubc30\uce58\ub3c4"
+            samples["FLOOR PLAN"] = u"\ud3c9\uba74\ub3c4"
+            samples["ROOF PLAN"] = u"\uc625\uc0c1\ud3c9\uba74\ub3c4"
+            samples["REFLECTED CEILING PLAN"] = u"\ubc18\uc0ac\ucc9c\uc815\ub3c4"
+            samples["BUILDING ELEVATIONS"] = u"\uc785\uba74\ub3c4"
+            samples["BUILDING SECTIONS"] = u"\ub2e8\uba74\ub3c4"
+            samples["COVER SHEET"] = u"\ud45c\uc9c0"
+            samples["DRAWING LIST"] = u"\ub3c4\uba74 \ubaa9\ub85d"
+            samples["DETAIL"] = u"\uc0c1\uc138\ub3c4"
+            return samples
+        # Latin-script and Arabic languages: Gemini handles these natively
+        # without examples. No samples avoids IronPython Unicode encoding issues.
+        return dict()
 
 
     def get_sample_translation_dict(self):
@@ -725,10 +799,6 @@ class AiTranslator(WPFWindow):
 
         samples["xxx"] = u"xxx"
 
-def run_exe():
-
-    EXE.try_open_app("AiTranslator")
-
 
 
 
@@ -746,6 +816,8 @@ def main():
 ################## main code below #####################
 output = script.get_output()
 output.close_others()
+output.set_width(1)
+output.set_height(1)
 
 
 if __name__ == "__main__":

@@ -3,35 +3,25 @@
 
 
 
-__doc__ = "AI-powered quality control assistant that transforms complex model data into actionable insights. This innovative tool generates comprehensive QAQC reports for your current document and features a natural language interface powered by OpenAI, allowing you to interrogate the results through simple conversation. Perfect for project milestones, coordination reviews, or when preparing deliverables that require rigorous quality verification."
+__doc__ = "AI-powered quality control assistant that transforms complex model data into actionable insights. This tool generates comprehensive QAQC reports for your current document and features a natural language interface powered by EnneaDuck AI, allowing you to interrogate the results through simple conversation. Perfect for project milestones, coordination reviews, or when preparing deliverables that require rigorous quality verification."
 __title__ = "QAQC\nReporter"
 __is_popular__ = True
 
 import System # pyright: ignore
 import os
+import time
+import random
+
 from pyrevit import script
 from pyrevit import forms
-
-import time
-
-
-from Autodesk.Revit.UI import IExternalEventHandler, ExternalEvent # pyright: ignore
-from Autodesk.Revit.Exceptions import InvalidOperationException # pyright: ignore
 from pyrevit.forms import WPFWindow # pyright: ignore
-# from pyrevit import forms #
+from Autodesk.Revit import DB # pyright: ignore
 
-# from pyrevit import revit #
-
-import proDUCKtion # pyright: ignore 
+import proDUCKtion # pyright: ignore
 proDUCKtion.validify()
 from EnneadTab.REVIT import REVIT_FORMS
+from EnneadTab import DATA_FILE, SOUND, TIME, ERROR_HANDLE, FOLDER, IMAGE, LOG, JOKE, AUTH, AI
 
-from EnneadTab import EXE, DATA_FILE, SOUND, TIME, ERROR_HANDLE, FOLDER,USER,  IMAGE, LOG, JOKE, SECRET
-import traceback
-
-from Autodesk.Revit import DB # pyright: ignore 
-import random
-# from Autodesk.Revit import UI # pyright: ignore
 uidoc = __revit__.ActiveUIDocument
 doc = __revit__.ActiveUIDocument.Document # pyright: ignore
 __persistentengine__ = True
@@ -40,43 +30,6 @@ __persistentengine__ = True
 
 
 
-
-
-
-
-
-
-# Create a subclass of IExternalEventHandler
-class conversation_SimpleEventHandler(IExternalEventHandler):
-    """
-    Simple IExternalEventHandler sample
-    """
-
-    # __init__ is used to make function from outside of the class to be executed by the handler. \
-    # Instructions could be simply written under Execute method only
-    def __init__(self, do_this):
-        self.do_this = do_this
-        self.kwargs = None
-        self.OUT = None
-
-
-    # Execute method run in Revit API environment.
-    def Execute(self,  uiapp):
-
-        try:
-
-            try:
-                #print "try to do event handler func"
-                self.OUT = self.do_this(self.kwargs)
-            except:
-                self.OUT =  traceback.format_exc()
-                print ("failed")
-        except InvalidOperationException:
-            # If you don't catch this exeption Revit may crash.
-            print ("InvalidOperationException catched")
-
-    def GetName(self):
-        return "simple function executed by an IExternalEventHandler in a Form"
 
 
 
@@ -95,25 +48,14 @@ class AI_Report_modelessForm(WPFWindow):
 
 
 
-    def pre_actions(self):
-
-        return 
-        self.clock_event_handler = conversation_SimpleEventHandler(clock_work)
-
-        self.ext_event_clock = ExternalEvent.Create(self.clock_event_handler)
-    
-        return
-
     @ERROR_HANDLE.try_catch_error()
     def __init__(self):
-
-        self.pre_actions()
-        xaml_file_name = "QAQC_Reporter_ModelessForm.xaml" 
+        xaml_file_name = "QAQC_Reporter_ModelessForm.xaml"
         WPFWindow.__init__(self, xaml_file_name)
 
-        self.title_text.Text = "EnneadTab-GPT: Chat With Document (ft. openAI)"
+        self.title_text.Text = "EnneaDuck: Chat With Document"
 
-        self.sub_text.Text = "Use openai's AI_Report to answer all kinds of questions in current document or from exisitng QAQC report."
+        self.sub_text.Text = "Use EnneaDuck AI to answer all kinds of questions in current document or from existing QAQC report."
 
 
         self.Title = "QAQC Reporter"
@@ -131,10 +73,7 @@ class AI_Report_modelessForm(WPFWindow):
 
     @property
     def log_file(self):
-        file_name = "QAQC_REPORT_LOG"
-        return file_name
-
-        return FOLDER.get_local_dump_folder_file(file_name)
+        return "QAQC_REPORT_LOG"
 
    
     def get_previous_conversation(self):
@@ -147,67 +86,68 @@ class AI_Report_modelessForm(WPFWindow):
 
     @ERROR_HANDLE.try_catch_error()
     def ask_Click(self, sender, e):
-        if not USER.IS_DEVELOPER:
-            print ("Due to recent security change about AI, this function is temporarily disabled until further notice.")
+        # 2026-04-08: Migrated from OpenAI EXE to EnneadTab AI proxy (Gemini backend)
+        query = self.tbox_input.Text
+        if not query or not query.strip():
+            self.debug_textbox.Text = "Please enter a question."
             return
 
-        # if not USER.IS_DEVELOPER:
-        #     self.debug_textbox.Text = "WIP function."
-        #     return
-        query = self.tbox_input.Text
-        data = dict()
-        data["direction"] = "IN"
+        # Build context from report or PDF
         if self.radio_bt_is_reading_pdf.IsChecked:
-            data["method"] = "pdf"
             if not hasattr(self, "pdf"):
                 self.debug_textbox.Text = "You need to pick pdf first...."
-                
                 return
-            data["qaqc_file"] = self.pdf
+            context_text = "User has a PDF QAQC report at: {}".format(self.pdf)
         else:
-            data["method"] = "text"
             if not hasattr(self, "report"):
                 self.debug_textbox.Text = "You need to run the report first...."
                 return
-            data["qaqc_text"] = self.report
-        data["query"] = self.tbox_input.Text
-        data["api_key"] = SECRET.get_openai_api_key("EnneadTabAPI")
-        data["store_name"] = self.session_name
-        data["response"] = "No results."
-        
-        self.data_file = "QAQC_REPORT_DATA"
-        DATA_FILE.set_data(data, self.data_file)
-        
-        run_exe()
-        self.debug_textbox.Text = "Thinking..."
-        
-        
-        max_wait = 60
-        attempt = 0
-        output = script.get_output()
-        while attempt < max_wait:
-            attempt += 1
-            print(attempt)
-            output.set_width(10)
-            output.set_height(10)
+            context_text = self.report
 
-
-            if attempt%3 == 0:
-                self.debug_textbox.Text = JOKE.random_loading_message()
-            
-            time.sleep(1)
-            temp_data = DATA_FILE.get_data(self.data_file)
-            if temp_data["direction"] == "OUT":
-                 
-                SOUND.play_sound("sound_effect_popup_msg3.wav")
-
-                self.tbox_conversation.Text += "\n\nQ: {}\nA:{}".format(query, temp_data["response"])
-                #self.tbox_conversation.Text = temp_data["response"]
-                self.debug_textbox.Text = "Thinking finished."
+        # Get auth token (lazy browser OAuth)
+        session_token = AUTH.get_token()
+        if not session_token:
+            if not AUTH.is_auth_in_progress():
+                AUTH.request_auth()
+            max_wait = 120
+            elapsed = 0
+            while elapsed < max_wait:
+                self.debug_textbox.Text = "Waiting for browser sign-in... {}s/{}s".format(elapsed, max_wait)
+                time.sleep(1)
+                elapsed += 1
+                session_token = AUTH.get_token()
+                if session_token:
+                    break
+            if not session_token:
+                self.debug_textbox.Text = "Sign-in timed out. Please try again."
                 return
 
+        self.debug_textbox.Text = JOKE.random_loading_message()
 
-        self.debug_textbox.Text = "Thinking stopped."
+        system_prompt = (
+            "You are a QAQC expert for architectural Revit models at Ennead Architects. "
+            "Analyze the following QAQC report data and answer the user's question clearly and concisely. "
+            "Focus on actionable insights. If the data is insufficient, say so.\n\n"
+            "QAQC Report Data:\n{}"
+        ).format(context_text[:8000])
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": query}
+        ]
+
+        try:
+            ai_response = AI.chat_with_token(session_token, messages, temperature=0.7)
+            SOUND.play_sound("sound_effect_popup_msg3.wav")
+            self.tbox_conversation.Text += "\n\nQ: {}\nA: {}".format(query, ai_response)
+            self.debug_textbox.Text = "Done."
+
+        except AI.AIRequestError as e:
+            if e.status_code == 401:
+                AUTH.clear_token()
+                self.debug_textbox.Text = "Token expired. Please try again."
+                return
+            self.debug_textbox.Text = "AI request failed: {}".format(str(e)[:200])
         
   
 
@@ -266,12 +206,6 @@ class AI_Report_modelessForm(WPFWindow):
             self.pdf_source_panel.Visibility = System.Windows.Visibility.Visible
         else:
             self.pdf_source_panel.Visibility = System.Windows.Visibility.Collapsed
-
-
-def run_exe():
-    print ("due to AI policy change, the chatbot feature is no longer avaible.")
-    return
-    EXE.try_open_app('QaqcReporter')
 
 
 @LOG.log(__file__, __title__)

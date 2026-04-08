@@ -117,7 +117,7 @@ class EA_GFA_Conduit(Rhino.Display.DisplayConduit):
         
         if time.time() - sc.sticky["reset_timestamp"] < 2:
             return
-        if note:
+        if note and NOTIFICATION is not None:
             NOTIFICATION.messenger(note)
         self.cached_data = []
         self.current_objs = get_current_objs()

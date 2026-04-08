@@ -127,10 +127,20 @@
                 </Expander>
                 
 
+                <WrapPanel Margin="0,5,0,5">
+                    <TextBlock Text="Target Language:  " VerticalAlignment="Center"/>
+                    <ComboBox x:Name="language_selector"
+                              Width="180"
+                              Height="22"
+                              VerticalAlignment="Center"
+                              Cursor="Hand"
+                              SelectionChanged="language_changed"/>
+                </WrapPanel>
+
                 <Grid >
                     <WrapPanel >
-                        <Button Content='Pick Sheets'  
-                        Click="pick_views_sheets_Click" 
+                        <Button Content='Pick Sheets'
+                        Click="pick_views_sheets_Click"
                         Width="150"
                         HorizontalAlignment="Left"
                          x:Name="bt_pick"/>
@@ -298,9 +308,10 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn  IsReadOnly="True" Header="SheetNum" Width="100" Binding="{Binding sheet_num}"/>
                         <DataGridTextColumn  IsReadOnly="True" Header="English Names" Width="3*" Binding="{Binding english_name}"/>
-                        <DataGridTextColumn  IsReadOnly="False" 
-                                                 Header="Chinese Names (Editable in Table)" 
-                                                 Width="2*" 
+                        <DataGridTextColumn  IsReadOnly="False"
+                                                 x:Name="translation_column"
+                                                 Header="Translation (Editable in Table)"
+                                                 Width="2*"
                                                  Binding="{Binding chinese_name}"/>
                         <DataGridCheckBoxColumn IsReadOnly="False"
                                                 Header="Approved?"
