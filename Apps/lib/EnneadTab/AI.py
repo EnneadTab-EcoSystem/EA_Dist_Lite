@@ -273,7 +273,12 @@ def _post_multipart(url, fields, files, token, timeout_ms=120000):
         AIRequestError: On HTTP or network errors.
     """
     import os
-    boundary = "----EnneadTabBoundary{}".format(os.urandom(8).hex() if hasattr(os.urandom(8), 'hex') else ''.join('{:02x}'.format(b) for b in bytearray(os.urandom(8))))
+    try:
+        rand_hex = os.urandom(8).hex()
+    except AttributeError:
+        # IronPython 2.7: os.urandom returns str, no .hex() method
+        rand_hex = ''.join('{:02x}'.format(b) for b in bytearray(os.urandom(8)))
+    boundary = "----EnneadTabBoundary{}".format(rand_hex)
 
     body_parts = []
     for name, value in fields.items():
@@ -314,9 +319,12 @@ def _post_multipart_dotnet(url, body, content_type, token, timeout_ms):
         request.Headers.Add("Authorization", "Bearer {}".format(token))
         request.Timeout = timeout_ms
 
-        request.ContentLength = len(body)
+        # Convert Python bytes to .NET Array[Byte] for IronPython interop
+        import System # pyright: ignore
+        dotnet_bytes = System.Array[System.Byte](bytearray(body))
+        request.ContentLength = dotnet_bytes.Length
         req_stream = request.GetRequestStream()
-        req_stream.Write(body, 0, len(body))
+        req_stream.Write(dotnet_bytes, 0, dotnet_bytes.Length)
         req_stream.Close()
 
         response = request.GetResponse()
@@ -350,21 +358,114 @@ def _post_multipart_urllib(url, body, content_type, token, timeout_ms):
         raise AIRequestError(str(e))
 
 
-def render_image_with_token(token, image_path, prompt, aspect_ratio="16:9"):
+def _post_multipart_raw(url, fields, files, token, timeout_ms=180000, progress_callback=None):
+    """HTTP POST multipart/form-data, returns raw response text (for SSE parsing).
+
+    Args:
+        url: Full API URL.
+        fields: dict of form fields.
+        files: list of (field_name, filename, file_bytes, content_type).
+        token: Bearer auth token.
+        timeout_ms: Timeout in milliseconds.
+        progress_callback: Optional callable(str) for progress updates.
+
+    Returns:
+        str: Raw response body text.
+
+    Raises:
+        AIRequestError: On HTTP or network errors.
+    """
+    import os
+    try:
+        rand_hex = os.urandom(8).hex()
+    except AttributeError:
+        rand_hex = ''.join('{:02x}'.format(b) for b in bytearray(os.urandom(8)))
+    boundary = "----EnneadTabBoundary{}".format(rand_hex)
+
+    body_parts = []
+    for name, value in fields.items():
+        body_parts.append("--{}".format(boundary).encode("utf-8"))
+        body_parts.append('Content-Disposition: form-data; name="{}"'.format(name).encode("utf-8"))
+        body_parts.append(b"")
+        body_parts.append(str(value).encode("utf-8") if not isinstance(value, bytes) else value)
+
+    for field_name, filename, file_bytes, ct in files:
+        body_parts.append("--{}".format(boundary).encode("utf-8"))
+        body_parts.append('Content-Disposition: form-data; name="{}"; filename="{}"'.format(field_name, filename).encode("utf-8"))
+        body_parts.append("Content-Type: {}".format(ct).encode("utf-8"))
+        body_parts.append(b"")
+        body_parts.append(file_bytes)
+
+    body_parts.append("--{}--".format(boundary).encode("utf-8"))
+    body_parts.append(b"")
+    body = b"\r\n".join(body_parts)
+    content_type_header = "multipart/form-data; boundary={}".format(boundary)
+
+    if progress_callback:
+        progress_callback("Uploading image...")
+
+    if _USE_DOTNET:
+        try:
+            import System # pyright: ignore
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12
+            request = WebRequest.Create(url)
+            request.Method = "POST"
+            request.ContentType = content_type_header
+            request.Headers.Add("Authorization", "Bearer {}".format(token))
+            request.Timeout = timeout_ms
+
+            dotnet_bytes = System.Array[System.Byte](bytearray(body))
+            request.ContentLength = dotnet_bytes.Length
+            req_stream = request.GetRequestStream()
+            req_stream.Write(dotnet_bytes, 0, dotnet_bytes.Length)
+            req_stream.Close()
+
+            if progress_callback:
+                progress_callback("AI is generating your image...")
+
+            response = request.GetResponse()
+            reader = StreamReader(response.GetResponseStream())
+            result_text = reader.ReadToEnd()
+            reader.Close()
+            response.Close()
+            return result_text
+        except Exception as e:
+            error_msg = str(e)
+            status = 401 if ("401" in error_msg or "Unauthorized" in error_msg) else None
+            raise AIRequestError(error_msg, status_code=status)
+    else:
+        try:
+            req = Request(url)
+            req.add_header("Content-Type", content_type_header)
+            req.add_header("Authorization", "Bearer {}".format(token))
+            if progress_callback:
+                progress_callback("AI is generating your image...")
+            response = urlopen(req, body, timeout=timeout_ms // 1000)
+            resp_body = response.read()
+            if isinstance(resp_body, bytes):
+                resp_body = resp_body.decode("utf-8")
+            return resp_body
+        except HTTPError as e:
+            raise AIRequestError(str(e), status_code=e.code)
+        except Exception as e:
+            raise AIRequestError(str(e))
+
+
+def render_image_with_token(token, image_path, prompt, aspect_ratio="16:9", progress_callback=None):
     """Render an architectural image using Gemini via ennead-ai.com.
 
     Sends a viewport capture + text prompt to RenderPolisher's image
-    generation API. Returns a list of base64-encoded result images.
+    generation API via SSE streaming. Returns a list of base64-encoded result images.
 
     Args:
         token: Bearer auth token from AUTH.get_token().
         image_path: Path to JPEG/PNG file (viewport capture).
         prompt: Description of desired rendering style/mood.
         aspect_ratio: Output aspect ratio (default "16:9").
+        progress_callback: Optional callable(status_text) for UI progress updates.
 
     Returns:
         list: List of dicts with 'b64' (base64 image data) and 'mime' keys.
-              Empty list on failure.
 
     Raises:
         AIRequestError: On failure. Check status_code == 401 for expired token.
@@ -387,8 +488,35 @@ def render_image_with_token(token, image_path, prompt, aspect_ratio="16:9"):
         ("mainImages", filename, image_bytes, mime),
     ]
 
-    data = _post_multipart(url, fields, files, token, timeout_ms=120000)
-    return data.get("images", [])
+    # Use SSE streaming mode - non-streaming times out on Vercel
+    raw = _post_multipart_raw(url + "&stream=true", fields, files, token, timeout_ms=180000,
+                              progress_callback=progress_callback)
+
+    if progress_callback:
+        progress_callback("Processing response...")
+
+    # Parse SSE events: each event is "data: {json}\n\n"
+    # Split by double-newline to get complete events
+    images = []
+    for chunk in raw.split("\n\n"):
+        chunk = chunk.strip()
+        if not chunk.startswith("data: "):
+            continue
+        json_str = chunk[6:]  # strip "data: " prefix
+        try:
+            event = json.loads(json_str)
+            if event.get("type") == "image":
+                result = event.get("result", {})
+                if result.get("b64"):
+                    images.append(result)
+            elif event.get("type") == "error":
+                raise AIRequestError(event.get("error", "Generation failed"))
+            elif event.get("type") == "progress" and progress_callback:
+                progress_callback("AI is generating... {}%".format(
+                    int(100 * event.get("current", 0) / max(event.get("total", 1), 1))))
+        except (ValueError, KeyError):
+            continue
+    return images
 
 
 def render_image(image_path, prompt, aspect_ratio="16:9"):

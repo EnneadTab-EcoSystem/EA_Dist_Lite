@@ -159,10 +159,14 @@ class ViewCaptureDialog(Eto.Forms.Form):
 
         # Send to AI
         prompt = self.tbox_prompt.Text
-        self.status_label.Text = "Rendering with AI... (this may take 30-60s)"
+
+        def update_status(msg):
+            self.status_label.Text = msg
+
+        update_status("Uploading to AI...")
 
         try:
-            images = AI.render_image_with_token(token, input_path, prompt)
+            images = AI.render_image_with_token(token, input_path, prompt, progress_callback=update_status)
         except AI.AIRequestError as e:
             if e.status_code == 401:
                 AUTH.clear_token()

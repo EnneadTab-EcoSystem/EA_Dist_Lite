@@ -648,16 +648,23 @@ class AiTranslator(WPFWindow):
             samples["DETAIL"] = u"\u8a73\u7d30\u56f3"
             return samples
         if lang_code == "ko":
+            # Verified by DaYeon Kim (Korean architect) 2026-04-08
             samples = dict()
             samples["SITE PLAN"] = u"\ubc30\uce58\ub3c4"
+            samples["SITE GROUND PLAN"] = u"\ub300\uc9c0 \uc9c0\uc0c11\uce35 \ud3c9\uba74\ub3c4"
             samples["FLOOR PLAN"] = u"\ud3c9\uba74\ub3c4"
-            samples["ROOF PLAN"] = u"\uc625\uc0c1\ud3c9\uba74\ub3c4"
-            samples["REFLECTED CEILING PLAN"] = u"\ubc18\uc0ac\ucc9c\uc815\ub3c4"
+            samples["ROOF PLAN"] = u"\uc9c0\ubd95 \ud3c9\uba74\ub3c4"
+            samples["REFLECTED CEILING PLAN"] = u"\ucc9c\uc815 \ud3c9\uba74\ub3c4"
             samples["BUILDING ELEVATIONS"] = u"\uc785\uba74\ub3c4"
             samples["BUILDING SECTIONS"] = u"\ub2e8\uba74\ub3c4"
             samples["COVER SHEET"] = u"\ud45c\uc9c0"
             samples["DRAWING LIST"] = u"\ub3c4\uba74 \ubaa9\ub85d"
             samples["DETAIL"] = u"\uc0c1\uc138\ub3c4"
+            samples["EXTERIOR WALL SYSTEMS"] = u"\uc678\ubcbd \uc2dc\uc2a4\ud15c"
+            samples["EXTERIOR WALL SECTIONS"] = u"\uc678\ubcbd\ub2e8\uba74\ub3c4"
+            samples["PARTITION TYPES"] = u"\ud30c\ud2f0\uc158 \ud0c0\uc785 \uc77c\ub78c\ud45c"
+            samples["PARTITION DETAILS"] = u"\ud30c\ud2f0\uc158 \uc0c1\uc138\ub3c4"
+            samples["CEILING DETAILS"] = u"\ucc9c\uc815 \uc0c1\uc138\ub3c4"
             return samples
         # Latin-script and Arabic languages: Gemini handles these natively
         # without examples. No samples avoids IronPython Unicode encoding issues.

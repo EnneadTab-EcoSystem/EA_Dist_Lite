@@ -1,23 +1,24 @@
-__title__ = "RenderPolisher"
-__doc__ = """Launch the Render Polisher application for enhancing and refining your renders!
+# -*- coding: utf-8 -*-
+__title__ = "EnneaDuck Render Studio"
+__doc__ = """Open e.AI — EnneaDuck's rendering studio.
 
-This tool opens the RenderPolisher.exe application that helps you:
-- Polish and enhance render outputs
-- Apply post-processing effects
-- Refine render quality and appearance
-- Streamline your rendering workflow
+AI-powered rendering and video generation for architectural visualization:
+- Multi-style image generation (Gemini + Imagen)
+- Image editing and style transfer
+- Video generation from stills
+- Iterative conversational refinement
 
-Perfect for visualization specialists looking to take their renders to the next level.
+Opens ennead-ai.com in your default browser.
 """
 
 __is_popular__ = True
-from EnneadTab import ERROR_HANDLE, LOG, EXE
+import webbrowser
+from EnneadTab import ERROR_HANDLE, LOG
 
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def render_polisher():
-    EXE.try_open_app("RenderPolisher")
-    
+    webbrowser.open("https://ennead-ai.com")
+
 if __name__ == "__main__":
     render_polisher()
-

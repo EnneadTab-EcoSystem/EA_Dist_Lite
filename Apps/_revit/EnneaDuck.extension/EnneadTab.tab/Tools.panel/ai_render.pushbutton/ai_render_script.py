@@ -135,10 +135,13 @@ class AiRenderForm(WPFWindow):
                 return
 
         # Send to AI
-        self.debug_textbox.Text = JOKE.random_loading_message()
+        def update_status(msg):
+            self.debug_textbox.Text = msg
+
+        update_status("Uploading to AI...")
 
         try:
-            images = AI.render_image_with_token(session_token, actual_file, prompt)
+            images = AI.render_image_with_token(session_token, actual_file, prompt, progress_callback=update_status)
         except AI.AIRequestError as e:
             if e.status_code == 401:
                 AUTH.clear_token()
