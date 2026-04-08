@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-__title__ = "MCP Server"
+__title__ = "MCPServer"
 __doc__ = "Start the EnneadTab MCP Server for Rhino. When running, Claude Code can query and control this Rhino session via MCP protocol."
 
 

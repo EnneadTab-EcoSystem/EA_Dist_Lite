@@ -1,4 +1,4 @@
-__title__ = "Stack PSD"
+__title__ = "StackPSD"
 __doc__ = """Stack PSD Files Tool
 
 Automates the process of stacking and combining PSD files for rendering workflows.

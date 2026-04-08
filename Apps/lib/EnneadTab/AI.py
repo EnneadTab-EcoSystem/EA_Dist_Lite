@@ -413,6 +413,13 @@ def _post_multipart_raw(url, fields, files, token, timeout_ms=180000, progress_c
             request.ContentType = content_type_header
             request.Headers.Add("Authorization", "Bearer {}".format(token))
             request.Timeout = timeout_ms
+            # ReadWriteTimeout covers reading the response body — critical for
+            # SSE streams where generation takes 30-60s after headers arrive.
+            # request.Timeout only covers time to first byte (headers).
+            request.ReadWriteTimeout = timeout_ms
+            # Prevent .NET from silently following 307 redirects to login page,
+            # which would return HTML instead of SSE data and cause empty results.
+            request.AllowAutoRedirect = False
 
             dotnet_bytes = System.Array[System.Byte](bytearray(body))
             request.ContentLength = dotnet_bytes.Length
@@ -424,10 +431,17 @@ def _post_multipart_raw(url, fields, files, token, timeout_ms=180000, progress_c
                 progress_callback("AI is generating your image...")
 
             response = request.GetResponse()
-            reader = StreamReader(response.GetResponseStream())
-            result_text = reader.ReadToEnd()
-            reader.Close()
-            response.Close()
+            reader = StreamReader(response.GetResponseStream(), Encoding.UTF8)
+            try:
+                result_text = reader.ReadToEnd()
+            finally:
+                reader.Close()
+                response.Close()
+
+            if not result_text or len(result_text) < 10:
+                raise AIRequestError(
+                    "Empty response from server (got {} bytes). "
+                    "Check auth token and server logs.".format(len(result_text or "")))
             return result_text
         except Exception as e:
             error_msg = str(e)
@@ -451,7 +465,52 @@ def _post_multipart_raw(url, fields, files, token, timeout_ms=180000, progress_c
             raise AIRequestError(str(e))
 
 
-def render_image_with_token(token, image_path, prompt, aspect_ratio="16:9", progress_callback=None):
+def get_render_presets(token=None):
+    """Fetch rendering style presets from ennead-ai.com.
+
+    Returns:
+        list: List of dicts with 'name', 'prompt', 'category', 'description' keys.
+              Empty list on error or if server is unreachable.
+    """
+    url = "{}/api/create/image".format(RENDER_URL)
+    try:
+        if _USE_DOTNET:
+            import System # pyright: ignore
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12
+            request = WebRequest.Create(url)
+            request.Method = "GET"
+            request.Timeout = 10000
+            if token:
+                request.Headers.Add("Authorization", "Bearer {}".format(token))
+            response = request.GetResponse()
+            reader = StreamReader(response.GetResponseStream())
+            try:
+                text = reader.ReadToEnd()
+            finally:
+                reader.Close()
+                response.Close()
+        else:
+            req = Request(url)
+            if token:
+                req.add_header("Authorization", "Bearer {}".format(token))
+            resp = urlopen(req, timeout=10)
+            try:
+                text = resp.read()
+                if isinstance(text, bytes):
+                    text = text.decode("utf-8")
+            finally:
+                resp.close()
+
+        data = json.loads(text)
+        if data.get("ok") and isinstance(data.get("prompts"), list):
+            return data["prompts"]
+    except Exception:
+        pass
+    return []
+
+
+def render_image_with_token(token, image_path, prompt, aspect_ratio="16:9",
+                            style_image_path=None, progress_callback=None):
     """Render an architectural image using Gemini via ennead-ai.com.
 
     Sends a viewport capture + text prompt to RenderPolisher's image
@@ -462,6 +521,7 @@ def render_image_with_token(token, image_path, prompt, aspect_ratio="16:9", prog
         image_path: Path to JPEG/PNG file (viewport capture).
         prompt: Description of desired rendering style/mood.
         aspect_ratio: Output aspect ratio (default "16:9").
+        style_image_path: Optional path to a style reference image.
         progress_callback: Optional callable(status_text) for UI progress updates.
 
     Returns:
@@ -470,6 +530,9 @@ def render_image_with_token(token, image_path, prompt, aspect_ratio="16:9", prog
     Raises:
         AIRequestError: On failure. Check status_code == 401 for expired token.
     """
+    if not token:
+        raise AIRequestError("No auth token provided. Please sign in first.")
+
     import os
     with open(image_path, "rb") as f:
         image_bytes = f.read()
@@ -478,7 +541,7 @@ def render_image_with_token(token, image_path, prompt, aspect_ratio="16:9", prog
     mime = "image/png" if ext == ".png" else "image/jpeg"
     filename = os.path.basename(image_path)
 
-    url = "{}/api/create/image?mode=edit&countFactor=1&aspectRatio={}&temperature=1.0".format(
+    url = "{}/api/create/image?generationMode=image-to-image&countFactor=1&aspectRatio={}&temperature=1.0".format(
         RENDER_URL, aspect_ratio)
 
     fields = {
@@ -487,6 +550,14 @@ def render_image_with_token(token, image_path, prompt, aspect_ratio="16:9", prog
     files = [
         ("mainImages", filename, image_bytes, mime),
     ]
+
+    # Add style reference image if provided
+    if style_image_path and os.path.exists(style_image_path):
+        with open(style_image_path, "rb") as sf:
+            style_bytes = sf.read()
+        s_ext = os.path.splitext(style_image_path)[1].lower()
+        s_mime = "image/png" if s_ext == ".png" else "image/jpeg"
+        files.append(("styleImages", os.path.basename(style_image_path), style_bytes, s_mime))
 
     # Use SSE streaming mode - non-streaming times out on Vercel
     raw = _post_multipart_raw(url + "&stream=true", fields, files, token, timeout_ms=180000,
@@ -498,10 +569,12 @@ def render_image_with_token(token, image_path, prompt, aspect_ratio="16:9", prog
     # Parse SSE events: each event is "data: {json}\n\n"
     # Split by double-newline to get complete events
     images = []
+    event_count = 0
     for chunk in raw.split("\n\n"):
         chunk = chunk.strip()
         if not chunk.startswith("data: "):
             continue
+        event_count += 1
         json_str = chunk[6:]  # strip "data: " prefix
         try:
             event = json.loads(json_str)
@@ -516,6 +589,13 @@ def render_image_with_token(token, image_path, prompt, aspect_ratio="16:9", prog
                     int(100 * event.get("current", 0) / max(event.get("total", 1), 1))))
         except (ValueError, KeyError):
             continue
+
+    if not images:
+        # Raise with full diagnostic so ERROR_HANDLE surfaces the traceback
+        preview = raw[:500].replace("\n", "\\n") if raw else "(empty)"
+        raise AIRequestError(
+            "No images in response. {} bytes, {} SSE events parsed. "
+            "Response start: {}".format(len(raw), event_count, preview))
     return images
 
 

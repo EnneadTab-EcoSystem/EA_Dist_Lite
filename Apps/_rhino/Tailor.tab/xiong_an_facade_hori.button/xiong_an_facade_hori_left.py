@@ -2,7 +2,7 @@
 it is important to use type hint for GH input.
 Only consider process it with rhino common, do not use rhinoscriptsyntax as it cannot process gh guid correctly to the funcs.
 """
-__title__ = "2419_Facade move"
+__title__ = "2419_FacadeMove"
 __doc__ = """Xiong'an Facade Movement Tool
 
 Processes facade curves to extract specific points for facade movement operations.

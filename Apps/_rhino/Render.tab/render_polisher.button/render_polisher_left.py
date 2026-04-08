@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-__title__ = "EnneaDuck Render Studio"
+__title__ = "EnneaDuckRenderStudio"
 __doc__ = """Open e.AI — EnneaDuck's rendering studio.
 
 AI-powered rendering and video generation for architectural visualization:

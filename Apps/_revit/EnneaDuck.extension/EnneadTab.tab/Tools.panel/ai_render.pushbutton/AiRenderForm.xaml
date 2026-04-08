@@ -79,22 +79,57 @@
                 <TextBlock x:Name="title_text" Text="EnneaDuck: AI View Render"
                            Foreground="#FFFFE59C" FontSize="18" FontWeight="Bold"/>
                 <TextBlock x:Name="sub_text" Text="" Foreground="#FFCBCBCB"
-                           TextWrapping="Wrap" MaxWidth="450" HorizontalAlignment="Left"/>
+                           TextWrapping="Wrap" MaxWidth="500" HorizontalAlignment="Left"/>
 
                 <Separator Margin="0,10"/>
 
-                <TextBlock Text="Rendering Style:" Margin="0,5,0,2"/>
-                <ComboBox x:Name="cb_style" HorizontalAlignment="Stretch"
-                          SelectionChanged="style_changed"/>
+                <!-- Result preview image -->
+                <TextBlock x:Name="preview_label" Text="View Preview:" Margin="0,5,0,2"/>
+                <Image x:Name="result_preview" MaxHeight="350" MaxWidth="500"
+                       Margin="0,5,0,5" Stretch="Uniform"/>
 
+                <!-- Result action buttons (hidden until result) -->
+                <StackPanel x:Name="result_buttons" Orientation="Horizontal"
+                            HorizontalAlignment="Center" Visibility="Collapsed" Margin="0,5,0,5">
+                    <Button x:Name="bt_toggle" Content="Show Original" Click="toggle_Click"/>
+                    <Button Content="Copy to Clipboard" Click="copy_image_Click"/>
+                    <Button Content="Save As..." Click="save_image_Click"/>
+                </StackPanel>
+
+                <!-- Category + Style dropdowns -->
+                <TextBlock Text="Rendering Style:" Margin="0,5,0,2"/>
+                <StackPanel Orientation="Horizontal">
+                    <ComboBox x:Name="cb_category" Width="150" SelectionChanged="category_changed"/>
+                    <ComboBox x:Name="cb_style" Width="290" Margin="5,0,0,0"
+                              SelectionChanged="style_changed"/>
+                </StackPanel>
+
+                <!-- Prompt -->
                 <TextBlock Text="Prompt (edit or write your own):" Margin="0,10,0,2"/>
                 <TextBox x:Name="tbox_prompt" Height="60" TextWrapping="Wrap"
-                         AcceptsReturn="True" MaxWidth="450"/>
+                         AcceptsReturn="True" MaxWidth="500"/>
+
+                <!-- Style reference -->
+                <TextBlock Text="Style Reference (optional):" Margin="0,10,0,2"/>
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="Browse..." Click="browse_style_Click"/>
+                    <Button Content="Paste from Clipboard" Click="paste_style_Click"/>
+                    <Button x:Name="bt_clear_style" Content="Clear" Click="clear_style_Click"
+                            Visibility="Collapsed"/>
+                    <Image x:Name="style_preview" Width="50" Height="50" Margin="10,0,0,0"/>
+                </StackPanel>
+
+                <!-- Progress bar -->
+                <ProgressBar x:Name="progress_bar" Height="8" Margin="0,10,0,0"
+                             IsIndeterminate="True" Visibility="Collapsed"/>
 
                 <Separator Margin="0,10"/>
 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Button Content="Send to AI" Click="render_Click" Margin="5"/>
+                <!-- Main action buttons -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
+                    <Button x:Name="bt_capture" Content="Capture View" Click="capture_Click" Margin="5"/>
+                    <Button x:Name="bt_render" Content="Send to EnneaDuck" Click="render_Click"
+                            Margin="5" IsEnabled="False"/>
                     <Button Content="Close" Click="close_Click" Margin="5"/>
                 </StackPanel>
 

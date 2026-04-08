@@ -13,6 +13,7 @@ layout:
   - toggle content_UI 
   - batch_cut
   - translate_AI
+  - ai_render
   - mcp_server
   - generic_healthcare_tool
   - ">>>" 

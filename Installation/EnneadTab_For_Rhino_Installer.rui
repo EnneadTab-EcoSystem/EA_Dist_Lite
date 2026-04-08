@@ -8,21 +8,21 @@
     </menu>
   </extend_rhino_menus>
   <menus>
-    <menu guid="0bab194f-25e5-44f8-a372-af5bcf299954">
+    <menu guid="4ce6c109-a197-484d-af9a-44cfcf47befd">
       <text>
         <locale_1033>Enneaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaad</locale_1033>
       </text>
-      <menu_item guid="3d050a12-9e44-49a9-9f28-53a4866112f6">
+      <menu_item guid="005b7fd7-9581-40db-b1ba-06aa4d935e4a">
         <text>
           <locale_1033>Installation</locale_1033>
         </text>
-        <macro_id>a6f3ba0e-cacc-4f6c-94c0-43ed72054978</macro_id>
+        <macro_id>875ae18d-5511-49cd-bbd4-e40316db4dd3</macro_id>
       </menu_item>
-      <menu_item guid="332bc705-550c-4508-b7de-9a14c6e237c2">
+      <menu_item guid="c13891ae-f306-435d-9a6f-bbaa08f7838d">
         <text>
           <locale_1033>uninstall_old_version</locale_1033>
         </text>
-        <macro_id>d6eab242-e891-4747-af99-3c85cf12f959</macro_id>
+        <macro_id>8830f350-503b-4b17-95a4-5d351f43e3c5</macro_id>
       </menu_item>
     </menu>
   </menus>
@@ -36,7 +36,7 @@
   </tool_bar_groups>
   <tool_bars/>
   <macros>
-    <macro_item guid="a6f3ba0e-cacc-4f6c-94c0-43ed72054978" bitmap_id="005afbf4-2472-4082-ba0e-391698699ed6">
+    <macro_item guid="875ae18d-5511-49cd-bbd4-e40316db4dd3" bitmap_id="28e515d6-1bbb-4c72-8811-3e495e067219">
       <text>
         <locale_1033>Install EnneadTab</locale_1033>
       </text>
@@ -68,7 +68,7 @@ MODULE_HELPER.run_Rhino_button('Enneaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 )
 </script>
     </macro_item>
-    <macro_item guid="d6eab242-e891-4747-af99-3c85cf12f959" bitmap_id="e239a2a2-b587-48bc-812f-7acd48de7965">
+    <macro_item guid="8830f350-503b-4b17-95a4-5d351f43e3c5" bitmap_id="25e8a2d5-35f5-40a8-baa6-5bb282a2d0ad">
       <text>
         <locale_1033>UninstallOldVersion</locale_1033>
       </text>
@@ -107,8 +107,8 @@ MODULE_HELPER.run_Rhino_button('Enneaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   </macros>
   <bitmaps>
     <small_bitmap item_width="16" item_height="16">
-      <bitmap_item guid="005afbf4-2472-4082-ba0e-391698699ed6" index="0"/>
-      <bitmap_item guid="e239a2a2-b587-48bc-812f-7acd48de7965" index="1"/>
+      <bitmap_item guid="28e515d6-1bbb-4c72-8811-3e495e067219" index="0"/>
+      <bitmap_item guid="25e8a2d5-35f5-40a8-baa6-5bb282a2d0ad" index="1"/>
       <bitmap>iVBORw0KGgoAAAANSUhEUgAAABAAAAAgCAYAAAAbifjMAAAFaElEQVR4nJVUe2xTZRQ/33cfbbdu
 3QbbgEEtjwxhOLcIM2ZEwYAKMYOhRYMQo0TlD4MaCRoh6ZDsD2PEEN8SRSUEtiVTfCU4xggBRxwM
 JjDGww42tnZd13dvb+/jO+brmIwgBk/ypbm95/zO7/zO77sAAIBfvCzx30AgMVlToo2mnjwyMjRQ
@@ -137,8 +137,8 @@ ggQYQcES6it9auepVQUHbrqRyKOXZezIOQBWx63/jR2eOxqjte7GRsEDQPnT3Ryey2t48d9BL/iH
 xguA8wAAAABJRU5ErkJggg==</bitmap>
     </small_bitmap>
     <normal_bitmap item_width="24" item_height="24">
-      <bitmap_item guid="005afbf4-2472-4082-ba0e-391698699ed6" index="0"/>
-      <bitmap_item guid="e239a2a2-b587-48bc-812f-7acd48de7965" index="1"/>
+      <bitmap_item guid="28e515d6-1bbb-4c72-8811-3e495e067219" index="0"/>
+      <bitmap_item guid="25e8a2d5-35f5-40a8-baa6-5bb282a2d0ad" index="1"/>
       <bitmap>iVBORw0KGgoAAAANSUhEUgAAABgAAAAwCAYAAAALiLqjAAAKLklEQVR4nKVXCZBU1RU97//f/ad7
 epnuGWYjA8M2IxARAVFUwlYTCRRJRMHSmIpSpZEo0YoxVGXroUqTUqMsJqbUisEtKWYClCJEDXEG
 NSgyqECGRR1mWGaf3rt/d//l3dT7s8qiQl7V7/e7333nLu/dc28zjBhExFBfL9UDqKmZv4pxq8al
@@ -188,8 +188,8 @@ TtEYCETbYur/o90vIwo/GZBdLZGSUc8fm8sODFXE4ZdBBj/7wcAQYudbP4/sFzD7rZS+pJCfremC
 w8YYAX6BTWfX2MEC8lWdx7lt4/8AZQFuneiywJwAAAAASUVORK5CYII=</bitmap>
     </normal_bitmap>
     <large_bitmap item_width="32" item_height="32">
-      <bitmap_item guid="005afbf4-2472-4082-ba0e-391698699ed6" index="0"/>
-      <bitmap_item guid="e239a2a2-b587-48bc-812f-7acd48de7965" index="1"/>
+      <bitmap_item guid="28e515d6-1bbb-4c72-8811-3e495e067219" index="0"/>
+      <bitmap_item guid="25e8a2d5-35f5-40a8-baa6-5bb282a2d0ad" index="1"/>
       <bitmap>iVBORw0KGgoAAAANSUhEUgAAACAAAABACAYAAAB7jnWuAAAPwUlEQVR4nN1ZeZRU1Zn/3fveq1f7
 0jvSdLOJgIAILkEngTYmMThojrE5szl64oljdMyox0wyZE6a1plBzdEzyZhMzJyYmFVpo+IWBxfA
 LUgERJHNpaEb6K7uqura6233fnPua1qhBQyK/8x3zq169d599/t9y/2++33FcAwiIs4YkwcP7p0d
