@@ -69,6 +69,8 @@ def get_data(block):
 @ERROR_HANDLE.try_catch_error()
 def map_block_transform():
     blocks = rs.GetObjects(message = "pick blocks", custom_filter = rs.filter.instance)
+    if blocks is None:
+        return
     data = [get_data(x) for x in blocks]
     rs.EnableRedraw(False)
     filepath = FOLDER.DUMP_FOLDER + "\map_block_transform.txt"
