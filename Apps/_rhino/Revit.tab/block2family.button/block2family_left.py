@@ -109,7 +109,7 @@ def process_block_name(block_name,block_ids):
     temp_block = rs.InsertBlock(block_name, [0,0,0])
     contents = rs.ExplodeBlockInstance(temp_block)
     children_block = []
-    for content in contents:
+    for content in (contents or []):
         if rs.IsBlockInstance(content):
             children_block.append(rs.BlockInstanceName(content))
         rs.DeleteObject(content)
@@ -132,7 +132,7 @@ def process_block_name(block_name,block_ids):
                 key = str(block_id)
             geo_data[key] = {
                 "transform_data": get_transform(block_id),
-                "user_data": {key:rs.GetUserText(block_id, key) for key in rs.GetUserText(block_id)}
+                "user_data": {key:rs.GetUserText(block_id, key) for key in (rs.GetUserText(block_id) or [])}
                 }
         
         data["unit"] = rs.UnitSystemName(abbreviate=True)    
@@ -189,6 +189,8 @@ def export_sample_block(block_name, output_folder):
     
     temp_block = rs.InsertBlock(block_name, (0,0,0))
     block_objs = rs.ExplodeBlockInstance(temp_block, explode_nested_instances=True)
+    if block_objs is None:
+        block_objs = []
     block_objs = [obj for obj in block_objs if rs.IsObject(obj)]
     if not block_objs:
         return
