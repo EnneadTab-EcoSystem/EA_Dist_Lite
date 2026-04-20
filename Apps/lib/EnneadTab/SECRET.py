@@ -56,6 +56,33 @@ def get_dev_dict():
 
 
 
+def get_service_key(service_name):
+    """Return the API key for a third-party service (Replicate, HuggingFace,
+    etc.) stored in EA_API_KEY.secret.
+
+    The file historically held the OpenAI key too, hence the old
+    ``get_openai_api_key`` naming elsewhere in the codebase — but the values
+    are generic service tokens, not OpenAI-specific. New callers should use
+    this name.
+
+    Args:
+        service_name (string): Key name inside EA_API_KEY.secret
+            (e.g. "replicate", "huggingface", "EnneadTabAPI").
+
+    Returns:
+        string or None: The key value, or None if not found.
+    """
+    api_key_file = "EA_API_KEY.secret"
+    L_drive_file_path = os.path.join(ENVIRONMENT.DB_FOLDER, api_key_file)
+    if ENVIRONMENT.IS_OFFLINE_MODE:
+        data = DATA_FILE.get_data(api_key_file)
+    else:
+        data = DATA_FILE.get_data(L_drive_file_path)
+    if not data:
+        return None
+    return data.get(service_name) or next(iter(data.values()), None)
+
+
 def unit_test():
     """Unit test for the SECRET module."""
     import pprint

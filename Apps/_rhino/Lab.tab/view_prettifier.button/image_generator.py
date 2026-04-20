@@ -66,11 +66,12 @@ def get_openai_api_keys():
             
             try:
                 from EnneadTab import SECRET
-                # Try to get keys from SECRET
+                # These are third-party service keys (Replicate / HuggingFace),
+                # not OpenAI keys — use get_service_key.
                 if not keys["replicate"]:
-                    keys["replicate"] = SECRET.get_openai_api_key("replicate")
+                    keys["replicate"] = SECRET.get_service_key("replicate")
                 if not keys["huggingface"]:
-                    keys["huggingface"] = SECRET.get_openai_api_key("huggingface")
+                    keys["huggingface"] = SECRET.get_service_key("huggingface")
             except ImportError as e:
                 logger.warning(f"Could not import EnneadTab SECRET: {str(e)}")
             except Exception as e:

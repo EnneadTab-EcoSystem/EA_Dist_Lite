@@ -3,7 +3,6 @@
     "AboutMe_ComputerInfo_Silent.exe": "ac7c45e2e8a36e62837f6f282437dd1e81cd1a6348cd444e91da9f6c60ac76bc",
     "AccAutoRestarter.exe": "a97a9d534bd5b7ca95abc6b55ff9631c6966d7740ebdee4a9034b900e5cda6d2",
     "AccFileOpenner.exe": "83860795298aeaac426049a179894a9d1be3312cd99b7e11512130c713bb9076",
-    "AiTranslator.exe": "365efec2504ef3c67fb88c64fdbdbeba182a6c7c746c13bce040a7171b315fad",
     "AppStore.exe": "00cdd8987b8d991357daa314dac60569284387773d1683640c4d1b721738a403",
     "AutoClicker.exe": "f79353c9fde509d26f8d1dfe0eb9d20336bafea6af82e18fd037a2e8414cceb2",
     "AutoReconnectDrive.exe": "da172b4eba2e0a5f0ddc2b17f9f8f5abe2957f77f45f06fd49db3c7198f9d8e8",
@@ -48,7 +47,6 @@
     "Pdf2OrderedJpgs.exe": "7070a2d8623706e4445ef8be863b992f35a993f1fa1444b7486a71ac60a43ada",
     "Pet.exe": "58a1527770c4dc8c014b376dfd20335b3519806fd571512d6f396bb50b369f80",
     "ProgressBar.exe": "1cae95e2787eebc52f50b39d45d8cd8aa6a66bbd55c7ea5f05b1079d0c115b4e",
-    "QaqcReporter.exe": "41d1f10a7a00b3f691f151b0529ccc5ad98173ebef2f801d7f091fddf38f15e4",
     "RegisterAutoStartup.exe": "93a32f217967c0dec10fa265d8eea49f812cb2f8a1cdbbea19646a1c51a5abac",
     "RelationshipTree.exe": "88ecb826ed4b1b3fcdebe84bdb7e8d04d14ec171b02cf93ba074d6f12200a2a2",
     "ResourceHistory.exe": "3f86766c35b0e2c04b22b5649fd8966f1a083acfc7a3124a6162b0c511dc9554",
@@ -62,7 +60,6 @@
     "SparcAccFetcher.exe": "1f327b15d03a726d3d172af6d83afb8bf60fd109ed21fbab3dc1b823471b184b",
     "Speaker.exe": "36899c4b2785213a31f701097bf6b108ae64fdf48ea4034b082574d85755df5e",
     "SplashScreen.exe": "97676c43000480e055ab690e5506a708dce55374e103cdc7ae530afffaedc92f",
-    "Translator.exe": "fce70bea263236c9e393b501e215468a9ba8cf406433d173c26f2ca8c2861cf7",
     "VizSheetTree.exe": "9d4a81873e1dc8fabc9f2bc45ca483667b7a9d67c4417d039f2a7585a7804619",
     "WhatTheLunch.exe": "f0e4c44abf148dd28d52267647c80cb2bd2c5c4a9749f08607d00a0518cea058"
 }

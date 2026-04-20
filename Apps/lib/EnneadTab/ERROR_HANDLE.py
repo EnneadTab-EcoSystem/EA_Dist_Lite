@@ -498,8 +498,21 @@ def try_catch_error(is_silent=False, is_pass = False):
 def send_error_to_error_dump(error_message, func_name, user_name, is_silent=False):
     """Send error to the universal ErrorDump service at enneadtab.com.
 
-    Public endpoint — no API key needed. Fires and forgets with a 5s timeout.
+    Public endpoint - no API key needed. Fires and forgets with a 5s timeout.
     Compatible with IronPython 2.7, CPython 2.7, and CPython 3.x.
+
+    Transport order:
+      1. .NET HttpWebRequest (IronPython 2.7 inside Revit/Rhino) - only HTTPS
+         path proven reliable on our user machines; urllib2/urllib.request
+         have TLS/DNS issues on some office network segments that cause silent
+         failures (see memory: feedback_ironpython_networking).
+      2. urllib.request (CPython 3.x)
+      3. urllib2 (legacy CPython 2.7)
+      4. urllib3 (Revit venv fallback)
+
+    When an earlier transport fails, its exception repr is captured and
+    attached to the next attempt's context under ``prev_transport_attempts``
+    so that the first successful send reveals why prior transports failed.
 
     Args:
         error_message (str): The error traceback or message
@@ -522,65 +535,114 @@ def send_error_to_error_dump(error_message, func_name, user_name, is_silent=Fals
         pass
 
     # Build context with available metadata
-    context = {
+    base_context = {
         "is_silent": is_silent,
         "computer_name": os.environ.get("COMPUTERNAME", "unknown"),
     }
     try:
         if ENVIRONMENT is not None:
             if hasattr(ENVIRONMENT, "get_revit_version"):
-                context["revit_version"] = str(ENVIRONMENT.get_revit_version())
+                base_context["revit_version"] = str(ENVIRONMENT.get_revit_version())
             if hasattr(ENVIRONMENT, "get_pyrevit_version"):
-                context["pyrevit_version"] = str(ENVIRONMENT.get_pyrevit_version())
+                base_context["pyrevit_version"] = str(ENVIRONMENT.get_pyrevit_version())
     except Exception:
         pass
 
-    payload = json.dumps({
-        "source_app": "EnneadTab-OS",
-        "environment": env,
-        "error_message": str(error_message)[:5000],
-        "stack_trace": str(error_message)[:10000],
-        "function_name": str(func_name),
-        "user_name": str(user_name),
-        "machine_name": os.environ.get("COMPUTERNAME", "unknown"),
-        "context": context,
-    })
-
     url = "https://error-dump-ennead-projects.vercel.app/error-dump/api/ingest"
     headers = {"Content-Type": "application/json"}
+    prev_attempts = []
 
-    # Try urllib.request (CPython 3.x)
+    def _payload_str(transport):
+        ctx = dict(base_context)
+        ctx["transport"] = transport
+        if prev_attempts:
+            ctx["prev_transport_attempts"] = prev_attempts
+        return json.dumps({
+            "source_app": "EnneadTab-OS",
+            "environment": env,
+            "error_message": str(error_message)[:5000],
+            "stack_trace": str(error_message)[:10000],
+            "function_name": str(func_name),
+            "user_name": str(user_name),
+            "machine_name": os.environ.get("COMPUTERNAME", "unknown"),
+            "context": ctx,
+        })
+
+    # Transport 1: .NET HttpWebRequest (reliable from IronPython 2.7 in Revit/Rhino).
+    # urllib paths below have silently failed for a known cohort of users
+    # whose office network or IronPython TLS stack rejects urllib HTTPS but
+    # accepts .NET HttpWebRequest. If clr is unavailable (CPython), fall through.
+    try:
+        import clr  # noqa: F401  (IronPython interop gate)
+        clr.AddReference("System")
+        from System.Net import WebRequest, ServicePointManager, SecurityProtocolType
+        from System.Text import Encoding
+
+        try:
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12
+        except Exception:
+            pass
+
+        payload_str = _payload_str("dotnet-http")
+        body_bytes = Encoding.UTF8.GetBytes(payload_str)
+
+        req = WebRequest.Create(url)
+        req.Method = "POST"
+        req.ContentType = "application/json"
+        req.Timeout = 5000  # milliseconds
+
+        req.ContentLength = body_bytes.Length
+        req_stream = req.GetRequestStream()
+        try:
+            req_stream.Write(body_bytes, 0, body_bytes.Length)
+        finally:
+            req_stream.Close()
+        resp = req.GetResponse()
+        try:
+            resp.Close()
+        except Exception:
+            pass
+        return
+    except ImportError:
+        pass  # not running under IronPython / .NET - fall through to urllib paths
+    except Exception as e:
+        prev_attempts.append({"type": "dotnet-http", "error": repr(e)[:200]})
+
+    # Transport 2: urllib.request (CPython 3.x)
     try:
         import urllib.request
-        req = urllib.request.Request(url, data=payload.encode("utf-8"), headers=headers)
+        payload = _payload_str("urllib.request").encode("utf-8")
+        req = urllib.request.Request(url, data=payload, headers=headers)
         urllib.request.urlopen(req, timeout=5)
         return
     except ImportError:
         pass
-    except Exception:
-        pass
+    except Exception as e:
+        prev_attempts.append({"type": "urllib.request", "error": repr(e)[:200]})
 
-    # Try urllib2 (IronPython 2.7 / CPython 2.7)
+    # Transport 3: urllib2 (legacy CPython 2.7)
     try:
         import urllib2
-        req = urllib2.Request(url, data=payload.encode("utf-8"), headers=headers)
+        payload = _payload_str("urllib2").encode("utf-8")
+        req = urllib2.Request(url, data=payload, headers=headers)
         urllib2.urlopen(req, timeout=5)
         return
     except ImportError:
         pass
-    except Exception:
-        pass
+    except Exception as e:
+        prev_attempts.append({"type": "urllib2", "error": repr(e)[:200]})
 
-    # Try urllib3 (if available in Revit venv)
+    # Transport 4: urllib3 (Revit venv fallback)
     try:
         import urllib3
         http = urllib3.PoolManager()
-        http.request("POST", url, body=payload.encode("utf-8"), headers=headers, timeout=5.0)
+        payload = _payload_str("urllib3").encode("utf-8")
+        http.request("POST", url, body=payload, headers=headers, timeout=5.0)
         return
     except ImportError:
         pass
-    except Exception:
-        pass
+    except Exception as e:
+        prev_attempts.append({"type": "urllib3", "error": repr(e)[:200]})
 
 
 def send_error_to_google_form(error, func_name, user_name):

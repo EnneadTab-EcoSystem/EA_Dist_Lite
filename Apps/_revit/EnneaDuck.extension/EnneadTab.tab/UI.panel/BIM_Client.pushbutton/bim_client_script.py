@@ -1,6 +1,5 @@
 #! python3
 # -*- coding: utf-8 -*-
-# r: openai
 # r: requests
 # -*- coding: utf-8 -*-
 
@@ -93,52 +92,6 @@ def get_pyrevit_python_executable():
     
     # Fallback to sys.executable (works for IronPython)
     return sys.executable
-
-# Attempt to install OpenAI if not needed
-def install_openai_if_needed():
-    """Ensure OpenAI package is available by importing from the dependency folder if not found."""
-    try:
-        import openai
-        return True
-    except ImportError:
-        # Try to import from dependency folder directly
-        output = script.get_output()
-        output.print_md("## Importing OpenAI from dependency folder...")
-        import os
-        import sys
-        script_dir = os.path.dirname(__file__)
-        # Find the parent folder until 'Apps' is reached
-        def find_apps_root(start_path):
-            current = os.path.abspath(start_path)
-            while True:
-                if os.path.basename(current) == "Apps":
-                    return current
-                parent = os.path.dirname(current)
-                if parent == current:
-                    # Reached the root of the filesystem
-                    return None
-                current = parent
-        apps_root = find_apps_root(script_dir)
-        if apps_root:
-            dependency_path = os.path.join(apps_root, "lib", "dependency", "py3")
-        else:
-            dependency_path = None
-        if dependency_path and os.path.exists(dependency_path):
-            if dependency_path not in sys.path:
-                sys.path.insert(0, dependency_path)
-                output.print_md(f"✅ Added dependency path to sys.path: {dependency_path}")
-            try:
-                import openai
-                output.print_md("✅ OpenAI imported successfully from dependency folder!")
-                return True
-            except ImportError as e:
-                output.print_md(f"❌ Failed to import OpenAI from dependency folder: {e}")
-                output.print_md("**Manual installation required or check dependency folder.**")
-                return False
-        else:
-            output.print_md(f"❌ Dependency path not found: {dependency_path}")
-            output.print_md("**Manual installation required or check dependency folder.**")
-            return False
 
 # CLR imports for Revit API (conditional for CPython compatibility)
 try:
@@ -352,7 +305,6 @@ def test_pip_install_missing_module():
         {'name': 'pandas', 'import_name': 'pandas', 'description': 'Data analysis library'},
         {'name': 'numpy', 'import_name': 'numpy', 'description': 'Numerical computing'},
         {'name': 'matplotlib', 'import_name': 'matplotlib', 'description': 'Plotting library'},
-        {'name': 'openai', 'import_name': 'openai', 'description': 'OpenAI API client'}
     ]
     
     # Get the correct Python executable
@@ -567,75 +519,34 @@ def debug_missing_module(module_name):
         return False
 
 
-# --- BEGIN: Helper to get OpenAI API key without EnneadTab imports ---
-def get_openai_api_key_from_secret(app_name="EnneadTabAPI"):
-    """Get OpenAI API key from EA_API_KEY.secret file without EnneadTab imports."""
-    import os
-    import json
-    # Try to find the DB folder from environment variable or fallback to relative path
-    db_folder = os.environ.get("ENNEADTAB_DB_FOLDER")
-    if not db_folder:
-        # Fallback: try to find Apps/lib/EnneadTab/DB or sibling DB folder
-        script_dir = os.path.dirname(__file__)
-        # Try up to 6 levels up
-        current = script_dir
-        for _ in range(6):
-            candidate = os.path.join(current, "..", "..", "..", "lib", "EnneadTab", "DB")
-            candidate = os.path.abspath(candidate)
-            if os.path.exists(candidate):
-                db_folder = candidate
-                break
-            current = os.path.dirname(current)
-    if not db_folder or not os.path.exists(db_folder):
-        # Fallback: try L drive
-        db_folder = "L:/EnneadTab/DB"
-    secret_file = os.path.join(db_folder, "EA_API_KEY.secret")
-    if not os.path.exists(secret_file):
-        # Try local secret file in script dir
-        secret_file = os.path.join(os.path.dirname(__file__), "EA_API_KEY.secret")
-        if not os.path.exists(secret_file):
-            return None
-    try:
-        with open(secret_file, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        # Try to get value from specified app_name first, fallback to any key if not found
-        if app_name in data:
-            return data[app_name]
-        return next(iter(data.values()), None)
-    except Exception as e:
-        return None
-# --- END: Helper to get OpenAI API key without EnneadTab imports ---
+def test_ai_proxy_functionality():
+    """Smoke-test the AI proxy (ennead-ai.com) via EnneadTab.AI module.
 
-
-def test_openai_functionality():
-    """Test OpenAI functionality if available, using dependency folder import if needed."""
+    Replaces the legacy OpenAI SDK test. Issues a tiny chat round-trip
+    through the .NET HTTPS proxy — no OpenAI key required.
+    """
     output = script.get_output()
-    # Attempt to import OpenAI from dependency folder if not found
-    if install_openai_if_needed():
-        try:
-            import openai
-            # Set API key from secret file if available
-            api_key = get_openai_api_key_from_secret()
-            if api_key:
-                openai.api_key = api_key
-                output.print_md("✅ OpenAI API key loaded from secret file.")
-            else:
-                output.print_md("⚠️ OpenAI API key not found. Please check EA_API_KEY.secret.")
-            output.print_md("## OpenAI Package Test")
-            output.print_md(f"✅ **OpenAI version:** {getattr(openai, '__version__', 'Unknown')}")
-            output.print_md(f"✅ **OpenAI available:** Yes")
-            # Test basic OpenAI functionality
-            try:
-                client = openai.OpenAI()
-                output.print_md("✅ **OpenAI client created successfully**")
-            except Exception as e:
-                output.print_md(f"⚠️ OpenAI client creation failed: {e}")
+    try:
+        from EnneadTab import AI  # pyright: ignore
+    except Exception as e:
+        output.print_md("## AI Proxy Test")
+        output.print_md("[X] **EnneadTab.AI import failed:** {}".format(e))
+        return False
+
+    output.print_md("## AI Proxy Test")
+    try:
+        reply = AI.chat(
+            messages=[{"role": "user", "content": "ping"}],
+            system_prompt="Reply with the single word 'pong'.",
+            temperature=0,
+        )
+        if reply:
+            output.print_md("[OK] **AI proxy reachable** (reply: {})".format(str(reply)[:60]))
             return True
-        except Exception as e:
-            output.print_md(f"❌ **OpenAI test failed:** {str(e)}")
-            return False
-    else:
-        output.print_md("❌ **OpenAI package not available**")
+        output.print_md("[!] AI proxy returned empty response")
+        return False
+    except Exception as e:
+        output.print_md("[X] **AI proxy test failed:** {}".format(e))
         return False
 
 
@@ -683,11 +594,11 @@ def main():
     except Exception as e:
         output.print_md(f"⚠️ Error in f-string test: {e}")
     
-    # Test OpenAI functionality (only check/install openai, not others)
+    # Smoke-test the AI proxy (replaces legacy OpenAI SDK test)
     try:
-        test_openai_functionality()
+        test_ai_proxy_functionality()
     except Exception as e:
-        output.print_md(f"⚠️ Error in OpenAI test: {e}")
+        output.print_md(f"⚠️ Error in AI proxy test: {e}")
     
     # Detect Python engine
     try:

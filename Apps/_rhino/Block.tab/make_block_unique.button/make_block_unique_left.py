@@ -47,15 +47,16 @@ def make_block_unique(add_name_tag = True, original_blocks = None, treat_nesting
 
 def create_unique_block(orginal_block, will_explode_nesting, add_name_tag, treat_nesting):
     old_block_name = rs.BlockInstanceName(orginal_block)
-    
-    if "[CreatedBy " in old_block_name:
-        old_block_name = old_block_name.split("[CreatedBy ")[0]
+
+    display_name = old_block_name
+    if "[CreatedBy " in display_name:
+        display_name = display_name.split("[CreatedBy ")[0]
 
 
     addition_note = ""
     while True:
         new_block_name = rs.StringBox("What is the new name of the block after making unique?{}".format(addition_note),
-                                  default_value = old_block_name + "[CreatedBy {}]".format(USER.USER_NAME),
+                                  default_value = display_name + "[CreatedBy {}]".format(USER.USER_NAME),
                                   title = "EnneadTab Make Block Unique")
         if new_block_name not in rs.BlockNames():
             break

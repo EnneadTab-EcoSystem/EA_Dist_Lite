@@ -30,6 +30,17 @@ import traceback
 
 FORM_KEY = 'quick_massing_modeless_form'
 
+
+def _get_notification():
+    """Get NOTIFICATION module, re-importing if needed for modeless form context."""
+    if NOTIFICATION is not None:
+        return NOTIFICATION
+    try:
+        from EnneadTab import NOTIFICATION as _notif
+        return _notif
+    except Exception:
+        return None
+
 class LevelEditorTable(Forms.GridView):
     """Custom GridView for managing building levels with elevation calculations."""
     
@@ -1095,39 +1106,43 @@ class QuickMassingDialog(Forms.Form):
     @ERROR_HANDLE.try_catch_error()
     def on_create_massing(self, sender, e):
         """Create massing based on level configuration."""
+        notif = _get_notification()
         if not self.selected_surfaces:
-            NOTIFICATION.messenger("Please select surfaces first")
+            if notif is not None:
+                notif.messenger("Please select surfaces first")
             return
-            
+
         if not self.level_table.levels:
-            NOTIFICATION.messenger("Please configure at least one level")
+            if notif is not None:
+                notif.messenger("Please configure at least one level")
             return
-       
+
         self.Close()
         self.create_massing()
         
     @ERROR_HANDLE.try_catch_error()
     def create_massing(self):
         """Create massing based on configured levels."""
+        notif = _get_notification()
         if not self.selected_surfaces:
-            NOTIFICATION.messenger("No surfaces selected for massing")
+            if notif is not None:
+                notif.messenger("No surfaces selected for massing")
             return
-            
+
         if not self.level_table.levels:
-            NOTIFICATION.messenger("No levels configured")
+            if notif is not None:
+                notif.messenger("No levels configured")
             return
 
         try:
-            # Use the unified preview logic with final creation flag
             self.level_table.refresh_preview(self.selected_surfaces, is_final_creation=True)
-            
-            # Save level configuration after successful massing creation
             self.level_table.save_levels()
-            
-            NOTIFICATION.messenger("Created final massing for {} surface(s)".format(len(self.selected_surfaces)))
-            
+            if notif is not None:
+                notif.messenger("Created final massing for {} surface(s)".format(len(self.selected_surfaces)))
+
         except Exception as e:
-            NOTIFICATION.messenger("Error creating final massing: {}".format(str(e)))
+            if notif is not None:
+                notif.messenger("Error creating final massing: {}".format(str(e)))
             
     # Old create_massing_for_surface method removed - now using unified preview logic
     

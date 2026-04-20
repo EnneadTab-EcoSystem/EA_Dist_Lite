@@ -44,7 +44,6 @@ REQUIREMENTS = [
     "pillow",       # For image processing
     "numpy",        # For numerical computing
     "pandas",       # For data analysis
-    "openai",       # For AI/ML functionality
 ]
 
 # Special case modules that are built-in and can't be installed via pip
@@ -1065,67 +1064,67 @@ print("############# END NUMPY TEST ##############")
             except:
                 pass
 
-def test_openai():
-    """Test openai installation and basic functionality."""
-    print("\n" + "="*60)
-    print("TESTING OPENAI MODULE")
-    print("="*60)
-    
-    openai_script = """
-import sys
-import os
+def test_ai_proxy():
+    """Smoke-test the EnneadTab AI proxy (ennead-ai.com) via EnneadTab.AI.
 
-print("############# OPENAI TEST ##############")
+    Replaces the legacy OpenAI SDK test. Issues a tiny chat round-trip
+    through the .NET HTTPS proxy — no OpenAI SDK required.
+    """
+    print("\n" + "="*60)
+    print("TESTING AI PROXY (ennead-ai.com)")
+    print("="*60)
+
+    proxy_script = """
+import sys
 print("Python version:", sys.version)
 print("Python executable:", sys.executable)
 
 try:
-    import openai
-    print("OpenAI version:", openai.__version__)
-    print("OpenAI location:", openai.__file__)
-    
-    # Test basic openai functionality (without making actual API calls)
-    print("OpenAI module loaded successfully")
-    
-    # Check if we can access the client class
-    try:
-        client_class = openai.OpenAI
-        print("OpenAI client class accessible:", client_class.__name__)
-    except AttributeError:
-        print("OpenAI client class not found (older version?)")
-    
-    print("OpenAI test PASSED")
-    
-except ImportError as e:
-    print("OpenAI not available:", str(e))
-    print("OpenAI test FAILED")
-    
-print("############# END OPENAI TEST ##############")
+    from EnneadTab import AI
+except Exception as e:
+    print("EnneadTab.AI import failed:", e)
+    print("AI proxy test FAILED")
+    sys.exit(1)
+
+try:
+    reply = AI.chat(
+        messages=[{"role": "user", "content": "ping"}],
+        system_prompt="Reply with the single word 'pong'.",
+        temperature=0,
+    )
+    if reply:
+        print("AI proxy reachable. Reply snippet:", str(reply)[:80])
+        print("AI proxy test PASSED")
+    else:
+        print("AI proxy returned empty response")
+        print("AI proxy test FAILED")
+except Exception as e:
+    print("AI proxy call failed:", e)
+    print("AI proxy test FAILED")
 """
-    
-    test_file = os.path.join(ENVIRONMENT.WINDOW_TEMP_FOLDER, "test_openai.py")
+
+    test_file = os.path.join(ENVIRONMENT.WINDOW_TEMP_FOLDER, "test_ai_proxy.py")
     try:
         with open(test_file, "w") as f:
-            f.write(openai_script)
-        
-        print("Running OpenAI test...")
+            f.write(proxy_script)
+
+        print("Running AI proxy test...")
         success, stdout, stderr = cast_python(test_file, wait=True)
-        
-        print("OpenAI test successful:", success)
+
+        print("AI proxy test successful:", success)
         if stdout:
-            print("OpenAI output:")
+            print("AI proxy output:")
             print(stdout)
         if stderr:
-            print("OpenAI errors:")
+            print("AI proxy errors:")
             print(stderr)
-            
+
         return success
-        
+
     except Exception as e:
-        print("OpenAI test failed: {}".format(str(e)))
+        print("AI proxy test failed: {}".format(str(e)))
         return False
     finally:
-        # Clean up
         if os.path.exists(test_file):
             try:
                 os.remove(test_file)
@@ -1238,7 +1237,7 @@ for sp_dir in site_packages_dirs:
         print("    Exists: False")
 
 # Test specific modules we expect to have installed
-test_modules = ['requests', 'psutil', 'pillow', 'numpy', 'pandas', 'openai']
+test_modules = ['requests', 'psutil', 'pillow', 'numpy', 'pandas']
 print("\\nTesting specific modules:")
 for module in test_modules:
     try:
@@ -1306,8 +1305,8 @@ def comprehensive_test():
     # Test pandas
     results['pandas'] = test_pandas()
     
-    # Test openai
-    results['openai'] = test_openai()
+    # Test AI proxy (replaces legacy OpenAI SDK test)
+    results['ai_proxy'] = test_ai_proxy()
     
     # Summary
     print("\n" + "="*80)
