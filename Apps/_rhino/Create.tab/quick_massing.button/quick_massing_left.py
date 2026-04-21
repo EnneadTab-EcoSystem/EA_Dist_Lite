@@ -31,20 +31,19 @@ import traceback
 FORM_KEY = 'quick_massing_modeless_form'
 
 
-def _get_notification():
-    """Get NOTIFICATION module, re-importing if needed for modeless form context."""
-    if NOTIFICATION is not None:
-        return NOTIFICATION
-    try:
-        from EnneadTab import NOTIFICATION as _notif
-        return _notif
-    except Exception:
-        return None
-
 class LevelEditorTable(Forms.GridView):
     """Custom GridView for managing building levels with elevation calculations."""
-    
+
     def __init__(self):
+        # Pin EnneadTab module references as instance attributes. Rhino modeless
+        # forms outlive the pushbutton script that spawns them; by the time cell
+        # edit handlers fire, the top-level `NOTIFICATION`/`DATA_FILE` bindings
+        # may resolve to None on installs where package init was partial. Pinning
+        # here (while the script is still alive) captures live references that
+        # survive for the form's lifetime. Superseded auto-fix 271e4aec6 (2026-04-15).
+        self._NOTIFICATION = NOTIFICATION
+        self._DATA_FILE = DATA_FILE
+
         self.levels = []
         self.refresh_callback = None  # Will be set to a callable function
         self.load_default_levels()
@@ -96,7 +95,7 @@ class LevelEditorTable(Forms.GridView):
         
     def load_default_levels(self):
         """Load default levels from settings or create default set."""
-        saved_levels = DATA_FILE.get_sticky("quick_massing_levels", None, DATA_FILE.DataType.DICT, tiny_wait=True)
+        saved_levels = self._DATA_FILE.get_sticky("quick_massing_levels", None, self._DATA_FILE.DataType.DICT, tiny_wait=True)
         if saved_levels and isinstance(saved_levels, list):
             self.levels = saved_levels
         else:
@@ -305,7 +304,7 @@ class LevelEditorTable(Forms.GridView):
     def save_levels(self):
         """Save levels to settings with error handling."""
         try:
-            DATA_FILE.set_sticky("quick_massing_levels", self.levels, DATA_FILE.DataType.DICT, tiny_wait=True)
+            self._DATA_FILE.set_sticky("quick_massing_levels", self.levels, self._DATA_FILE.DataType.DICT, tiny_wait=True)
         except Exception as ex:
             print("ERROR saving levels: {}".format(str(ex)))
     
@@ -817,6 +816,10 @@ class QuickMassingDialog(Forms.Form):
     
     def __init__(self):
         """Initialize dialog UI components and default state."""
+        # Pin EnneadTab module references — see LevelEditorTable.__init__ for why.
+        self._NOTIFICATION = NOTIFICATION
+        self._DATA_FILE = DATA_FILE
+
         # Eto initials
         self.Title = "Quick Massing - Level Editor"
         self.Resizable = True
@@ -824,7 +827,7 @@ class QuickMassingDialog(Forms.Form):
         self.Spacing = Drawing.Size(5, 5)
         self.Size = Drawing.Size(400, 500)
         self.Closed += self.OnFormClosed
-        
+
         # Initialize data
         self.selected_surfaces = []
         
@@ -939,7 +942,7 @@ class QuickMassingDialog(Forms.Form):
             if surfaces:
                 self.selected_surfaces = surfaces
                 self.surface_info_label.Text = "{} surface(s) selected".format(len(surfaces))
-                NOTIFICATION.messenger("Selected {} surface(s) for massing".format(len(surfaces)))
+                self._NOTIFICATION.messenger("Selected {} surface(s) for massing".format(len(surfaces)))
                 # Save selected surfaces
                 self.save_surfaces()
                 # Generate preview massing with selected surfaces
@@ -949,7 +952,7 @@ class QuickMassingDialog(Forms.Form):
                 self.surface_info_label.Text = "No surfaces selected"
                 
         except Exception as e:
-            NOTIFICATION.messenger("Error picking surfaces: {}".format(str(e)))
+            self._NOTIFICATION.messenger("Error picking surfaces: {}".format(str(e)))
     
     def refresh_level_preview(self):
         """Refresh the level preview with current selected surfaces."""
@@ -971,7 +974,7 @@ class QuickMassingDialog(Forms.Form):
             # Check if trying to remove DATUM level
             level_index = self.level_table.grid_index_to_level_index(selected_index)
             if self.level_table.levels[level_index].get("is_datum", False):
-                NOTIFICATION.messenger("Cannot remove DATUM level - it must stay as the reference level")
+                self._NOTIFICATION.messenger("Cannot remove DATUM level - it must stay as the reference level")
                 return
             self.level_table.remove_level(selected_index)
             # Generate preview after removing level
@@ -986,7 +989,7 @@ class QuickMassingDialog(Forms.Form):
             # Check if trying to move DATUM level
             level_index = self.level_table.grid_index_to_level_index(selected_index)
             if self.level_table.levels[level_index].get("is_datum", False):
-                NOTIFICATION.messenger("Cannot move DATUM level - it must stay at elevation 0")
+                self._NOTIFICATION.messenger("Cannot move DATUM level - it must stay at elevation 0")
                 return
             # Move up in elevation means move towards top of list (decrease grid index)
             self.level_table.move_level_up(selected_index)
@@ -1002,7 +1005,7 @@ class QuickMassingDialog(Forms.Form):
             # Check if trying to move DATUM level
             level_index = self.level_table.grid_index_to_level_index(selected_index)
             if self.level_table.levels[level_index].get("is_datum", False):
-                NOTIFICATION.messenger("Cannot move DATUM level - it must stay at elevation 0")
+                self._NOTIFICATION.messenger("Cannot move DATUM level - it must stay at elevation 0")
                 return
             # Move down in elevation means move towards bottom of list (increase grid index)
             self.level_table.move_level_down(selected_index)
@@ -1016,14 +1019,14 @@ class QuickMassingDialog(Forms.Form):
             # Check if any rows are selected
             selected_rows = list(self.level_table.SelectedRows)
             if not selected_rows or len(selected_rows) == 0:
-                NOTIFICATION.messenger("Please select a level to edit")
+                self._NOTIFICATION.messenger("Please select a level to edit")
                 return
             
             selected_index = selected_rows[0]
             level_index = self.level_table.grid_index_to_level_index(selected_index)
             
             if level_index < 0 or level_index >= len(self.level_table.levels):
-                NOTIFICATION.messenger("Invalid level selection")
+                self._NOTIFICATION.messenger("Invalid level selection")
                 return
             
             level = self.level_table.levels[level_index]
@@ -1086,7 +1089,7 @@ class QuickMassingDialog(Forms.Form):
                     edit_dialog.Close()
                 except Exception as ex:
                     print("ERROR updating level: {}".format(str(ex)))
-                    NOTIFICATION.messenger("Error updating level: {}".format(str(ex)))
+                    self._NOTIFICATION.messenger("Error updating level: {}".format(str(ex)))
             
             def on_cancel_click(s, ev):
                 # Re-enable preview even if cancelled
@@ -1101,48 +1104,40 @@ class QuickMassingDialog(Forms.Form):
             
         except Exception as ex:
             print("ERROR in on_edit_level: {}".format(str(ex)))
-            NOTIFICATION.messenger("Error opening edit dialog: {}".format(str(ex)))
+            self._NOTIFICATION.messenger("Error opening edit dialog: {}".format(str(ex)))
 
     @ERROR_HANDLE.try_catch_error()
     def on_create_massing(self, sender, e):
         """Create massing based on level configuration."""
-        notif = _get_notification()
         if not self.selected_surfaces:
-            if notif is not None:
-                notif.messenger("Please select surfaces first")
+            self._NOTIFICATION.messenger("Please select surfaces first")
             return
 
         if not self.level_table.levels:
-            if notif is not None:
-                notif.messenger("Please configure at least one level")
+            self._NOTIFICATION.messenger("Please configure at least one level")
             return
 
         self.Close()
         self.create_massing()
-        
+
     @ERROR_HANDLE.try_catch_error()
     def create_massing(self):
         """Create massing based on configured levels."""
-        notif = _get_notification()
         if not self.selected_surfaces:
-            if notif is not None:
-                notif.messenger("No surfaces selected for massing")
+            self._NOTIFICATION.messenger("No surfaces selected for massing")
             return
 
         if not self.level_table.levels:
-            if notif is not None:
-                notif.messenger("No levels configured")
+            self._NOTIFICATION.messenger("No levels configured")
             return
 
         try:
             self.level_table.refresh_preview(self.selected_surfaces, is_final_creation=True)
             self.level_table.save_levels()
-            if notif is not None:
-                notif.messenger("Created final massing for {} surface(s)".format(len(self.selected_surfaces)))
+            self._NOTIFICATION.messenger("Created final massing for {} surface(s)".format(len(self.selected_surfaces)))
 
         except Exception as e:
-            if notif is not None:
-                notif.messenger("Error creating final massing: {}".format(str(e)))
+            self._NOTIFICATION.messenger("Error creating final massing: {}".format(str(e)))
             
     # Old create_massing_for_surface method removed - now using unified preview logic
     
@@ -1153,7 +1148,7 @@ class QuickMassingDialog(Forms.Form):
         """Save selected surfaces to settings."""
         try:
             if self.selected_surfaces:
-                DATA_FILE.set_sticky("quick_massing_surfaces", self.selected_surfaces, DATA_FILE.DataType.STR, tiny_wait=True)
+                self._DATA_FILE.set_sticky("quick_massing_surfaces", self.selected_surfaces, self._DATA_FILE.DataType.STR, tiny_wait=True)
         except Exception:
             # If saving fails, continue silently
             pass

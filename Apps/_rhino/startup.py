@@ -7,6 +7,11 @@ _app_folder = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _lib_path = os.path.join(_app_folder, "lib" )
 sys.path.append(_lib_path)
 
+# Announce which source tree this session booted from. Helps developers verify
+# dev-mode is active (RHINO_ALIAS._prefer_dev_path should have flipped the alias
+# before this startup ran). End users see the same line with EA_Dist path.
+print("[EnneadTab] Startup loaded from: {}".format(_app_folder))
+
 # print ("\n".join(sys.path))
 from EnneadTab import ERROR_HANDLE, NOTIFICATION, ENVIRONMENT
 from EnneadTab import VERSION_CONTROL, USER, EXE, CONFIG, DOCUMENTATION, HOLIDAY
