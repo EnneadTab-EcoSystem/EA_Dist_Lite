@@ -634,6 +634,14 @@ def EnneadTab_startup():
     # Register MCP Routes API (must happen during startup, before Routes server starts)
     _register_mcp_routes()
 
+    # InfraWatch fleet bootstrap. Idempotent, canary-gated, fully wrapped so
+    # any failure is silent and cannot block Revit startup. See INFRAWATCH.py.
+    try:
+        from EnneadTab import INFRAWATCH
+        INFRAWATCH.register_if_needed()
+    except:
+        pass
+
     # Run ACC automation only in developer sessions for now
     if USER.IS_DEVELOPER:
         handle_bim_runner_job()

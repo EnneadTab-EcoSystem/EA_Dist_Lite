@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Image generation module for ViewPrettifier.
 
 This module handles:

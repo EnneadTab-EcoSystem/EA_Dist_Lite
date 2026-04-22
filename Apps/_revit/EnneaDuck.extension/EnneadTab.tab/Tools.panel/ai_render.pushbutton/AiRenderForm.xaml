@@ -3,26 +3,32 @@
         Title="EnneadTab"
         Foreground="#000"
         Margin="0"
-        SizeToContent="WidthAndHeight"
+        Width="1100" MinWidth="900"
+        Height="780" MinHeight="560"
+        MaxHeight="980"
         ShowInTaskbar="True"
         BorderThickness="0"
         Background="{x:Null}"
         WindowStartupLocation="CenterScreen"
-        ScrollViewer.VerticalScrollBarVisibility="Disabled"
         HorizontalContentAlignment="Center"
         UseLayoutRounding="False"
         FontFamily="RomanD"
         AllowsTransparency="True"
         WindowStyle="None"
-        MouseLeftButtonDown="mouse_down_main_panel"
-        Cursor="ScrollAll">
+        ResizeMode="CanResize"
+        Cursor="Arrow">
     <Window.Resources>
         <SolidColorBrush x:Key="TextColor" Color="#FFDAE8FD"/>
         <SolidColorBrush x:Key="AccentColor" Color="#f39c12"/>
         <SolidColorBrush x:Key="PanelColor" Color="#FF464646"/>
+        <SolidColorBrush x:Key="PanelColorDeep" Color="#FF2E2E2E"/>
+        <SolidColorBrush x:Key="MutedTextColor" Color="#FFCBCBCB"/>
+        <SolidColorBrush x:Key="DimTextColor" Color="#FF9A9A9A"/>
+
         <Style TargetType="{x:Type TextBlock}">
             <Setter Property="Foreground" Value="{StaticResource TextColor}"/>
         </Style>
+
         <Style TargetType="{x:Type Button}">
             <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
             <Setter Property="Background" Value="{StaticResource TextColor}"/>
@@ -40,7 +46,7 @@
                                 BorderBrush="{TemplateBinding BorderBrush}"
                                 BorderThickness="{TemplateBinding BorderThickness}"
                                 CornerRadius="10"
-                                Margin="5"
+                                Margin="3"
                                 Height="25"
                                 SnapsToDevicePixels="true">
                             <ContentPresenter Name="Presenter"
@@ -52,90 +58,471 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{StaticResource AccentColor}" />
-                                <Setter Property="Foreground" Value="White" />
+                                <Setter Property="Background" Value="{StaticResource AccentColor}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
         </Style>
+
+        <!-- Small button style for inline prompt actions / per-row actions -->
+        <Style x:Key="SmallButton" TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="Padding" Value="6,0,6,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="8" Margin="2" Height="20">
+                            <ContentPresenter
+                                Margin="{TemplateBinding Padding}"
+                                VerticalAlignment="Center"
+                                HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AccentColor}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Primary (accent) button style for the Queue Render CTA -->
+        <Style x:Key="PrimaryButton" TargetType="{x:Type Button}" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="{StaticResource AccentColor}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Padding" Value="16,0,16,0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="12" Margin="4" Height="34">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#FFFFB84D"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Hyperlink-style text button for "Open ennead-ai.com →" -->
+        <Style x:Key="LinkButton" TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{StaticResource AccentColor}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <TextBlock Text="{TemplateBinding Content}"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   TextDecorations="Underline"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Foreground" Value="#FFFFB84D"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ComboBox dark-theme styling (minimal) -->
+        <Style TargetType="{x:Type ComboBox}">
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Padding" Value="6,0,6,0"/>
+        </Style>
+
+        <!-- TextBox dark-theme styling -->
+        <Style TargetType="{x:Type TextBox}">
+            <Setter Property="Background" Value="#FF3A3A3A"/>
+            <Setter Property="Foreground" Value="{StaticResource TextColor}"/>
+            <Setter Property="BorderBrush" Value="#FF5A5A5A"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="6,3,6,3"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="SpellCheck.IsEnabled" Value="True"/>
+            <!-- Language is set by code-behind to avoid parse issues when default IME is missing -->
+        </Style>
+
+        <Style TargetType="{x:Type CheckBox}">
+            <Setter Property="Foreground" Value="{StaticResource TextColor}"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style TargetType="{x:Type Separator}">
+            <Setter Property="Background" Value="#FF5A5A5A"/>
+            <Setter Property="Height" Value="1"/>
+        </Style>
     </Window.Resources>
-    <Border BorderThickness="1" CornerRadius="15" Margin="20">
+
+    <Border BorderThickness="1" CornerRadius="15" Margin="20" Name="main_border"
+            MouseLeftButtonDown="mouse_down_main_panel">
         <Border.Background>
             <SolidColorBrush Color="#FF464646" Opacity="1"/>
         </Border.Background>
         <Border.Effect>
             <DropShadowEffect Color="#FFFFE59C" BlurRadius="15" Opacity="0.8"/>
         </Border.Effect>
-        <Grid Margin="20">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="50"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-            <Image Grid.Column="0" Height="100" x:Name="logo_img"
-                   VerticalAlignment="Bottom" HorizontalAlignment="Left"/>
-            <StackPanel Margin="0,20,0,0" Grid.Column="1">
-                <TextBlock x:Name="title_text" Text="EnneaDuck: AI View Render"
-                           Foreground="#FFFFE59C" FontSize="18" FontWeight="Bold"/>
-                <TextBlock x:Name="sub_text" Text="" Foreground="#FFCBCBCB"
-                           TextWrapping="Wrap" MaxWidth="500" HorizontalAlignment="Left"/>
 
-                <Separator Margin="0,10"/>
+        <Grid Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>  <!-- Header -->
+                <RowDefinition Height="Auto"/>  <!-- Controls -->
+                <RowDefinition Height="Auto"/>  <!-- Separator -->
+                <RowDefinition Height="*"/>     <!-- Gallery (fills remaining) -->
+                <RowDefinition Height="Auto"/>  <!-- Footer -->
+            </Grid.RowDefinitions>
 
-                <!-- Result preview image -->
-                <TextBlock x:Name="preview_label" Text="View Preview:" Margin="0,5,0,2"/>
-                <Image x:Name="result_preview" MaxHeight="350" MaxWidth="500"
-                       Margin="0,5,0,5" Stretch="Uniform"/>
+            <!-- ============== HEADER ============== -->
+            <Grid Grid.Row="0" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Image Grid.Column="0" x:Name="logo_img" Height="40"
+                       VerticalAlignment="Center" HorizontalAlignment="Left" Margin="0,0,12,0"/>
+                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                    <TextBlock x:Name="title_text" Text="EnneaDuck: AI View Render"
+                               Foreground="#FFFFE59C" FontSize="18" FontWeight="Bold"/>
+                    <TextBlock x:Name="sub_text"
+                               Text="Powered by ennead-ai.com — Ennead's in-house rendering AI."
+                               Foreground="{StaticResource MutedTextColor}"
+                               TextWrapping="Wrap" FontSize="11"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button Style="{StaticResource LinkButton}" Content="Open ennead-ai.com →"
+                            Click="open_web_Click" Margin="0,0,12,0"/>
+                    <Button Content="✕" Click="close_Click" Width="28"
+                            Background="Transparent" Foreground="{StaticResource MutedTextColor}"/>
+                </StackPanel>
+            </Grid>
 
-                <!-- Result action buttons (hidden until result) -->
-                <StackPanel x:Name="result_buttons" Orientation="Horizontal"
-                            HorizontalAlignment="Center" Visibility="Collapsed" Margin="0,5,0,5">
-                    <Button x:Name="bt_toggle" Content="Show Original" Click="toggle_Click"/>
-                    <Button Content="Copy to Clipboard" Click="copy_image_Click"/>
-                    <Button Content="Save As..." Click="save_image_Click"/>
+            <!-- ============== CONTROLS (two-column: capture thumb + prompt stack) ============== -->
+            <Grid Grid.Row="1" Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="280"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- LEFT: Capture thumb + update button + resolution/aspect + style ref -->
+                <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                    <TextBlock x:Name="preview_label" Text="Click Update Capture to begin"
+                               Foreground="{StaticResource MutedTextColor}"
+                               FontSize="11" Margin="0,0,0,4"/>
+                    <Border Background="#FF2A2A2A" CornerRadius="6" Padding="4" Height="168">
+                        <Image x:Name="capture_preview" Stretch="Uniform"
+                               HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <Button Content="Update Capture" Click="capture_Click" Margin="0,6,0,0"/>
+
+                    <TextBlock Text="Capture Resolution" FontSize="11" Margin="0,10,0,2"
+                               Foreground="{StaticResource MutedTextColor}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0" x:Name="cb_resolution" Margin="0,0,4,0"/>
+                        <ComboBox Grid.Column="1" x:Name="cb_aspect" Margin="4,0,0,0"/>
+                    </Grid>
+                    <TextBlock x:Name="resolution_hint" Text="1500 × 844 (High · 16:9)"
+                               FontSize="10" Margin="0,2,0,0"
+                               Foreground="{StaticResource DimTextColor}"/>
+
+                    <TextBlock Text="Style Reference (optional)" FontSize="11" Margin="0,12,0,4"
+                               Foreground="{StaticResource MutedTextColor}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Orientation="Vertical">
+                            <Button Style="{StaticResource SmallButton}"
+                                    Content="Browse..." Click="browse_style_Click"/>
+                            <Button Style="{StaticResource SmallButton}"
+                                    Content="Paste Clipboard" Click="paste_style_Click"/>
+                            <Button Style="{StaticResource SmallButton}"
+                                    Content="Load from Library..." Click="library_style_Click"/>
+                            <Button Style="{StaticResource SmallButton}" x:Name="bt_clear_style"
+                                    Content="Clear" Click="clear_style_Click" Visibility="Collapsed"/>
+                        </StackPanel>
+                        <Border Grid.Column="1" Background="#FF2A2A2A" CornerRadius="4"
+                                Width="120" Height="92" Margin="8,0,0,0">
+                            <Image x:Name="style_preview" Stretch="Uniform" MouseLeftButtonUp="style_preview_Click"/>
+                        </Border>
+                    </Grid>
                 </StackPanel>
 
-                <!-- Category + Style dropdowns -->
-                <TextBlock Text="Rendering Style:" Margin="0,5,0,2"/>
-                <StackPanel Orientation="Horizontal">
-                    <ComboBox x:Name="cb_category" Width="150" SelectionChanged="category_changed"/>
-                    <ComboBox x:Name="cb_style" Width="290" Margin="5,0,0,0"
-                              SelectionChanged="style_changed"/>
+                <!-- RIGHT: Style dropdowns + prompt + action row -->
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="Rendering Style" FontSize="11" Margin="0,0,0,4"
+                               Foreground="{StaticResource MutedTextColor}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <ComboBox Grid.Column="0" x:Name="cb_category" Margin="0,0,4,0"
+                                  IsEditable="True" IsTextSearchEnabled="True"
+                                  SelectionChanged="category_changed"/>
+                        <ComboBox Grid.Column="1" x:Name="cb_style" Margin="4,0,0,0"
+                                  IsEditable="True" IsTextSearchEnabled="True"
+                                  SelectionChanged="style_changed"/>
+                    </Grid>
+
+                    <!-- My Prompts row (saved per-user via /api/prompts/list|save) -->
+                    <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="My Prompts:" FontSize="11"
+                                   VerticalAlignment="Center"
+                                   Foreground="{StaticResource MutedTextColor}" Margin="0,0,4,0"/>
+                        <ComboBox Grid.Column="1" x:Name="cb_my_prompts"
+                                  IsEditable="True" IsTextSearchEnabled="True"
+                                  SelectionChanged="my_prompt_Changed"/>
+                        <Button Grid.Column="2" Style="{StaticResource SmallButton}"
+                                x:Name="bt_save_prompt" Content="Save current..."
+                                Click="save_prompt_Click" Margin="4,0,0,0"/>
+                    </Grid>
+
+                    <Grid Margin="0,8,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Prompt" FontSize="11"
+                                   Foreground="{StaticResource MutedTextColor}"/>
+                        <CheckBox Grid.Column="1" x:Name="cb_interior" Content="Interior scene"
+                                  FontSize="10"/>
+                    </Grid>
+                    <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBox Grid.Column="0" x:Name="tbox_prompt" Height="120"
+                                 TextWrapping="Wrap" AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto"/>
+                        <StackPanel Grid.Column="1" Margin="4,0,0,0">
+                            <Button Style="{StaticResource SmallButton}" x:Name="bt_spell"
+                                    Content="Spell Check" Click="spell_Click"/>
+                            <Button Style="{StaticResource SmallButton}" x:Name="bt_lengthen"
+                                    Content="Lengthen" Click="lengthen_Click"/>
+                            <Button Style="{StaticResource SmallButton}" x:Name="bt_shorten"
+                                    Content="Shorten" Click="shorten_Click"/>
+                            <Button Style="{StaticResource SmallButton}" x:Name="bt_reset_prompt"
+                                    Content="Reset" Click="reset_prompt_Click"/>
+                            <Button Style="{StaticResource SmallButton}" x:Name="bt_undo_prompt"
+                                    Content="↶ Undo" Click="undo_prompt_Click" IsEnabled="False"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,10,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" x:Name="status_label"
+                                   Text="Ready. Capture a view then queue a render."
+                                   VerticalAlignment="Center"
+                                   Foreground="{StaticResource MutedTextColor}"
+                                   FontSize="11" TextTrimming="CharacterEllipsis"/>
+                        <Button Grid.Column="1" Style="{StaticResource PrimaryButton}"
+                                x:Name="bt_render" Content="Queue Render  →"
+                                Click="render_Click"/>
+                    </Grid>
                 </StackPanel>
+            </Grid>
 
-                <!-- Prompt -->
-                <TextBlock Text="Prompt (edit or write your own):" Margin="0,10,0,2"/>
-                <TextBox x:Name="tbox_prompt" Height="60" TextWrapping="Wrap"
-                         AcceptsReturn="True" MaxWidth="500"/>
+            <!-- ============== SEPARATOR ============== -->
+            <Separator Grid.Row="2" Margin="0,4,0,8"/>
 
-                <!-- Style reference -->
-                <TextBlock Text="Style Reference (optional):" Margin="0,10,0,2"/>
-                <StackPanel Orientation="Horizontal">
-                    <Button Content="Browse..." Click="browse_style_Click"/>
-                    <Button Content="Paste from Clipboard" Click="paste_style_Click"/>
-                    <Button x:Name="bt_clear_style" Content="Clear" Click="clear_style_Click"
-                            Visibility="Collapsed"/>
-                    <Image x:Name="style_preview" Width="50" Height="50" Margin="10,0,0,0"/>
-                </StackPanel>
+            <!-- ============== GALLERY ============== -->
+            <Grid Grid.Row="3">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>  <!-- filter bar -->
+                    <RowDefinition Height="*"/>     <!-- list -->
+                </Grid.RowDefinitions>
 
-                <!-- Progress bar -->
-                <ProgressBar x:Name="progress_bar" Height="8" Margin="0,10,0,0"
-                             IsIndeterminate="True" Visibility="Collapsed"/>
+                <!-- Filter bar -->
+                <Grid Grid.Row="0" Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" x:Name="gallery_header"
+                               Text="History"
+                               FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
+                    <TextBlock Grid.Column="1" x:Name="gallery_count"
+                               Text="loading..." Margin="8,0,0,0"
+                               FontSize="11" VerticalAlignment="Center"
+                               Foreground="{StaticResource MutedTextColor}"/>
+                    <ComboBox Grid.Column="2" x:Name="cb_date_filter" Width="140"
+                              Margin="4,0" VerticalAlignment="Center"
+                              SelectionChanged="date_filter_Changed"/>
+                    <TextBox Grid.Column="3" x:Name="tbox_search" Width="180" Height="22"
+                             Margin="4,0" VerticalAlignment="Center"
+                             TextChanged="search_Changed"
+                             ToolTip="Search prompt text or view name"/>
+                    <Button Grid.Column="4" Style="{StaticResource SmallButton}"
+                            Content="⟳ Refresh" Click="refresh_gallery_Click"/>
+                    <Button Grid.Column="5" Style="{StaticResource SmallButton}"
+                            x:Name="bt_active_jobs" Content="Active jobs (0)"
+                            Click="scroll_to_active_Click"/>
+                </Grid>
 
-                <Separator Margin="0,10"/>
+                <!-- Resume button shown only when worker pauses on 401 -->
+                <Border Grid.Row="0" HorizontalAlignment="Right" Margin="0,28,0,0"
+                        x:Name="resume_panel" Visibility="Collapsed"
+                        Background="#FF8B0000" CornerRadius="6" Padding="6,2,6,2">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="⚠ Queue paused (auth)" Foreground="White"
+                                   FontSize="11" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <Button Style="{StaticResource SmallButton}"
+                                Content="Resume" Click="resume_Click"/>
+                    </StackPanel>
+                </Border>
 
-                <!-- Main action buttons -->
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,5,0,0">
-                    <Button x:Name="bt_capture" Content="Capture View" Click="capture_Click" Margin="5"/>
-                    <Button x:Name="bt_render" Content="Send to EnneaDuck" Click="render_Click"
-                            Margin="5" IsEnabled="False"/>
-                    <Button Content="Close" Click="close_Click" Margin="5"/>
-                </StackPanel>
+                <!-- Gallery list (virtualized) -->
+                <Border Grid.Row="1" Background="#FF2A2A2A" CornerRadius="6">
+                    <ListView x:Name="lv_gallery" Background="Transparent" BorderThickness="0"
+                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                              ScrollViewer.VerticalScrollBarVisibility="Auto"
+                              VirtualizingStackPanel.IsVirtualizing="True"
+                              VirtualizingStackPanel.VirtualizationMode="Recycling">
+                        <ListView.ItemContainerStyle>
+                            <Style TargetType="ListViewItem">
+                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                <Setter Property="Padding" Value="0"/>
+                                <Setter Property="Margin" Value="0,1"/>
+                                <Setter Property="Background" Value="#FF333333"/>
+                                <Setter Property="BorderThickness" Value="0"/>
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#FF3F3F3F"/>
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ListView.ItemContainerStyle>
+                        <ListView.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="4">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="92"/>   <!-- original -->
+                                        <ColumnDefinition Width="92"/>   <!-- result -->
+                                        <ColumnDefinition Width="*"/>    <!-- info -->
+                                        <ColumnDefinition Width="150"/>  <!-- status/timer -->
+                                        <ColumnDefinition Width="100"/>  <!-- inline save + more -->
+                                    </Grid.ColumnDefinitions>
 
-                <TextBlock x:Name="debug_textbox" Text="Ready."
-                           Foreground="#FFCBCBCB" Margin="0,10,0,0" TextWrapping="Wrap"/>
-            </StackPanel>
+                                    <Border Grid.Column="0" Background="#FF222222" Width="84" Height="60">
+                                        <Image Source="{Binding OriginalThumb}" Stretch="UniformToFill"
+                                               MouseLeftButtonUp="row_view_original_Click"/>
+                                    </Border>
+                                    <Border Grid.Column="1" Background="#FF222222" Width="84" Height="60">
+                                        <Grid>
+                                            <Image Source="{Binding ResultThumb}" Stretch="UniformToFill"
+                                                   MouseLeftButtonUp="row_view_result_Click"/>
+                                            <TextBlock Text="{Binding KindIcon}"
+                                                       HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                                       Margin="0,0,3,1" FontSize="14"
+                                                       Foreground="White"/>
+                                        </Grid>
+                                    </Border>
+                                    <StackPanel Grid.Column="2" Margin="8,0,0,0" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding StyleName}" FontWeight="Bold" FontSize="12"/>
+                                        <TextBlock Text="{Binding PromptPreview}"
+                                                   Foreground="{StaticResource MutedTextColor}"
+                                                   FontSize="11" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding Subtitle}"
+                                                   Foreground="{StaticResource DimTextColor}"
+                                                   FontSize="10"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="Bold"
+                                                   Foreground="{Binding StatusColor}"/>
+                                        <ProgressBar Visibility="{Binding ProgressVisibility}"
+                                                     Value="{Binding ProgressPct}" Maximum="100"
+                                                     Height="6" Margin="0,2,8,0"
+                                                     IsIndeterminate="{Binding ProgressIndeterminate}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="4" Orientation="Horizontal">
+                                        <Button Style="{StaticResource SmallButton}"
+                                                Content="Save" FontSize="10" Width="44"
+                                                ToolTip="Save result to disk"
+                                                Visibility="{Binding SaveVisibility}"
+                                                Click="row_save_Click"/>
+                                        <Button Style="{StaticResource SmallButton}"
+                                                Content="More" FontSize="10" Width="44"
+                                                ToolTip="More actions: Show prompt, Re-run, Animate, Open in Studio, Delete..."
+                                                Click="row_more_Click"/>
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListView.ItemTemplate>
+                    </ListView>
+                </Border>
+            </Grid>
+
+            <!-- ============== FOOTER ============== -->
+            <Grid Grid.Row="4" Margin="0,8,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <CheckBox Grid.Column="0" x:Name="cb_auto_save" Content="Auto-save to Gallery"
+                          IsChecked="True" Checked="auto_save_Changed" Unchecked="auto_save_Changed"
+                          VerticalAlignment="Center"
+                          ToolTip="Saves every new render to your cloud Gallery (visible from web Studio, Revit, Rhino, mobile). Applies to newly-queued renders only — in-flight jobs keep their setting. Turn OFF for NDA / draft work."/>
+                <TextBlock Grid.Column="1" x:Name="cache_size_label"
+                           Text="—"
+                           Margin="12,0,0,0" VerticalAlignment="Center"
+                           FontSize="11" Foreground="{StaticResource DimTextColor}"
+                           Cursor="Hand"
+                           ToolTip="Click to manage local gallery cache (clearing is safe — cloud copy is canonical)"
+                           MouseLeftButtonUp="cache_label_Click"/>
+                <Button Grid.Column="2" Style="{StaticResource SmallButton}"
+                        Content="Open Output Folder" Click="open_folder_Click"/>
+                <TextBlock Grid.Column="3" x:Name="quota_label"
+                           Text="Quota: —" Margin="12,0,0,0" VerticalAlignment="Center"
+                           FontSize="11" Foreground="{StaticResource DimTextColor}"
+                           ToolTip="Office-wide daily Gemini quota"/>
+            </Grid>
         </Grid>
     </Border>
 </Window>

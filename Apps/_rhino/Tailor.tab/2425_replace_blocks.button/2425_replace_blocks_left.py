@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 __title__ = "2425ReplaceBlocks"
 __doc__ = """Block Replacement Tool for 2425 Project
 

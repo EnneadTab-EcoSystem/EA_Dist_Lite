@@ -1,4 +1,4 @@
-
+# -*- coding: utf-8 -*-
 __title__ = "ExportWithoutCrv_1643"
 __doc__ = """Export Tool for 1643 Project - Solids Only
 

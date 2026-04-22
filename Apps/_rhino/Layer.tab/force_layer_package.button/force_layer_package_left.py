@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 __title__ = "ForceLayerPackage"
 __doc__ = """Detach selected geometry and blocks to a chosen SYSTEM_ layer.
 

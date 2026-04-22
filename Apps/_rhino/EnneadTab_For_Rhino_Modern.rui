@@ -106,12 +106,6 @@
         </text>
         <macro_id>603ded49-e34b-4265-8734-511f7a832aef</macro_id>
       </menu_item>
-      <menu_item guid="889f65b2-adb7-4ed9-a258-dbc5a83bfb7f">
-        <text>
-          <locale_1033>monitor_drive_connection</locale_1033>
-        </text>
-        <macro_id>38a5cc88-771b-41bf-87a5-69b3def39093</macro_id>
-      </menu_item>
       <menu_item guid="aca8b205-79a7-4c9c-9c15-82408aa66383">
         <text>
           <locale_1033>open_autosave_folder</locale_1033>
@@ -5738,27 +5732,6 @@ EA_GetEngine</script>
       </menu_text>
       <script>EA_ActivateEnneadTab
 EA_MCPServer</script>
-    </macro_item>
-    <macro_item guid="38a5cc88-771b-41bf-87a5-69b3def39093" bitmap_id="6584114c-c354-436f-8eb7-d98c8bc25cb0">
-      <text>
-        <locale_1033>MonitorDriveConnection</locale_1033>
-      </text>
-      <tooltip>
-        <locale_1033>Launches the MonitorDrive application to track and manage network drive connections.
-This tool provides real-time monitoring of network drive status and connection health.</locale_1033>
-      </tooltip>
-      <help_text>
-        <locale_1033>Launches the MonitorDrive application to track and manage network drive connections.
-This tool provides real-time monitoring of network drive status and connection health.</locale_1033>
-      </help_text>
-      <button_text>
-        <locale_1033>MonitorDriveConnection</locale_1033>
-      </button_text>
-      <menu_text>
-        <locale_1033>MonitorDriveConnection</locale_1033>
-      </menu_text>
-      <script>EA_ActivateEnneadTab
-EA_MonitorDriveConnection</script>
     </macro_item>
     <macro_item guid="04df730a-3e46-45d8-9fed-df145ade6e77" bitmap_id="6f62db42-ee2b-462d-af1c-69a7e8d72ab6">
       <text>

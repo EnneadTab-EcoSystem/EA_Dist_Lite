@@ -1054,15 +1054,19 @@ def get_project_revit_files_data(project_id, hub_id, project_name=None, hub_name
         return None
 
     revit_files = []
-    revit_file_count = 0
-    
+    # 2026-04-22: was `revit_file_count = 0` + `nonlocal revit_file_count`,
+    # but `nonlocal` is Python 3 only and doesn't exist in IronPython 2.7,
+    # so the function would crash on import inside Revit. Wrap in a 1-element
+    # list so the inner closure can mutate without rebinding (standard IP2.7
+    # workaround). Caught by tools/check_ironpython.py + pyRevit IronPython
+    # compile sweep.
+    revit_file_count = [0]
+
     def search_folder(folder_id, depth=0):
-        nonlocal revit_file_count
-        
         # Early exit if we've found enough files to confirm this is an active project
         # This saves API calls for large projects
-        if revit_file_count > MAX_REVIT_FILES_SEARCH:  # Use global constant
-            logging.info("Found {} Revit files, stopping search to save API calls".format(revit_file_count))
+        if revit_file_count[0] > MAX_REVIT_FILES_SEARCH:  # Use global constant
+            logging.info("Found {} Revit files, stopping search to save API calls".format(revit_file_count[0]))
             return
             
         # Prevent infinite recursion in deep folder structures
@@ -1107,10 +1111,10 @@ def get_project_revit_files_data(project_id, hub_id, project_name=None, hub_name
         for item in revit_items:
             file_name = item.get("attributes", {}).get("displayName", "")
             item_id = item.get("id")
-            revit_file_count += 1
-            
+            revit_file_count[0] += 1
+
             # For cost savings, limit detailed file info calls for large projects
-            if revit_file_count <= MAX_REVIT_FILES_DETAILED:  # Use global constant
+            if revit_file_count[0] <= MAX_REVIT_FILES_DETAILED:  # Use global constant
                 try:
                     detail_url = "https://developer.api.autodesk.com/data/v1/projects/{}/items/{}".format(project_id, item_id)
                     detail_headers = {"Authorization": "Bearer {}".format(access_token)}

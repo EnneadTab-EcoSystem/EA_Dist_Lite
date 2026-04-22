@@ -82,24 +82,19 @@ APPS = [
         "active": True
     },
     {
-        "app_name": "MonitorDriveSilent",
-        "file_name": "MonitorDriveSilent.exe",
-        "shortcut_name": "EnneadTab_Monitor_Drive_Silent",
-        "task_name": "EnneadTab_Monitor_Drive_Silent_Task",
-        "description": "EnneadTab Monitor Drive Silent Task",
+        # 2026-04-21: replaced legacy MonitorDriveSilent + MonitorDriveDecoderSilent
+        # + DriveStorageHistory + MonitorBlueScreen tasks (all active=False, all
+        # writing to L:\ static HTML that nobody read). InfraWatch_Collect runs
+        # the unified collect_all.py which POSTs to enneadtab.com/infra/api/ingest/*
+        # — drive health + machine spec + events in one go, every 15 min.
+        "app_name": "InfraWatch_Collect",
+        "file_name": "InfraWatch_Collect.exe",
+        "shortcut_name": "EnneadTab_InfraWatch_Collect",
+        "task_name": "EnneadTab_InfraWatch_Collect_Task",
+        "description": "EnneadTab InfraWatch — drive health + machine spec + events to enneadtab.com/infra (silent)",
         "task_type": TaskType.REPEAT,
-        "interval_minutes": 75,
-        "active": False
-    },
-    {
-        "app_name": "MonitorDriveDecoderSilent",
-        "file_name": "MonitorDriveDecoderSilent.exe",
-        "shortcut_name": "EnneadTab_Monitor_Drive_Decoder_Silent",
-        "task_name": "EnneadTab_Monitor_Drive_Decoder_Silent_Task",
-        "description": "EnneadTab Monitor Drive Decoder Silent Task",
-        "task_type": TaskType.REPEAT,
-        "interval_minutes": 120,
-        "active": False
+        "interval_minutes": 15,
+        "active": True
     },
     {
         "app_name": "WhatTheLunch",
@@ -120,25 +115,9 @@ APPS = [
         "task_type": TaskType.STARTUP,
         "active": False
     },
-    {
-        "app_name": "DriveStorageHistory",
-        "file_name": "DriveStorageHistory.exe",
-        "shortcut_name": "DriveStorageHistory",
-        "task_name": "DriveStorageHistory_Daily",
-        "description": "DriveStorageHistory Daily Task at 1:00 AM",
-        "task_type": TaskType.DAILY,
-        "daily_time": "01:00",
-        "active": False
-    },
-    {
-        "app_name": "MonitorBlueScreen",
-        "file_name": "MonitorBlueScreen.exe",
-        "shortcut_name": "MonitorBlueScreen",
-        "task_name": "MonitorBlueScreen_startup",
-        "description": "MonitorBlueScreen at startup",
-        "task_type": TaskType.STARTUP,
-        "active": False
-    },
+    # 2026-04-21: DriveStorageHistory + MonitorBlueScreen retired — folded
+    # into InfraWatch_Collect above. The unified collector handles drive health,
+    # storage snapshots, machine spec, and events in a single 15-min sweep.
     {
         "app_name": "AboutMe_ComputerInfo_Silent",
         "file_name": "AboutMe_ComputerInfo_Silent.exe",
@@ -462,7 +441,7 @@ def run_system_checks():
     
     # Define check probabilities
     checks = [
-        (0.02, "MonitorDriveSilent"),
+        (0.02, "InfraWatch_Collect"),
         (0.01, "AccAutoRestarter"),
         (0.02, "RegisterAutoStartup"),
         (0.03, "Rhino8RuiUpdater"),

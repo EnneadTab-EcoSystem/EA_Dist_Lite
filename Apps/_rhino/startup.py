@@ -29,10 +29,18 @@ import get_latest_left # pyright: ignore
 @ERROR_HANDLE.try_catch_error(is_silent=True)
 def main():
 
-    
+
     get_latest_left.get_latest(is_silient = True)
     RHINO_ALIAS.register_alias_set()
     add_hook()
+
+    # InfraWatch fleet bootstrap. Mirrors plugin_startup.py call. Wrapped in
+    # broad except -- Rhino startup must never fail because of telemetry setup.
+    try:
+        from EnneadTab import INFRAWATCH
+        INFRAWATCH.register_if_needed()
+    except:
+        pass
 
     rs.Command("{}_Activate{}".format(ENVIRONMENT.PLUGIN_ABBR, ENVIRONMENT.PLUGIN_NAME))
     RHINO_ALIAS.register_shortcut("F12", "{}_SearchCommand".format(ENVIRONMENT.PLUGIN_ABBR))
