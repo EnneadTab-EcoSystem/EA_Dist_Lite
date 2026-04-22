@@ -480,7 +480,7 @@ DATE_FILTERS = [
     ("This year", 365 * 86400),
     ("All time", None),
 ]
-DEFAULT_DATE_FILTER = "Last 7 days"
+DEFAULT_DATE_FILTER = "All time"
 
 
 def cache_dir():
@@ -1007,8 +1007,17 @@ class QueueWorker(object):
                         job.error_msg = "Gallery save failed: {}".format(str(e)[:200])
                     finally:
                         Monitor.Exit(self._lock)
+                    # Split sidecar + UI callback into separate try blocks so a
+                    # WPF/Eto Dispatcher exception in _on_job_update can't kill
+                    # the sidecar write. _on_job_update on Revit hits Monitor +
+                    # multiple _invoke_ui calls; any unhandled exception there
+                    # propagates to the .NET ThreadPool and crashes Revit with
+                    # 0xE0434352 (Mac/Eto is more forgiving). Belt and braces.
                     try:
                         job.write_sidecar()
+                    except Exception:
+                        pass
+                    try:
                         self._on_job_update(job)
                     except Exception:
                         pass

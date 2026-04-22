@@ -635,12 +635,6 @@
         </text>
         <left_macro_id>20893eb7-d501-4aa4-b126-7de33541ba5b</left_macro_id>
       </tool_bar_item>
-      <tool_bar_item guid="edb5f791-2478-4fac-9868-af5009f0c0c1">
-        <text>
-          <locale_1033>get_inspired</locale_1033>
-        </text>
-        <left_macro_id>e0c415f6-0b03-4a11-9fb1-47acea8ce750</left_macro_id>
-      </tool_bar_item>
       <tool_bar_item guid="eed6c858-a01f-4b71-a140-90f032009b18">
         <text>
           <locale_1033>import_selected_camera</locale_1033>
@@ -3147,25 +3141,6 @@ EA_EnscapeAssetLocator</script>
       </menu_text>
       <script>EA_ActivateEnneadTab
 EA_GetGoogleEarthModel</script>
-    </macro_item>
-    <macro_item guid="e0c415f6-0b03-4a11-9fb1-47acea8ce750" bitmap_id="1a448603-4e5c-4c1b-93b3-01b8f2d183c6">
-      <text>
-        <locale_1033>GetInspired</locale_1033>
-      </text>
-      <tooltip>
-        <locale_1033>Opens e.AI rendering website (https://enneadtab.com/rendering/home) in the default browser</locale_1033>
-      </tooltip>
-      <help_text>
-        <locale_1033>Opens e.AI rendering website (https://enneadtab.com/rendering/home) in the default browser</locale_1033>
-      </help_text>
-      <button_text>
-        <locale_1033>GetInspired</locale_1033>
-      </button_text>
-      <menu_text>
-        <locale_1033>GetInspired</locale_1033>
-      </menu_text>
-      <script>EA_ActivateEnneadTab
-EA_GetInspired</script>
     </macro_item>
     <macro_item guid="67d4edc6-a8c6-46c3-8fa6-8627095b07c6" bitmap_id="84ef7286-5ff2-4d73-98e0-07a3619621ee">
       <text>

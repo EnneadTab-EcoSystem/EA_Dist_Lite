@@ -134,11 +134,14 @@ def bitmap_from_data_url(data_url, max_w=None, max_h=None):
 
 # ---------- GalleryRow ----------
 
-# Default (small) thumb size. Can be overridden at runtime by the dialog
-# via set_thumb_size() — toggling between small (84x60) and large (240x160)
-# preview modes.
-THUMB_W, THUMB_H = 84, 60
+# Default (large) thumb size. Can be overridden at runtime by the dialog
+# via set_thumb_size() — toggling between large (240x160, default) and
+# small (84x60) preview modes. Default flipped to large 2026-04-22 because
+# small thumbs hid composition details that users needed to verify the
+# AI render matched their intent before downloading.
+THUMB_W_SMALL, THUMB_H_SMALL = 84, 60
 THUMB_W_LARGE, THUMB_H_LARGE = 240, 160
+THUMB_W, THUMB_H = THUMB_W_LARGE, THUMB_H_LARGE
 
 
 def set_thumb_size(w, h):
@@ -196,7 +199,11 @@ def row_from_job(job):
     r.created_at = job.created_at
     r.KindIcon = "🎬" if job.kind == "video" else ""
     r.StyleName = job.style_preset or "Custom"
-    r.PromptPreview = truncate(job.prompt, 80)
+    # PromptPreview now carries the full text; the row label uses WrapMode.Word.
+    r.PromptPreview = job.prompt
+    # full_prompt is what the row label actually renders (with WrapMode.Word).
+    # PromptPreview is kept on the type for any callers that still want the
+    # truncated form, but the Rhino UI uses full_prompt for wrap-display.
     r.full_prompt = job.prompt
     r.view_name = job.view_name
     r.host = job.host
@@ -241,7 +248,7 @@ def row_from_cloud_item(item):
     r.created_at = float(created_ms) / 1000.0 if created_ms else 0
     r.KindIcon = "🎬" if r.kind == "video" else ""
     r.full_prompt = item.get("promptPreview") or ""
-    r.PromptPreview = truncate(r.full_prompt, 80)
+    r.PromptPreview = r.full_prompt  # full text — Rhino label wraps
     r.StyleName = (item.get("metadata") or {}).get("styleName") or "—"
     r.view_name = (item.get("metadata") or {}).get("viewName") or ""
     r.host = (item.get("metadata") or {}).get("host") or "web"

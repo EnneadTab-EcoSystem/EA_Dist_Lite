@@ -193,23 +193,36 @@ class GalleryRowPanel(Eto.Forms.Panel):
         iv_res.MouseDown += self._handle_res_click
         layout.Add(iv_res)
 
-        # Info column
+        # Info column. Three stacked labels:
+        #   - StyleName (bold, top)
+        #   - full prompt (wraps to multiple lines, fills middle)
+        #   - Subtitle (small grey, pinned to bottom by spacer)
+        # The spacer (empty Add with yscale=True) pushes the subtitle to the
+        # bottom of the row so it visually aligns with the status column's
+        # bottom-aligned status text.
         info = Eto.Forms.DynamicLayout()
         info.Padding = Eto.Drawing.Padding(0)
-        info.Spacing = Eto.Drawing.Size(0, 0)
+        info.Spacing = Eto.Drawing.Size(0, 2)
         lbl_style = Eto.Forms.Label(Text=row.StyleName)
         lbl_style.Font = Eto.Drawing.Font(Eto.Drawing.SystemFont.Bold, 11)
         info.Add(lbl_style)
-        lbl_prompt = Eto.Forms.Label(Text=row.PromptPreview)
+        lbl_prompt = Eto.Forms.Label(Text=(row.full_prompt or row.PromptPreview))
         lbl_prompt.TextColor = _hex_to_color("#CBCBCB")
-        info.Add(lbl_prompt)
+        try:
+            lbl_prompt.Wrap = Eto.Forms.WrapMode.Word
+        except Exception:
+            pass  # older Eto builds may not expose Wrap
+        info.Add(lbl_prompt, yscale=True)
         lbl_sub = Eto.Forms.Label(Text=row.Subtitle)
         lbl_sub.TextColor = _hex_to_color("#9A9A9A")
         info.Add(lbl_sub)
         layout.Add(info, xscale=True)
 
-        # Status + progress
+        # Status + progress column. Top spacer pushes content to the bottom
+        # so the status text aligns with the Subtitle line in the info column.
         status_col = Eto.Forms.DynamicLayout()
+        status_col.Spacing = Eto.Drawing.Size(0, 2)
+        status_col.Add(None, yscale=True)  # bottom-align spacer
         lbl_st = Eto.Forms.Label(Text=row.StatusText)
         lbl_st.TextColor = _hex_to_color(row.StatusColor)
         lbl_st.Font = Eto.Drawing.Font(Eto.Drawing.SystemFont.Bold, 11)
@@ -223,12 +236,17 @@ class GalleryRowPanel(Eto.Forms.Panel):
             status_col.Add(pb)
         layout.Add(status_col)
 
-        # Inline save button (only when SaveVisibility True)
+        # Inline save button (only when SaveVisibility True). Wrapped in its
+        # own bottom-aligned column so it sits on the same baseline as the
+        # status text and Subtitle, not floating top.
         if row.SaveVisibility:
+            save_col = Eto.Forms.DynamicLayout()
+            save_col.Add(None, yscale=True)  # bottom-align spacer
             bt = Eto.Forms.Button(Text="💾")
             bt.Size = Eto.Drawing.Size(28, 28)
             bt.Click += self._handle_save_click
-            layout.Add(bt)
+            save_col.Add(bt)
+            layout.Add(save_col)
 
         layout.EndHorizontal()
         self.Content = layout
@@ -558,8 +576,10 @@ class AiRenderForm(Eto.Forms.Form):
         # 2026-04-21 — Large-thumb toggle. Calls G.set_thumb_size() then
         # rebuilds the gallery so existing rows reload at the new size.
         self.cb_large_thumbs = Eto.Forms.CheckBox(Text="Large")
-        self.cb_large_thumbs.Checked = False
-        self.cb_large_thumbs.ToolTip = "Show larger preview thumbnails (240×160)"
+        # Default ON (2026-04-22) — matches the new G.THUMB_W/H default in
+        # ai_render_gallery_module.py. Users can uncheck for compact rows.
+        self.cb_large_thumbs.Checked = True
+        self.cb_large_thumbs.ToolTip = "Show larger preview thumbnails (240x160)"
         self.cb_large_thumbs.CheckedChanged += self._on_large_thumbs_changed
         row.Add(self.cb_large_thumbs)
         self.cb_date_filter = Eto.Forms.DropDown()
@@ -1387,7 +1407,7 @@ class AiRenderForm(Eto.Forms.Form):
             if bool(self.cb_large_thumbs.Checked):
                 G.set_thumb_size(G.THUMB_W_LARGE, G.THUMB_H_LARGE)
             else:
-                G.set_thumb_size(84, 60)
+                G.set_thumb_size(G.THUMB_W_SMALL, G.THUMB_H_SMALL)
         except Exception as ex:
             _trace("large_thumbs.set_size FAILED {}".format(ex))
             return

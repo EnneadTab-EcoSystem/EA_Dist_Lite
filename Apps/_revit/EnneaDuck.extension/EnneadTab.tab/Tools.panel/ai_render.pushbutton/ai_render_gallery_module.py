@@ -132,7 +132,10 @@ def row_from_job(job):
     r.created_at = job.created_at
     r.KindIcon = "🎬" if job.kind == "video" else ""
     r.StyleName = job.style_preset or "Custom"
-    r.PromptPreview = truncate(job.prompt, 80)
+    # Don't truncate — the row TextBlock now uses TextWrapping="Wrap" so
+    # the full prompt is visible. PromptPreview kept as the binding name for
+    # historical reasons; it now carries the full text.
+    r.PromptPreview = job.prompt
     r.full_prompt = job.prompt
     r.view_name = job.view_name
     r.host = job.host
@@ -180,7 +183,7 @@ def row_from_cloud_item(item):
     r.created_at = float(created_ms) / 1000.0 if created_ms else 0
     r.KindIcon = "🎬" if r.kind == "video" else ""
     r.full_prompt = item.get("promptPreview") or ""
-    r.PromptPreview = truncate(r.full_prompt, 80)
+    r.PromptPreview = r.full_prompt  # full text — TextBlock wraps
     r.StyleName = (item.get("metadata") or {}).get("styleName") or "—"
     r.view_name = (item.get("metadata") or {}).get("viewName") or ""
     r.host = (item.get("metadata") or {}).get("host") or "web"

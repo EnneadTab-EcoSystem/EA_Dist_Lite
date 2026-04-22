@@ -66,6 +66,30 @@ def _safe_token(token):
     return (token or "").strip()
 
 
+def to_unicode(s):
+    """Coerce input to a Python unicode string for safe json.dumps on IP27.
+
+    On IronPython 2.7 / Windows, json.dumps of a `str` containing non-ASCII
+    bytes triggers an implicit str.decode('ascii') and dies with
+    "'unknown' codec can't decode byte 0xNN" (the Lengthen / Shorten failure
+    mode reported 2026-04-22). Cause: prompts arrive from clipboard paste,
+    file load (cp1252 default per Windows-encoding memory), or stale persisted
+    state and carry mojibake bytes. Normalize at the API boundary so every
+    AI endpoint is encoding-safe regardless of caller hygiene.
+    """
+    if s is None:
+        return u""
+    if isinstance(s, bytes):
+        try:
+            return s.decode("utf-8")
+        except (UnicodeDecodeError, UnicodeError):
+            try:
+                return s.decode("cp1252", "replace")
+            except Exception:
+                return s.decode("latin-1", "replace")
+    return s
+
+
 def _status_from_exception(e):
     """Extract a typed HTTP status code from a .NET WebException or urllib HTTPError.
 

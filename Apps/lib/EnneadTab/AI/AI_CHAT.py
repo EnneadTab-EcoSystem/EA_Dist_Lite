@@ -18,14 +18,20 @@ import json
 
 from EnneadTab import AUTH
 from EnneadTab.AI._common import (
-    ENNEADTAB_URL, RENDER_URL, AIRequestError, post_json,
+    ENNEADTAB_URL, RENDER_URL, AIRequestError, post_json, to_unicode,
 )
 
 
 def chat_with_token(token, messages, temperature=None, json_mode=False):
     """Chat with a pre-obtained token. Use from IronPython UIs that handle auth themselves."""
     url = "{}/api/ai/desktop-chat".format(ENNEADTAB_URL)
-    body = {"messages": messages}
+    safe_messages = []
+    for m in (messages or []):
+        if isinstance(m, dict) and "content" in m:
+            m = dict(m)
+            m["content"] = to_unicode(m.get("content"))
+        safe_messages.append(m)
+    body = {"messages": safe_messages}
     if temperature is not None:
         body["temperature"] = temperature
     if json_mode:
@@ -68,7 +74,7 @@ def improve_prompt_with_token(token, prompt, mode="image", action="improve",
         raise AIRequestError("No auth token provided.", status_code=401)
     url = "{}/api/improve-prompt".format(RENDER_URL)
     payload = json.dumps({
-        "prompt": prompt,
+        "prompt": to_unicode(prompt),
         "mode": mode,
         "action": action,
         "isInterior": bool(is_interior),
@@ -93,7 +99,7 @@ def spell_check_with_token(token, prompt, timeout_ms=60000):
     if not token:
         raise AIRequestError("No auth token provided.", status_code=401)
     url = "{}/api/spell-check".format(RENDER_URL)
-    payload = json.dumps({"prompt": prompt}, ensure_ascii=True)
+    payload = json.dumps({"prompt": to_unicode(prompt)}, ensure_ascii=True)
     data = post_json(url, payload, token, timeout_ms=timeout_ms)
     if not data.get("ok"):
         raise AIRequestError(
