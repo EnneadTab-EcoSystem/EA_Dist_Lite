@@ -2,31 +2,45 @@
 <#
 .SYNOPSIS
     Fixes pyRevit.addin files by replacing Administrator paths with current user paths.
-    
+
 .DESCRIPTION
-    This script automatically requests admin elevation and fixes pyRevit.addin files 
-    across all Revit versions in ProgramData by replacing Administrator AppData paths 
+    This script automatically requests admin elevation and fixes pyRevit.addin files
+    across all Revit versions in ProgramData by replacing Administrator AppData paths
     with the current logged-in user's AppData path.
-    
-    Only modifies files named exactly "pyRevit.addin" (case-sensitive).
-    Skips files that are already using the correct path.
-    
-.PARAMETER None
-    
+
+    Writes UTF-8 without BOM (preserves most .addin authoring). Files with a BOM in
+    the original will lose it on rewrite.
+
+.PARAMETER OriginalUser
+    The interactive (non-elevated) username. Set automatically when the script
+    self-elevates via UAC. Do not pass this manually unless debugging.
+
 .EXAMPLE
     .\FixPyRevitAdminPath.ps1
-    Double-click the script or run from PowerShell. UAC prompt will appear if not admin.
+    Double-click the script. UAC prompt will appear; supply IT admin credentials
+    if prompted (over-the-shoulder elevation is supported — the original interactive
+    user is detected and preserved across elevation).
 #>
+
+param(
+    [string]$OriginalUser
+)
 
 # Set error action preference
 $ErrorActionPreference = "Continue"
 
-# Get current username
-$currentUsername = $env:USERNAME
+# Resolve the INTERACTIVE user (the user whose pyRevit paths need fixing),
+# NOT $env:USERNAME — which, under over-the-shoulder UAC elevation, becomes the
+# admin account that supplied credentials. If $OriginalUser wasn't passed in
+# (first invocation, before elevation), fall back to $env:USERNAME.
+if (-not $OriginalUser -or $OriginalUser.Trim() -eq "") {
+    $OriginalUser = $env:USERNAME
+}
+$currentUsername = $OriginalUser
 
-# Check if current user is Administrator (would cause infinite loop)
+# Check if the INTERACTIVE user is Administrator — only then is there nothing to fix.
 if ($currentUsername -eq "Administrator") {
-    Write-Host "`nWARNING: Current user is 'Administrator'. No replacement needed." -ForegroundColor Yellow
+    Write-Host "`nWARNING: Interactive user is 'Administrator'. No replacement needed." -ForegroundColor Yellow
     Write-Host "Press any key to exit..."
     $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     exit 0
@@ -46,14 +60,18 @@ function Request-AdminElevation {
         Write-Host "Requesting elevation..." -ForegroundColor Yellow
         
         try {
-            # Re-launch script with admin privileges
-            $scriptPath = $MyInvocation.PSCommandPath
+            # Re-launch script with admin privileges.
+            # CRITICAL: pass the current $currentUsername as -OriginalUser so that
+            # over-the-shoulder UAC elevation (IT typing admin creds on a non-admin
+            # user's machine) doesn't lose the real interactive user's identity.
+            $scriptPath = if ($PSCommandPath) { $PSCommandPath } else { $MyInvocation.MyCommand.Path }
+            $escapedUser = $currentUsername -replace '"', '\"'
             $processInfo = New-Object System.Diagnostics.ProcessStartInfo
             $processInfo.FileName = "powershell.exe"
-            $processInfo.Arguments = "-ExecutionPolicy Bypass -NoProfile -File `"$scriptPath`""
+            $processInfo.Arguments = "-ExecutionPolicy Bypass -NoProfile -File `"$scriptPath`" -OriginalUser `"$escapedUser`""
             $processInfo.Verb = "runas"
             $processInfo.UseShellExecute = $true
-            
+
             $process = [System.Diagnostics.Process]::Start($processInfo)
             exit 0
         }
@@ -120,17 +138,21 @@ $filesError = 0
 $processedFiles = @()
 
 # Patterns for matching and replacement
-$adminPathPattern = "C:\\Users\\Administrator\\AppData"
-$adminPathPatternCaseInsensitive = [regex]::Escape("C:\Users\Administrator\AppData")
-$currentUserPath = "C:\Users\$currentUsername\AppData"
-$currentUserPathPattern = [regex]::Escape("C:\Users\$currentUsername\AppData")
+# NOTE: PowerShell strings do NOT interpret "\\" as an escape — it is two literal
+# backslashes. For regex we must feed a single-backslash source through
+# [regex]::Escape(...) exactly once. Real pyRevit.addin XML contains single
+# backslashes (e.g. C:\Users\Administrator\AppData\...), not doubled.
+$adminPathLiteral  = "C:\Users\Administrator\AppData"
+$adminPathRegex    = [regex]::Escape($adminPathLiteral)
+$currentUserPath   = "C:\Users\$currentUsername\AppData"
+$currentUserRegex  = [regex]::Escape($currentUserPath)
 
 # Function to check if file is already fixed
 function Test-FileAlreadyFixed {
     param([string]$fileContent)
-    
-    # Check if file already contains current username path (case-insensitive)
-    if ($fileContent -match $currentUserPathPattern -and $fileContent -notmatch $adminPathPatternCaseInsensitive) {
+
+    # Already fixed = contains current-user path AND no Administrator path remains
+    if ($fileContent -match $currentUserRegex -and $fileContent -notmatch $adminPathRegex) {
         return $true
     }
     return $false
@@ -231,7 +253,7 @@ foreach ($versionFolder in $versionFolders) {
         }
         
         # Check if file contains Administrator path (case-insensitive)
-        if ($fileContent -notmatch $adminPathPatternCaseInsensitive) {
+        if ($fileContent -notmatch $adminPathRegex) {
             Write-Host "  -> No Administrator path found, skipping" -ForegroundColor Yellow
             $filesSkipped++
             $processedFiles += [PSCustomObject]@{
@@ -241,10 +263,10 @@ foreach ($versionFolder in $versionFolders) {
             }
             continue
         }
-        
-        # Perform replacement (case-insensitive, replace all occurrences)
+
+        # Perform replacement (case-insensitive via -replace, all occurrences)
         $originalContent = $fileContent
-        $newContent = $fileContent -replace [regex]::Escape($adminPathPattern), $currentUserPath
+        $newContent = $fileContent -replace $adminPathRegex, $currentUserPath
         
         # Verify replacement occurred
         if ($newContent -eq $originalContent) {
@@ -297,7 +319,24 @@ if ($processedFiles.Count -gt 0) {
     $processedFiles | Format-Table -AutoSize
 }
 
+# A found-but-fixed-zero outcome is a failure class, not a success.
+# Exit non-zero so callers / batch wrappers can tell. Loud message for users.
+$exitCode = 0
+if ($filesFound -gt 0 -and $filesFixed -eq 0 -and $filesError -eq 0) {
+    Write-Host ""
+    Write-Host "WARNING: Found $filesFound pyRevit.addin file(s) but fixed 0." -ForegroundColor Red
+    Write-Host "The script did NOT help. Likely causes:" -ForegroundColor Red
+    Write-Host "  - Files were already on the correct path (no action needed)" -ForegroundColor Yellow
+    Write-Host "  - Files contained no Administrator path (nothing to replace)" -ForegroundColor Yellow
+    Write-Host "  - A pattern/permission issue prevented the rewrite" -ForegroundColor Yellow
+    Write-Host "Check the Detailed Results above for the per-file reason." -ForegroundColor Yellow
+    $exitCode = 2
+} elseif ($filesError -gt 0) {
+    $exitCode = 1
+}
+
 Write-Host ""
-Write-Host "Script completed. Press any key to exit..." -ForegroundColor Cyan
+Write-Host "Script completed (exit=$exitCode). Press any key to exit..." -ForegroundColor Cyan
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+exit $exitCode
 

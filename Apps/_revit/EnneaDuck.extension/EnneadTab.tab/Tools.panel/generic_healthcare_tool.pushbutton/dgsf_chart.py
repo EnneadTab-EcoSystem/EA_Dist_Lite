@@ -313,11 +313,38 @@ class OptionValidation:
         print("\n".join(note))
 
     def validate_family(self):
-        """Validates calculator family exists."""
+        """Validates calculator family exists AND has at least one type.
+
+        A family can exist in the project but be type-less if a prior run died
+        mid-purge or if a user deleted the types manually. When that happens,
+        make_new_calcualtor() would IndexError on [0] and every subsequent
+        type lookup would fire NOTIFICATION.messenger("Cannot find any type
+        in [...]") until the messenger rate-limits. Force-reload from the
+        sample file to restore a healthy type list before we start mutating.
+        """
         default_sample_family_path = SAMPLE_FILE.get_file("{}.rfa".format(self.option.CALCULATOR_FAMILY_NAME_BASE))
-       
+
         fam = REVIT_FAMILY.get_family_by_name(self.option.CALCULATOR_FAMILY_NAME, doc=self.doc, load_path_if_not_exist=default_sample_family_path)
-        return fam is not None
+        if fam is None:
+            return False
+
+        # Verify the family actually has types; reload from sample if it's empty.
+        type_ids = list(fam.GetFamilySymbolIds())
+        if not type_ids:
+            print("Family [{}] exists but has no types. Reloading from sample [{}].".format(
+                self.option.CALCULATOR_FAMILY_NAME, default_sample_family_path))
+            if not default_sample_family_path or not os.path.exists(default_sample_family_path):
+                ERROR_HANDLE.print_note("Cannot reload family [{}]: sample file missing at [{}]".format(
+                    self.option.CALCULATOR_FAMILY_NAME, default_sample_family_path))
+                return False
+            REVIT_FAMILY.load_family_by_path(default_sample_family_path, project_doc=self.doc,
+                                             as_name=self.option.CALCULATOR_FAMILY_NAME)
+            fam = REVIT_FAMILY.get_family_by_name(self.option.CALCULATOR_FAMILY_NAME, doc=self.doc)
+            if fam is None or not list(fam.GetFamilySymbolIds()):
+                ERROR_HANDLE.print_note("Reload of family [{}] did not produce any types - sample may be corrupt".format(
+                    self.option.CALCULATOR_FAMILY_NAME))
+                return False
+        return True
 
     def validate_container_view(self):
         """Validates and creates container view if needed."""
@@ -405,9 +432,20 @@ class OptionValidation:
 
     def make_new_calcualtor(self, type_name):
         """Creates a new calculator instance."""
+        # Guard: validate_family() should have already ensured the family has
+        # types, but a mid-loop purge could still empty it. Fail loudly with a
+        # clear message instead of IndexError-ing on [0] and then firing the
+        # "Cannot find any type" messenger on every remaining iteration.
+        all_types = REVIT_FAMILY.get_all_types_by_family_name(self.option.CALCULATOR_FAMILY_NAME, self.doc)
+        if not all_types:
+            ERROR_HANDLE.print_note(
+                "Cannot create type [{}]: family [{}] has no source types to duplicate. "
+                "Re-run validate_family() or reload the sample family.".format(
+                    type_name, self.option.CALCULATOR_FAMILY_NAME))
+            return
         t = DB.Transaction(self.doc, "Making new type [{}]".format(type_name))
         t.Start()
-        new_type = REVIT_FAMILY.get_all_types_by_family_name(self.option.CALCULATOR_FAMILY_NAME, self.doc)[0].Duplicate(type_name)
+        new_type = all_types[0].Duplicate(type_name)
         new_type.Activate()
         self.doc.Regenerate()
 
