@@ -188,7 +188,13 @@ def row_from_cloud_item(item):
     r.view_name = (item.get("metadata") or {}).get("viewName") or ""
     r.host = (item.get("metadata") or {}).get("host") or "web"
     thumb_data = item.get("thumbnailData") or item.get("thumbnailVideo")
-    r.OriginalThumb = None
+    meta = item.get("metadata") or {}
+    orig_thumb_data = (
+        item.get("originalThumbnailData") or meta.get("originalThumbnailData")
+    )
+    r.OriginalThumb = (
+        bitmap_from_data_url(orig_thumb_data) if orig_thumb_data else None
+    )
     r.ResultThumb = bitmap_from_data_url(thumb_data)
     r.StatusText = "✓"
     r.StatusColor = "#FF88DD88"

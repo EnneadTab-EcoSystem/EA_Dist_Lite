@@ -404,8 +404,15 @@ def get_gallery_items_with_token(token, ids, timeout_ms=30000):
 
 
 def save_to_gallery_with_token(token, image_path, prompt, mode="image",
-                               style_name=None, view_name=None, timeout_ms=60000):
-    """Save a generated image to the user's cloud Gallery. Visible on every device."""
+                               style_name=None, view_name=None, original_path=None,
+                               timeout_ms=60000):
+    """Save a generated image to the user's cloud Gallery. Visible on every device.
+
+    If `original_path` is provided, the source capture is uploaded alongside the
+    result as a second multipart file. The server derives a small thumbnail and
+    stores it on the gallery item so the History panel can show both thumbs.
+    Old clients omit the field; server treats that case as result-only.
+    """
     if not token:
         raise AIRequestError("No auth token provided.", status_code=401)
     if not os.path.exists(image_path):
@@ -420,6 +427,18 @@ def save_to_gallery_with_token(token, image_path, prompt, mode="image",
     if view_name:
         fields["viewName"] = view_name
     files = [("file", os.path.basename(image_path), image_bytes, mime)]
+    if original_path and os.path.exists(original_path):
+        try:
+            with open(original_path, "rb") as f:
+                orig_bytes = f.read()
+            o_ext = os.path.splitext(original_path)[1].lower()
+            o_mime = "image/png" if o_ext == ".png" else "image/jpeg"
+            files.append(
+                ("originalFile", os.path.basename(original_path), orig_bytes, o_mime)
+            )
+        except Exception:
+            # Non-fatal: if the original can't be read, still save the result.
+            pass
     url = "{}/api/gallery/save".format(RENDER_URL)
     data = post_multipart(url, fields, files, token, timeout_ms=timeout_ms)
     if not data.get("ok"):
@@ -982,7 +1001,8 @@ class QueueWorker(object):
                     resp = save_to_gallery_with_token(
                         token, result_path, job.prompt,
                         mode="image", style_name=job.style_preset,
-                        view_name=job.view_name)
+                        view_name=job.view_name,
+                        original_path=job.original_path)
                     gid = (resp.get("item") or {}).get("id") or resp.get("id")
                     if gid:
                         Monitor.Enter(self._lock)
