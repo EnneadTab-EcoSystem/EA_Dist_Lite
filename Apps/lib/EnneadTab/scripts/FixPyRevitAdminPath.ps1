@@ -319,20 +319,45 @@ if ($processedFiles.Count -gt 0) {
     $processedFiles | Format-Table -AutoSize
 }
 
-# A found-but-fixed-zero outcome is a failure class, not a success.
-# Exit non-zero so callers / batch wrappers can tell. Loud message for users.
+# Exit-code decision:
+#   - Real error during rewrite -> exit 2, red ERROR (investigate).
+#   - At least one file fixed this run -> exit 0, green (action taken).
+#   - No fixes needed because every found file was already on the correct path
+#     -> exit 0, green (healthy no-op; re-run on an already-correct machine).
+#   - No files matched the pyRevit.addin target at all -> exit 2, red WARNING
+#     (likely broken install / wrong paths; loud-fail per
+#     feedback_files_skipped_is_not_success.md).
+$filesAlreadyFixed = ($processedFiles | Where-Object { $_.Status -eq "Skipped (already fixed)" }).Count
+
 $exitCode = 0
-if ($filesFound -gt 0 -and $filesFixed -eq 0 -and $filesError -eq 0) {
+if ($filesError -gt 0) {
+    Write-Host ""
+    Write-Host "ERROR: $filesError file(s) failed to rewrite. See Detailed Results above." -ForegroundColor Red
+    $exitCode = 2
+} elseif ($filesFixed -gt 0) {
+    Write-Host ""
+    Write-Host "Fixed $filesFixed file(s)." -ForegroundColor Green
+    $exitCode = 0
+} elseif ($filesAlreadyFixed -gt 0) {
+    Write-Host ""
+    Write-Host "No action needed - all $filesAlreadyFixed pyRevit.addin file(s) already on the correct path." -ForegroundColor Green
+    $exitCode = 0
+} elseif ($filesFound -eq 0) {
+    Write-Host ""
+    Write-Host "WARNING: no files matched pattern - verify pyRevit install." -ForegroundColor Red
+    Write-Host "Expected to find pyRevit.addin under $addinsBasePath\<version>\." -ForegroundColor Yellow
+    Write-Host "Likely causes:" -ForegroundColor Yellow
+    Write-Host "  - pyRevit not installed for any Revit version on this machine" -ForegroundColor Yellow
+    Write-Host "  - ProgramData Addins folder missing expected layout" -ForegroundColor Yellow
+    Write-Host "  - Filename case or spelling drift in a future pyRevit release" -ForegroundColor Yellow
+    $exitCode = 2
+} else {
+    # Fallback: files were found but all skipped for non-"already fixed" reasons
+    # (e.g. "pattern not matched" on non-Administrator paths). Treat as warning.
     Write-Host ""
     Write-Host "WARNING: Found $filesFound pyRevit.addin file(s) but fixed 0." -ForegroundColor Red
-    Write-Host "The script did NOT help. Likely causes:" -ForegroundColor Red
-    Write-Host "  - Files were already on the correct path (no action needed)" -ForegroundColor Yellow
-    Write-Host "  - Files contained no Administrator path (nothing to replace)" -ForegroundColor Yellow
-    Write-Host "  - A pattern/permission issue prevented the rewrite" -ForegroundColor Yellow
     Write-Host "Check the Detailed Results above for the per-file reason." -ForegroundColor Yellow
     $exitCode = 2
-} elseif ($filesError -gt 0) {
-    $exitCode = 1
 }
 
 Write-Host ""
