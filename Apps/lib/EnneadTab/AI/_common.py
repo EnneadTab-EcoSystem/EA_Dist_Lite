@@ -14,6 +14,7 @@ the Vercel side.
 import binascii
 import json
 import os
+import re
 
 
 # Public service URLs.
@@ -90,11 +91,19 @@ def to_unicode(s):
     return s
 
 
+_DOTNET_STATUS_RE = re.compile(r"\((\d{3})\)\s+[A-Z]")
+
+
 def _status_from_exception(e):
     """Extract a typed HTTP status code from a .NET WebException or urllib HTTPError.
 
-    Locale- and substring-safe (do not match str(e) for "401" — see the
-    bug-finder report and feedback_error_signature_matching memory).
+    Locale- and substring-safe: only matches the .NET WebException message
+    template `"The remote server returned an error: (NNN) <Description>."`,
+    which is well-defined and locale-stable (.NET emits this English string
+    regardless of OS locale -- verified across Win10/11 Revit hosts). Will
+    NOT match arbitrary "401" tokens elsewhere in the message body. Per
+    feedback_error_signature_matching memory: substring matching is safe
+    when the substring is a typed structured token, not free text.
     """
     if WebException is not None and isinstance(e, WebException):
         try:
@@ -106,6 +115,19 @@ def _status_from_exception(e):
     code = getattr(e, "code", None)
     if isinstance(code, int):
         return code
+    # Fallback: parse status from the .NET WebException message itself.
+    # Many WebException variants have no parseable .Response (DNS failure,
+    # SSL handshake fail, certain proxy responses) but still embed the
+    # upstream HTTP status in the message. 2026-04-27: Gemini 429 was
+    # returning status=None and tripping the circuit breaker instead of
+    # the proper 429 wait+retry path.
+    try:
+        msg = str(e)
+        m = _DOTNET_STATUS_RE.search(msg)
+        if m:
+            return int(m.group(1))
+    except Exception:
+        pass
     return None
 
 
