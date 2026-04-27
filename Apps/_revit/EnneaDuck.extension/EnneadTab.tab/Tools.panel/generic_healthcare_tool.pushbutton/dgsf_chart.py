@@ -237,28 +237,43 @@ class OptionValidation:
         return True
 
     def validate_all(self):
-        """Validates all aspects of the department option."""
+        """Validates all aspects of the department option.
+
+        On failure, sets self.failure_reason to a short human-readable string
+        so the caller can surface it in the messenger toast instead of a
+        generic "Validation failed". Every print is prefixed with [dgsf] so
+        users don't misattribute it to the surrounding hook (e.g. doc-closing).
+        """
+        self.failure_reason = None
+        opt_name = self.option.formated_option_name if self.option else "?"
         if not self.doc:
-            print ("Document not found, skipping validation")
+            self.failure_reason = "document not found"
+            print("[dgsf] [{}] document not found, skipping validation".format(opt_name))
             return False
         self.show_logic()
         if not self.is_area_scheme_valid():
-            print("Area scheme validation failed")
+            self.failure_reason = "area scheme invalid"
+            print("[dgsf] [{}] area scheme validation failed".format(opt_name))
             return False
         if not self.validate_family():
-            print("Family validation failed")
+            self.failure_reason = "family [{}] missing or empty".format(self.option.CALCULATOR_FAMILY_NAME)
+            print("[dgsf] [{}] family validation failed".format(opt_name))
             return False
         if not self.validate_family_data_holder():
-            print("Family data holder validation failed")
+            self.failure_reason = "family data holder invalid"
+            print("[dgsf] [{}] family data holder validation failed".format(opt_name))
             return False
         if not self.validate_container_view():
-            print("Container view validation failed")
+            self.failure_reason = "container view invalid"
+            print("[dgsf] [{}] container view validation failed".format(opt_name))
             return False
         if not self.validate_schedule_view():
-            print("Schedule view validation failed")
+            self.failure_reason = "schedule view invalid"
+            print("[dgsf] [{}] schedule view validation failed".format(opt_name))
             return False
         if not self.is_family_types_valid():
-            print("Family types validation failed")
+            self.failure_reason = "family types invalid"
+            print("[dgsf] [{}] family types validation failed".format(opt_name))
             return False
         return True
 
@@ -331,18 +346,18 @@ class OptionValidation:
         # Verify the family actually has types; reload from sample if it's empty.
         type_ids = list(fam.GetFamilySymbolIds())
         if not type_ids:
-            print("Family [{}] exists but has no types. Reloading from sample [{}].".format(
+            print("[dgsf] Family [{}] exists but has no types. Reloading from sample [{}].".format(
                 self.option.CALCULATOR_FAMILY_NAME, default_sample_family_path))
             if not default_sample_family_path or not os.path.exists(default_sample_family_path):
-                ERROR_HANDLE.print_note("Cannot reload family [{}]: sample file missing at [{}]".format(
+                ERROR_HANDLE.print_note("[dgsf] Cannot reload family [{}]: sample file missing at [{}]".format(
                     self.option.CALCULATOR_FAMILY_NAME, default_sample_family_path))
                 return False
             REVIT_FAMILY.load_family_by_path(default_sample_family_path, project_doc=self.doc,
                                              as_name=self.option.CALCULATOR_FAMILY_NAME)
             fam = REVIT_FAMILY.get_family_by_name(self.option.CALCULATOR_FAMILY_NAME, doc=self.doc)
             if fam is None or not list(fam.GetFamilySymbolIds()):
-                ERROR_HANDLE.print_note("Reload of family [{}] did not produce any types - sample may be corrupt".format(
-                    self.option.CALCULATOR_FAMILY_NAME))
+                ERROR_HANDLE.print_note("[dgsf] Reload of family [{}] did not produce any types - sample at [{}] may be corrupt or empty. Open the sample in Revit and verify it has at least one type.".format(
+                    self.option.CALCULATOR_FAMILY_NAME, default_sample_family_path))
                 return False
         return True
 
@@ -1143,9 +1158,12 @@ def dgsf_chart_update(doc, show_log=True, dedicated_department=None):
                                 dedicated_department,
                                 doc)
 
-        if not OptionValidation(doc, option, show_log).validate_all():
-            print("Validation failed")
-            NOTIFICATION.messenger("Validation failed")
+        validation = OptionValidation(doc, option, show_log)
+        if not validation.validate_all():
+            reason = getattr(validation, "failure_reason", None) or "unknown"
+            opt_label = option.formated_option_name
+            print("[dgsf] Validation failed for option [{}]: {}".format(opt_label, reason))
+            NOTIFICATION.messenger("[dgsf] [{}] validation failed: {}".format(opt_label, reason))
             return
 
         InternalCheck(doc, option, show_log).update_dgsf_chart()

@@ -683,8 +683,13 @@ def alert_l_drive_not_available(play_sound = False):
 if should_cleanup_dump_folder():
     cleanup_dump_folder()
 
-if should_check_l_drive():
-    alert_l_drive_not_available()
+# 2026-04-27: removed module-level L-drive availability nag.
+# IS_OFFLINE_MODE (above) handles the missing-share fallback gracefully,
+# so the "Friendly reminder!" auto-print on every Revit/Rhino startup is
+# pure noise. Functions kept — REVIT_PROJ_DATA still calls
+# alert_l_drive_not_available() as a True/False gate at three call sites
+# (simple_get_revit_project_data / open_project_data_file /
+# ProjectDataEditor.edit_project_data). Cutting just the auto-fire.
 ###############
 if __name__ == "__main__":
     unit_test()
