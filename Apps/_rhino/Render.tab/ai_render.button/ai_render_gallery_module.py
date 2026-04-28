@@ -20,6 +20,17 @@ import tempfile
 
 import Eto # pyright: ignore
 
+# 2026-04-28 — sibling-import baseline trace. If view2render_left.py logs
+# this on dialog-open, sibling-module imports from .button/ are working.
+# That isolates the viewer-import question: if THIS line shows up but
+# the viewer's "loaded OK" line doesn't, the viewer file specifically
+# has a problem (typo, syntax, missing class), not the import system.
+try:
+    import Rhino  # pyright: ignore
+    Rhino.RhinoApp.WriteLine("[ai_render] gallery module loaded OK")
+except Exception:
+    pass
+
 # Re-export shared helpers so the main script can stay terse.
 from EnneadTab.AI.AI_RENDER import ( # noqa: F401
     DATE_FILTERS,
@@ -241,19 +252,28 @@ def row_from_job(job):
 
 
 def row_from_cloud_item(item):
+    # 2026-04-28 — Subtitle enriched to match the local-job row format
+    # (host / aspect / longEdge / duration / style-ref / interior). All
+    # values come from `item.metadata` populated by the new client
+    # save_to_gallery_with_token() call. Old items where these were
+    # never sent fall back gracefully to date-only.
     r = GalleryRow()
     r.id = item.get("id")
-    r.kind = (item.get("metadata") or {}).get("type") or "image"
+    meta = item.get("metadata") or {}
+    r.kind = meta.get("type") or "image"
     created_ms = item.get("createdAt") or 0
     r.created_at = float(created_ms) / 1000.0 if created_ms else 0
     r.KindIcon = "🎬" if r.kind == "video" else ""
     r.full_prompt = item.get("promptPreview") or ""
     r.PromptPreview = r.full_prompt  # full text — Rhino label wraps
-    r.StyleName = (item.get("metadata") or {}).get("styleName") or "—"
-    r.view_name = (item.get("metadata") or {}).get("viewName") or ""
-    r.host = (item.get("metadata") or {}).get("host") or "web"
+    # Prefer the user's saved-prompt title over the raw prompt-preset
+    # name when both exist; "My Tower Night v2" is more meaningful than
+    # "Night View" for a row the user authored themselves.
+    r.StyleName = (meta.get("promptTitle")
+                   or meta.get("styleName") or "—")
+    r.view_name = meta.get("viewName") or ""
+    r.host = meta.get("host") or "web"
     thumb_data = item.get("thumbnailData") or item.get("thumbnailVideo")
-    meta = item.get("metadata") or {}
     orig_thumb_data = (
         item.get("originalThumbnailData") or meta.get("originalThumbnailData")
     )
@@ -263,10 +283,35 @@ def row_from_cloud_item(item):
     )
     r.ResultThumb = bitmap_from_data_url(thumb_data, THUMB_W, THUMB_H)
     r.StatusText = "✓"
+    if meta.get("durationMs"):
+        try:
+            secs = int(meta["durationMs"]) // 1000
+            r.StatusText = "✓ {}:{:02d}".format(secs // 60, secs % 60)
+        except Exception:
+            pass
     r.StatusColor = "#88DD88"
     r.SaveVisibility = True
+
+    # Build the rich subtitle. Falls back to date-only if no metadata.
+    parts = []
+    if r.view_name:
+        parts.append(r.view_name)
+    if meta.get("aspectRatio"):
+        parts.append(str(meta["aspectRatio"]))
+    if meta.get("longEdge"):
+        parts.append("{}px".format(meta["longEdge"]))
+    if r.host and r.host != "web":
+        parts.append(r.host)
+    if meta.get("isInterior"):
+        parts.append("interior")
+    if meta.get("usedStyleRef"):
+        parts.append("ref")
     ts = time.localtime(r.created_at) if r.created_at else None
-    r.Subtitle = time.strftime("%Y-%m-%d %H:%M", ts) if ts else ""
+    date_str = time.strftime("%Y-%m-%d %H:%M", ts) if ts else ""
+    if parts:
+        r.Subtitle = " · ".join(parts) + ("  ·  " + date_str if date_str else "")
+    else:
+        r.Subtitle = date_str
     r.cloud_item = item
     return r
 

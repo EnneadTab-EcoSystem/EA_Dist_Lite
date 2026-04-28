@@ -405,6 +405,9 @@ def get_gallery_items_with_token(token, ids, timeout_ms=30000):
 
 def save_to_gallery_with_token(token, image_path, prompt, mode="image",
                                style_name=None, view_name=None, original_path=None,
+                               aspect_ratio=None, long_edge=None, host=None,
+                               is_interior=None, duration_ms=None,
+                               prompt_title=None, used_style_ref=None,
                                timeout_ms=60000):
     """Save a generated image to the user's cloud Gallery. Visible on every device.
 
@@ -412,7 +415,15 @@ def save_to_gallery_with_token(token, image_path, prompt, mode="image",
     result as a second multipart file. The server derives a small thumbnail and
     stores it on the gallery item so the History panel can show both thumbs.
     Old clients omit the field; server treats that case as result-only.
+
+    2026-04-28 — extended kwargs (aspect_ratio, long_edge, host, is_interior,
+    duration_ms, prompt_title, used_style_ref) are bundled into a `metadata`
+    JSON form field so the server `/api/gallery/save` (saveToStorage util)
+    persists them on the gallery item. Without these the History panel shows
+    only prompt + date because the server's saveToStorage IGNORES flat
+    styleName/viewName fields and only reads the metadata JSON.
     """
+    import json
     if not token:
         raise AIRequestError("No auth token provided.", status_code=401)
     if not os.path.exists(image_path):
@@ -422,10 +433,36 @@ def save_to_gallery_with_token(token, image_path, prompt, mode="image",
     ext = os.path.splitext(image_path)[1].lower()
     mime = "image/png" if ext == ".png" else "image/jpeg"
     fields = {"prompt": prompt, "mode": mode}
+    # Flat fields kept for back-compat with any older server build that
+    # might read them. Newer server reads only the metadata JSON.
     if style_name:
         fields["styleName"] = style_name
     if view_name:
         fields["viewName"] = view_name
+    # Build the rich metadata blob the History panel needs to surface
+    # style/view/resolution/duration/etc. Keys match what
+    # ai_render_gallery_module.row_from_cloud_item() reads.
+    meta = {}
+    if style_name:
+        meta["styleName"] = style_name
+    if view_name:
+        meta["viewName"] = view_name
+    if aspect_ratio:
+        meta["aspectRatio"] = aspect_ratio
+    if long_edge:
+        meta["longEdge"] = int(long_edge)
+    if host:
+        meta["host"] = host
+    if is_interior is not None:
+        meta["isInterior"] = bool(is_interior)
+    if duration_ms is not None:
+        meta["durationMs"] = int(duration_ms)
+    if prompt_title:
+        meta["promptTitle"] = prompt_title
+    if used_style_ref is not None:
+        meta["usedStyleRef"] = bool(used_style_ref)
+    meta["type"] = mode  # row builder reads metadata.type for video icon
+    fields["metadata"] = json.dumps(meta)
     files = [("file", os.path.basename(image_path), image_bytes, mime)]
     if original_path and os.path.exists(original_path):
         try:
@@ -998,11 +1035,27 @@ class QueueWorker(object):
             # Off-worker upload so the next queued render starts immediately.
             def upload_worker(state):
                 try:
+                    # 2026-04-28 — pass full job context so the History
+                    # row can render style/view/resolution/duration etc.
+                    # Without these the cloud row shows only prompt + date.
+                    duration_ms = None
+                    try:
+                        if getattr(job, "started_at", None):
+                            duration_ms = int(
+                                (time.time() - float(job.started_at)) * 1000)
+                    except Exception:
+                        duration_ms = None
                     resp = save_to_gallery_with_token(
                         token, result_path, job.prompt,
                         mode="image", style_name=job.style_preset,
                         view_name=job.view_name,
-                        original_path=job.original_path)
+                        original_path=job.original_path,
+                        aspect_ratio=getattr(job, "aspect_ratio", None),
+                        long_edge=getattr(job, "long_edge", None),
+                        host=getattr(job, "host", None),
+                        is_interior=getattr(job, "is_interior", None),
+                        duration_ms=duration_ms,
+                        used_style_ref=bool(getattr(job, "style_ref_path", None)))
                     gid = (resp.get("item") or {}).get("id") or resp.get("id")
                     if gid:
                         Monitor.Enter(self._lock)
