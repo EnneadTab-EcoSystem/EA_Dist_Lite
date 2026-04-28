@@ -34,14 +34,16 @@ import ai_render_gallery_module as G
 # user clicks a thumbnail. _SHOW_VIEWER stays None on import failure so
 # callers know to use the legacy path.
 #
-# 2026-04-28 v2 — explicitly invalidate sys.modules entry first. Rhino's
-# IronPython script engine can hold onto a previously-loaded module
-# even after _-RunPythonScript ResetEngine, which left users stuck with
-# the v1 _ImageViewerForm class definition and its broken arg arity
-# even after the source file was rewritten. del sys.modules forces a
-# fresh disk read on every dialog open.
+# 2026-04-28 v3 — explicitly invalidate sys.modules entry FOR EVERY
+# sibling module on each dialog open. Rhino's IronPython script engine
+# holds onto previously-loaded modules even after _-RunPythonScript
+# ResetEngine. v2 only invalidated the viewer; gallery_module changes
+# (row metadata, materialize_thumb, etc.) were silently no-ops because
+# the cached version kept loading.
 import sys as _sys
-for _stale in ("ai_render_image_viewer",):
+import time as _t_modload
+_AI_RENDER_LOAD_TS = _t_modload.strftime("%H:%M:%S")
+for _stale in ("ai_render_image_viewer", "ai_render_gallery_module"):
     if _stale in _sys.modules:
         try:
             del _sys.modules[_stale]
@@ -51,7 +53,8 @@ _SHOW_VIEWER = None
 try:
     from ai_render_image_viewer import show_viewer as _SHOW_VIEWER
     Rhino.RhinoApp.WriteLine(
-        "[ai_render] native image viewer loaded OK (fresh import)")
+        "[ai_render] view2render_left.py loaded {} (viewer OK)".format(
+            _AI_RENDER_LOAD_TS))
 except Exception as _viewer_import_ex:
     try:
         Rhino.RhinoApp.WriteLine(
@@ -2023,39 +2026,48 @@ class AiRenderForm(Eto.Forms.Form):
         self._update_cache_size()
 
     def _render_skeleton_rows(self, count=4):
-        """Show dimmed placeholder rows so an empty gallery during initial
+        """Show dimmed loading rows so an empty gallery during initial
         cloud-fetch doesn't look like 'you have nothing'. Replaced by
         real rows the moment _apply_gallery_rows fires (~0.5-3s after
-        dialog open depending on network)."""
+        dialog open depending on network).
+
+        2026-04-28 v2 — earlier version used Eto.Forms.Panel for
+        placeholders, which doesn't paint BackgroundColor on this
+        Rhino 8 build (same bug that hid the viewer's bar backgrounds).
+        Switched to Scrollable-wrapped Label rows which DO paint.
+        """
         try:
             self._rows_layout.Items.Clear()
             for i in range(count):
-                placeholder = Eto.Forms.Panel()
+                placeholder = Eto.Forms.Scrollable()
                 placeholder.BackgroundColor = _hex_to_color("#FF2A2A2A")
-                placeholder.Padding = Eto.Drawing.Padding(8)
-                placeholder.Height = 90
-                inner = Eto.Forms.DynamicLayout()
-                inner.Spacing = Eto.Drawing.Size(8, 4)
-                inner.BeginHorizontal()
-                # Two skeleton thumbs
-                for _ in (0, 1):
-                    thumb = Eto.Forms.Panel()
-                    thumb.BackgroundColor = _hex_to_color("#FF383838")
-                    thumb.Size = Eto.Drawing.Size(120, 70)
-                    inner.Add(thumb)
-                # Skeleton text bars
-                txt_col = Eto.Forms.DynamicLayout()
-                txt_col.Spacing = Eto.Drawing.Size(0, 6)
-                for w in (200, 320, 280):
-                    bar = Eto.Forms.Panel()
-                    bar.BackgroundColor = _hex_to_color("#FF333333")
-                    bar.Size = Eto.Drawing.Size(w, 10)
-                    txt_col.Add(bar)
-                inner.Add(txt_col, xscale=True)
-                inner.EndHorizontal()
-                placeholder.Content = inner
+                try:
+                    placeholder.Border = Eto.Forms.BorderType.None
+                    placeholder.ExpandContentWidth = True
+                    placeholder.ExpandContentHeight = True
+                except Exception:
+                    pass
+                placeholder.Padding = Eto.Drawing.Padding(16, 28)
+                placeholder.Height = 80
+                label = Eto.Forms.Label(
+                    Text="Loading recent renders... ({}/{})".format(
+                        i + 1, count))
+                try:
+                    label.TextColor = _hex_to_color("#FF6A6A6A")
+                    label.Font = Eto.Drawing.Font(
+                        Eto.Drawing.SystemFont.Default, 11)
+                except Exception:
+                    pass
+                placeholder.Content = label
                 self._rows_layout.Items.Add(
-                    Eto.Forms.StackLayoutItem(placeholder))
+                    Eto.Forms.StackLayoutItem(
+                        placeholder,
+                        Eto.Forms.HorizontalAlignment.Stretch))
+            try:
+                self._rows_layout.Invalidate()
+            except Exception:
+                pass
+            _trace("skeleton rendered {} placeholder rows".format(count))
         except Exception as ex:
             _trace("skeleton render failed: {}".format(ex))
 

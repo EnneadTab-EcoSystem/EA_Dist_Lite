@@ -202,11 +202,14 @@ def _render_current(state):
 
 
 def _apply_image_to_view(state, bmp):
-    try:
-        state.image_view.Image = bmp
-    except Exception as ex:
-        _trace("set Image FAILED: " + str(ex))
-        return
+    """Drawable + custom Paint approach: Eto.Forms.ImageView renders
+    the bitmap at NATIVE pixel size regardless of its .Size, so the
+    1:1 / Fit toggle was clipping rather than scaling. We use an
+    Eto.Forms.Drawable and draw the bitmap into it at the right rect
+    for each mode. Fit mode = bitmap scaled to drawable client size,
+    centered. 1:1 mode = drawable expanded to bitmap native size and
+    bitmap drawn at 0,0; Scrollable handles pan."""
+    state.loaded_bmp = bmp
     bw = bh = 0
     try:
         bw, bh = bmp.Size.Width, bmp.Size.Height
@@ -214,49 +217,41 @@ def _apply_image_to_view(state, bmp):
         pass
     if bw <= 0 or bh <= 0:
         return
-    if not state.fit_mode:
-        try:
-            state.image_view.Size = Eto.Drawing.Size(int(bw), int(bh))
-        except Exception:
-            pass
-        return
-    avail_w = avail_h = 0
     try:
-        sz = state.scroll.Size
-        avail_w = max(0, int(sz.Width) - 16)
-        avail_h = max(0, int(sz.Height) - 16)
-    except Exception:
-        pass
-    if avail_w <= 0 or avail_h <= 0:
-        try:
-            state.image_view.Size = Eto.Drawing.Size(int(bw), int(bh))
-        except Exception:
-            pass
-        return
-    ratio = min(float(avail_w) / bw, float(avail_h) / bh, 1.0)
-    new_w = max(1, int(bw * ratio))
-    new_h = max(1, int(bh * ratio))
-    try:
-        state.image_view.Size = Eto.Drawing.Size(new_w, new_h)
+        if state.fit_mode:
+            # Match Drawable to scrollable client size so it fills,
+            # doesn't trigger scroll. Paint computes the inscribed rect.
+            sz = state.scroll.Size
+            if sz.Width > 0 and sz.Height > 0:
+                state.drawable.Size = Eto.Drawing.Size(
+                    int(sz.Width), int(sz.Height))
+        else:
+            # 1:1 — Drawable is bitmap-sized so the Scrollable enables
+            # scrollbars and the user can pan to see the full pixel grid.
+            state.drawable.Size = Eto.Drawing.Size(int(bw), int(bh))
     except Exception as ex:
-        _trace("set Size FAILED: " + str(ex))
+        _trace("set Drawable.Size FAILED: " + str(ex))
+    try:
+        state.drawable.Invalidate()
+    except Exception as ex:
+        _trace("Invalidate FAILED: " + str(ex))
 
 
-_CONTAINER_TYPES = (
-    'Panel', 'Scrollable', 'GroupBox',
-    'DynamicLayout', 'StackLayout', 'TableLayout', 'PixelLayout',
-    'TabControl', 'TabPage', 'Splitter',
+# Leaf widget types whose BackgroundColor we should NOT touch (they
+# manage their own theming and overriding washes out contrast).
+_LEAF_TYPES = (
+    'Button', 'Label', 'TextBox', 'TextArea', 'ImageView',
+    'CheckBox', 'RadioButton', 'ComboBox', 'DropDown', 'ListBox',
+    'Slider', 'NumericStepper', 'Spinner', 'ProgressBar',
 )
 
 def _force_opaque_tree(control, color):
-    """Recursively set BackgroundColor on every CONTAINER in the
-    Eto control tree (Panel/Scrollable/DynamicLayout/etc.) — not on
-    leaf widgets like Button/Label/TextArea/ImageView, which need
-    their own background to keep contrast and theming.
-    Some containers (DynamicLayout especially) don't paint their
-    BackgroundColor by default, so the parent Form's surface bleeds
-    through gaps between explicit-paint children. Called once after
-    the form is built."""
+    """Inverted approach (2026-04-28 v2): paint BackgroundColor on
+    EVERY control in the tree except known leaf widgets. Earlier
+    container-type allow-list missed Eto's wrapped class names like
+    'Eto.Wpf.Forms.Controls.PanelHandler' on Rhino 8, so the
+    DynamicLayouts stayed transparent and the parent dialog bled
+    through. Now we paint by default and only skip explicit leaves."""
     if control is None:
         return
     cls_name = ""
@@ -264,8 +259,8 @@ def _force_opaque_tree(control, color):
         cls_name = type(control).__name__
     except Exception:
         pass
-    is_container = any(t in cls_name for t in _CONTAINER_TYPES)
-    if is_container:
+    is_leaf = any(t in cls_name for t in _LEAF_TYPES)
+    if not is_leaf:
         try:
             if hasattr(control, 'BackgroundColor'):
                 control.BackgroundColor = color
@@ -386,18 +381,41 @@ def _build_form(state):
     bar.EndHorizontal()
 
     bar.EndVertical()
-    bar_panel = Eto.Forms.Panel()
+    # 2026-04-28 v8 — Scrollable from v7 fixed paint but introduced a
+    # horizontal scrollbar because DynamicLayout's natural width
+    # exceeded the scrollable's client area. TableLayout paints its
+    # BackgroundColor reliably AND doesn't introduce scrollbars; it
+    # also auto-stretches its single cell to fill, which is exactly
+    # what we want for a "background-painting wrapper".
+    bar_panel = Eto.Forms.TableLayout()
     try:
         bar_panel.BackgroundColor = _hex_to_color("#FF2A2A2A")
+        bar_panel.Padding = Eto.Drawing.Padding(0)
+        bar_panel.Spacing = Eto.Drawing.Size(0, 0)
     except Exception:
         pass
-    bar_panel.Content = bar
+    bar_panel.Rows.Add(Eto.Forms.TableRow(
+        Eto.Forms.TableCell(bar, True)))
+    # Wrap in BeginVertical so each Add() becomes a full-width row
+    # instead of a horizontal slot. Without this, DynamicLayout's
+    # implicit horizontal mode left bar_panel and ctrl_panel at their
+    # natural width with burgundy form chrome visible at the edges.
+    root.BeginVertical()
     root.Add(bar_panel)
 
     # ---------------- Image area ----------------
-    state.image_view = Eto.Forms.ImageView()
+    # Drawable + custom Paint so 1:1 vs Fit actually scales the bitmap.
+    # ImageView renders at native pixel size regardless of its Size,
+    # which made the toggle a no-op (just clipped/showed full bitmap).
+    state.drawable = Eto.Forms.Drawable()
+    try:
+        state.drawable.BackgroundColor = _hex_to_color("#FF1A1A1A")
+    except Exception:
+        pass
+    state.drawable.Paint += _make_paint_handler(state)
+    state.image_view = state.drawable  # keep field name for back-compat
     state.scroll = Eto.Forms.Scrollable()
-    state.scroll.Content = state.image_view
+    state.scroll.Content = state.drawable
     try:
         state.scroll.BackgroundColor = _hex_to_color("#FF1A1A1A")
         state.scroll.ExpandContentWidth = True
@@ -417,10 +435,11 @@ def _build_form(state):
             Eto.Drawing.SystemFont.Default, 10)
     except Exception:
         pass
-    state.prompt_panel = Eto.Forms.Panel()
+    state.prompt_panel = Eto.Forms.TableLayout()
     try:
         state.prompt_panel.BackgroundColor = _hex_to_color("#FF222222")
         state.prompt_panel.Padding = Eto.Drawing.Padding(8, 6)
+        state.prompt_panel.Spacing = Eto.Drawing.Size(0, 0)
     except Exception:
         pass
     p_layout = Eto.Forms.DynamicLayout()
@@ -435,7 +454,10 @@ def _build_form(state):
     p_layout.Add(p_label)
     p_layout.Add(state.tbox_prompt, xscale=True)
     p_layout.EndHorizontal()
-    state.prompt_panel.Content = p_layout
+    # TableLayout doesn't have .Content; add p_layout as a single
+    # full-width row (scaleWidth=True).
+    state.prompt_panel.Rows.Add(Eto.Forms.TableRow(
+        Eto.Forms.TableCell(p_layout, True)))
     try:
         state.prompt_panel.Height = 110
     except Exception:
@@ -530,21 +552,34 @@ def _build_form(state):
         pass
     ctrl.Add(hint, xscale=True)
     ctrl.EndHorizontal()
-    ctrl_panel = Eto.Forms.Panel()
+    ctrl_panel = Eto.Forms.TableLayout()
     try:
         ctrl_panel.BackgroundColor = _hex_to_color("#FF2A2A2A")
+        ctrl_panel.Padding = Eto.Drawing.Padding(0)
+        ctrl_panel.Spacing = Eto.Drawing.Size(0, 0)
     except Exception:
         pass
-    ctrl_panel.Content = ctrl
+    ctrl_panel.Rows.Add(Eto.Forms.TableRow(
+        Eto.Forms.TableCell(ctrl, True)))
     root.Add(ctrl_panel)
+    root.EndVertical()
 
-    # Wrap layout in a hard-painted opaque Panel. Eto Form.BackgroundColor
-    # on Rhino 8 doesn't reliably paint the client area — gaps in the
-    # DynamicLayout let the parent AiRenderForm's burgundy tint bleed
-    # through, which is what made the viewer look "red semi-transparent".
-    outer = Eto.Forms.Panel()
+    # 2026-04-28 v10 — Empirical evidence after 4 iterations:
+    # - Eto.Forms.Panel: BackgroundColor silently NO-OP on Rhino 8 build
+    # - Eto.Forms.TableLayout: BackgroundColor ALSO silent NO-OP
+    # - Eto.Forms.Scrollable: paints reliably (image area proof)
+    # - Eto.Forms.Drawable: paints reliably (custom Paint event)
+    # Only the last two work. Using Scrollable as outer wrapper because
+    # it can hold a layout child via .Content. Trade-off: the inner bar
+    # color distinctions are lost (everything reads uniform dark grey)
+    # because we can't reliably paint differentiated bars. Accepting
+    # that trade-off in exchange for getting opacity right.
+    outer = Eto.Forms.Scrollable()
     try:
         outer.BackgroundColor = _hex_to_color("#FF1A1A1A")
+        outer.Border = Eto.Forms.BorderType.None
+        outer.ExpandContentWidth = True
+        outer.ExpandContentHeight = True
         outer.Padding = Eto.Drawing.Padding(0)
     except Exception:
         pass
@@ -562,8 +597,15 @@ def _build_form(state):
         f.Shown += _make_shown_handler(state)
     except Exception as ex:
         _trace("Shown subscribe failed (non-fatal): " + str(ex))
+    resize_handler = _make_resize_handler(state)
     try:
-        f.SizeChanged += _make_resize_handler(state)
+        f.SizeChanged += resize_handler
+    except Exception:
+        pass
+    # Also subscribe on the Scrollable directly — Form.SizeChanged
+    # doesn't always propagate to inner content sizing on Rhino 8 Eto.
+    try:
+        state.scroll.SizeChanged += resize_handler
     except Exception:
         pass
     # KeyDown subscribed on multiple controls so arrow keys still fire
@@ -584,6 +626,77 @@ def _build_form(state):
 # Closure factories. Separate named functions instead of inline lambdas
 # so stack traces point at meaningful sites.
 
+def _make_paint_handler(state):
+    """Per-frame paint for the image Drawable. Reads state.loaded_bmp
+    and state.fit_mode; draws scaled-to-fit (centered) or 1:1 native.
+    Uses the SCROLLABLE's size for fit calc so resizes are honored
+    even when Drawable.Size was set to a stale value at load time."""
+    def _on_paint(sender, e):
+        try:
+            g = e.Graphics
+        except Exception:
+            return
+        try:
+            g.Clear(_hex_to_color("#FF1A1A1A"))
+        except Exception:
+            pass
+        bmp = state.loaded_bmp
+        if bmp is None:
+            return
+        bw = bh = 0
+        try:
+            bw, bh = bmp.Size.Width, bmp.Size.Height
+        except Exception:
+            return
+        if bw <= 0 or bh <= 0:
+            return
+        # Use ClipRectangle FIRST — it's the actual paint surface size
+        # and is always valid inside a Paint event. Drawable.Size and
+        # Scrollable.Size both returned stale/wrong values in earlier
+        # iterations, breaking centering.
+        dw = dh = 0
+        try:
+            cr = e.ClipRectangle
+            dw, dh = int(cr.Width), int(cr.Height)
+        except Exception:
+            pass
+        if dw <= 0 or dh <= 0:
+            try:
+                sz = state.drawable.Size
+                dw, dh = int(sz.Width), int(sz.Height)
+            except Exception:
+                pass
+        if dw <= 0 or dh <= 0:
+            try:
+                sz = state.scroll.Size
+                dw, dh = int(sz.Width), int(sz.Height)
+            except Exception:
+                dw, dh = bw, bh
+
+        if state.fit_mode and dw > 0 and dh > 0:
+            ratio = min(float(dw) / bw, float(dh) / bh, 1.0)
+            new_w = max(1, int(bw * ratio))
+            new_h = max(1, int(bh * ratio))
+            x = max(0, (dw - new_w) // 2)
+            y = max(0, (dh - new_h) // 2)
+            _trace("paint fit dw={} dh={} new={}x{} at ({},{})".format(
+                dw, dh, new_w, new_h, x, y))
+            try:
+                g.DrawImage(bmp,
+                            Eto.Drawing.RectangleF(
+                                float(x), float(y),
+                                float(new_w), float(new_h)))
+            except Exception as ex:
+                _trace("DrawImage fit FAILED: " + str(ex))
+        else:
+            _trace("paint 1:1 bw={} bh={}".format(bw, bh))
+            try:
+                g.DrawImage(bmp, 0.0, 0.0, float(bw), float(bh))
+            except Exception as ex:
+                _trace("DrawImage 1:1 FAILED: " + str(ex))
+    return _on_paint
+
+
 def _make_shown_handler(state):
     def _on_shown(sender, e):
         if not state.first_render_done:
@@ -601,6 +714,12 @@ def _make_resize_handler(state):
     def _on_resized(sender, e):
         if state.first_render_done and state.fit_mode and state.loaded_bmp is not None:
             _apply_image_to_view(state, state.loaded_bmp)
+            # Belt-and-suspenders: also force the Drawable to repaint
+            # so paint reads the freshly-changed Scrollable size.
+            try:
+                state.drawable.Invalidate()
+            except Exception:
+                pass
     return _on_resized
 
 
