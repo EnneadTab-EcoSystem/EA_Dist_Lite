@@ -49,7 +49,7 @@ from EnneadTab.RHINO import RHINO_UI
 # viewer module changes, the Rhino command line shows exactly which
 # version is running. Format: BUILD_TAG must include the iteration
 # version so a cached old viewer can be spotted at a glance.
-_VIEWER_BUILD_TAG = "v4.1-file-logging"
+_VIEWER_BUILD_TAG = "v4.6-scrollable-panels-and-hint-wrap"
 
 
 # v4.1 (2026-04-30) - file logging.
@@ -344,7 +344,20 @@ def _init_transform(state):
     try:
         m = Eto.Drawing.Matrix.Create()
         if state.fit_mode:
-            scale = min(float(dw) / bw, float(dh) / bh, 1.0)
+            # v4.2 (2026-04-30): drop the 1.0 cap that the rafntor
+            # DragZoomImageView pattern uses. Cap was correct for
+            # photo-viewer use cases where upscaling a small image
+            # produces visible blur (better to show 1:1 native than
+            # an upscaled blur). HERE the bitmap is often a 512px
+            # cloud thumbnail - capping at 1.0 leaves it as a tiny
+            # patch in a 2667x590 viewport (~19% width fill). For an
+            # architectural-render viewer "fit" must mean "fill the
+            # available area while preserving aspect", regardless of
+            # whether that requires upscaling. Eto's DrawImage uses
+            # bilinear by default which is acceptable for thumb -> fit.
+            # If full-res cloud download lands later (separate bug),
+            # the upscale becomes much smaller and looks crisp.
+            scale = min(float(dw) / bw, float(dh) / bh)
             new_w = bw * scale
             new_h = bh * scale
             tx = (dw - new_w) / 2.0
@@ -354,11 +367,24 @@ def _init_transform(state):
             _trace("_init_transform fit: bmp={}x{} drawable={}x{} scale={:.4f} translate=({:.1f},{:.1f}) drawn={:.0f}x{:.0f}".format(
                 bw, bh, dw, dh, scale, tx, ty, new_w, new_h))
         else:
-            # 1:1 mode: identity matrix - bitmap drawn at native pixel
-            # size starting at (0, 0). User sees the top-left chunk if
-            # bitmap > drawable. (Pan deferred to v5.)
-            _trace("_init_transform 1:1: bmp={}x{} drawable={}x{} (identity matrix)".format(
-                bw, bh, dw, dh))
+            # v4.3 (2026-04-30): 1:1 mode centers the bitmap rather
+            # than pinning to top-left.
+            # v4 used the rafntor default (identity matrix, draw at
+            # (0,0)) which left small bitmaps pinned to the upper-
+            # left of a huge viewer with empty black space everywhere
+            # else. User reported this as "still issue on 1:1 being
+            # top left corner" - correct, that pattern only makes
+            # sense if mouse-drag pan is implemented (DragZoomImageView
+            # has it, our v4 doesn't yet). Centering at native size
+            # is the right default until pan lands. If bitmap is
+            # larger than drawable in either axis, translate goes
+            # negative and the bitmap clips off-screen edges - user
+            # sees the central pixels. (Pan still deferred to v5.)
+            tx = (dw - bw) / 2.0
+            ty = (dh - bh) / 2.0
+            m.Translate(float(tx), float(ty))
+            _trace("_init_transform 1:1: bmp={}x{} drawable={}x{} translate=({:.1f},{:.1f}) (centered at native size)".format(
+                bw, bh, dw, dh, tx, ty))
         state._transform = m
     except Exception as ex:
         _trace("_init_transform FAILED: " + str(ex))
@@ -384,13 +410,25 @@ _LEAF_TYPES = (
     'Slider', 'NumericStepper', 'Spinner', 'ProgressBar',
 )
 
-def _force_opaque_tree(control, color):
+def _force_opaque_tree(control, color, _depth=0, _stats=None):
     """Inverted approach (2026-04-28 v2): paint BackgroundColor on
     EVERY control in the tree except known leaf widgets. Earlier
     container-type allow-list missed Eto's wrapped class names like
     'Eto.Wpf.Forms.Controls.PanelHandler' on Rhino 8, so the
     DynamicLayouts stayed transparent and the parent dialog bled
-    through. Now we paint by default and only skip explicit leaves."""
+    through. Now we paint by default and only skip explicit leaves.
+
+    v4.4 (2026-04-30): diagnostic mode. Walks the tree and logs
+    every control, its class name, whether BackgroundColor exists,
+    whether the assignment "took" (read-back compare). The log will
+    show exactly which control types silently no-op the assignment -
+    that's the burgundy-bleed root cause.
+    """
+    is_root_call = _stats is None
+    if is_root_call:
+        _stats = {"painted": 0, "leaf_skipped": 0, "no_attr": 0,
+                  "no_op": 0, "fail": 0, "depth": 0, "by_class": {}}
+    _stats["depth"] = max(_stats["depth"], _depth)
     if control is None:
         return
     cls_name = ""
@@ -398,18 +436,45 @@ def _force_opaque_tree(control, color):
         cls_name = type(control).__name__
     except Exception:
         pass
+    _stats["by_class"][cls_name] = _stats["by_class"].get(cls_name, 0) + 1
     is_leaf = any(t in cls_name for t in _LEAF_TYPES)
-    if not is_leaf:
+    indent = "  " * _depth
+    if is_leaf:
+        _stats["leaf_skipped"] += 1
+    else:
         try:
             if hasattr(control, 'BackgroundColor'):
+                # v4.4: read-back compare to detect silent no-op.
+                # Cast both to argb int via tostring for comparison.
                 control.BackgroundColor = color
-        except Exception:
-            pass
+                try:
+                    actual = control.BackgroundColor
+                    target_argb = (color.A, color.R, color.G, color.B)
+                    actual_argb = (actual.A, actual.R, actual.G, actual.B)
+                    if abs(target_argb[0] - actual_argb[0]) < 0.01 and \
+                       abs(target_argb[1] - actual_argb[1]) < 0.01 and \
+                       abs(target_argb[2] - actual_argb[2]) < 0.01 and \
+                       abs(target_argb[3] - actual_argb[3]) < 0.01:
+                        _stats["painted"] += 1
+                        _trace("{}paint OK: {}".format(indent, cls_name))
+                    else:
+                        _stats["no_op"] += 1
+                        _trace("{}paint NO-OP: {} (set->{} got->{})".format(
+                            indent, cls_name, target_argb, actual_argb))
+                except Exception:
+                    _stats["painted"] += 1  # assume took if read-back fails
+                    _trace("{}paint set: {} (read-back failed)".format(indent, cls_name))
+            else:
+                _stats["no_attr"] += 1
+                _trace("{}no BackgroundColor attr: {}".format(indent, cls_name))
+        except Exception as ex:
+            _stats["fail"] += 1
+            _trace("{}paint FAIL: {} ({})".format(indent, cls_name, ex))
     # Walk Content (Panel, ScrollView, etc.)
     try:
         child = getattr(control, 'Content', None)
         if child is not None and child is not control:
-            _force_opaque_tree(child, color)
+            _force_opaque_tree(child, color, _depth + 1, _stats)
     except Exception:
         pass
     # Walk Items (DynamicLayout, StackLayout, etc.)
@@ -419,7 +484,7 @@ def _force_opaque_tree(control, color):
             for it in items:
                 # DynamicLayoutItem / StackLayoutItem expose .Control
                 inner = getattr(it, 'Control', it)
-                _force_opaque_tree(inner, color)
+                _force_opaque_tree(inner, color, _depth + 1, _stats)
     except Exception:
         pass
     # Walk Rows (TableLayout)
@@ -431,9 +496,20 @@ def _force_opaque_tree(control, color):
                 if cells:
                     for cell in cells:
                         inner = getattr(cell, 'Control', cell)
-                        _force_opaque_tree(inner, color)
+                        _force_opaque_tree(inner, color, _depth + 1, _stats)
     except Exception:
         pass
+    if is_root_call:
+        _trace("===== _force_opaque_tree summary =====")
+        _trace("  painted_ok={} no_op={} no_attr={} leaf_skipped={} fail={} max_depth={}".format(
+            _stats["painted"], _stats["no_op"], _stats["no_attr"],
+            _stats["leaf_skipped"], _stats["fail"], _stats["depth"]))
+        # Class histogram - order by count
+        items_sorted = sorted(_stats["by_class"].items(),
+                              key=lambda kv: -kv[1])
+        _trace("  classes seen: " + ", ".join(
+            "{}={}".format(k, v) for k, v in items_sorted))
+        _trace("======================================")
 
 
 def _build_form(state):
@@ -520,21 +596,36 @@ def _build_form(state):
     bar.EndHorizontal()
 
     bar.EndVertical()
-    # 2026-04-28 v8 — Scrollable from v7 fixed paint but introduced a
-    # horizontal scrollbar because DynamicLayout's natural width
-    # exceeded the scrollable's client area. TableLayout paints its
-    # BackgroundColor reliably AND doesn't introduce scrollbars; it
-    # also auto-stretches its single cell to fill, which is exactly
-    # what we want for a "background-painting wrapper".
-    bar_panel = Eto.Forms.TableLayout()
+    # ----- bar_panel container decision history -----
+    # v7 (2026-04-28): Scrollable wrapper - paint worked but
+    #   introduced a horizontal scrollbar because DynamicLayout's
+    #   natural width exceeded the scrollable's client area.
+    # v8 (2026-04-28): switched to TableLayout. The carry-forward
+    #   notes claimed TableLayout paints its BackgroundColor; later
+    #   empirical evidence (v4.4 readback log + v4.5 walker
+    #   showing painted_ok=16 across all 9 TableLayouts BUT user
+    #   reports burgundy still visible) proved TableLayout STORES
+    #   the BackgroundColor without rendering it on this Rhino 8
+    #   build. v8 was wrong.
+    # v4.6 (2026-04-30 this commit): back to Scrollable, but with
+    #   the v7 horizontal-scrollbar concern addressed by:
+    #   - hint label gets WrapMode.Word so it doesn't force the
+    #     button row's column 0 to ~722 px (root cause of #4)
+    #   - the inner content's natural width should now fit within
+    #     the parent layout cell, so the wrapper Scrollable's
+    #     horizontal scroll never triggers in practice
+    #   The Scrollable+ExpandContent IS the proven paint-reliable
+    #   primitive on Rhino 8 per the carry-forward memory.
+    bar_panel = Eto.Forms.Scrollable()
     try:
         bar_panel.BackgroundColor = _hex_to_color("#FF2A2A2A")
+        bar_panel.Border = Eto.Forms.BorderType.None
+        bar_panel.ExpandContentWidth = True
+        bar_panel.ExpandContentHeight = True
         bar_panel.Padding = Eto.Drawing.Padding(0)
-        bar_panel.Spacing = Eto.Drawing.Size(0, 0)
     except Exception:
         pass
-    bar_panel.Rows.Add(Eto.Forms.TableRow(
-        Eto.Forms.TableCell(bar, True)))
+    bar_panel.Content = bar
     # Wrap in BeginVertical so each Add() becomes a full-width row
     # instead of a horizontal slot. Without this, DynamicLayout's
     # implicit horizontal mode left bar_panel and ctrl_panel at their
@@ -597,11 +688,19 @@ def _build_form(state):
             Eto.Drawing.SystemFont.Default, 10)
     except Exception:
         pass
-    state.prompt_panel = Eto.Forms.TableLayout()
+    # v4.6 (2026-04-30): Scrollable wrapper instead of TableLayout
+    # for paint reliability (TableLayout silently ignores
+    # BackgroundColor at render time on Rhino 8 - proven empirically
+    # in v4.5 log: readback returned target color but user reports
+    # burgundy still visible). Scrollable+ExpandContent is the
+    # proven paint-reliable primitive per carry-forward memory.
+    state.prompt_panel = Eto.Forms.Scrollable()
     try:
         state.prompt_panel.BackgroundColor = _hex_to_color("#FF222222")
+        state.prompt_panel.Border = Eto.Forms.BorderType.None
+        state.prompt_panel.ExpandContentWidth = True
+        state.prompt_panel.ExpandContentHeight = True
         state.prompt_panel.Padding = Eto.Drawing.Padding(8, 6)
-        state.prompt_panel.Spacing = Eto.Drawing.Size(0, 0)
     except Exception:
         pass
     p_layout = Eto.Forms.DynamicLayout()
@@ -616,10 +715,7 @@ def _build_form(state):
     p_layout.Add(p_label)
     p_layout.Add(state.tbox_prompt, xscale=True)
     p_layout.EndHorizontal()
-    # TableLayout doesn't have .Content; add p_layout as a single
-    # full-width row (scaleWidth=True).
-    state.prompt_panel.Rows.Add(Eto.Forms.TableRow(
-        Eto.Forms.TableCell(p_layout, True)))
+    state.prompt_panel.Content = p_layout
     try:
         state.prompt_panel.Height = 110
     except Exception:
@@ -710,19 +806,36 @@ def _build_form(state):
         hint.TextColor = _hex_to_color("#7A7A7A")
         hint.Font = Eto.Drawing.Font(Eto.Drawing.SystemFont.Default, 9)
         hint.TextAlignment = Eto.Forms.TextAlignment.Center
+        # v4.6 (2026-04-30) #4 fix: WrapMode.Word lets the label
+        # wrap to fit allocated width instead of demanding its
+        # full natural width (~722px unwrapped). v4.4 layout walk
+        # showed this label sits in the same DynamicLayout as the
+        # button row above and DynamicLayout shares column widths
+        # across BeginHorizontal blocks, so the unwrapped 722px
+        # cascaded up to force the entire viewer content to 2667
+        # wide -> oversized horizontal scrollbar at the bottom of
+        # the dialog. With wrap enabled, the label takes whatever
+        # the parent layout allocates (the viewport width) and
+        # wraps to multiple lines if needed.
+        hint.Wrap = Eto.Forms.WrapMode.Word
     except Exception:
         pass
     ctrl.Add(hint, xscale=True)
     ctrl.EndHorizontal()
-    ctrl_panel = Eto.Forms.TableLayout()
+    # v4.6 (2026-04-30): Scrollable wrapper instead of TableLayout
+    # for paint reliability. Same reasoning as bar_panel and
+    # prompt_panel - TableLayout silently ignores BackgroundColor
+    # at render time on Rhino 8.
+    ctrl_panel = Eto.Forms.Scrollable()
     try:
         ctrl_panel.BackgroundColor = _hex_to_color("#FF2A2A2A")
+        ctrl_panel.Border = Eto.Forms.BorderType.None
+        ctrl_panel.ExpandContentWidth = True
+        ctrl_panel.ExpandContentHeight = True
         ctrl_panel.Padding = Eto.Drawing.Padding(0)
-        ctrl_panel.Spacing = Eto.Drawing.Size(0, 0)
     except Exception:
         pass
-    ctrl_panel.Rows.Add(Eto.Forms.TableRow(
-        Eto.Forms.TableCell(ctrl, True)))
+    ctrl_panel.Content = ctrl
     root.Add(ctrl_panel)
     root.EndVertical()
 
@@ -767,12 +880,21 @@ def _build_form(state):
         pass
     outer.Content = root
     f.Content = outer
-    # 2026-04-28 — even with the outer Panel set, DynamicLayout
+    # 2026-04-28: even with the outer Panel set, DynamicLayout
     # containers don't paint their BackgroundColor, so the parent
     # AiRenderForm's burgundy was leaking through the gaps between
     # explicit panels. Recursively force BackgroundColor on every
-    # container in the tree as a brute-force opacity guarantee. Mirrors
-    # what RHINO_UI.apply_dark_style does for the main dialog.
+    # container in the tree as a brute-force opacity guarantee.
+    # Mirrors what RHINO_UI.apply_dark_style does for the main
+    # dialog.
+    # 2026-04-30 v4.5: this build-time call is kept BUT is mostly
+    # ineffective (the v4.4 log proves it only paints depth=1 -
+    # Scrollable + root DynamicLayout). DynamicLayout's children
+    # aren't exposed via Rows/Items until the form is realized.
+    # The load-bearing call is now in _make_shown_handler which
+    # runs AFTER f.Show() when the tree is fully walkable. Kept
+    # here as belt-and-suspenders (paints the 2 reachable
+    # controls; harmless if it duplicates the Shown-time pass).
     _force_opaque_tree(outer, _hex_to_color("#FF1A1A1A"))
 
     try:
@@ -926,6 +1048,74 @@ def _make_drawable_size_handler(state):
     return _on_drawable_size
 
 
+def _walk_layout_for_diag(control, _depth=0, _stats=None):
+    """v4.4 (2026-04-30): one-shot layout-diagnosis walker. Logs
+    every control's class, size, and position so we can spot what's
+    eating the horizontal scrollbar. The OUTER Scrollable shows a
+    horizontal scrollbar when its content has natural width >
+    viewport width. This walker tells us which control demands the
+    excess width by logging Size + Width + Location for every node.
+    """
+    is_root_call = _stats is None
+    if is_root_call:
+        _stats = {"max_w": 0, "widest_class": "?"}
+    if control is None:
+        return _stats
+    cls_name = ""
+    try:
+        cls_name = type(control).__name__
+    except Exception:
+        pass
+    indent = "  " * _depth
+    sz_str = "?"
+    loc_str = "?"
+    try:
+        sz = control.Size
+        sz_str = "{}x{}".format(int(sz.Width), int(sz.Height))
+        if int(sz.Width) > _stats["max_w"]:
+            _stats["max_w"] = int(sz.Width)
+            _stats["widest_class"] = cls_name
+    except Exception:
+        pass
+    try:
+        loc = control.Location
+        loc_str = "({},{})".format(int(loc.X), int(loc.Y))
+    except Exception:
+        pass
+    _trace("{}{} size={} loc={}".format(indent, cls_name, sz_str, loc_str))
+    try:
+        child = getattr(control, 'Content', None)
+        if child is not None and child is not control:
+            _walk_layout_for_diag(child, _depth + 1, _stats)
+    except Exception:
+        pass
+    try:
+        items = getattr(control, 'Items', None)
+        if items is not None:
+            for it in items:
+                inner = getattr(it, 'Control', it)
+                _walk_layout_for_diag(inner, _depth + 1, _stats)
+    except Exception:
+        pass
+    try:
+        rows = getattr(control, 'Rows', None)
+        if rows is not None:
+            for row in rows:
+                cells = getattr(row, 'Cells', None)
+                if cells:
+                    for cell in cells:
+                        inner = getattr(cell, 'Control', cell)
+                        _walk_layout_for_diag(inner, _depth + 1, _stats)
+    except Exception:
+        pass
+    if is_root_call:
+        _trace("===== layout summary =====")
+        _trace("  widest control: {} at width={}".format(
+            _stats["widest_class"], _stats["max_w"]))
+        _trace("==========================")
+    return _stats
+
+
 def _make_shown_handler(state):
     def _on_shown(sender, e):
         if not state.first_render_done:
@@ -936,6 +1126,34 @@ def _make_shown_handler(state):
                     state.drawable.Size))
             except Exception:
                 pass
+            # ----- _force_opaque_tree call-site decision history -----
+            # 2026-04-28 v10: called from build_form() right after
+            #   outer.Content = root, BEFORE f.Show(). At that point
+            #   the DynamicLayout's children are stored internally
+            #   via BeginVertical/Add but NOT yet exposed via
+            #   Rows/Items collections. Walker stopped at depth 1
+            #   (only Scrollable + root DynamicLayout painted). All
+            #   inner TableLayouts stayed transparent -> burgundy
+            #   bleed.
+            # 2026-04-30 v4.5 (this commit): proven by v4.4 log:
+            #   "painted_ok=2 ... classes seen: Scrollable=1,
+            #   DynamicLayout=1" vs the layout walk at Shown-time
+            #   descending 9+ levels through every TableLayout. The
+            #   tree is only walkable AFTER the form is shown.
+            #   Move the paint sweep here so it actually reaches
+            #   every container.
+            try:
+                _trace("===== Shown-time _force_opaque_tree =====")
+                _force_opaque_tree(state.form, _hex_to_color("#FF1A1A1A"))
+            except Exception as ex:
+                _trace("Shown-time _force_opaque_tree FAILED: " + str(ex))
+            # v4.4 layout diagnostic - kept on (cheap one-shot, useful
+            # for future iterations).
+            try:
+                _trace("===== Shown-time layout walk =====")
+                _walk_layout_for_diag(state.form)
+            except Exception as ex:
+                _trace("layout walk FAILED: " + str(ex))
         _render_current(state)
     return _on_shown
 
