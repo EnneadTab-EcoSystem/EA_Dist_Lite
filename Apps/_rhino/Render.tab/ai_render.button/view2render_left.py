@@ -40,10 +40,24 @@ import ai_render_gallery_module as G
 # ResetEngine. v2 only invalidated the viewer; gallery_module changes
 # (row metadata, materialize_thumb, etc.) were silently no-ops because
 # the cached version kept loading.
+# 2026-04-30 v4 — extended the invalidation list to cover the lib
+# modules touched by Phase A: EnneadTab.COLOR (added hex_to_rgba) and
+# EnneadTab.RHINO.RHINO_UI (added hex_to_eto_color). Without this, a
+# stale-cache user picks up b9f22fc06's new lib symbols against the
+# old in-memory module dict, raising AttributeError on first call OR
+# silently routing to the old _hex_to_color path. Add new entries
+# here whenever a lib module is touched by an AI Render iteration.
 import sys as _sys
 import time as _t_modload
 _AI_RENDER_LOAD_TS = _t_modload.strftime("%H:%M:%S")
-for _stale in ("ai_render_image_viewer", "ai_render_gallery_module"):
+_STALE_MODULES = (
+    "ai_render_image_viewer",
+    "ai_render_gallery_module",
+    "EnneadTab.COLOR",
+    "EnneadTab.RHINO.RHINO_UI",
+    "EnneadTab.RHINO",  # parent package - forces reimport of children
+)
+for _stale in _STALE_MODULES:
     if _stale in _sys.modules:
         try:
             del _sys.modules[_stale]

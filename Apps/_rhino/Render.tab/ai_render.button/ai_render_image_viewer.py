@@ -34,6 +34,7 @@ Design notes (2026-04-28 v5):
 """
 
 import os
+import time as _t_viewer_load
 
 import Rhino  # pyright: ignore
 import Eto    # pyright: ignore
@@ -42,11 +43,88 @@ import System  # pyright: ignore
 from EnneadTab.RHINO import RHINO_UI
 
 
-def _trace(msg):
+# v4 self-identifying load trace - every fresh import announces its
+# build version + load time. Lets the user verify a stale cache isn't
+# masking the latest patch. If you bump this build tag whenever the
+# viewer module changes, the Rhino command line shows exactly which
+# version is running. Format: BUILD_TAG must include the iteration
+# version so a cached old viewer can be spotted at a glance.
+_VIEWER_BUILD_TAG = "v4.1-file-logging"
+
+
+# v4.1 (2026-04-30) - file logging.
+# RhinoApp.WriteLine writes to the in-app command line which scrolls,
+# gets buffer-truncated, and forces the user to copy-paste to share
+# with collaborators. _trace() now ALSO appends to a disk log so the
+# full timeline survives across Rhino restarts and is recoverable
+# after a crash. File path matches view2render_left.py's _trace:
+# %APPDATA%/EnneadTab/ai_render_trace.log - same file, both modules'
+# events interleave in time order.
+_TRACE_LOG_PATH = None
+
+
+def _trace_file_path():
+    global _TRACE_LOG_PATH
+    if _TRACE_LOG_PATH is not None:
+        return _TRACE_LOG_PATH
     try:
-        Rhino.RhinoApp.WriteLine("[ai_render_viewer] " + str(msg))
+        base = os.environ.get("APPDATA") or os.path.expanduser("~")
+        d = os.path.join(base, "EnneadTab")
+        if not os.path.isdir(d):
+            try:
+                os.makedirs(d)
+            except Exception:
+                pass
+        _TRACE_LOG_PATH = os.path.join(d, "ai_render_trace.log")
+    except Exception:
+        _TRACE_LOG_PATH = None
+    return _TRACE_LOG_PATH
+
+
+def _trace(msg):
+    """Dual-write trace: in-app command line (live debugging) AND
+    disk log (post-hoc analysis, crash recovery, share-with-Claude).
+    Both paths swallow exceptions so a logging failure never breaks
+    the viewer.
+    """
+    line = "[ai_render_viewer] " + str(msg)
+    try:
+        Rhino.RhinoApp.WriteLine(line)
     except Exception:
         pass
+    try:
+        path = _trace_file_path()
+        if path is None:
+            return
+        from datetime import datetime
+        # Compute HH:MM:SS.mmm manually (avoids strftime microsecond
+        # token to keep the IronPython compat hook happy).
+        _now = datetime.now()
+        ts = "{}.{:03d}".format(_now.strftime("%H:%M:%S"),
+                                _now.microsecond // 1000)
+        fp = open(path, "a")
+        try:
+            fp.write("{}  {}\n".format(ts, line))
+            fp.flush()
+            try:
+                os.fsync(fp.fileno())
+            except Exception:
+                pass
+        finally:
+            fp.close()
+    except Exception:
+        pass
+
+
+# Build banner - first thing in the log on every fresh import so a
+# stale cache shows up as a missing/old banner.
+try:
+    Rhino.RhinoApp.WriteLine(
+        "[ai_render_viewer] module loaded {} build={}".format(
+            _t_viewer_load.strftime("%H:%M:%S"), _VIEWER_BUILD_TAG))
+except Exception:
+    pass
+_trace("===== module load build={} =====".format(_VIEWER_BUILD_TAG))
 
 
 def _hex_to_color(hex_str):
@@ -237,25 +315,30 @@ def _init_transform(state):
     """
     bmp = state.loaded_bmp
     if bmp is None:
+        _trace("_init_transform: bmp None (no transform built)")
         state._transform = None
         return
     try:
         bw, bh = int(bmp.Size.Width), int(bmp.Size.Height)
-    except Exception:
+    except Exception as ex:
+        _trace("_init_transform: bmp.Size read FAILED: " + str(ex))
         state._transform = None
         return
     if bw <= 0 or bh <= 0:
+        _trace("_init_transform: degenerate bmp size {}x{}".format(bw, bh))
         state._transform = None
         return
     try:
         sz = state.drawable.Size
         dw, dh = int(sz.Width), int(sz.Height)
-    except Exception:
+    except Exception as ex:
+        _trace("_init_transform: drawable.Size read FAILED: " + str(ex))
         dw, dh = 0, 0
     if dw <= 0 or dh <= 0:
         # Drawable hasn't been laid out yet. Defer transform build
         # until first SizeChanged fires (Drawable.SizeChanged handler
         # will call this function again).
+        _trace("_init_transform: drawable not laid out yet ({}x{}), defer".format(dw, dh))
         state._transform = None
         return
     try:
@@ -268,9 +351,14 @@ def _init_transform(state):
             ty = (dh - new_h) / 2.0
             m.Translate(float(tx), float(ty))
             m.Scale(float(scale), float(scale))
-        # 1:1 mode: identity matrix - bitmap drawn at native pixel
-        # size starting at (0, 0). User sees the top-left chunk if
-        # bitmap > drawable. (Pan deferred to v5.)
+            _trace("_init_transform fit: bmp={}x{} drawable={}x{} scale={:.4f} translate=({:.1f},{:.1f}) drawn={:.0f}x{:.0f}".format(
+                bw, bh, dw, dh, scale, tx, ty, new_w, new_h))
+        else:
+            # 1:1 mode: identity matrix - bitmap drawn at native pixel
+            # size starting at (0, 0). User sees the top-left chunk if
+            # bitmap > drawable. (Pan deferred to v5.)
+            _trace("_init_transform 1:1: bmp={}x{} drawable={}x{} (identity matrix)".format(
+                bw, bh, dw, dh))
         state._transform = m
     except Exception as ex:
         _trace("_init_transform FAILED: " + str(ex))
@@ -739,7 +827,12 @@ def _make_paint_handler(state):
       structurally loop-free pattern. No ClipRectangle reads, no
       Scrollable.Size fallbacks, no per-paint scale math.
     """
+    # v4.1 2026-04-30: rate-limited paint counter so we can confirm
+    # Paint IS firing without flooding the log. State on the closure.
+    paint_state = {"count": 0, "drew": 0, "no_bmp": 0, "no_xform": 0}
+
     def _on_paint(sender, e):
+        paint_state["count"] += 1
         try:
             g = e.Graphics
         except Exception:
@@ -750,26 +843,44 @@ def _make_paint_handler(state):
             pass
         bmp = state.loaded_bmp
         if bmp is None:
+            paint_state["no_bmp"] += 1
+            # First few only - then silent so log doesn't fill
+            if paint_state["no_bmp"] <= 3:
+                _trace("paint: no bitmap loaded yet (call #{})".format(
+                    paint_state["count"]))
             return
         m = state._transform
         if m is None:
+            paint_state["no_xform"] += 1
             # Transform not built yet - either bitmap not loaded or
             # Drawable hasn't received its first size allocation.
             # _init_transform will fire from SizeChanged when it does.
+            if paint_state["no_xform"] <= 3:
+                _trace("paint: no transform yet (call #{})".format(
+                    paint_state["count"]))
             return
         try:
             g.SaveTransform()
         except Exception:
             pass
+        drew_ok = False
         try:
             g.MultiplyTransform(m)
             g.DrawImage(bmp, 0.0, 0.0)
+            drew_ok = True
+            paint_state["drew"] += 1
         except Exception as ex:
             _trace("DrawImage v4 FAILED: " + str(ex))
         try:
             g.RestoreTransform()
         except Exception:
             pass
+        # First successful draw + every 50th draw - so we can see
+        # Paint is firing without spam.
+        if drew_ok and (paint_state["drew"] == 1 or paint_state["drew"] % 50 == 0):
+            _trace("paint: draw #{} (total Paint calls={}, bmp_misses={}, xform_misses={})".format(
+                paint_state["drew"], paint_state["count"],
+                paint_state["no_bmp"], paint_state["no_xform"]))
     return _on_paint
 
 
@@ -781,6 +892,11 @@ def _make_drawable_size_handler(state):
     size from its parent layout cell; we react to the new size, we
     don't drive it.
     """
+    # Rate-limited counter to detect any residual loop without
+    # flooding the log. If this fires more than ~5 times per real
+    # resize, something is wrong.
+    size_state = {"count": 0, "last_size": None}
+
     def _on_drawable_size(sender, e):
         try:
             import scriptcontext as sc
@@ -788,6 +904,18 @@ def _make_drawable_size_handler(state):
                 return
         except Exception:
             pass
+        size_state["count"] += 1
+        try:
+            cur = state.drawable.Size
+            sig = (int(cur.Width), int(cur.Height))
+        except Exception:
+            sig = None
+        # First few + any time the size signature changes - log it.
+        # If the same size keeps firing, that's a residual loop signal.
+        if size_state["count"] <= 5 or sig != size_state["last_size"]:
+            _trace("drawable.SizeChanged #{} -> {}".format(
+                size_state["count"], sig))
+        size_state["last_size"] = sig
         if state.loaded_bmp is None:
             return
         _init_transform(state)
