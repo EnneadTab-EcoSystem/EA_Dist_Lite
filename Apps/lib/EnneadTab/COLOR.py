@@ -240,6 +240,33 @@ def hex_to_rgb(hex_str):
     """
     return tuple(int(str(hex_str).lstrip('#')[i:i+2], 16) for i in (0, 2, 4))
 
+
+def hex_to_rgba(hex_str):
+    """Convert hex to (alpha, r, g, b) tuple.
+
+    Accepts #RRGGBB (alpha defaults to 255) and #AARRGGBB. On invalid
+    input, returns (255, 255, 255, 255) - opaque white - so callers
+    that paint with the result get a visible-but-wrong color rather
+    than a crash. Pair with a logged warning at the call site.
+
+    Args:
+        hex_str (str): Hex string with or without leading '#'. 6 or 8 chars.
+
+    Returns:
+        tuple: (a, r, g, b), each 0-255.
+    """
+    if not hex_str:
+        return (255, 255, 255, 255)
+    s = str(hex_str).lstrip('#')
+    try:
+        if len(s) == 6:
+            return (255, int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16))
+        if len(s) == 8:
+            return (int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16), int(s[6:8], 16))
+    except (ValueError, TypeError):
+        pass
+    return (255, 255, 255, 255)
+
 def decimal_to_rgb(decimal_color):
     """Convert decimal to rgb.
 

@@ -208,10 +208,10 @@
                 <Image Grid.Column="0" x:Name="logo_img" Height="40"
                        VerticalAlignment="Center" HorizontalAlignment="Left" Margin="0,0,12,0"/>
                 <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                    <TextBlock x:Name="title_text" Text="EnneaDuck: AI View Render"
+                    <TextBlock x:Name="title_text" Text="EnneaDuck: View Render"
                                Foreground="#FFFFE59C" FontSize="18" FontWeight="Bold"/>
                     <TextBlock x:Name="sub_text"
-                               Text="Powered by ennead-ai.com — Ennead's in-house rendering AI."
+                               Text="Render Revit views through Ennead's curated style library."
                                Foreground="{StaticResource MutedTextColor}"
                                TextWrapping="Wrap" FontSize="11"/>
                 </StackPanel>
@@ -251,7 +251,7 @@
                         <ComboBox Grid.Column="0" x:Name="cb_resolution" Margin="0,0,4,0"/>
                         <ComboBox Grid.Column="1" x:Name="cb_aspect" Margin="4,0,0,0"/>
                     </Grid>
-                    <TextBlock x:Name="resolution_hint" Text="1500 × 844 (High · 16:9)"
+                    <TextBlock x:Name="resolution_hint" Text="1500 x 844 (High, 16:9)"
                                FontSize="10" Margin="0,2,0,0"
                                Foreground="{StaticResource DimTextColor}"/>
 
@@ -514,20 +514,20 @@
                 <CheckBox Grid.Column="0" x:Name="cb_auto_save" Content="Auto-save to Gallery"
                           IsChecked="True" Checked="auto_save_Changed" Unchecked="auto_save_Changed"
                           VerticalAlignment="Center"
-                          ToolTip="Saves every new render to your cloud Gallery (visible from web Studio, Revit, Rhino, mobile). Applies to newly-queued renders only — in-flight jobs keep their setting. Turn OFF for NDA / draft work."/>
+                          ToolTip="Saves every new render to your cloud Gallery (visible from web Studio, Revit, Rhino, mobile). Applies to newly-queued renders only - in-flight jobs keep their setting. Turn OFF to keep this render local-only (won't appear on other devices)."/>
                 <TextBlock Grid.Column="1" x:Name="cache_size_label"
-                           Text="—"
+                           Text="-"
                            Margin="12,0,0,0" VerticalAlignment="Center"
                            FontSize="11" Foreground="{StaticResource DimTextColor}"
                            Cursor="Hand"
-                           ToolTip="Click to manage local gallery cache (clearing is safe — cloud copy is canonical)"
+                           ToolTip="Click to manage local gallery cache (clearing is safe - cloud copy is canonical)"
                            MouseLeftButtonUp="cache_label_Click"/>
                 <Button Grid.Column="2" Style="{StaticResource SmallButton}"
                         Content="Open Output Folder" Click="open_folder_Click"/>
                 <TextBlock Grid.Column="3" x:Name="quota_label"
-                           Text="Quota: —" Margin="12,0,0,0" VerticalAlignment="Center"
+                           Text="Quota: -" Margin="12,0,0,0" VerticalAlignment="Center"
                            FontSize="11" Foreground="{StaticResource DimTextColor}"
-                           ToolTip="Office-wide daily Gemini quota"/>
+                           ToolTip="Office-wide daily render quota"/>
             </Grid>
         </Grid>
     </Border>

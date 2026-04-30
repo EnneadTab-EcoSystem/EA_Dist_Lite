@@ -39,6 +39,8 @@ import Rhino  # pyright: ignore
 import Eto    # pyright: ignore
 import System  # pyright: ignore
 
+from EnneadTab.RHINO import RHINO_UI
+
 
 def _trace(msg):
     try:
@@ -48,16 +50,11 @@ def _trace(msg):
 
 
 def _hex_to_color(hex_str):
-    if not hex_str:
-        return Eto.Drawing.Colors.White
-    s = hex_str.lstrip("#")
-    if len(s) == 6:
-        r, g, b, a = int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16), 255
-    elif len(s) == 8:
-        a, r, g, b = int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16), int(s[6:8], 16)
-    else:
-        return Eto.Drawing.Colors.White
-    return Eto.Drawing.Color.FromArgb(a, r, g, b)
+    """Thin alias - lifted to RHINO_UI.hex_to_eto_color 2026-04-30.
+    Kept locally to avoid renaming ~30 callsites in this file. New
+    code should call RHINO_UI.hex_to_eto_color directly.
+    """
+    return RHINO_UI.hex_to_eto_color(hex_str)
 
 
 class _ViewerState(object):
@@ -86,6 +83,29 @@ class _ViewerState(object):
 
         self.loaded_bmp = None
         self.first_render_done = False
+        # 2026-04-30 death-loop fix (picoe/Eto #477):
+        # - v1 (3678cb888) re-entry flag is belt-and-suspenders; the
+        #   size-equality guard in _apply_image_to_view was the actual
+        #   loop-breaker. WPF SizeChanged fires async on the dispatcher
+        #   queue, so the flag may release before the next event.
+        #   INSUFFICIENT - loop returned with bigger trace dimensions.
+        # - v2/v3 iterations on Scrollable+ExpandContent flags - see
+        #   stacked history in build_form() near state.scroll / outer
+        #   and in _make_resize_handler.
+        # - v4 (this commit) adopts the rafntor/Eto.Containers
+        #   DragZoomImageView pattern: Drawable IS the image-area
+        #   root (no inner Scrollable wrapper), an Eto.Drawing.Matrix
+        #   transform owns scale+translate, and Drawable.SizeChanged
+        #   rebuilds the transform without ever mutating Size. The
+        #   #477 trigger (Scrollable.ExpandContent + Drawable.Size
+        #   mutation from SizeChanged) is structurally absent.
+        self._applying_size = False
+        # v4: image transform - identity until a bitmap is loaded.
+        # Holds zoom (scale) + pan (translate) for both fit and 1:1
+        # modes. Built/rebuilt by _init_transform from the current
+        # Drawable.Size and bitmap.Size.
+        self._transform = None
+        self._prev_drawable_size = None
 
         self.on_save_index = on_save_index
         self.on_open_external_index = on_open_external_index
@@ -201,36 +221,67 @@ def _render_current(state):
     _apply_image_to_view(state, bmp)
 
 
-def _apply_image_to_view(state, bmp):
-    """Drawable + custom Paint approach: Eto.Forms.ImageView renders
-    the bitmap at NATIVE pixel size regardless of its .Size, so the
-    1:1 / Fit toggle was clipping rather than scaling. We use an
-    Eto.Forms.Drawable and draw the bitmap into it at the right rect
-    for each mode. Fit mode = bitmap scaled to drawable client size,
-    centered. 1:1 mode = drawable expanded to bitmap native size and
-    bitmap drawn at 0,0; Scrollable handles pan."""
-    state.loaded_bmp = bmp
-    bw = bh = 0
-    try:
-        bw, bh = bmp.Size.Width, bmp.Size.Height
-    except Exception:
-        pass
-    if bw <= 0 or bh <= 0:
+def _init_transform(state):
+    """v4 Pattern 1 (DragZoomImageView, rafntor/Eto.Containers):
+    Build the Matrix that maps bitmap-space -> drawable-space.
+
+    fit_mode: scale = min(dw/bw, dh/bh, 1.0); translate to center.
+    1:1 mode: scale = 1.0; translate to (0, 0). Bitmap clips at the
+    edges if it exceeds the drawable. (Pan-via-mouse-drag is a
+    follow-up; v4 ships without it to keep the migration scoped.)
+
+    Critically: this function NEVER mutates state.drawable.Size.
+    The Drawable inherits its size from its parent layout cell
+    (yscale=True). Mutating Size from a SizeChanged handler is
+    exactly what triggered picoe/Eto #477 in v1-v3.
+    """
+    bmp = state.loaded_bmp
+    if bmp is None:
+        state._transform = None
         return
     try:
+        bw, bh = int(bmp.Size.Width), int(bmp.Size.Height)
+    except Exception:
+        state._transform = None
+        return
+    if bw <= 0 or bh <= 0:
+        state._transform = None
+        return
+    try:
+        sz = state.drawable.Size
+        dw, dh = int(sz.Width), int(sz.Height)
+    except Exception:
+        dw, dh = 0, 0
+    if dw <= 0 or dh <= 0:
+        # Drawable hasn't been laid out yet. Defer transform build
+        # until first SizeChanged fires (Drawable.SizeChanged handler
+        # will call this function again).
+        state._transform = None
+        return
+    try:
+        m = Eto.Drawing.Matrix.Create()
         if state.fit_mode:
-            # Match Drawable to scrollable client size so it fills,
-            # doesn't trigger scroll. Paint computes the inscribed rect.
-            sz = state.scroll.Size
-            if sz.Width > 0 and sz.Height > 0:
-                state.drawable.Size = Eto.Drawing.Size(
-                    int(sz.Width), int(sz.Height))
-        else:
-            # 1:1 — Drawable is bitmap-sized so the Scrollable enables
-            # scrollbars and the user can pan to see the full pixel grid.
-            state.drawable.Size = Eto.Drawing.Size(int(bw), int(bh))
+            scale = min(float(dw) / bw, float(dh) / bh, 1.0)
+            new_w = bw * scale
+            new_h = bh * scale
+            tx = (dw - new_w) / 2.0
+            ty = (dh - new_h) / 2.0
+            m.Translate(float(tx), float(ty))
+            m.Scale(float(scale), float(scale))
+        # 1:1 mode: identity matrix - bitmap drawn at native pixel
+        # size starting at (0, 0). User sees the top-left chunk if
+        # bitmap > drawable. (Pan deferred to v5.)
+        state._transform = m
     except Exception as ex:
-        _trace("set Drawable.Size FAILED: " + str(ex))
+        _trace("_init_transform FAILED: " + str(ex))
+        state._transform = None
+
+
+# v4: kept as a thin compatibility shim for any caller that still
+# uses the old name. New code should call _init_transform directly.
+def _apply_image_to_view(state, bmp):
+    state.loaded_bmp = bmp
+    _init_transform(state)
     try:
         state.drawable.Invalidate()
     except Exception as ex:
@@ -404,25 +455,48 @@ def _build_form(state):
     root.Add(bar_panel)
 
     # ---------------- Image area ----------------
-    # Drawable + custom Paint so 1:1 vs Fit actually scales the bitmap.
-    # ImageView renders at native pixel size regardless of its Size,
-    # which made the toggle a no-op (just clipped/showed full bitmap).
+    # ----- Image-area architecture decision history -----
+    # v1-v3 wrapped state.drawable in state.scroll (Scrollable with
+    #   ExpandContent flags) for native scrollbar pan in 1:1 mode.
+    #   That architecture trapped us in picoe/Eto #477 (the WPF
+    #   ScrollableHandler.UpdateSizes feedback loop). Three iterations
+    #   of guards (re-entry flag, size-equality, drop-then-restore
+    #   ExpandContent) failed to converge cleanly - either the loop
+    #   came back, the bitmap stopped fitting, the background stopped
+    #   painting, or oversized scrollbars appeared.
+    # v4 (this commit) adopts rafntor/Eto.Containers.DragZoomImageView:
+    #   the Drawable IS the image-area root, sitting directly in the
+    #   layout with yscale=True to inherit allocated size. NO inner
+    #   Scrollable wrapper. NO ExpandContent flag. An Eto.Drawing.
+    #   Matrix transform owns scale+translate; SizeChanged on the
+    #   Drawable rebuilds the transform without ever mutating Size.
+    #   The #477 trigger pattern (Scrollable.ExpandContent + manual
+    #   content-size mutation) is structurally absent.
+    #
+    # Trade-off vs v1-v3: 1:1 mode no longer has scrollbar-pan; the
+    # bitmap shows top-left clipped if it exceeds the Drawable. Pan-
+    # via-mouse-drag is a follow-up (v5). Most users live in fit-mode
+    # so this is acceptable for first ship of v4.
     state.drawable = Eto.Forms.Drawable()
     try:
         state.drawable.BackgroundColor = _hex_to_color("#FF1A1A1A")
     except Exception:
         pass
     state.drawable.Paint += _make_paint_handler(state)
-    state.image_view = state.drawable  # keep field name for back-compat
-    state.scroll = Eto.Forms.Scrollable()
-    state.scroll.Content = state.drawable
+    # v4: SizeChanged on Drawable itself (not Scrollable) rebuilds
+    # the transform when the layout cell allocates a new size.
     try:
-        state.scroll.BackgroundColor = _hex_to_color("#FF1A1A1A")
-        state.scroll.ExpandContentWidth = True
-        state.scroll.ExpandContentHeight = True
-    except Exception:
-        pass
-    root.Add(state.scroll, yscale=True)
+        state.drawable.SizeChanged += _make_drawable_size_handler(state)
+    except Exception as ex:
+        _trace("Drawable.SizeChanged subscribe failed: " + str(ex))
+    state.image_view = state.drawable  # keep field name for back-compat
+    # v4: state.scroll kept as a None placeholder so other code paths
+    # that reference it (KeyDown subscribe loop, _on_resized fallback
+    # reads in older traces, etc.) don't AttributeError. Set to None
+    # so any accidental .Size / .Content access raises clearly rather
+    # than silently misbehaving.
+    state.scroll = None
+    root.Add(state.drawable, yscale=True)
 
     # ---------------- Prompt panel ----------------
     state.tbox_prompt = Eto.Forms.TextArea()
@@ -578,6 +652,26 @@ def _build_form(state):
     try:
         outer.BackgroundColor = _hex_to_color("#FF1A1A1A")
         outer.Border = Eto.Forms.BorderType.None
+        # ----- outer.ExpandContent decision history -----
+        # v1 (3678cb888): kept ExpandContent = True; the loop was
+        #   amplified here because the outer's content (the whole
+        #   dialog body) reflows on every inner-Scrollable layout
+        #   pass, feeding back into the WPF UpdateSizes mechanism.
+        # v2 (0c678b26b): dropped ExpandContent here. The 11088x9010
+        #   trace dimensions were the OUTER scrollable accumulating
+        #   layout drift on a wrapper whose content depended on its
+        #   own size - classic #477 signature at ~7x dialog size.
+        #   The loop died, BUT:
+        #     (a) form chrome (burgundy) bled through where outer
+        #         used to paint - per the carry-forward memory's
+        #         empirical finding, ExpandContent IS the only
+        #         paint-reliable primitive on this Rhino 8 build
+        #     (b) inner button rows wider than viewport triggered
+        #         an oversized horizontal scrollbar at natural width
+        # v3 (this commit): ExpandContent restored on outer too.
+        #   We accept the layout-level loop risk and rely on the
+        #   centralized resize-handler guard to break the cycle.
+        #   See _on_resized for the actual loop-breaking logic.
         outer.ExpandContentWidth = True
         outer.ExpandContentHeight = True
         outer.Padding = Eto.Drawing.Padding(0)
@@ -597,23 +691,23 @@ def _build_form(state):
         f.Shown += _make_shown_handler(state)
     except Exception as ex:
         _trace("Shown subscribe failed (non-fatal): " + str(ex))
-    resize_handler = _make_resize_handler(state)
-    try:
-        f.SizeChanged += resize_handler
-    except Exception:
-        pass
-    # Also subscribe on the Scrollable directly — Form.SizeChanged
-    # doesn't always propagate to inner content sizing on Rhino 8 Eto.
-    try:
-        state.scroll.SizeChanged += resize_handler
-    except Exception:
-        pass
+    # ----- form/scroll-level SizeChanged subscription history -----
+    # v1-v3: subscribed _make_resize_handler to BOTH f.SizeChanged
+    #   AND state.scroll.SizeChanged, with an in-handler call to
+    #   _apply_image_to_view that mutated state.drawable.Size. This
+    #   was the upper rung of the picoe/Eto #477 chain - dual-source
+    #   re-entry from form-resize OR scroll-relayout.
+    # v4 (this commit): both subscriptions DROPPED. The Drawable
+    #   itself is what needs to know about resizes (to rebuild the
+    #   transform), and Drawable.SizeChanged is wired separately at
+    #   the Drawable construction site. Form/scroll resize events
+    #   are no longer relevant to the image area.
     # KeyDown subscribed on multiple controls so arrow keys still fire
-    # when focus is on the Scrollable / ImageView / TextArea instead of
-    # the Form itself. Eto.Forms doesn't bubble KeyDown reliably across
-    # the focus tree on every Rhino build.
+    # when focus is on the outer wrapper / Drawable / TextArea instead
+    # of the Form itself. Eto.Forms doesn't bubble KeyDown reliably
+    # across the focus tree on every Rhino build.
     key_handler = _make_key_handler(state)
-    for target in (f, outer, state.scroll, state.image_view):
+    for target in (f, outer, state.image_view):
         try:
             target.KeyDown += key_handler
         except Exception as ex:
@@ -627,10 +721,24 @@ def _build_form(state):
 # so stack traces point at meaningful sites.
 
 def _make_paint_handler(state):
-    """Per-frame paint for the image Drawable. Reads state.loaded_bmp
-    and state.fit_mode; draws scaled-to-fit (centered) or 1:1 native.
-    Uses the SCROLLABLE's size for fit calc so resizes are honored
-    even when Drawable.Size was set to a stale value at load time."""
+    """Per-frame paint for the image Drawable.
+
+    ----- paint-handler decision history (DO NOT delete) -----
+    v1-v3: read e.ClipRectangle (with Drawable.Size + Scrollable.Size
+      fallbacks) every paint to compute an inscribed RectangleF and
+      DrawImage into it. The trace line "[ai_render_viewer] paint fit
+      dw=N dh=N new=NxN at (X,Y)" was emitted from this path. The
+      ClipRectangle approach was correct but it interacted badly with
+      the WPF #477 layout loop - paint ran in lockstep with each
+      drifting size pass, hammering the trace and the Graphics.Clear.
+    v4 (this commit): paint reads state._transform (built ONCE in
+      _init_transform from current Drawable.Size + bitmap.Size, also
+      rebuilt on Drawable.SizeChanged). MultiplyTransform applies the
+      matrix and the bitmap is drawn at origin. Per
+      rafntor/Eto.Containers.DragZoomImageView - this is the
+      structurally loop-free pattern. No ClipRectangle reads, no
+      Scrollable.Size fallbacks, no per-paint scale math.
+    """
     def _on_paint(sender, e):
         try:
             g = e.Graphics
@@ -643,58 +751,51 @@ def _make_paint_handler(state):
         bmp = state.loaded_bmp
         if bmp is None:
             return
-        bw = bh = 0
-        try:
-            bw, bh = bmp.Size.Width, bmp.Size.Height
-        except Exception:
+        m = state._transform
+        if m is None:
+            # Transform not built yet - either bitmap not loaded or
+            # Drawable hasn't received its first size allocation.
+            # _init_transform will fire from SizeChanged when it does.
             return
-        if bw <= 0 or bh <= 0:
-            return
-        # Use ClipRectangle FIRST — it's the actual paint surface size
-        # and is always valid inside a Paint event. Drawable.Size and
-        # Scrollable.Size both returned stale/wrong values in earlier
-        # iterations, breaking centering.
-        dw = dh = 0
         try:
-            cr = e.ClipRectangle
-            dw, dh = int(cr.Width), int(cr.Height)
+            g.SaveTransform()
         except Exception:
             pass
-        if dw <= 0 or dh <= 0:
-            try:
-                sz = state.drawable.Size
-                dw, dh = int(sz.Width), int(sz.Height)
-            except Exception:
-                pass
-        if dw <= 0 or dh <= 0:
-            try:
-                sz = state.scroll.Size
-                dw, dh = int(sz.Width), int(sz.Height)
-            except Exception:
-                dw, dh = bw, bh
-
-        if state.fit_mode and dw > 0 and dh > 0:
-            ratio = min(float(dw) / bw, float(dh) / bh, 1.0)
-            new_w = max(1, int(bw * ratio))
-            new_h = max(1, int(bh * ratio))
-            x = max(0, (dw - new_w) // 2)
-            y = max(0, (dh - new_h) // 2)
-            _trace("paint fit dw={} dh={} new={}x{} at ({},{})".format(
-                dw, dh, new_w, new_h, x, y))
-            try:
-                g.DrawImage(bmp,
-                            Eto.Drawing.RectangleF(
-                                float(x), float(y),
-                                float(new_w), float(new_h)))
-            except Exception as ex:
-                _trace("DrawImage fit FAILED: " + str(ex))
-        else:
-            _trace("paint 1:1 bw={} bh={}".format(bw, bh))
-            try:
-                g.DrawImage(bmp, 0.0, 0.0, float(bw), float(bh))
-            except Exception as ex:
-                _trace("DrawImage 1:1 FAILED: " + str(ex))
+        try:
+            g.MultiplyTransform(m)
+            g.DrawImage(bmp, 0.0, 0.0)
+        except Exception as ex:
+            _trace("DrawImage v4 FAILED: " + str(ex))
+        try:
+            g.RestoreTransform()
+        except Exception:
+            pass
     return _on_paint
+
+
+def _make_drawable_size_handler(state):
+    """v4 (rafntor pattern): listens to Drawable.SizeChanged and
+    rebuilds the transform. Critically, this handler does NOT mutate
+    Drawable.Size or any layout property - that mutation was the
+    picoe/Eto #477 trigger across v1-v3. The Drawable inherits its
+    size from its parent layout cell; we react to the new size, we
+    don't drive it.
+    """
+    def _on_drawable_size(sender, e):
+        try:
+            import scriptcontext as sc
+            if sc.sticky.get('EA_DISABLE_FIT_MODE'):
+                return
+        except Exception:
+            pass
+        if state.loaded_bmp is None:
+            return
+        _init_transform(state)
+        try:
+            state.drawable.Invalidate()
+        except Exception:
+            pass
+    return _on_drawable_size
 
 
 def _make_shown_handler(state):
@@ -702,20 +803,79 @@ def _make_shown_handler(state):
         if not state.first_render_done:
             state.first_render_done = True
             try:
-                _trace("Shown - rendering at scrollable size {}".format(
-                    state.scroll.Size))
+                # v4: state.scroll is None - log Drawable.Size instead.
+                _trace("Shown - rendering at drawable size {}".format(
+                    state.drawable.Size))
             except Exception:
                 pass
         _render_current(state)
     return _on_shown
 
 
+# v4 NOTE: _make_resize_handler is NO LONGER WIRED to any event.
+# The form/scroll-level SizeChanged subscriptions were removed when
+# v4 adopted the rafntor pattern. This function is retained verbatim
+# (NOT deleted) so the v1/v2/v3 stacked decision history below stays
+# in source - per memory feedback_increment_investigation_record.md
+# the detour lessons are load-bearing for future maintenance. If a
+# future iteration needs to revive form-level resize handling, this
+# is the documented starting point.
+
 def _make_resize_handler(state):
     def _on_resized(sender, e):
+        # ----- resize-handler decision history (DO NOT delete) -----
+        #
+        # v1 (3678cb888) - INSUFFICIENT
+        #   Approach: re-entry flag (state._applying_size) wrapped
+        #   around state.drawable.Size assignment in
+        #   _apply_image_to_view, plus size-equality guard
+        #   (if state.drawable.Size != new_size:) before assigning,
+        #   plus sticky kill-switch.
+        #   Trace fired with dw/dh ~7989-8001, monotonic +1-3px growth.
+        #   Symptom returned with bigger numbers (~11088).
+        #   Why it failed: WPF SizeChanged fires async on the
+        #   dispatcher queue. The flag releases (in finally) BEFORE
+        #   the next queued event fires. Even with the equality
+        #   guard preventing Drawable.Size from changing, Invalidate()
+        #   still fired, Paint kept reading a drifting ClipRectangle
+        #   from the WPF ScrollableHandler.UpdateSizes loop (picoe/Eto
+        #   #477) which was alive at the layout level.
+        #
+        # v2 (0c678b26b) - LOOP DIED, BROKE THREE OTHER THINGS
+        #   Approach: removed _apply_image_to_view call from resize
+        #   handler entirely; dropped ExpandContentWidth/Height = True
+        #   on BOTH state.scroll AND outer; resize handler only
+        #   called Invalidate.
+        #   Death loop died (no more substrate for #477).
+        #   But: image didn't fill viewer (Drawable wasn't growing
+        #   with viewport), background paint broke on outer (form
+        #   chrome bled through - per carry-forward memory only
+        #   Scrollable+ExpandContent paints reliably on Rhino 8),
+        #   and inner button rows triggered an oversized horizontal
+        #   scrollbar at natural width.
+        #
+        # v3 (this commit) - centralized guard
+        #   ExpandContent restored on both Scrollables to fix the
+        #   three v2 regressions. Re-entry flag + size-equality guard
+        #   restored, this time as the ONLY loop-breaker. Resize
+        #   handler still calls _apply_image_to_view + Invalidate so
+        #   Drawable grows with viewport - but the guards inside
+        #   _apply_image_to_view make subsequent re-entries no-ops
+        #   once the size has settled, so #477's monotonic drift
+        #   converges instead of diverging.
+        #   Sticky kill-switch retained as in-field bypass.
+        try:
+            import scriptcontext as sc
+            if sc.sticky.get('EA_DISABLE_FIT_MODE'):
+                return
+        except Exception:
+            pass
+        # Re-entry guard - skip if we're inside our own Drawable.Size
+        # assignment (handles synchronous SizeChanged refire paths).
+        if getattr(state, "_applying_size", False):
+            return
         if state.first_render_done and state.fit_mode and state.loaded_bmp is not None:
             _apply_image_to_view(state, state.loaded_bmp)
-            # Belt-and-suspenders: also force the Drawable to repaint
-            # so paint reads the freshly-changed Scrollable size.
             try:
                 state.drawable.Invalidate()
             except Exception:

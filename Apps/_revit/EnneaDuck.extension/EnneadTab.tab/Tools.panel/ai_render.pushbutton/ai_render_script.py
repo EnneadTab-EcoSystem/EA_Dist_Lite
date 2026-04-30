@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "AI-powered view rendering. Queue multiple renders, see your full cloud gallery across devices, enhance prompts with the ennead-ai.com AI, load style references from the Ennead library. Powered by ennead-ai.com."
+__doc__ = "View rendering through Ennead's in-house style library. Queue multiple renders, see your full cloud gallery across devices, refine prompts with the ennead-ai.com helpers, load style references from the Ennead library."
 __title__ = "AI\nRender"
 
 import os
@@ -354,7 +354,7 @@ class AiRenderForm(WPFWindow):
                 "Yes = finish them in the background (dialog closes).\n"
                 "No  = drop pending jobs and close now.\n"
                 "Cancel = keep the dialog open.".format(in_flight),
-                "Closing AI Render",
+                "Closing render",
                 MessageBoxButton.YesNoCancel)
             if res == MessageBoxResult.Cancel:
                 return
@@ -1067,7 +1067,7 @@ class AiRenderForm(WPFWindow):
             row.id[:6], ext)
         if self._last_save_folder and os.path.isdir(self._last_save_folder):
             dlg.InitialDirectory = self._last_save_folder
-        dlg.Title = "Save AI render"
+        dlg.Title = "Save render"
         if dlg.ShowDialog():
             try:
                 shutil.copyfile(src, dlg.FileName)

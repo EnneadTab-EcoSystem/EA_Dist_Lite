@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 __title__ = "AiRenderingFromView"
-__doc__ = """AI-powered view rendering for Rhino.
+__doc__ = """View rendering for Rhino through Ennead's in-house style library.
 
 Capture the active viewport, queue prompts, and see your full cloud Gallery
-across every device (Revit, Rhino, mobile web, desktop web — same items).
+across every device (Revit, Rhino, mobile web, desktop web - same items).
 
-Powered by ennead-ai.com — all features call the live web API. No local
-fallbacks: when the web product improves, this dialog improves automatically.
+All features call the live ennead-ai.com web API. No local fallbacks: when
+the web product improves, this dialog improves automatically.
 """
 
 import time
@@ -195,17 +195,16 @@ def _items_text(dropdown, idx):
 
 
 def _hex_to_color(hex_str):
-    """Eto.Drawing.Color from #RRGGBB or #AARRGGBB hex string."""
-    if not hex_str:
-        return Eto.Drawing.Colors.White
-    s = hex_str.lstrip("#")
-    if len(s) == 6:
-        r, g, b, a = int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16), 255
-    elif len(s) == 8:
-        a, r, g, b = int(s[0:2], 16), int(s[2:4], 16), int(s[4:6], 16), int(s[6:8], 16)
-    else:
-        return Eto.Drawing.Colors.White
-    return Eto.Drawing.Color.FromArgb(a, r, g, b)
+    """Eto.Drawing.Color from #RRGGBB or #AARRGGBB hex string.
+
+    Lifted to EnneadTab.RHINO.RHINO_UI.hex_to_eto_color (2026-04-30) so
+    the parse logic lives in COLOR.py (framework-agnostic) and the Eto
+    construction lives next to other Eto helpers. This local wrapper
+    is kept as a thin alias to avoid a sweeping rename across ~40
+    callsites in this file. New code should call
+    RHINO_UI.hex_to_eto_color directly.
+    """
+    return RHINO_UI.hex_to_eto_color(hex_str)
 
 
 class GalleryRowPanel(Eto.Forms.Panel):
@@ -353,7 +352,7 @@ class AiRenderForm(Eto.Forms.Form):
         win_w = int(self._prefs.get("window_w", 1180))
         win_h = int(self._prefs.get("window_h", 940))
 
-        self.Title = "EnneaDuck: AI View Render"
+        self.Title = "EnneaDuck: View Render"
         self.Padding = Eto.Drawing.Padding(8)
         self.Size = Eto.Drawing.Size(win_w, win_h)
         self.MinimumSize = Eto.Drawing.Size(900, 560)
@@ -533,12 +532,12 @@ class AiRenderForm(Eto.Forms.Form):
 
     def _build_title_block(self):
         col = Eto.Forms.DynamicLayout()
-        title = Eto.Forms.Label(Text="EnneaDuck: AI View Render")
+        title = Eto.Forms.Label(Text="EnneaDuck: View Render")
         title.Font = Eto.Drawing.Font(Eto.Drawing.SystemFont.Bold, 14)
         title.TextColor = _hex_to_color("#FFFFE59C")
         col.Add(title)
         sub = Eto.Forms.Label(
-            Text="Powered by ennead-ai.com — Ennead's in-house rendering AI.")
+            Text="Render Rhino views through Ennead's curated style library.")
         sub.TextColor = _hex_to_color("#CBCBCB")
         col.Add(sub)
         return col
@@ -877,7 +876,8 @@ class AiRenderForm(Eto.Forms.Form):
         self.cb_auto_save.ToolTip = (
             "Saves every new render to your cloud Gallery (visible from web "
             "Studio, Revit, Rhino, mobile). Applies to newly-queued renders "
-            "only — in-flight jobs keep their setting. Turn OFF for NDA work.")
+            "only - in-flight jobs keep their setting. Turn OFF to keep this "
+            "render local-only (won't appear on other devices).")
         row.Add(self.cb_auto_save)
         # Cache label is clickable — opens manage-cache modal (Round 3 P1-parity
         # with Revit fix #16; Rhino missed this in Round 2).
@@ -1568,9 +1568,22 @@ class AiRenderForm(Eto.Forms.Form):
     # My Prompts
     # ------------------------------------------------------------------
 
+    def _set_status(self, msg):
+        """Set status_label text from any thread context (when wrapped
+        in _invoke_ui) or directly from the UI thread. Phase B1 helper
+        - mirrors the dozens of existing direct status_label.Text=...
+        sites without introducing a stringly-typed setattr pattern.
+        """
+        try:
+            self.status_label.Text = msg
+        except Exception:
+            pass
+
     def _refresh_my_prompts_async(self):
         token = AUTH.get_token()
         if not token:
+            self._set_status(
+                "My prompts unavailable - sign in or check connection.")
             return
         def worker(state):
             # 2026-04-21 — .NET worker exception = host process termination.
@@ -1580,6 +1593,9 @@ class AiRenderForm(Eto.Forms.Form):
                 self._invoke_ui(lambda: self._apply_my_prompts(prompts))
             except Exception as ex:
                 _trace("worker.my_prompts SWALLOWED {}".format(ex))
+                # Phase B1 2026-04-30: surface coherent error instead of silent no-op
+                self._invoke_ui(lambda: self._set_status(
+                    "My prompts unavailable - check connection."))
         System.Threading.ThreadPool.QueueUserWorkItem(
             System.Threading.WaitCallback(worker))
 
@@ -2012,9 +2028,16 @@ class AiRenderForm(Eto.Forms.Form):
     def _refresh_gallery_async(self):
         token = AUTH.get_token()
         if not token:
+            # Phase B1 2026-04-30: surface coherent error instead of silent no-op
+            self._set_status(
+                "Gallery unavailable - sign in or check connection.")
             return
         def on_done(rows):
             if rows is None:
+                # Fetch failed (network or auth). Don't clear existing
+                # rows on failure - just surface a status.
+                self._invoke_ui(lambda: self._set_status(
+                    "Gallery refresh failed - check connection."))
                 return
             self._invoke_ui(lambda: self._apply_gallery_rows(rows))
         G.fetch_gallery_index_async(token, on_done, limit=500)
@@ -2049,9 +2072,10 @@ class AiRenderForm(Eto.Forms.Form):
                     pass
                 placeholder.Padding = Eto.Drawing.Padding(16, 28)
                 placeholder.Height = 80
-                label = Eto.Forms.Label(
-                    Text="Loading recent renders... ({}/{})".format(
-                        i + 1, count))
+                # Honesty fix 2026-04-30: previously said "(1/4)"..(4/4)"
+                # which read as 25%-stages of progress. It's just 4
+                # identical placeholder rows - all say the same thing.
+                label = Eto.Forms.Label(Text="Loading recent renders...")
                 try:
                     label.TextColor = _hex_to_color("#FF6A6A6A")
                     label.Font = Eto.Drawing.Font(
@@ -2696,24 +2720,31 @@ class AiRenderForm(Eto.Forms.Form):
     def _refresh_quota_async(self):
         token = AUTH.get_token()
         if not token:
-            self.quota_label.Text = "Quota: —"
+            self.quota_label.Text = "Quota: -"
+            # Phase B1 2026-04-30: surface coherent error instead of silent dash
+            self._set_status(
+                "Quota unavailable - sign in or check connection.")
             return
         def worker(state):
             # 2026-04-21 — .NET worker exception = host termination.
             # Audit Lens B P0. Mirrored in Revit. The int(...) calls below
             # raise ValueError on non-int strings if the API returns them.
+            txt = "Quota: -"
+            had_error = False
             try:
                 q = AI_RENDER.get_quota_with_token(token)
                 if q:
                     txt = "Quota: {:,}/{:,}".format(
                         int(q.get("requestsRemaining") or 0),
                         int(q.get("requestsLimit") or 0))
-                else:
-                    txt = "Quota: —"
             except Exception as ex:
                 _trace("worker.quota SWALLOWED {}".format(ex))
-                txt = "Quota: —"
+                had_error = True
             self._invoke_ui(lambda: setattr(self.quota_label, 'Text', txt))
+            if had_error:
+                # Phase B1 2026-04-30: surface coherent error instead of silent dash
+                self._invoke_ui(lambda: self._set_status(
+                    "Quota check failed - check connection."))
         System.Threading.ThreadPool.QueueUserWorkItem(
             System.Threading.WaitCallback(worker))
 

@@ -20,6 +20,24 @@ if ENVIRONMENT.IS_RHINO_ENVIRONMENT:
 
 
 
+def hex_to_eto_color(hex_str):
+    """Eto.Drawing.Color from #RRGGBB or #AARRGGBB hex string.
+
+    Thin Eto wrapper over COLOR.hex_to_rgba. On invalid input, returns
+    Colors.White (matches historical helper behavior across the
+    EnneadTab Rhino dialogs) - the parse layer in COLOR.py owns
+    fallback semantics; this wrapper just adapts the tuple to Eto.
+
+    Args:
+        hex_str (str): Hex string with or without leading '#'. 6 or 8 chars.
+
+    Returns:
+        Eto.Drawing.Color
+    """
+    a, r, g, b = COLOR.hex_to_rgba(hex_str)
+    return Eto.Drawing.Color.FromArgb(a, r, g, b)
+
+
 def apply_dark_style(UI):
     
     logo_dark_path = IMAGE.get_image_path_by_name("icon_logo_dark_background.png")
