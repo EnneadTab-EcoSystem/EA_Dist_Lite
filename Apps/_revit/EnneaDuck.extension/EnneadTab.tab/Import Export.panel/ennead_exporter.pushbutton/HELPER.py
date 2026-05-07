@@ -17,6 +17,12 @@ def find_definition_by_name(doc, name):
 
 def create_color_setting_to_sheet(doc):
     sample_sheet = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_Sheets).WhereElementIsNotElementType().FirstElement()
+    if sample_sheet is None:
+        # No sheets in the document yet -- there's nothing to bind the
+        # parameter to. Bail out cleanly instead of crashing the button
+        # with AttributeError on the next .LookupParameter() call.
+        NOTIFICATION.messenger("This document has no sheets. Add at least one sheet before configuring [Print_In_Color].")
+        return
     para = sample_sheet.LookupParameter("Print_In_Color")
     if para:
         NOTIFICATION.messenger('[Print_In_Color] parameter already exist in current file.')
@@ -76,8 +82,13 @@ def create_color_setting_to_sheet(doc):
 
 
 def create_issue_para_to_sheet(doc, issue_name):
-    
+
     sample_sheet = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_Sheets).WhereElementIsNotElementType().FirstElement()
+    if sample_sheet is None:
+        # No sheets in the document yet -- there's nothing to bind the
+        # issue parameter to. Bail out cleanly.
+        NOTIFICATION.messenger("This document has no sheets. Add at least one sheet before adding issue parameters.")
+        return
     para = sample_sheet.LookupParameter(issue_name)
     if para:
         NOTIFICATION.messenger('[{}] parameter already exist in current file.'.format(issue_name))

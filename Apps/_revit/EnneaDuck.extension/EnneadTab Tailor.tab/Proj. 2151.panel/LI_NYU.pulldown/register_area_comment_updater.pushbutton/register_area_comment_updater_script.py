@@ -7,7 +7,7 @@ __title__ = "(Un)Register Area Comment Live Updater"
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 
-from EnneadTab import ERROR_HANDLE, LOG, DATA_FILE, GUID
+from EnneadTab import ERROR_HANDLE, LOG, DATA_FILE, GUID, NOTIFICATION
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_UPDATER
 from Autodesk.Revit import DB # pyright: ignore 
 
@@ -72,6 +72,13 @@ def register_area_comment_updater(doc):
 
 
     sample_area = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_Areas).FirstElement()
+    if sample_area is None:
+        # Updater registration depends on a parameter discovered from a
+        # sample Area. With zero Areas, the LookupParameter call below
+        # would crash with NoneType. Bail cleanly so the user sees an
+        # actionable message instead of a stacktrace.
+        NOTIFICATION.messenger("This document has no Areas. Create at least one Area before registering the comment updater.")
+        return
     para = sample_area.LookupParameter("Area_$Department_Program Type")
 
     # Register the updater with a trigger for area elements

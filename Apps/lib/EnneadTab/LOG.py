@@ -174,14 +174,22 @@ def log(script_path, func_name_as_record):
 
                     # print ("data to be place in log is ", data)
 
-                # Send usage data to Google Form
+                # Send usage data to Google Form (legacy) and InfraWatch (primary).
+                # Both are best-effort and must never break the wrapped call.
+                # Form path is on borrowed time -- the response sheet hit its
+                # 100k-row tab cap on 2026-03-24 and silently dropped writes
+                # for ~6 weeks before being noticed. Once InfraWatch ingestion
+                # has 2 weeks of healthy traffic, the Form path can be removed.
                 try:
                     environment = app_name
                     function_name = func_name_as_record.replace("\n", " ")
                     result = str(out)
                     send_usage_to_google_form(environment, function_name, result)
-                except Exception as e:
-                    # Don't let Google Form errors break the main logging
+                except Exception:
+                    pass
+                try:
+                    send_usage_to_infrawatch(environment, function_name, result)
+                except Exception:
                     pass
 
                 return out
@@ -210,6 +218,133 @@ def read_log(user_name=USER.USER_NAME):
     data = DATA_FILE.get_data(LOG_FILE_NAME)
     print("Printing user log from <{}>".format(user_name))
     pprint.pprint(data, indent=4)
+
+
+INFRAWATCH_USAGE_URL = "https://enneadtab.com/infra/api/ingest/usage"
+
+
+def _build_infrawatch_payload(environment, function_name, result):
+    """Build the JSON body for the InfraWatch /api/ingest/usage endpoint.
+
+    Schema matches src/app/api/ingest/usage/route.ts in the infrawatch repo.
+    """
+    import os
+    try:
+        machine_name = os.environ.get("COMPUTERNAME", "")
+    except Exception:
+        machine_name = ""
+    try:
+        username = USER.USER_NAME
+    except Exception:
+        username = ""
+    return {
+        "occurred_at": TIME.get_formatted_current_time(),
+        "environment": environment or "",
+        "function_name": function_name or "",
+        "result": result if result is not None else "",
+        "username": username,
+        "machine_name": machine_name,
+    }
+
+
+def send_usage_to_infrawatch(environment, function_name, result):
+    """Send usage event to InfraWatch Postgres-backed ingestion.
+
+    Replacement for the Google Form / Sheet pipeline. Tries the best
+    available HTTP library for the runtime (Revit -> urllib3, Rhino ->
+    urllib2, terminal -> urllib.request). Silent on success, print_note
+    on failure -- never raises, must not break the wrapped call.
+    """
+    try:
+        if _try_infrawatch_urllib3(environment, function_name, result):
+            return
+        elif _try_infrawatch_urllib2(environment, function_name, result):
+            return
+        elif _try_infrawatch_urllib_request(environment, function_name, result):
+            return
+        else:
+            ERROR_HANDLE.print_note("No HTTP library available for InfraWatch usage POST")
+    except Exception as e:
+        ERROR_HANDLE.print_note("Failed to send usage to InfraWatch: {}".format(e))
+
+
+def _try_infrawatch_urllib3(environment, function_name, result):
+    try:
+        import urllib3
+        payload = _build_infrawatch_payload(environment, function_name, result)
+        body = json.dumps(payload).encode("utf-8")
+        http = urllib3.PoolManager()
+        response = http.request(
+            "POST",
+            INFRAWATCH_USAGE_URL,
+            body=body,
+            headers={"Content-Type": "application/json"},
+            timeout=10.0,
+        )
+        if response.status == 200:
+            return True
+        ERROR_HANDLE.print_note(
+            "InfraWatch usage POST non-200: {} (urllib3)".format(response.status)
+        )
+        return False
+    except ImportError:
+        return False
+    except Exception as e:
+        ERROR_HANDLE.print_note("InfraWatch usage POST error (urllib3): {}".format(e))
+        return False
+
+
+def _try_infrawatch_urllib2(environment, function_name, result):
+    # IronPython 2.7 path used by Rhino. urllib2 is Py2-only; the bare import
+    # raises ImportError on CPython 3, which is the correct skip signal.
+    try:
+        import urllib2
+        payload = _build_infrawatch_payload(environment, function_name, result)
+        body = json.dumps(payload).encode("utf-8")
+        req = urllib2.Request(
+            INFRAWATCH_USAGE_URL,
+            data=body,
+            headers={"Content-Type": "application/json"},
+        )
+        response = urllib2.urlopen(req, timeout=10)
+        if response.getcode() == 200:
+            return True
+        ERROR_HANDLE.print_note(
+            "InfraWatch usage POST non-200: {} (urllib2)".format(response.getcode())
+        )
+        return False
+    except ImportError:
+        return False
+    except Exception as e:
+        ERROR_HANDLE.print_note("InfraWatch usage POST error (urllib2): {}".format(e))
+        return False
+
+
+def _try_infrawatch_urllib_request(environment, function_name, result):
+    try:
+        import urllib.request
+        payload = _build_infrawatch_payload(environment, function_name, result)
+        body = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            INFRAWATCH_USAGE_URL,
+            data=body,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        response = urllib.request.urlopen(req, timeout=10)
+        if response.getcode() == 200:
+            return True
+        ERROR_HANDLE.print_note(
+            "InfraWatch usage POST non-200: {} (urllib.request)".format(response.getcode())
+        )
+        return False
+    except ImportError:
+        return False
+    except Exception as e:
+        ERROR_HANDLE.print_note(
+            "InfraWatch usage POST error (urllib.request): {}".format(e)
+        )
+        return False
 
 
 def send_usage_to_google_form(environment, function_name, result):

@@ -85,6 +85,13 @@ def register_place_family_routes(api):
                 .OfClass(DB.Level)
                 .FirstElement()
             )
+            if level is None:
+                # Fresh model can have zero levels -- abort cleanly instead
+                # of crashing NewFamilyInstance with a NoneType error.
+                return routes.make_response(
+                    data={"error": "No levels exist in this document. Add a level before placing families."},
+                    status_code=400,
+                )
 
         location = DB.XYZ(float(x), float(y), float(z))
 

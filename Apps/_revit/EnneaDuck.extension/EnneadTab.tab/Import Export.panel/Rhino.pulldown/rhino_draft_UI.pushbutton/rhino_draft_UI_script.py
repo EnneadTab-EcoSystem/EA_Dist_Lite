@@ -331,6 +331,12 @@ def create_filled_region_from_srf(filled_region_name, obj_info):
     if not filled_region_type:
         NOTIFICATION.messenger("Cannot find the type of filled region in your project: {}\nI will use a default type instead.".format(filled_region_name),)
         filled_region_type = DB.FilteredElementCollector(doc).OfClass(DB.FilledRegionType).FirstElement()
+    if filled_region_type is None:
+        # Both the named lookup AND the fallback came up empty -- the
+        # project has zero FilledRegionTypes loaded. Skip this region
+        # rather than crashing on .Id.
+        NOTIFICATION.messenger("This project has no FilledRegionType loaded. Skipping the {} region.".format(filled_region_name))
+        return None
     filled_region = DB.FilledRegion.Create(doc,
                                             filled_region_type.Id,
                                             doc.ActiveView.Id,
