@@ -66,7 +66,7 @@ def get_doc_create():
 
 
 def group_contents(new_elements):
-    new_elements = filter(lambda x: x is not None, new_elements)
+    new_elements = [x for x in new_elements if x is not None and x.IsValidObject]
     if len(new_elements) == 0:
         return
 
