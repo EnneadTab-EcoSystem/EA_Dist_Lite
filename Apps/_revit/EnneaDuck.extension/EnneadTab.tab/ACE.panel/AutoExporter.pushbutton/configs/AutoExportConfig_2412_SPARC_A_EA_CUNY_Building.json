@@ -1,4 +1,4 @@
-{
+﻿{
   "project": {
     "project_name": "2412_SPARC",
     "pim_parameter_name": null
@@ -40,10 +40,10 @@
     "enable_notifications": true
   },
   "paths": {
-    "dev_root": "C:\\Users\\{username}\\github\\EnneadTab-OS",
+    "dev_root": "C:\\Users\\{username}\\github\\ennead-llp\\EnneadTab-OS",
     "dist_root": "C:\\Users\\{username}\\Documents\\EnneadTab Ecosystem\\EA_Dist",
     "lib_paths": [
-      "C:\\Users\\{username}\\github\\EnneadTab-OS\\Apps\\lib",
+      "C:\\Users\\{username}\\github\\ennead-llp\\EnneadTab-OS\\Apps\\lib",
       "C:\\Users\\{username}\\Documents\\EnneadTab Ecosystem\\EA_Dist\\Apps\\lib"
     ]
   },

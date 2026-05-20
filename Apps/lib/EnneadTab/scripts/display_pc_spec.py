@@ -118,7 +118,7 @@ HTML_TEMPLATE = """
             </select>
         </div>
         <div class="machine-details" id="machine-details"></div>
-        <p class="note">Made with ❤️ by EnneadTab</p>
+        <p class="note">Made with <3 by EnneadTab</p>
     </div>
     <script>
         const summary = __SUMMARY__;

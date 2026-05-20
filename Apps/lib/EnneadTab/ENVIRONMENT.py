@@ -686,7 +686,7 @@ if should_cleanup_dump_folder():
 # 2026-04-27: removed module-level L-drive availability nag.
 # IS_OFFLINE_MODE (above) handles the missing-share fallback gracefully,
 # so the "Friendly reminder!" auto-print on every Revit/Rhino startup is
-# pure noise. Functions kept — REVIT_PROJ_DATA still calls
+# pure noise. Functions kept -- REVIT_PROJ_DATA still calls
 # alert_l_drive_not_available() as a True/False gate at three call sites
 # (simple_get_revit_project_data / open_project_data_file /
 # ProjectDataEditor.edit_project_data). Cutting just the auto-fire.

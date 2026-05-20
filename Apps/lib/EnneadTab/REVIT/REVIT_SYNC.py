@@ -199,7 +199,7 @@ def get_model_guid(doc):
     Returns:
         str: A GUID string or deterministic hash ID
     """
-    # 1. Cloud-based models (BIM 360 / ACC / Autodesk Docs) — Revit 2019+
+    # 1. Cloud-based models (BIM 360 / ACC / Autodesk Docs) -- Revit 2019+
     try:
         if hasattr(doc, 'IsModelInCloud') and doc.IsModelInCloud:
             cloud_path = doc.GetCloudModelPath()

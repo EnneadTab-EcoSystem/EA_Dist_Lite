@@ -28,7 +28,7 @@ TOKEN_CACHE_FILE = "desktop_auth_token.sexyDuck"
 _cached_token = None  # in-memory cache for current session
 _auth_in_progress = False  # prevent multiple browser opens
 
-# 2026-05-14 — auth-complete listeners. Caller dialogs (Rhino/Revit AI Render,
+# 2026-05-14 -- auth-complete listeners. Caller dialogs (Rhino/Revit AI Render,
 # QAQC AI, AI Translate, etc.) register a zero-arg callback so they can
 # refresh their stale UI state the moment the OAuth callback writes a token.
 # Without this, the user sees "Sign-in complete" in the browser but the
@@ -224,7 +224,7 @@ def _notify_user_signed_in():
 
     Best-effort: NOTIFICATION.messenger spawns an external EXE which may be
     rate-limited or unavailable on a fresh install. Any failure here is
-    silent — the listener-driven UI refresh is the primary signal; the
+    silent -- the listener-driven UI refresh is the primary signal; the
     toast is a secondary cue for dialogs that did not register a listener.
     """
     try:

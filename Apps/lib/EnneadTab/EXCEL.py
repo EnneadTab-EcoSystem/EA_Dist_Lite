@@ -564,24 +564,68 @@ def _read_data_from_excel_locally(filepath, worksheet, return_dict, headless):
         if not worksheet:
             NOTIFICATION.messenger("Worksheet input is required for xlsx files")
             print ("Worksheet input is required for xlsx files")
-            return {}   
+            return {}
         job_data = {
             "mode": "read",
             "filepath": filepath,
-            "worksheet": worksheet
+            "worksheet": worksheet,
+            # explicit pending status so we never accept a leftover "done"
+            # from a previous run as the answer to this job
+            "status": "pending",
         }
+        # Clear stale output up-front to avoid silently inheriting the previous
+        # run's data if ExcelHandler crashes before writing fresh output.
+        DATA_FILE.set_data({}, "excel_handler_output")
         DATA_FILE.set_data(job_data, "excel_handler_input")
         EXE.try_open_app("ExcelHandler")
-        
+
         max_wait = 1000
         wait = 0
-        while wait<max_wait:
-            job_data = DATA_FILE.get_data("excel_handler_input")
-            if job_data.get("status") == "done":
+        finished = False
+        handler_error = None
+        handler_warnings = []
+        last_status = None
+        while wait < max_wait:
+            current = DATA_FILE.get_data("excel_handler_input")
+            last_status = current.get("status")
+            if last_status == "done":
+                finished = True
+                handler_warnings = current.get("warnings", []) or []
+                break
+            if last_status == "error":
+                handler_error = current.get("error", "(no error message provided)")
                 break
             time.sleep(0.1)
             wait += 1
-            # print ("{}/{}/{}".format(wait, max_wait, job_data.get("status")))
+
+        if handler_error is not None:
+            NOTIFICATION.messenger(
+                "ExcelHandler reported an error while reading\n{}\nsheet '{}':\n{}".format(
+                    filepath, worksheet, handler_error
+                )
+            )
+            print("ExcelHandler reported an error: {}".format(handler_error))
+            return {} if return_dict else []
+
+        if not finished:
+            NOTIFICATION.messenger(
+                "ExcelHandler did not finish within {:.0f}s for\n{}\nsheet '{}'.\n"
+                "Last status: {}. Likely causes: handler exe crashed, file is "
+                "locked, or worksheet was renamed/removed after picking.".format(
+                    max_wait * 0.1, filepath, worksheet, last_status
+                )
+            )
+            print("ExcelHandler timed out, last status: {}".format(last_status))
+            return {} if return_dict else []
+
+        # Surface any non-fatal hints the handler attached (e.g. Conditional
+        # Formatting present, theme-color resolution failures). These are the
+        # most common reason a read succeeds but downstream code reports
+        # "No valid color entries" -- without these hints the user has no clue.
+        for warn in handler_warnings:
+            print("ExcelHandler warning: {}".format(warn))
+            NOTIFICATION.messenger("Excel warning: {}".format(warn))
+
         raw_data = DATA_FILE.get_data("excel_handler_output")
         # Convert string keys back to tuple keys
         converted_data = {}

@@ -9,11 +9,11 @@ Submodules (all proxied through enneadtab.com / ennead-ai.com):
 
 Two valid import styles, both supported:
 
-    # Submodule (preferred for new code — explicit about which surface):
+    # Submodule (preferred for new code -- explicit about which surface):
     from EnneadTab.AI import AI_RENDER
     AI_RENDER.render_image_with_token(...)
 
-    # Top-level (back-compat with the pre-package-split AI.py — keeps existing
+    # Top-level (back-compat with the pre-package-split AI.py -- keeps existing
     # callers in QAQC_AI, translate_AI, keynote_assistant, BIM_Client,
     # text2script, ENGINE working unchanged):
     from EnneadTab import AI
@@ -22,7 +22,7 @@ Two valid import styles, both supported:
     AI.AIRequestError
 """
 
-# Back-compat re-exports — DO NOT REMOVE without auditing every
+# Back-compat re-exports -- DO NOT REMOVE without auditing every
 # `from EnneadTab import AI` call site across Apps/_revit/, Apps/_rhino/,
 # and Apps/lib/EnneadTab/. Removing these silently breaks ~7 buttons.
 

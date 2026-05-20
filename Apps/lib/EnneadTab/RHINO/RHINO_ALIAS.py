@@ -13,7 +13,7 @@ import Rhino # pyright: ignore
 # Developer-machine detection. If a live source repo exists on this machine,
 # every alias we register is rewritten to point at the repo instead of EA_Dist,
 # so future Rhino sessions boot from the source of truth without waiting on
-# AutoDist publish cycles. End users lack these folders entirely — the search
+# AutoDist publish cycles. End users lack these folders entirely -- the search
 # returns None in microseconds and alias registration falls through to the
 # EA_Dist path that was walked. Keep the parent/org lists in sync with
 # DarkSide/RuiWriter/MacroHandler.py so pushbutton macros and alias
@@ -53,7 +53,7 @@ def _prefer_dev_path(full_path):
     """
     if _DEV_APPS_ROOT is None:
         return full_path
-    # Split on the literal "Apps\" segment — both EA_Dist and repo share the same
+    # Split on the literal "Apps\" segment -- both EA_Dist and repo share the same
     # subtree layout below Apps/, so the remainder is directly transplantable.
     sep = os.sep + "Apps" + os.sep
     if sep not in full_path:

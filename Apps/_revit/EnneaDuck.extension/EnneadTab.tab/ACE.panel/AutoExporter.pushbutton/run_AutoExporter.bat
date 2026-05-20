@@ -63,7 +63,7 @@ echo.
 echo ================================================
 
 REM Determine paths (developer vs distribution)
-set DEV_ROOT=C:\Users\%USERNAME%\github\EnneadTab-OS
+set DEV_ROOT=C:\Users\%USERNAME%\github\ennead-llp\EnneadTab-OS
 set DIST_ROOT=C:\Users\%USERNAME%\Documents\EnneadTab Ecosystem\EA_Dist
 
 REM Detect which environment we're in

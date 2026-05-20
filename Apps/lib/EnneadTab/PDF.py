@@ -93,7 +93,7 @@ try:
     from reportlab.platypus.flowables import KeepTogether
     REPORTLAB_AVAILABLE = True
 except ImportError as e:
-    ERROR_HANDLE.print_note("⚠️  ReportLab not available: {}".format(e))
+    ERROR_HANDLE.print_note("[!]  ReportLab not available: {}".format(e))
     # Provide fallback values for missing imports
     inch = 72  # Default to 72 points per inch
     REPORTLAB_AVAILABLE = False

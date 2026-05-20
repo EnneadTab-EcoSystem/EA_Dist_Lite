@@ -611,10 +611,10 @@ def compare_names_with_usernames(employee_records, pc_usernames, threshold=90):
             })
             if best_match in unmatched_usernames:
                 unmatched_usernames.remove(best_match)
-            print(f"✓ MATCH: '{employee_name}' (email: {email_username}) -> '{best_match}' (confidence: {best_score}%)")
+            print(f"[OK] MATCH: '{employee_name}' (email: {email_username}) -> '{best_match}' (confidence: {best_score}%)")
         else:
             unmatched_employees.append(employee_name)
-            print(f"✗ NO MATCH: '{employee_name}' (email: {email_username}) (best: '{best_match}' at {best_score}%)")
+            print(f"[X] NO MATCH: '{employee_name}' (email: {email_username}) (best: '{best_match}' at {best_score}%)")
     print(f"\n=== MATCHING SUMMARY ===")
     print(f"Total matches found: {len(matches)}")
     print(f"Unmatched employees: {len(unmatched_employees)}")

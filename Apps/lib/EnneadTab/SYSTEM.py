@@ -86,7 +86,7 @@ APPS = [
         # + DriveStorageHistory + MonitorBlueScreen tasks (all active=False, all
         # writing to L:\ static HTML that nobody read). InfraWatch_Collect runs
         # the unified collect_all.py which POSTs to enneadtab.com/infra/api/ingest/*
-        # — drive health + machine spec + events in one go, every 15 min.
+        # -- drive health + machine spec + events in one go, every 15 min.
         #
         # 2026-05-18: switched task target to run_collectors.bat (stdlib-only, no
         # exe compile required). The .bat tries py/python from the system image
@@ -97,7 +97,7 @@ APPS = [
         "file_name": r"..\DumpScripts\collectors\run_collectors.bat",
         "shortcut_name": "EnneadTab_InfraWatch_Collect",
         "task_name": "EnneadTab_InfraWatch_Collect_Task",
-        "description": "EnneadTab InfraWatch — drive health + machine spec + events to enneadtab.com/infra (silent)",
+        "description": "EnneadTab InfraWatch -- drive health + machine spec + events to enneadtab.com/infra (silent)",
         "task_type": TaskType.REPEAT,
         "interval_minutes": 15,
         "active": True
@@ -121,7 +121,7 @@ APPS = [
         "task_type": TaskType.STARTUP,
         "active": False
     },
-    # 2026-04-21: DriveStorageHistory + MonitorBlueScreen retired — folded
+    # 2026-04-21: DriveStorageHistory + MonitorBlueScreen retired -- folded
     # into InfraWatch_Collect above. The unified collector handles drive health,
     # storage snapshots, machine spec, and events in a single 15-min sweep.
     {

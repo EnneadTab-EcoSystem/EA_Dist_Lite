@@ -686,7 +686,7 @@ def get_reusable_access_token():
 def get_acc_projects_data(use_record = True):
     """Get ACC projects data with timestamp-based caching.
     
-    🏗️ GENERATES: PROJECT DETAILS DATA FILE
+    [bldg] GENERATES: PROJECT DETAILS DATA FILE
     
     This function produces the foundational project data containing:
     - All hubs and their associated projects
@@ -1159,7 +1159,7 @@ def get_project_revit_files_data(project_id, hub_id, project_name=None, hub_name
 def get_ACC_summary_data(show_progress = False):
     """Get a comprehensive summary of all ACC projects and their Revit files.
     
-    🏗️ GENERATES: PROJECT SUMMARY + PROJECT BY YEAR DATA FILES
+    [bldg] GENERATES: PROJECT SUMMARY + PROJECT BY YEAR DATA FILES
     
     This is the MAIN DATA GENERATION function that creates comprehensive project summaries.
     It processes project details and enriches them with complete Revit file information.
@@ -1294,7 +1294,7 @@ def get_ACC_summary_data(show_progress = False):
             # COST OPTIMIZATION: Skip projects unlikely to have Revit files
             if should_skip_project(project_name, project_type):
                 if show_progress:
-                    print("  💰 Skipped to save API costs")
+                    print("  [money] Skipped to save API costs")
                 continue
             
             # Get Revit files with logging for progress tracking
@@ -1307,12 +1307,12 @@ def get_ACC_summary_data(show_progress = False):
             if revit_files is None:
                 logging.warning("Failed to get Revit files for project {} after {:.1f}s, skipping".format(project_name, elapsed))
                 if show_progress:
-                    print("  ⚠️  Failed to get Revit files, skipping")
+                    print("  [!]  Failed to get Revit files, skipping")
                 continue
             else:
                 logging.info("Got {} Revit files for project {} in {:.1f}s".format(len(revit_files) if revit_files else 0, project_name, elapsed))
                 if show_progress and elapsed > 10:
-                    print("  ⏱️  Took {:.1f}s to process".format(elapsed))
+                    print("  [t]  Took {:.1f}s to process".format(elapsed))
             
             processed_files = {}
             if revit_files:
@@ -1369,7 +1369,7 @@ def get_ACC_summary_data(show_progress = False):
 
     # Print cost summary
     api_summary = get_api_usage_summary()
-    print("\n🏦 API COST SUMMARY:")
+    print("\n[bank] API COST SUMMARY:")
     print("=" * 50)
     print("Total API Calls: {}".format(api_summary["total_calls"]))
     print("  - Token calls: {} (reused tokens saved ~{}% costs)".format(
@@ -1380,7 +1380,7 @@ def get_ACC_summary_data(show_progress = False):
     print("  - File detail calls: {}".format(api_summary["file_detail_calls"]))
     print("Session duration: {:.1f} minutes".format(api_summary["session_duration"] / 60))
     print("Calls per minute: {:.1f}".format(api_summary["calls_per_minute"]))
-    print("💰 Estimated cost savings: ~70-80% vs naive implementation")
+    print("[money] Estimated cost savings: ~70-80% vs naive implementation")
     print("=" * 50)
     
     logging.info("API cost summary: {}".format(api_summary))
@@ -1388,8 +1388,8 @@ def get_ACC_summary_data(show_progress = False):
     # Log final results
     logging.info("ACC summary completed: {} projects processed, {} projects in summary".format(processed_count, len(summary)))
     if show_progress:
-        print("📊 ACC summary completed: {} projects processed".format(processed_count))
-        print("📊 Summary contains {} projects".format(len(summary)))
+        print("[chart] ACC summary completed: {} projects processed".format(processed_count))
+        print("[chart] Summary contains {} projects".format(len(summary)))
 
     return summary
 
@@ -1491,7 +1491,7 @@ class ACC_PROJECT_RUNNER:
     def run_an_idle_job(self, year_version = None, debug = False):
         """Find and execute an idle job matching the specified Revit version.
         
-        🔄 AUTOMATIC DATA REGENERATION LOGIC:
+        [sync] AUTOMATIC DATA REGENERATION LOGIC:
         
         This function intelligently manages when to regenerate expensive project summary data:
         
@@ -1685,29 +1685,29 @@ def batch_run_projects(debug = False):
 def DEMO_data_generation():
     """Demonstration of what data gets generated and when.
     
-    🎯 DEMONSTRATION: Data Generation Pipeline
+    [target] DEMONSTRATION: Data Generation Pipeline
     
     This function shows the complete data generation process and what gets created:
     """
-    print("🏗️ ACC DATA GENERATION DEMONSTRATION")
+    print("[bldg] ACC DATA GENERATION DEMONSTRATION")
     print("=" * 60)
     
     # Step 1: Show cache status
-    print("\n1️⃣ CHECKING CURRENT CACHE STATUS:")
+    print("\n1 CHECKING CURRENT CACHE STATUS:")
     cache_status = get_cache_status()
     for cache_name, status in cache_status.items():
         if isinstance(status, dict):
             if status["exists"]:
-                print("   ✅ {} - {:.1f} days old, {} bytes".format(
+                print("   [OK] {} - {:.1f} days old, {} bytes".format(
                     cache_name, status["age_days"], status["size_bytes"]))
             else:
-                print("   ❌ {} - Not found".format(cache_name))
+                print("   [X] {} - Not found".format(cache_name))
         else:
-            print("   📁 {} individual project cache files".format(status))
+            print("   [folder] {} individual project cache files".format(status))
     
     # Step 2: Generate Project Details if needed
-    print("\n2️⃣ GENERATING PROJECT DETAILS:")
-    print("   📡 Calling get_acc_projects_data()...")
+    print("\n2 GENERATING PROJECT DETAILS:")
+    print("   [satdish] Calling get_acc_projects_data()...")
     start_time = time.time()
     project_details = get_acc_projects_data()
     elapsed = time.time() - start_time
@@ -1715,55 +1715,55 @@ def DEMO_data_generation():
     if project_details:
         hub_count = len(project_details)
         total_projects = sum(len(hub_data.get("data", [])) for hub_data in project_details.values() if hub_data)
-        print("   ✅ Generated: {} hubs, {} projects in {:.1f}s".format(hub_count, total_projects, elapsed))
-        print("   💾 Saved as: {}.sexyDuck".format(ACC_PROJECTS_DETAILS))
+        print("   [OK] Generated: {} hubs, {} projects in {:.1f}s".format(hub_count, total_projects, elapsed))
+        print("   [save] Saved as: {}.sexyDuck".format(ACC_PROJECTS_DETAILS))
         
         # Show sample structure
         sample_hub = list(project_details.keys())[0] if project_details else None
         if sample_hub and project_details[sample_hub]:
             sample_project = project_details[sample_hub]["data"][0] if project_details[sample_hub].get("data") else None
             if sample_project:
-                print("   📋 Sample project: {} (ID: {})".format(
+                print("   [list] Sample project: {} (ID: {})".format(
                     sample_project["attributes"]["name"], 
                     sample_project["id"]))
     else:
-        print("   ❌ Failed to generate project details")
+        print("   [X] Failed to generate project details")
         return
     
     # Step 3: Generate Project Summary (expensive operation)
-    print("\n3️⃣ GENERATING PROJECT SUMMARY (EXPENSIVE):")
-    print("   ⚠️  This will make 100-1000+ API calls and may take several minutes...")
-    print("   💰 Estimated cost: $5-50 depending on project count")
+    print("\n3 GENERATING PROJECT SUMMARY (EXPENSIVE):")
+    print("   [!]  This will make 100-1000+ API calls and may take several minutes...")
+    print("   [money] Estimated cost: $5-50 depending on project count")
     
     user_input = input("   Continue with expensive summary generation? (y/N): ")
     if user_input.lower() != 'y':
-        print("   ⏭️  Skipping expensive summary generation")
-        print("   💡 To see cached summary data if available:")
+        print("   [skip]  Skipping expensive summary generation")
+        print("   [idea] To see cached summary data if available:")
         cached_summary = DATA_FILE.get_data(CACHE_ACC_PROJECTS_SUMMARY, is_local=False)
         if cached_summary:
             project_count = len(cached_summary)
             total_revit_files = sum(len(proj.get("revit_files", {})) for proj in cached_summary.values())
-            print("   📊 Cached summary: {} projects, {} Revit files total".format(project_count, total_revit_files))
+            print("   [chart] Cached summary: {} projects, {} Revit files total".format(project_count, total_revit_files))
             
             # Show sample project with Revit files
             sample_project_name = list(cached_summary.keys())[0] if cached_summary else None
             if sample_project_name:
                 sample_proj = cached_summary[sample_project_name]
                 revit_files = sample_proj.get("revit_files", {})
-                print("   📋 Sample: '{}' has {} Revit files".format(sample_project_name, len(revit_files)))
+                print("   [list] Sample: '{}' has {} Revit files".format(sample_project_name, len(revit_files)))
                 if revit_files:
                     sample_file = list(revit_files.keys())[0]
                     file_data = revit_files[sample_file]
-                    print("      📄 File: {} (Version: {}, GUID: {})".format(
+                    print("      [doc] File: {} (Version: {}, GUID: {})".format(
                         sample_file, 
                         file_data.get("revit_project_version", "N/A"),
                         file_data.get("model_guid", "N/A")[:8] + "..."
                     ))
         else:
-            print("   ❌ No cached summary data found")
+            print("   [X] No cached summary data found")
         return
     
-    print("   📡 Calling get_ACC_summary_data(show_progress=True)...")
+    print("   [satdish] Calling get_ACC_summary_data(show_progress=True)...")
     start_time = time.time()
     project_summary = get_ACC_summary_data(show_progress=True)
     elapsed = time.time() - start_time
@@ -1771,16 +1771,16 @@ def DEMO_data_generation():
     if project_summary:
         project_count = len(project_summary)
         total_revit_files = sum(len(proj.get("revit_files", {})) for proj in project_summary.values())
-        print("   ✅ Generated: {} projects, {} Revit files in {:.1f}s".format(
+        print("   [OK] Generated: {} projects, {} Revit files in {:.1f}s".format(
             project_count, total_revit_files, elapsed))
-        print("   💾 Saved as: {}.sexyDuck and {}.sexyDuck".format(
+        print("   [save] Saved as: {}.sexyDuck and {}.sexyDuck".format(
             ACC_PROJECTS_SUMMARY, ACC_PROJECTS_BY_YEAR))
         
         # Show sample detailed structure
         sample_project_name = list(project_summary.keys())[0] if project_summary else None
         if sample_project_name:
             sample_proj = project_summary[sample_project_name]
-            print("   📋 Sample project: '{}'".format(sample_project_name))
+            print("   [list] Sample project: '{}'".format(sample_project_name))
             print("      - Project ID: {}".format(sample_proj["project_id"]))
             print("      - Project Type: {}".format(sample_proj["project_type"]))
             print("      - Revit Files: {}".format(len(sample_proj.get("revit_files", {}))))
@@ -1789,32 +1789,32 @@ def DEMO_data_generation():
             if revit_files:
                 sample_file = list(revit_files.keys())[0]
                 file_data = revit_files[sample_file]
-                print("      📄 Sample file: {}".format(sample_file))
+                print("      [doc] Sample file: {}".format(sample_file))
                 print("         - File ID: {}".format(file_data.get("file_id", "N/A")))
                 print("         - Revit Version: {}".format(file_data.get("revit_project_version", "N/A")))
                 print("         - Model GUID: {}".format(file_data.get("model_guid", "N/A")))
                 print("         - Last Modified: {}".format(file_data.get("last_modified_time", "N/A")))
                 print("         - Storage Size: {} bytes".format(file_data.get("storage_size", "N/A")))
     else:
-        print("   ❌ Failed to generate project summary")
+        print("   [X] Failed to generate project summary")
         return
     
     # Step 4: Show API usage summary
-    print("\n4️⃣ API COST SUMMARY:")
+    print("\n4 API COST SUMMARY:")
     api_summary = get_api_usage_summary()
-    print("   📊 Total API Calls: {}".format(api_summary["total_calls"]))
-    print("   🎫 Token calls: {} (reused tokens saved ~{}% costs)".format(
+    print("   [chart] Total API Calls: {}".format(api_summary["total_calls"]))
+    print("   [ticket] Token calls: {} (reused tokens saved ~{}% costs)".format(
         api_summary["token_calls"], 
         int(100 * (1 - api_summary["token_calls"] / max(project_count, 1)))))
-    print("   📁 Project calls: {}".format(api_summary["project_calls"]))
-    print("   📂 Folder calls: {}".format(api_summary["folder_calls"]))
-    print("   📄 File detail calls: {}".format(api_summary["file_detail_calls"]))
-    print("   ⏱️  Session duration: {:.1f} minutes".format(api_summary["session_duration"] / 60))
-    print("   💰 Estimated cost savings: ~70-80% vs naive implementation")
+    print("   [folder] Project calls: {}".format(api_summary["project_calls"]))
+    print("   [folder] Folder calls: {}".format(api_summary["folder_calls"]))
+    print("   [doc] File detail calls: {}".format(api_summary["file_detail_calls"]))
+    print("   [t]  Session duration: {:.1f} minutes".format(api_summary["session_duration"] / 60))
+    print("   [money] Estimated cost savings: ~70-80% vs naive implementation")
     
-    print("\n🎯 GENERATION COMPLETE!")
-    print("   📅 Data cached for {} days".format(CACHE_EXPIRY_DAYS))
-    print("   🔄 Will auto-regenerate when cache expires or in debug mode")
+    print("\n[target] GENERATION COMPLETE!")
+    print("   [date] Data cached for {} days".format(CACHE_EXPIRY_DAYS))
+    print("   [sync] Will auto-regenerate when cache expires or in debug mode")
 
 if __name__ == "__main__":
     # print("Script started from __main__.")

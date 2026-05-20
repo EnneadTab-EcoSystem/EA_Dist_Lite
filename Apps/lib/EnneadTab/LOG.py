@@ -680,9 +680,9 @@ def download_log_data(spreadsheet_url=None):
             
             for row in csv_reader:
                 # Map CSV columns to our expected format based on actual spreadsheet
-                # Column A: 时间戳记 (Timestamp), Column B: Environment, Column C: Function, Column D: Result
+                # Column A: Timestamp, Column B: Environment, Column C: Function, Column D: Result
                 log_entry = {
-                    'timestamp': row.get('时间戳记', row.get('Timestamp', row.get('Date', row.get('Time', '')))),
+                    'timestamp': row.get(u'\u65f6\u95f4\u6233\u8bb0', row.get('Timestamp', row.get('Date', row.get('Time', '')))),
                     'environment': row.get('Environment', row.get('App', row.get('Application', ''))),
                     'function_name': row.get('Function', row.get('Function Name', row.get('Script', ''))),
                     'result': row.get('Result', row.get('Status', row.get('Outcome', '')))
@@ -779,7 +779,7 @@ def download_log_data(spreadsheet_url=None):
             log_data = []
             for row in csv_reader:
                 log_entry = {
-                    'timestamp': row.get('时间戳记', row.get('Timestamp', row.get('Date', row.get('Time', '')))),
+                    'timestamp': row.get(u'\u65f6\u95f4\u6233\u8bb0', row.get('Timestamp', row.get('Date', row.get('Time', '')))),
                     'environment': row.get('Environment', row.get('App', row.get('Application', ''))),
                     'function_name': row.get('Function', row.get('Function Name', row.get('Script', ''))),
                     'result': row.get('Result', row.get('Status', row.get('Outcome', '')))
@@ -859,7 +859,7 @@ def visualize_log_data():
                     dt = None
                     formats_to_try = [
                         '%Y-%m-%d %H:%M:%S',  # Standard format
-                        '%Y-%m-%d %p%I:%M:%S',  # Chinese format with 上午/下午
+                        '%Y-%m-%d %p%I:%M:%S',  # Chinese format with AM/PM markers
                         '%Y-%m-%d %H:%M',  # Without seconds
                         '%Y-%m-%d'  # Date only
                     ]
@@ -867,10 +867,10 @@ def visualize_log_data():
                     for fmt in formats_to_try:
                         try:
                             # Handle Chinese AM/PM indicators
-                            if '下午' in timestamp_str:
-                                timestamp_str = timestamp_str.replace('下午', 'PM')
-                            elif '上午' in timestamp_str:
-                                timestamp_str = timestamp_str.replace('上午', 'AM')
+                            if u'\u4e0b\u5348' in timestamp_str:
+                                timestamp_str = timestamp_str.replace(u'\u4e0b\u5348', 'PM')
+                            elif u'\u4e0a\u5348' in timestamp_str:
+                                timestamp_str = timestamp_str.replace(u'\u4e0a\u5348', 'AM')
                             
                             dt = datetime.strptime(timestamp_str, fmt)
                             break

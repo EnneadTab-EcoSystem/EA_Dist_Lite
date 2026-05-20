@@ -2,15 +2,15 @@
 # -*- coding: utf-8 -*-
 """Chat / prompt-improvement / spell-check endpoints.
 
-- chat / chat_with_token  →  enneadtab.com/api/ai/desktop-chat (general LLM)
-- improve_prompt_with_token →  ennead-ai.com/api/improve-prompt (scene-aware,
+- chat / chat_with_token  ->  enneadtab.com/api/ai/desktop-chat (general LLM)
+- improve_prompt_with_token ->  ennead-ai.com/api/improve-prompt (scene-aware,
                                   language-preserving, action=improve|summarize)
-- spell_check_with_token  →  ennead-ai.com/api/spell-check (intent-preserving,
+- spell_check_with_token  ->  ennead-ai.com/api/spell-check (intent-preserving,
                                   content-moderated)
 
 The improve_prompt and spell_check endpoints live on RenderPolisher
 (ennead-ai.com) and have tuned, frequently-updated system prompts. Reuse
-them — do not roll our own LLM call here (prime directive: REUSE, don't
+them -- do not roll our own LLM call here (prime directive: REUSE, don't
 reinvent).
 """
 

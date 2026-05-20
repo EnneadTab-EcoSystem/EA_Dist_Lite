@@ -2,8 +2,8 @@
 # -*- coding: utf-8 -*-
 """Shared HTTP transport for the EnneadTab.AI submodules.
 
-IronPython 2.7 (Revit/Rhino) — uses .NET HttpWebRequest because urllib2's SSL
-is broken inside the host process. CPython 3.x — uses urllib.
+IronPython 2.7 (Revit/Rhino) -- uses .NET HttpWebRequest because urllib2's SSL
+is broken inside the host process. CPython 3.x -- uses urllib.
 
 All AI calls are proxied through enneadtab.com or ennead-ai.com. The desktop
 Bearer token (issued by EnneadTabHome / .desktop_auth_token.sexyDuck) is
@@ -156,8 +156,8 @@ def _post_json_dotnet(url, payload_str, token, timeout_ms):
 
         response = request.GetResponse()
         # StreamReader without an explicit encoding uses Encoding.Default, which
-        # on .NET Framework (IronPython's host) is the Windows ANSI code page —
-        # any non-Latin-1 byte (UTF-8 multibyte sequences for é, ç, Chinese, …)
+        # on .NET Framework (IronPython's host) is the Windows ANSI code page --
+        # any non-Latin-1 byte (UTF-8 multibyte sequences for e-acute, c-cedilla, Chinese chars, etc.)
         # then triggers IronPython's "'unknown' codec can't decode byte 0xNN".
         # Always pass Encoding.UTF8 explicitly. (2026-04-21 Shorten failure.)
         reader = StreamReader(response.GetResponseStream(), Encoding.UTF8)
@@ -358,7 +358,7 @@ def post_multipart_raw(url, fields, files, token, timeout_ms=180000, progress_ca
                 except Exception:
                     pass
                 raise AIRequestError(
-                    "Auth redirect ({}) — token likely expired".format(status_code),
+                    "Auth redirect ({}) -- token likely expired".format(status_code),
                     status_code=401)
 
             reader = StreamReader(response.GetResponseStream(), Encoding.UTF8)

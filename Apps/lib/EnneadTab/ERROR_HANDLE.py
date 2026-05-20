@@ -415,7 +415,7 @@ def try_catch_error(is_silent=False, is_pass = False):
                     print_note("Cannot send email: {}".format(get_alternative_traceback()))
 
                 # DEPRECATED 2026-04-06: Google Form error logging scheduled for removal by 2026-04-30.
-                # ErrorDump API (below) is the replacement — confirmed receiving end-user errors
+                # ErrorDump API (below) is the replacement -- confirmed receiving end-user errors
                 # from multiple machines (szhang, nicole.levine, Han.Isozen, yhuang) since 2026-03-27.
                 # Retire this call once we verify no one on the team still reads the Google Sheet.
                 try:

@@ -1,21 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-"""AI image/video render — wrappers, queue, and gallery cache.
+"""AI image/video render -- wrappers, queue, and gallery cache.
 
 Single module owning the complete render concern:
 
-  Section A — Style preset library      (get_render_presets)
-  Section B — Image render API          (render_image_with_token, render_image)
-  Section C — Video render API          (render_video_with_token)
-  Section D — Style-reference library   (get_demo_style_images, cache helpers)
-  Section E — User saved prompts        (list_prompts_with_token, save_prompt_with_token)
-  Section F — Quota                     (get_quota_with_token)
-  Section G — Cloud Gallery API         (list/items/save/community/delete)
-  Section H — Local gallery cache       (cache_dir, fetch_*_async, filter_rows)
-  Section I — Render job model + worker (RenderJob, QueueWorker, ACTIVE_CAP)
+  Section A -- Style preset library      (get_render_presets)
+  Section B -- Image render API          (render_image_with_token, render_image)
+  Section C -- Video render API          (render_video_with_token)
+  Section D -- Style-reference library   (get_demo_style_images, cache helpers)
+  Section E -- User saved prompts        (list_prompts_with_token, save_prompt_with_token)
+  Section F -- Quota                     (get_quota_with_token)
+  Section G -- Cloud Gallery API         (list/items/save/community/delete)
+  Section H -- Local gallery cache       (cache_dir, fetch_*_async, filter_rows)
+  Section I -- Render job model + worker (RenderJob, QueueWorker, ACTIVE_CAP)
 
 All HTTP transports come from EnneadTab.AI._common. All the desktop UIs in
-Revit and Rhino import from this module — there is no per-platform copy of
+Revit and Rhino import from this module -- there is no per-platform copy of
 the queue or gallery logic.
 
 IronPython 2.7 + CPython 3.x compatible.
@@ -29,7 +29,7 @@ import time
 import shutil
 import uuid
 
-# Optional .NET imports — only present in IronPython hosts (Revit/Rhino).
+# Optional .NET imports -- only present in IronPython hosts (Revit/Rhino).
 # Pure-CPython callers (e.g. ENGINE.py background tasks that only need
 # AI.chat or AI.translate via the back-compat re-exports) must still be
 # able to import this module without crashing on `import clr`.
@@ -45,7 +45,7 @@ except ImportError:
     Thread = ThreadStart = AutoResetEvent = Monitor = None
 
 from EnneadTab import AUTH
-from EnneadTab import SOUND, FOLDER  # noqa: F401 — kept for callers
+from EnneadTab import SOUND, FOLDER  # noqa: F401 -- kept for callers
 from EnneadTab.AI._common import (
     RENDER_URL, AIRequestError,
     post_json, get_json, post_multipart, post_multipart_raw,
@@ -97,12 +97,12 @@ QUOTA_PANEL_BODY = (
 
 def _mime_for_path(path):
     """Pick correct MIME from file extension. Defaults to image/jpeg.
-    Round 3 P2-5 — was hardcoded `png else jpeg` so .webp uploaded as jpeg."""
+    Round 3 P2-5 -- was hardcoded `png else jpeg` so .webp uploaded as jpeg."""
     return _MIME_BY_EXT.get(os.path.splitext(path)[1].lower(), "image/jpeg")
 
 
 # =====================================================================
-# Section A — Style preset library
+# Section A -- Style preset library
 # =====================================================================
 
 def get_render_presets(token=None):
@@ -121,7 +121,7 @@ def get_render_presets(token=None):
 
 
 # =====================================================================
-# Section B — Image render API
+# Section B -- Image render API
 # =====================================================================
 
 def render_image_with_token(token, image_path, prompt, aspect_ratio="16:9",
@@ -155,7 +155,7 @@ def render_image_with_token(token, image_path, prompt, aspect_ratio="16:9",
     if progress_callback:
         progress_callback("Processing response...")
 
-    # SSE parser: normalize CRLF→LF first (some CDNs use \r\n\r\n separators),
+    # SSE parser: normalize CRLF->LF first (some CDNs use \r\n\r\n separators),
     # then split by blank lines and collect lines starting with "data:".
     # Tolerates "event: <name>" prefix lines (multi-line SSE events).
     images = []
@@ -220,7 +220,7 @@ def render_image(image_path, prompt, aspect_ratio="16:9"):
 
 
 # =====================================================================
-# Section C — Video render API
+# Section C -- Video render API
 # =====================================================================
 
 def render_video_with_token(token, image_path, prompt, duration_sec=4,
@@ -229,7 +229,7 @@ def render_video_with_token(token, image_path, prompt, duration_sec=4,
     """Image-to-video via /api/create/video (long-poll JSON, NOT SSE).
 
     Vercel route maxDuration=300; can run 60-180s typical. Returns the parsed
-    JSON response — caller downloads the videoUrl + posterUrl (if present).
+    JSON response -- caller downloads the videoUrl + posterUrl (if present).
     """
     if not token:
         raise AIRequestError("No auth token provided.", status_code=401)
@@ -265,7 +265,7 @@ def render_video_with_token(token, image_path, prompt, duration_sec=4,
 
 
 # =====================================================================
-# Section D — Style-reference library + per-image cache
+# Section D -- Style-reference library + per-image cache
 # =====================================================================
 
 def _style_cache_dir():
@@ -344,7 +344,7 @@ def prefetch_demo_style_images(token, max_count=None, progress_callback=None):
 
 
 # =====================================================================
-# Section E — User saved prompts
+# Section E -- User saved prompts
 # =====================================================================
 
 def list_prompts_with_token(token, timeout_ms=10000):
@@ -378,7 +378,7 @@ def save_prompt_with_token(token, name, prompt, category=None, tags=None, timeou
 
 
 # =====================================================================
-# Section F — Quota
+# Section F -- Quota
 # =====================================================================
 
 def get_quota_with_token(token, timeout_ms=10000):
@@ -396,11 +396,11 @@ def get_quota_with_token(token, timeout_ms=10000):
 
 
 # =====================================================================
-# Section G — Cloud Gallery API (list / items / save / community / delete)
+# Section G -- Cloud Gallery API (list / items / save / community / delete)
 # =====================================================================
 
 def list_gallery_index_with_token(token, limit=200, offset=0, timeout_ms=15000):
-    """Lightweight index — items have inline thumbnailData (data URL). Empty on failure."""
+    """Lightweight index -- items have inline thumbnailData (data URL). Empty on failure."""
     if not token:
         return []
     url = "{}/api/gallery/index?limit={}&offset={}".format(RENDER_URL, int(limit), int(offset))
@@ -448,7 +448,7 @@ def save_to_gallery_with_token(token, image_path, prompt, mode="image",
     stores it on the gallery item so the History panel can show both thumbs.
     Old clients omit the field; server treats that case as result-only.
 
-    2026-04-28 — extended kwargs (aspect_ratio, long_edge, host, is_interior,
+    2026-04-28 -- extended kwargs (aspect_ratio, long_edge, host, is_interior,
     duration_ms, prompt_title, used_style_ref) are bundled into a `metadata`
     JSON form field so the server `/api/gallery/save` (saveToStorage util)
     persists them on the gallery item. Without these the History panel shows
@@ -540,7 +540,7 @@ def save_to_community_with_token(token, image_path, prompt, mode="image",
 
 
 def delete_gallery_item_with_token(token, item_id, timeout_ms=15000):
-    """Delete an item — affects every device the user is signed in on."""
+    """Delete an item -- affects every device the user is signed in on."""
     if not token:
         raise AIRequestError("No auth token provided.", status_code=401)
     if not item_id:
@@ -554,7 +554,7 @@ def delete_gallery_item_with_token(token, item_id, timeout_ms=15000):
 
 
 # =====================================================================
-# Section H — Local gallery cache + fetch helpers (framework-agnostic)
+# Section H -- Local gallery cache + fetch helpers (framework-agnostic)
 # =====================================================================
 #
 # These run on a ThreadPool so the UI stays responsive. The platform-specific
@@ -608,7 +608,7 @@ def clear_cache():
     """Wipe local cache. Cloud is canonical so this is non-destructive.
 
     Per-entry try/except so a single locked file (Windows: another process
-    has it open) doesn't abort the whole sweep — Round 3 P3-4.
+    has it open) doesn't abort the whole sweep -- Round 3 P3-4.
     """
     base = cache_dir()
     if not os.path.exists(base):
@@ -695,7 +695,7 @@ def fetch_full_item_async(token, item_id, on_done):
                 return
             it = items[0]
             data_url = it.get("imageData") or ""
-            # Parse mime explicitly — substring match treats webp as jpg.
+            # Parse mime explicitly -- substring match treats webp as jpg.
             ext = ".jpg"
             if data_url.startswith("data:"):
                 mime_part = data_url.split(";", 1)[0].split(":", 1)[-1].lower()
@@ -735,11 +735,11 @@ def truncate_str(s, n):
     s = s or ""
     if len(s) <= n:
         return s
-    return s[:n - 1] + "…"
+    return s[:n - 1] + "..."
 
 
 # =====================================================================
-# Section I — Render job model + FIFO worker thread
+# Section I -- Render job model + FIFO worker thread
 # =====================================================================
 
 KIND_IMAGE = "image"
@@ -759,7 +759,7 @@ def _resolve_video_url(url):
 
     Today video URLs come back as public Vercel Blob URLs (no auth needed).
     If the web team ever returns /api/-relative URLs for signed downloads,
-    needs_auth=True signals the download helper to attach the bearer token —
+    needs_auth=True signals the download helper to attach the bearer token --
     when the helper grows that capability. Currently this is informational only.
     """
     if not url:
@@ -774,8 +774,8 @@ def cleanup_old_captures(dump_root, max_age_days=7):
     """Delete capture_* folders older than max_age_days from the dump root.
 
     Each Update Capture writes a fresh `capture_<ts>/` folder; over months of
-    daily use this becomes unbounded disk growth (Round 2 P1 — capture folder
-    leak). Call on dialog open. Safe — only removes capture_* folders.
+    daily use this becomes unbounded disk growth (Round 2 P1 -- capture folder
+    leak). Call on dialog open. Safe -- only removes capture_* folders.
     """
     base = os.path.join(dump_root, "EnneadTab_Ai_Rendering")
     if not os.path.exists(base):
@@ -872,12 +872,12 @@ class RenderJob(object):
         end = self.finished_at if self.finished_at else time.time()
         return max(0.0, end - self.started_at)
 
-    _sidecar_lock = None  # class attr — created lazily, shared across instances
+    _sidecar_lock = None  # class attr -- created lazily, shared across instances
 
     def write_sidecar(self):
         """Write prompt.json next to result. Lock-guarded so the worker, the
         upload_worker success branch, and the upload_worker failure branch
-        can't race (Round 3 P2-1 — three concurrent writers caused silent
+        can't race (Round 3 P2-1 -- three concurrent writers caused silent
         IOException + missing gallery_id in some sidecars)."""
         # Lazy class-level lock so we don't change __init__ signature.
         if RenderJob._sidecar_lock is None:
@@ -925,12 +925,12 @@ class QueueWorker(object):
                  on_completion=None):
         # auto_save_enabled_fn is kept as a backward-compat stub so existing
         # AiRenderForm.__init__ calls don't have to change. The worker never
-        # reads it — auto-save is locked at queue time on `job.auto_save_gallery`
+        # reads it -- auto-save is locked at queue time on `job.auto_save_gallery`
         # (Round 3 audit P2-4 noted the parameter was dead).
         self._kind_filter = kind_filter
         self._jobs = jobs_list
         self._lock = lock_obj
-        self._invoke_ui = invoke_ui  # not currently used here — callers marshal in callbacks
+        self._invoke_ui = invoke_ui  # not currently used here -- callers marshal in callbacks
         self._on_job_update = job_update_callback
         self._is_form_closed = is_form_closed_fn
         self._auto_save_enabled = auto_save_enabled_fn  # kept for caller back-compat; never read
@@ -1027,7 +1027,7 @@ class QueueWorker(object):
                 AUTH.clear_token()
                 self.pause()
                 self._set_status(job, STATUS_PENDING,
-                                 error_msg="Auth expired. Queue paused — sign in and resume.")
+                                 error_msg="Auth expired. Queue paused -- sign in and resume.")
                 return False
             self._set_status(job, STATUS_FAILED, error_msg=str(e)[:500])
             return False
@@ -1051,8 +1051,8 @@ class QueueWorker(object):
         self._set_status(job, STATUS_DONE,
                          finished_at=time.time(), progress_pct=100)
 
-        # Always write the local sidecar — gives every render full
-        # reproducibility metadata regardless of cloud save (Audit P1 — NDA
+        # Always write the local sidecar -- gives every render full
+        # reproducibility metadata regardless of cloud save (Audit P1 -- NDA
         # mode previously had BETTER metadata than the default cloud path).
         try:
             job.write_sidecar()
@@ -1060,14 +1060,14 @@ class QueueWorker(object):
             pass
 
         # Lock the auto-save decision at queue time (job.auto_save_gallery is
-        # captured in __init__). Don't read the live callable here — that would
+        # captured in __init__). Don't read the live callable here -- that would
         # let mid-batch toggle changes silently flip already-queued jobs
-        # (Audit P0 — auto-save toggle had asymmetric mid-batch semantics).
+        # (Audit P0 -- auto-save toggle had asymmetric mid-batch semantics).
         if job.auto_save_gallery:
             # Off-worker upload so the next queued render starts immediately.
             def upload_worker(state):
                 try:
-                    # 2026-04-28 — pass full job context so the History
+                    # 2026-04-28 -- pass full job context so the History
                     # row can render style/view/resolution/duration etc.
                     # Without these the cloud row shows only prompt + date.
                     duration_ms = None
@@ -1095,7 +1095,7 @@ class QueueWorker(object):
                             job.gallery_id = gid
                         finally:
                             Monitor.Exit(self._lock)
-                        # Re-write sidecar now that gallery_id is known —
+                        # Re-write sidecar now that gallery_id is known --
                         # otherwise sidecar always has gallery_id="" on the
                         # success path (Round 2 P1-state-6).
                         try:
@@ -1129,7 +1129,7 @@ class QueueWorker(object):
             System.Threading.ThreadPool.QueueUserWorkItem(
                 System.Threading.WaitCallback(upload_worker))
         else:
-            # Local-only path (NDA mode) — copy + sidecar.
+            # Local-only path (NDA mode) -- copy + sidecar.
             try:
                 local_only = _local_only_dir()
                 ts = time.strftime("%Y%m%d-%H%M%S")
@@ -1159,7 +1159,7 @@ class QueueWorker(object):
                 AUTH.clear_token()
                 self.pause()
                 self._set_status(job, STATUS_PENDING,
-                                 error_msg="Auth expired. Queue paused — sign in and resume.")
+                                 error_msg="Auth expired. Queue paused -- sign in and resume.")
                 return False
             self._set_status(job, STATUS_FAILED, error_msg=str(e)[:500])
             return False
@@ -1196,7 +1196,7 @@ class QueueWorker(object):
 
         self._set_status(job, STATUS_DONE,
                          finished_at=time.time(), progress_pct=100)
-        # Always write sidecar for video too (parity with image path —
+        # Always write sidecar for video too (parity with image path --
         # Round 2 P1-state-6 noted videos had no sidecar).
         try:
             job.write_sidecar()

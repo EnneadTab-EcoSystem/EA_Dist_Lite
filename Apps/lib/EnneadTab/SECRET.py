@@ -61,7 +61,7 @@ def get_service_key(service_name):
     etc.) stored in EA_API_KEY.secret.
 
     The file historically held the OpenAI key too, hence the old
-    ``get_openai_api_key`` naming elsewhere in the codebase — but the values
+    ``get_openai_api_key`` naming elsewhere in the codebase -- but the values
     are generic service tokens, not OpenAI-specific. New callers should use
     this name.
 

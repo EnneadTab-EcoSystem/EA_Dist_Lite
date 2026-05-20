@@ -458,7 +458,7 @@ def get_known_regions():
     """Return a deterministic list of all known region literals."""
     # Combine literal mapping and any extras discovered dynamically
     regions = list(set(_collect_available_cloud_regions()) | set(_REGION_LITERALS.values()))
-    # Keep ordering stable – US first, then alpha
+    # Keep ordering stable - US first, then alpha
     regions.sort()
     if _CLOUD_REGION_US in regions:
         regions.remove(_CLOUD_REGION_US)

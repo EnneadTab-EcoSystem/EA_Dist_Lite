@@ -408,7 +408,7 @@ if __name__ == "__main__":
     font = get_random_font()
     messenger("Hello world with bigger text\nUsing [{}]".format(font), font_size=30, font_family=font)
     for font_name    in FUNFONTS:
-        messenger("rapid fire test："+font_name, font_family=font_name)
+        messenger("rapid fire test:"+font_name, font_family=font_name)
         # import time 
         # time.sleep(0.2)
     
