@@ -288,7 +288,7 @@ def test_core_module():
 
 class TooManyFailedModuleException(BaseException):
     def __init__(self):
-        super().__init__(
+        super(TooManyFailedModuleException, self).__init__(
             "There are too many failed module during unit-test for the core module."
         )
 

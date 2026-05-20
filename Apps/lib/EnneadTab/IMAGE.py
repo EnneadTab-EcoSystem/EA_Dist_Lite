@@ -243,6 +243,55 @@ def create_bitmap_text_image(text, size=(64, 32), bg_color=(0, 0, 0), font_size=
         return False
 
 
+def copy_image_to_clipboard(image_path):
+    """Copy an image file to the Windows clipboard so the user can paste it
+    into Outlook / Teams / Word as a bitmap (not a path).
+
+    Args:
+        image_path (str): Absolute path to the image file on disk.
+
+    Returns:
+        bool: True on success, False on any failure (file missing, no
+        clipboard support, decode error). Failures are logged via
+        ERROR_HANDLE; callers should reflect the bool in user-visible
+        status text rather than raising.
+    """
+    if not image_path or not os.path.exists(image_path):
+        ERROR_HANDLE.print_note(
+            "copy_image_to_clipboard: file not found: {}".format(image_path))
+        return False
+    if not SD_AVAILABLE:
+        ERROR_HANDLE.print_note(
+            "copy_image_to_clipboard: System.Drawing not available")
+        return False
+    try:
+        import clr
+        clr.AddReference("System.Windows.Forms")
+        from System.Windows.Forms import Clipboard  # pyright: ignore
+    except Exception as e:
+        ERROR_HANDLE.print_note(
+            "copy_image_to_clipboard: System.Windows.Forms not available: {}".format(str(e)))
+        return False
+    try:
+        # SD.Image.FromFile holds a file lock for the lifetime of the
+        # returned Image. Load into a Bitmap copy + dispose the original
+        # so the file isn't pinned after the call returns.
+        with_lock = SD.Image.FromFile(image_path)
+        try:
+            bmp = SD.Bitmap(with_lock)
+        finally:
+            try:
+                with_lock.Dispose()
+            except Exception:
+                pass
+        Clipboard.SetImage(bmp)
+        return True
+    except Exception as e:
+        ERROR_HANDLE.print_note(
+            "copy_image_to_clipboard failed: {}".format(str(e)))
+        return False
+
+
 def purge_old_temp_bmp_files():
     """Purge old temporary bmp files in the EA dump folder."""
     try:

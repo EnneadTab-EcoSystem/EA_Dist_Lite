@@ -28,6 +28,19 @@ TOKEN_CACHE_FILE = "desktop_auth_token.sexyDuck"
 _cached_token = None  # in-memory cache for current session
 _auth_in_progress = False  # prevent multiple browser opens
 
+# 2026-05-14 — auth-complete listeners. Caller dialogs (Rhino/Revit AI Render,
+# QAQC AI, AI Translate, etc.) register a zero-arg callback so they can
+# refresh their stale UI state the moment the OAuth callback writes a token.
+# Without this, the user sees "Sign-in complete" in the browser but the
+# dialog still shows the un-authed empty state until they click again.
+#
+# Callbacks fire on the AUTH worker thread (.NET or Python) immediately
+# after _save_token() persists the token. Listeners MUST marshal any UI
+# work back to the main/UI thread themselves (Dispatcher.BeginInvoke for
+# WPF, Eto.Application.AsyncInvoke for Eto/Rhino). Exceptions in listeners
+# are swallowed so one bad listener cannot block the next.
+_auth_complete_listeners = []
+
 # Detect .NET availability (IronPython in Revit/Rhino)
 _HAS_DOTNET = False
 try:
@@ -148,6 +161,84 @@ def is_auth_in_progress():
     return _auth_in_progress
 
 
+def register_auth_complete_listener(callback):
+    """Register a zero-arg callable to fire when a token lands successfully.
+
+    Use this from any AI gate dialog that was opened BEFORE the user signed
+    in. When the OAuth callback writes the token, every registered listener
+    is invoked exactly once so the dialog can refresh its stale UI state
+    (presets, gallery, quota, "Sign in required" labels, etc.).
+
+    The callback fires on the AUTH worker thread (.NET or Python). Listeners
+    are responsible for marshaling UI work to the proper UI thread:
+      - WPF / Revit: self.Dispatcher.BeginInvoke(System.Action(fn))
+      - Eto / Rhino: Eto.Forms.Application.Instance.AsyncInvoke(fn)
+
+    Exceptions raised inside a listener are swallowed and printed so one
+    misbehaving dialog cannot block other listeners or crash the auth
+    worker thread.
+
+    Args:
+        callback: zero-arg callable. Adding the same callable twice is a
+            no-op (idempotent).
+
+    Returns:
+        The callback itself, so this can be used as a decorator pattern
+        or chained: ``handler = AUTH.register_auth_complete_listener(fn)``.
+    """
+    if callback is None:
+        return callback
+    if callback not in _auth_complete_listeners:
+        _auth_complete_listeners.append(callback)
+    return callback
+
+
+def unregister_auth_complete_listener(callback):
+    """Remove a previously registered listener. No-op if not present.
+
+    Dialogs MUST call this from their close/dispose handler so closed
+    dialogs do not receive callbacks against disposed widgets (that would
+    raise inside the listener and surface as a CLR unhandled exception in
+    IronPython / Revit). See ``register_auth_complete_listener`` for the
+    full contract.
+    """
+    try:
+        _auth_complete_listeners.remove(callback)
+    except ValueError:
+        pass
+
+
+def _fire_auth_complete_listeners():
+    """Invoke every registered listener. Called from the auth worker thread
+    after a token has been persisted. Exceptions are isolated per-listener."""
+    snapshot = list(_auth_complete_listeners)  # avoid mutation during iteration
+    for cb in snapshot:
+        try:
+            cb()
+        except Exception as e:
+            print("AUTH listener error: {}".format(e))
+
+
+def _notify_user_signed_in():
+    """Pop a toast telling the user auth succeeded and to retry the action.
+
+    Best-effort: NOTIFICATION.messenger spawns an external EXE which may be
+    rate-limited or unavailable on a fresh install. Any failure here is
+    silent — the listener-driven UI refresh is the primary signal; the
+    toast is a secondary cue for dialogs that did not register a listener.
+    """
+    try:
+        NOTIFICATION.messenger(
+            main_text=(
+                "Sign-in complete! You can return to EnneadTab.\n"
+                "If a dialog still looks empty, click the action button "
+                "again to refresh."
+            )
+        )
+    except Exception as e:
+        print("AUTH notify error: {}".format(e))
+
+
 def clear_token():
     """Clear cached token (for logout or token refresh)."""
     global _cached_token
@@ -205,15 +296,36 @@ def _load_cached_token():
 
 
 def _save_token(token, exp):
-    """Save token to file cache."""
+    """Save token to file cache.
+
+    On success also fires:
+      1. A user-facing toast (NOTIFICATION.messenger) so the user knows the
+         browser hand-off succeeded and that they can retry whatever action
+         opened the auth flow.
+      2. Every registered auth-complete listener so dialogs that opened
+         before the user signed in can refresh their stale UI without
+         requiring a click.
+
+    Steps 1 + 2 run AFTER the token is persisted so listeners that call
+    ``get_token()`` see the new token immediately. Both steps are wrapped
+    individually so a failure in one cannot block the other.
+    """
     global _cached_token
     path = _get_cache_path()
+    saved = False
     try:
         with open(path, "w") as f:
             json.dump({"token": token, "exp": exp}, f)
         _cached_token = token
+        saved = True
     except Exception:
         pass
+
+    if not saved:
+        return
+
+    _notify_user_signed_in()
+    _fire_auth_complete_listeners()
 
 
 def _extract_token_from_query(query_string):

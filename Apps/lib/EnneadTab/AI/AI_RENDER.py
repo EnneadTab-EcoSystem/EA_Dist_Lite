@@ -63,6 +63,38 @@ _MIME_BY_EXT = {
 }
 
 
+# =====================================================================
+# Auth panel canonical copy (2026-04-30, Item A)
+#
+# Both the Rhino and Revit dialogs import these strings so first-time-user
+# auth UX cannot drift between the two surfaces. If you change copy here,
+# both dialogs reflect it on next reload.
+#
+# WHY EnneaDuck not Microsoft: per memory feedback_enneaduck_branding.md,
+# every AI-facing UI uses the EnneaDuck identity. The IdP is Microsoft
+# under the hood (Entra ID via enneadtab.com SSO), but the user-visible
+# surface is "EnneaDuck."
+# =====================================================================
+
+AUTH_PANEL_HEADING = "Sign in to EnneaDuck"
+AUTH_PANEL_BODY = (
+    "AI Render uses your Ennead account. Click below -- your browser will "
+    "open enneadtab.com to sign in. After you sign in, this dialog will "
+    "refresh automatically (no Rhino/Revit restart needed)."
+)
+AUTH_PANEL_BUTTON = "Sign in"
+AUTH_PANEL_WAITING = "Waiting for sign-in... complete the flow in your browser."
+AUTH_PANEL_TIMEOUT = "Sign-in timed out. Click Sign in to try again."
+AUTH_PANEL_EXPIRED_HEADING = "Session expired"
+AUTH_PANEL_EXPIRED_BODY = "Sign in again to continue using AI Render."
+
+QUOTA_PANEL_HEADING = "Daily render quota reached"
+QUOTA_PANEL_BODY = (
+    "You've used your daily render allowance. Try again tomorrow, or "
+    "contact design-tech if this is unexpected (Ennead is on a paid tier)."
+)
+
+
 def _mime_for_path(path):
     """Pick correct MIME from file extension. Defaults to image/jpeg.
     Round 3 P2-5 — was hardcoded `png else jpeg` so .webp uploaded as jpeg."""

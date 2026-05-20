@@ -65,7 +65,15 @@ def get_data_from_circle(crv):
 
 def get_data_from_ellipse(crv):
     out = dict()
-    pts = (rs.EllipseCenterPoint(crv), rs.EllipseQuadPoints(crv))
+    quad_pts = rs.EllipseQuadPoints(crv) or []
+    center_pt = rs.EllipseCenterPoint(crv)
+
+    # Safely convert to tuples
+    center_tuple = pt_to_tuple(center_pt) if center_pt else None
+    quad_tuples = tuple(pt_to_tuple(x) for x in quad_pts)
+
+    pts = (center_tuple, quad_tuples)
+
     out["type"] = "ellipse"
     out["construct_info"] = pts
 

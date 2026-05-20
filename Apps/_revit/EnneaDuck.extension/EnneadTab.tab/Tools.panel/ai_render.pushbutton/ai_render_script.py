@@ -68,10 +68,6 @@ def _trace(msg):
             f.write("{}  {}\n".format(
                 datetime.now().strftime("%H:%M:%S.%f")[:-3], msg))
             f.flush()
-            try:
-                os.fsync(f.fileno())
-            except Exception:
-                pass
         finally:
             f.close()
     except Exception:
@@ -230,6 +226,17 @@ class AiRenderForm(WPFWindow):
         self._tick_timer.Tick += self._on_tick
         self._tick_timer.Start()
 
+        # 2026-04-30 (Item A): auth banner polling timer. Runs only while
+        # the auth banner is visible (started/stopped by _refresh_auth_banner).
+        self._auth_timer = DispatcherTimer(DispatcherPriority.Background)
+        self._auth_timer.Interval = System.TimeSpan.FromSeconds(1)
+        self._auth_timer.Tick += self._on_auth_tick
+        # Initial state: show banner if no token; timer starts only when shown.
+        try:
+            self._refresh_auth_banner()
+        except Exception:
+            pass
+
         self.Closed += self._on_closed
 
         # Wire context menu on the gallery list (programmatic — Review #1).
@@ -249,13 +256,26 @@ class AiRenderForm(WPFWindow):
         self._refresh_quota_async()
         self._refresh_my_prompts_async()
 
+        # 2026-05-14 — register auth-complete listener so the dialog auto-
+        # refreshes the moment the OAuth callback writes a token. Mirror of
+        # the Rhino handler in view2render_left.py::_on_auth_complete (per
+        # CLAUDE.md Rhino↔Revit parity rule). Without this, the user clicks
+        # the sign-in button, completes auth in the browser, comes back to
+        # Revit, and the dialog STILL shows "Sign in required" / empty
+        # preset+gallery state until they click something. Now presets,
+        # gallery, quota, my-prompts, and the auth banner all refresh
+        # themselves automatically.
+        try:
+            AUTH.register_auth_complete_listener(self._on_auth_complete)
+        except Exception:
+            pass
+
         # Show the dialog FIRST, then schedule the auto-capture asynchronously.
         # `doc.ExportImage` blocks the UI thread for 2-10s on large models —
         # if we capture before Show(), the user clicks the button and sees
         # nothing for seconds, thinks it's broken (Round 3 P1-startup-3).
         self.Show()
-        self.Dispatcher.BeginInvoke(
-            System.Action(self._capture_view), DispatcherPriority.Background)
+        self._invoke_ui(self._capture_view)
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -263,6 +283,15 @@ class AiRenderForm(WPFWindow):
 
     def _on_closed(self, sender, e):
         self._form_closed = True
+        # 2026-05-14 — unregister auth-complete listener FIRST so a callback
+        # racing the close path cannot fire against a disposed WPF window
+        # (would surface as CLR 0xE0434352 / unhandled managed exception,
+        # the same crash class _invoke_ui guards against). Mirror of Rhino
+        # _on_closed in view2render_left.py.
+        try:
+            AUTH.unregister_auth_complete_listener(self._on_auth_complete)
+        except Exception:
+            pass
         try:
             self._tick_timer.Stop()
         except Exception:
@@ -377,6 +406,114 @@ class AiRenderForm(WPFWindow):
             pass
 
     # ------------------------------------------------------------------
+    # Auth banner (Item A, 2026-04-30)
+    # ------------------------------------------------------------------
+
+    def _refresh_auth_banner(self):
+        """Show/hide the auth banner based on AUTH state. Called from
+        __init__ once and from every auth_timer tick.
+
+        DispatcherTimer auto-stops once token arrives -- avoids burning
+        CPU on a 1Hz tick after the banner is dismissed.
+        """
+        try:
+            has_token = bool(AUTH.get_token())
+            in_progress = bool(AUTH.is_auth_in_progress())
+        except Exception:
+            has_token = False
+            in_progress = False
+        if has_token:
+            self.auth_banner.Visibility = System.Windows.Visibility.Collapsed
+            try:
+                self._auth_timer.Stop()
+            except Exception:
+                pass
+            return
+        # Not authed -- show banner.
+        self.auth_banner.Visibility = System.Windows.Visibility.Visible
+        if in_progress:
+            self.auth_heading.Text = AI_RENDER.AUTH_PANEL_HEADING
+            self.auth_body.Text = AI_RENDER.AUTH_PANEL_WAITING
+            self.auth_button.IsEnabled = False
+        else:
+            self.auth_heading.Text = AI_RENDER.AUTH_PANEL_HEADING
+            self.auth_body.Text = AI_RENDER.AUTH_PANEL_BODY
+            self.auth_button.IsEnabled = True
+        try:
+            self._auth_timer.Start()
+        except Exception:
+            pass
+
+    def auth_signin_Click(self, sender, e):
+        try:
+            AUTH.request_auth()
+        except Exception as ex:
+            self.status_label.Text = "Sign-in failed: {}".format(ex)
+            return
+        self._refresh_auth_banner()
+
+    def _on_auth_tick(self, sender, e):
+        self._refresh_auth_banner()
+
+    def _on_auth_complete(self):
+        """Fires (on the AUTH worker thread) once the user finishes browser
+        sign-in and the token lands on disk. Mirror of the Rhino handler
+        in view2render_left.py::_on_auth_complete (per CLAUDE.md
+        Rhino↔Revit parity rule).
+
+        Marshals every refresh back to the WPF Dispatcher; the AUTH module
+        invokes us from a .NET background thread that cannot touch WPF
+        widgets directly. _invoke_ui already swallows exceptions from
+        post-close dispatches so an in-flight callback can't crash Revit
+        if the user closes the dialog mid-callback.
+        """
+        if self._form_closed:
+            return
+
+        def _refresh_all():
+            if self._form_closed:
+                return
+            try:
+                self._refresh_auth_banner()
+            except Exception:
+                pass
+            try:
+                self._load_presets_async()
+            except Exception:
+                pass
+            try:
+                self._refresh_gallery_async(initial=False)
+            except Exception:
+                pass
+            try:
+                self._refresh_quota_async()
+            except Exception:
+                pass
+            try:
+                self._refresh_my_prompts_async()
+            except Exception:
+                pass
+            # Wake any paused workers (mirrors resume_Click behavior for
+            # the case where the queue paused on 401 and the user just
+            # signed in via the banner instead of clicking Resume).
+            try:
+                self._image_worker.resume()
+                self._video_worker.resume()
+            except Exception:
+                pass
+            try:
+                if hasattr(self, "resume_panel"):
+                    self.resume_panel.Visibility = Visibility.Collapsed
+            except Exception:
+                pass
+            try:
+                self.status_label.Text = "Signed in. Dialog refreshed."
+            except Exception:
+                pass
+
+        self._invoke_ui(_refresh_all)
+
+    # ------------------------------------------------------------------
     # Presets
     # ------------------------------------------------------------------
 
@@ -470,6 +607,8 @@ class AiRenderForm(WPFWindow):
         self._capture_view()
 
     def _capture_view(self):
+        if self._form_closed:
+            return
         view = doc.ActiveView
         if view is None:
             self.status_label.Text = "No active Revit view to capture."
@@ -777,11 +916,11 @@ class AiRenderForm(WPFWindow):
         on background thread, restore text + button on result."""
         prompt = (self.tbox_prompt.Text or "").strip()
         if not prompt:
-            self.status_label.Text = "Nothing to {}.".format(action_name.lower())
+            self.status_label.Text = "Enter a prompt first."
             return
         btn.IsEnabled = False
         old_content = btn.Content
-        btn.Content = "…"
+        btn.Content = "..."
         self._push_prompt_undo()
         self.status_label.Text = "{}...".format(action_name)
 
@@ -795,11 +934,10 @@ class AiRenderForm(WPFWindow):
             try:
                 new_text = api_fn(token, prompt)
                 self._invoke_ui(lambda: setattr(self.tbox_prompt, 'Text', new_text))
-                self._invoke_ui(lambda: setattr(self.status_label, 'Text',
-                                                "{} applied.".format(action_name)))
+                self._invoke_ui(lambda: setattr(self.status_label, 'Text', "Done."))
             except Exception as ex:
                 self._invoke_ui(lambda: setattr(self.status_label, 'Text',
-                                                "{} failed: {}".format(action_name, str(ex)[:200])))
+                                                "Failed: {}".format(str(ex)[:200])))
             finally:
                 self._invoke_ui(lambda: self._restore_prompt_btn(btn, old_content))
         System.Threading.ThreadPool.QueueUserWorkItem(
@@ -813,7 +951,7 @@ class AiRenderForm(WPFWindow):
         self._run_prompt_api(
             self.bt_spell,
             lambda tok, p: AI_CHAT.spell_check_with_token(tok, p),
-            "Spell check")
+            "Checking")
 
     def lengthen_Click(self, sender, e):
         is_interior = bool(self.cb_interior.IsChecked)
@@ -821,14 +959,14 @@ class AiRenderForm(WPFWindow):
             self.bt_lengthen,
             lambda tok, p: AI_CHAT.improve_prompt_with_token(
                 tok, p, mode="image", action="improve", is_interior=is_interior),
-            "Lengthen")
+            "Improving")
 
     def shorten_Click(self, sender, e):
         self._run_prompt_api(
             self.bt_shorten,
             lambda tok, p: AI_CHAT.improve_prompt_with_token(
                 tok, p, mode="image", action="summarize"),
-            "Shorten")
+            "Summarizing")
 
     # ------------------------------------------------------------------
     # Queue
@@ -841,7 +979,7 @@ class AiRenderForm(WPFWindow):
             return
         prompt = (self.tbox_prompt.Text or "").strip()
         if not prompt:
-            self.status_label.Text = "Enter a prompt."
+            self.status_label.Text = "Please enter a prompt first."
             return
         if not Q.can_enqueue(self._jobs, self._jobs_lock):
             self.status_label.Text = "Queue full ({} active). Wait for one to finish.".format(Q.ACTIVE_CAP)
@@ -915,6 +1053,8 @@ class AiRenderForm(WPFWindow):
         Dedup uses `gallery_id` so a completed-then-uploaded job doesn't appear
         twice (P0-2-1).
         """
+        if self._form_closed:
+            return
         Monitor.Enter(self._jobs_lock)
         try:
             jobs_snapshot = list(self._jobs)
@@ -980,6 +1120,8 @@ class AiRenderForm(WPFWindow):
             pass
 
     def _update_active_jobs_label(self):
+        if self._form_closed:
+            return
         n = Q.count_inflight(self._jobs, self._jobs_lock)
         self.bt_active_jobs.Content = "Active jobs ({})".format(n)
 
@@ -1033,6 +1175,8 @@ class AiRenderForm(WPFWindow):
         G.fetch_full_item_async(token, row.id, on_done)
 
     def _open_path(self, path):
+        if self._form_closed:
+            return
         try:
             os.startfile(path)
             self.status_label.Text = "Opened {}".format(os.path.basename(path))
@@ -1054,7 +1198,44 @@ class AiRenderForm(WPFWindow):
             return
         self._save_path_as(src, row)
 
+    def row_copy_Click(self, sender, e):
+        row = getattr(sender, "DataContext", None)
+        if not row:
+            return
+        src = row.result_path
+        if not src or not os.path.exists(src):
+            if row.cloud_item:
+                self._fetch_and_copy(row)
+                return
+            self.status_label.Text = "No local result to copy."
+            return
+        if IMAGE.copy_image_to_clipboard(src):
+            self.status_label.Text = "Copied to clipboard."
+        else:
+            self.status_label.Text = "Copy failed."
+
+    def _fetch_and_copy(self, row):
+        self.status_label.Text = "Downloading for copy..."
+        token = AUTH.get_token()
+        if not token:
+            self.status_label.Text = "Sign in required."
+            return
+        def on_done(bmp, path):
+            if path:
+                def finish():
+                    if IMAGE.copy_image_to_clipboard(path):
+                        self.status_label.Text = "Copied to clipboard."
+                    else:
+                        self.status_label.Text = "Copy failed."
+                self._invoke_ui(finish)
+            else:
+                self._invoke_ui(lambda: setattr(self.status_label, 'Text',
+                                                "Failed to fetch image."))
+        G.fetch_full_item_async(token, row.id, on_done)
+
     def _save_path_as(self, src, row):
+        if self._form_closed:
+            return
         from Microsoft.Win32 import SaveFileDialog # pyright: ignore
         ext = os.path.splitext(src)[1]
         dlg = SaveFileDialog()

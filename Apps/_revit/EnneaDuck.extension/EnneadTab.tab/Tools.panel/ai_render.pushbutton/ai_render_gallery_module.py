@@ -40,26 +40,53 @@ from EnneadTab.AI.AI_RENDER import ( # noqa: F401
 
 # ---------- WPF bitmap loaders ----------
 
+# 2026-05-12: High-frequency refresh optimization. Re-loading bitmaps for
+# every row on every second's tick was tanking Revit performance.
+_BITMAP_CACHE = {}
+
+
 def bitmap_from_path(path):
-    """Frozen WPF BitmapImage from file path. Thread-safe (Freeze())."""
+    """Frozen WPF BitmapImage from local disk path. Cached to prevent
+    redundant I/O on UI refresh ticks. Thread-safe (Freeze()).
+    """
     if not path or not os.path.exists(path):
         return None
+
+    # Key by path + mtime so if the file changes (e.g. render completes)
+    # the cache is busted automatically.
     try:
+        mtime = os.path.getmtime(path)
+        cache_key = (path, mtime)
+        if cache_key in _BITMAP_CACHE:
+            return _BITMAP_CACHE[cache_key]
+
         bmp = BitmapImage()
         bmp.BeginInit()
         bmp.UriSource = System.Uri(os.path.abspath(path))
         bmp.CacheOption = BitmapCacheOption.OnLoad
         bmp.EndInit()
         bmp.Freeze()
+
+        # Keep cache size manageable — this module is short-lived anyway.
+        if len(_BITMAP_CACHE) > 200:
+            _BITMAP_CACHE.clear()
+        _BITMAP_CACHE[cache_key] = bmp
         return bmp
     except Exception:
         return None
 
 
 def bitmap_from_data_url(data_url):
-    """Frozen WPF BitmapImage from base64 data URL (gallery/index thumbs)."""
+    """Frozen WPF BitmapImage from base64 data URL (gallery/index thumbs).
+    Cached by string content.
+    """
     if not data_url:
         return None
+
+    # Key by full string — base64 thumbs are small (~5-10KB).
+    if data_url in _BITMAP_CACHE:
+        return _BITMAP_CACHE[data_url]
+
     try:
         if "," in data_url:
             b64 = data_url.split(",", 1)[1]
@@ -74,6 +101,10 @@ def bitmap_from_data_url(data_url):
             bmp.CacheOption = BitmapCacheOption.OnLoad
             bmp.EndInit()
             bmp.Freeze()
+            
+            if len(_BITMAP_CACHE) > 200:
+                _BITMAP_CACHE.clear()
+            _BITMAP_CACHE[data_url] = bmp
             return bmp
         finally:
             ms.Close()

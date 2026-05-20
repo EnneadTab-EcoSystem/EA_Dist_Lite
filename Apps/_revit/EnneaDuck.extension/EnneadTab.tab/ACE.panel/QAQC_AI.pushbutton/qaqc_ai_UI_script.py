@@ -68,7 +68,46 @@ class AI_Report_modelessForm(WPFWindow):
         self.initiate_form()
         self.get_previous_conversation()
         self.session_name = "QAQC_SESSION_{}".format(TIME.get_formatted_current_time())
+
+        # 2026-05-14 — register auth-complete listener so the dialog tells
+        # the user to click Ask again the moment the OAuth callback writes
+        # a token. Mirrors the AI Render dialogs (Rhino+Revit) and
+        # AI Translate. Listener fires on the AUTH worker thread; marshal
+        # back to the WPF dispatcher before touching debug_textbox.
+        try:
+            AUTH.register_auth_complete_listener(self._on_auth_complete)
+        except Exception:
+            pass
+        try:
+            self.Closed += self._on_window_closed
+        except Exception:
+            pass
+
         self.Show()
+
+    def _on_auth_complete(self):
+        """Fires on the AUTH worker thread once sign-in completes. Tells
+        the user (in the dialog itself, not just a toast) to click Ask
+        again. Marshaled back onto the WPF dispatcher because the worker
+        thread cannot touch debug_textbox directly."""
+        try:
+            def _update():
+                try:
+                    self.debug_textbox.Text = (
+                        "Sign-in complete. Click Ask to continue."
+                    )
+                except Exception:
+                    pass
+            self.Dispatcher.BeginInvoke(System.Action(_update))
+        except Exception:
+            pass
+
+    def _on_window_closed(self, sender, args):
+        """Unregister listener so it cannot fire against a disposed window."""
+        try:
+            AUTH.unregister_auth_complete_listener(self._on_auth_complete)
+        except Exception:
+            pass
 
 
     @property
@@ -104,23 +143,27 @@ class AI_Report_modelessForm(WPFWindow):
                 return
             context_text = self.report
 
-        # Get auth token (lazy browser OAuth)
+        # Get auth token (lazy browser OAuth).
+        # 2026-05-14 — was a 120-sec busy-wait with time.sleep(1) inside a
+        # WPF event handler, which froze the entire QAQC dialog while the
+        # user was still in the browser. Now event-driven: kick off auth,
+        # tell the user to click Ask again, return. _on_auth_complete
+        # (registered in __init__) updates debug_textbox to
+        # "Sign-in complete. Click Ask to continue." the moment the token
+        # lands so the user knows the dialog is ready.
         session_token = AUTH.get_token()
         if not session_token:
             if not AUTH.is_auth_in_progress():
                 AUTH.request_auth()
-            max_wait = 120
-            elapsed = 0
-            while elapsed < max_wait:
-                self.debug_textbox.Text = "Waiting for browser sign-in... {}s/{}s".format(elapsed, max_wait)
-                time.sleep(1)
-                elapsed += 1
-                session_token = AUTH.get_token()
-                if session_token:
-                    break
-            if not session_token:
-                self.debug_textbox.Text = "Sign-in timed out. Please try again."
-                return
+                self.debug_textbox.Text = (
+                    "Sign in via the browser, then click Ask again."
+                )
+            else:
+                self.debug_textbox.Text = (
+                    "Sign-in in progress. Finish in the browser, then "
+                    "click Ask again."
+                )
+            return
 
         self.debug_textbox.Text = JOKE.random_loading_message()
 

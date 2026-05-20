@@ -1069,7 +1069,7 @@ def test_ai_proxy():
     """Smoke-test the EnneadTab AI proxy (ennead-ai.com) via EnneadTab.AI.
 
     Replaces the legacy OpenAI SDK test. Issues a tiny chat round-trip
-    through the .NET HTTPS proxy — no OpenAI SDK required.
+    through the .NET HTTPS proxy - no OpenAI SDK required.
     """
     print("\n" + "="*60)
     print("TESTING AI PROXY (ennead-ai.com)")

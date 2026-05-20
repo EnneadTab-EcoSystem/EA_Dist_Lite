@@ -54,6 +54,7 @@ _STALE_MODULES = (
     "ai_render_image_viewer",
     "ai_render_gallery_module",
     "EnneadTab.COLOR",
+    "EnneadTab.IMAGE",  # 2026-04-30: copy_image_to_clipboard added
     "EnneadTab.RHINO.RHINO_UI",
     "EnneadTab.RHINO",  # parent package - forces reimport of children
 )
@@ -103,10 +104,6 @@ def _trace(msg):
             f.write("{}  {}\n".format(
                 datetime.now().strftime("%H:%M:%S.%f")[:-3], msg))
             f.flush()
-            try:
-                os.fsync(f.fileno())
-            except Exception:
-                pass
         finally:
             f.close()
     except Exception:
@@ -239,17 +236,18 @@ class GalleryRowPanel(Eto.Forms.Panel):
     """
 
     @classmethod
-    def create(cls, row, on_view_original, on_view_result, on_save, on_context):
+    def create(cls, row, on_view_original, on_view_result, on_save, on_context, on_copy):
         inst = cls()  # zero-arg init goes through Panel(content=None) cleanly
-        inst._initialize(row, on_view_original, on_view_result, on_save, on_context)
+        inst._initialize(row, on_view_original, on_view_result, on_save, on_context, on_copy)
         return inst
 
-    def _initialize(self, row, on_view_original, on_view_result, on_save, on_context):
+    def _initialize(self, row, on_view_original, on_view_result, on_save, on_context, on_copy):
         self._row = row
         self._on_view_original = on_view_original
         self._on_view_result = on_view_result
         self._on_save = on_save
         self._on_context = on_context
+        self._on_copy = on_copy
 
         self.BackgroundColor = _hex_to_color("#FF333333")
         self.Padding = Eto.Drawing.Padding(4)
@@ -322,16 +320,22 @@ class GalleryRowPanel(Eto.Forms.Panel):
             status_col.Add(pb)
         layout.Add(status_col)
 
-        # Inline save button (only when SaveVisibility True). Wrapped in its
-        # own bottom-aligned column so it sits on the same baseline as the
-        # status text and Subtitle, not floating top.
+        # Inline save + copy buttons (only when SaveVisibility True). Wrapped
+        # in their own bottom-aligned column so they sit on the same baseline
+        # as the status text and Subtitle, not floating top.
         if row.SaveVisibility:
             save_col = Eto.Forms.DynamicLayout()
             save_col.Add(None, yscale=True)  # bottom-align spacer
             bt = Eto.Forms.Button(Text="💾")
             bt.Size = Eto.Drawing.Size(28, 28)
+            bt.ToolTip = "Save result to disk"
             bt.Click += self._handle_save_click
             save_col.Add(bt)
+            bt_copy = Eto.Forms.Button(Text="Copy")
+            bt_copy.Size = Eto.Drawing.Size(48, 28)
+            bt_copy.ToolTip = "Copy image to clipboard"
+            bt_copy.Click += self._handle_copy_click
+            save_col.Add(bt_copy)
             layout.Add(save_col)
 
         layout.EndHorizontal()
@@ -350,6 +354,9 @@ class GalleryRowPanel(Eto.Forms.Panel):
 
     def _handle_save_click(self, sender, e):
         self._on_save(self._row)
+
+    def _handle_copy_click(self, sender, e):
+        self._on_copy(self._row)
 
     def _handle_panel_mouse(self, sender, e):
         if e.Buttons == Eto.Forms.MouseButtons.Alternate:
@@ -407,6 +414,13 @@ class AiRenderForm(Eto.Forms.Form):
 
         self._build_ui()
 
+        # 2026-04-30 (Item A): show auth banner if no token cached. The
+        # timer drives auto-dismiss when the OAuth callback completes.
+        try:
+            self._refresh_auth_banner()
+        except Exception:
+            pass
+
         # Workers
         self._image_worker = AI_RENDER.QueueWorker(
             kind_filter=AI_RENDER.KIND_IMAGE,
@@ -436,6 +450,7 @@ class AiRenderForm(Eto.Forms.Form):
         self._tick_timer.Start()
 
         self.Closed += self._on_closed
+        self.Closing += self._on_closing
         try:
             self.SizeChanged += self._on_size_changed
         except Exception:
@@ -488,9 +503,82 @@ class AiRenderForm(Eto.Forms.Form):
         self._refresh_gallery_async()
         self._refresh_quota_async()
         self._refresh_my_prompts_async()
-        self._capture_view()
+
+        # 2026-05-14 — register auth-complete listener so the dialog auto-
+        # refreshes the moment the OAuth callback writes a token. Without
+        # this, the user clicks the sign-in button, completes auth in the
+        # browser, comes back to Rhino, and the dialog STILL shows
+        # "Sign in required" / empty preset+gallery state until they
+        # click something. Now presets, gallery, quota, my-prompts, and
+        # the auth banner all refresh themselves automatically.
+        # Always defined as a bound method so _on_closed can unregister it.
+        try:
+            AUTH.register_auth_complete_listener(self._on_auth_complete)
+        except Exception:
+            pass
+
+        # 2026-05-12: Show the dialog FIRST, then schedule the auto-capture 
+        # asynchronously. ViewCapture blocks the UI thread for 2-5s — if 
+        # we capture before Show(), the user clicks the button and sees 
+        # nothing for seconds (port from Revit Round 3 P1-startup-3).
+        Eto.Forms.Application.Instance.AsyncInvoke(self._capture_view)
 
         RHINO_UI.apply_dark_style(self)
+
+    def _on_auth_complete(self):
+        """Fires (on the AUTH worker thread) once the user finishes browser
+        sign-in and the token lands on disk. Mirror of the Revit handler in
+        ai_render_script.py::_on_auth_complete (per CLAUDE.md Rhino↔Revit
+        parity rule).
+
+        Marshals every refresh back to the Eto UI thread; the AUTH module
+        invokes us from a .NET background thread that cannot touch Eto
+        widgets directly.
+        """
+        if self._form_closed:
+            return
+
+        def _refresh_all():
+            if self._form_closed:
+                return
+            try:
+                self._refresh_auth_banner()
+            except Exception:
+                pass
+            try:
+                self._load_presets_async()
+            except Exception:
+                pass
+            try:
+                self._refresh_gallery_async()
+            except Exception:
+                pass
+            try:
+                self._refresh_quota_async()
+            except Exception:
+                pass
+            try:
+                self._refresh_my_prompts_async()
+            except Exception:
+                pass
+            # Also wake the queue workers in case a paused job was waiting
+            # for the user to sign in (see _on_resume — same pattern).
+            try:
+                self._image_worker.resume()
+                self._video_worker.resume()
+            except Exception:
+                pass
+            try:
+                if hasattr(self, "bt_resume"):
+                    self.bt_resume.Visible = False
+            except Exception:
+                pass
+            try:
+                self.status_label.Text = "Signed in. Dialog refreshed."
+            except Exception:
+                pass
+
+        self._invoke_ui(_refresh_all)
 
     # ------------------------------------------------------------------
     # UI construction
@@ -506,11 +594,16 @@ class AiRenderForm(Eto.Forms.Form):
         hdr.BeginHorizontal()
         hdr.Add(self._build_logo())
         hdr.Add(self._build_title_block(), xscale=True)
-        bt_web = Eto.Forms.LinkButton(Text="Open ennead-ai.com →")
+        bt_web = Eto.Forms.LinkButton(Text="Open ennead-ai.com >")
         bt_web.Click += lambda s, e: webbrowser.open(STUDIO_URL)
         hdr.Add(bt_web)
         hdr.EndHorizontal()
         root.Add(hdr)
+
+        # --- Auth banner (2026-04-30, Item A) ---
+        # Shown when no token cached. Self-hides when token arrives. Stays
+        # visible during browser sign-in via UITimer-driven polling.
+        root.Add(self._build_auth_banner())
 
         # --- Controls (capture + prompt panels side by side) ---
         ctrl = Eto.Forms.DynamicLayout()
@@ -532,6 +625,113 @@ class AiRenderForm(Eto.Forms.Form):
         root.Add(self._build_footer())
 
         self.Content = root
+
+    def _build_auth_banner(self):
+        """Auth state banner. Hidden by default; shown when no token cached.
+
+        Self-driven via Eto UITimer (1s tick) so the banner auto-dismisses
+        once the OAuth callback writes the token to disk and the next
+        AUTH.get_token() returns non-None. No need for the user to click a
+        retry button.
+
+        Per memory feedback_evidence_before_hypothesis.md and reviewer #3
+        roleplay findings: hardcoded enneadtab.com/auth URLs cannot work
+        because the URL needs a `?port=NNNNN` query param tied to a
+        per-call randomized localhost listener spun up by request_auth().
+        Always go through request_auth(); never webbrowser.open() a static
+        URL.
+        """
+        panel = Eto.Forms.Panel()
+        panel.BackgroundColor = _hex_to_color("#FF3A2E14")
+        panel.Padding = Eto.Drawing.Padding(12, 10)
+        panel.Visible = False  # default hidden; shown only if not authed
+        self._auth_banner = panel
+
+        col = Eto.Forms.DynamicLayout()
+        col.Spacing = Eto.Drawing.Size(0, 4)
+        self._auth_heading = Eto.Forms.Label(Text=AI_RENDER.AUTH_PANEL_HEADING)
+        self._auth_heading.Font = Eto.Drawing.Font(
+            Eto.Drawing.SystemFont.Bold, 12)
+        self._auth_heading.TextColor = _hex_to_color("#FFE0B070")
+        col.Add(self._auth_heading)
+
+        self._auth_body = Eto.Forms.Label(Text=AI_RENDER.AUTH_PANEL_BODY)
+        self._auth_body.TextColor = _hex_to_color("#CBCBCB")
+        try:
+            self._auth_body.Wrap = Eto.Forms.WrapMode.Word
+        except Exception:
+            pass
+        col.Add(self._auth_body)
+
+        row = Eto.Forms.DynamicLayout()
+        row.Spacing = Eto.Drawing.Size(8, 0)
+        row.BeginHorizontal()
+        self._auth_button = Eto.Forms.Button(Text=AI_RENDER.AUTH_PANEL_BUTTON)
+        self._auth_button.Click += self._on_auth_button
+        row.Add(self._auth_button)
+        row.Add(None, xscale=True)
+        row.EndHorizontal()
+        col.Add(row)
+
+        panel.Content = col
+
+        # Polling timer (1s) so the banner auto-dismisses on token arrival.
+        try:
+            self._auth_timer = Eto.Forms.UITimer()
+            self._auth_timer.Interval = 1.0
+            self._auth_timer.Elapsed += self._on_auth_tick
+            # Started lazily by _refresh_auth_banner when banner becomes visible.
+        except Exception:
+            self._auth_timer = None
+
+        # Initial visibility check happens in __init__ after _build_ui.
+        return panel
+
+    def _refresh_auth_banner(self):
+        """Update banner visibility based on current AUTH state. Called from
+        __init__ after build, and after every auth event."""
+        if not hasattr(self, "_auth_banner") or self._auth_banner is None:
+            return
+        try:
+            has_token = bool(AUTH.get_token())
+            in_progress = bool(AUTH.is_auth_in_progress())
+        except Exception:
+            has_token = False
+            in_progress = False
+        if has_token:
+            self._auth_banner.Visible = False
+            try:
+                if self._auth_timer is not None:
+                    self._auth_timer.Stop()
+            except Exception:
+                pass
+            return
+        # Not authed — show banner.
+        self._auth_banner.Visible = True
+        if in_progress:
+            self._auth_heading.Text = AI_RENDER.AUTH_PANEL_HEADING
+            self._auth_body.Text = AI_RENDER.AUTH_PANEL_WAITING
+            self._auth_button.Enabled = False
+        else:
+            self._auth_heading.Text = AI_RENDER.AUTH_PANEL_HEADING
+            self._auth_body.Text = AI_RENDER.AUTH_PANEL_BODY
+            self._auth_button.Enabled = True
+        try:
+            if self._auth_timer is not None:
+                self._auth_timer.Start()
+        except Exception:
+            pass
+
+    def _on_auth_button(self, sender, e):
+        try:
+            AUTH.request_auth()
+        except Exception as ex:
+            self.status_label.Text = "Sign-in failed: {}".format(ex)
+            return
+        self._refresh_auth_banner()
+
+    def _on_auth_tick(self, sender, e):
+        self._refresh_auth_banner()
 
     def _build_logo(self):
         iv = Eto.Forms.ImageView()
@@ -564,9 +764,11 @@ class AiRenderForm(Eto.Forms.Form):
         #     instead of a header, freeing vertical space.
         #   - Style Reference buttons collapse from 4 vertical to 1 horizontal
         #     row of chips next to a smaller (100x76) thumb.
+        # 2026-04-30: capture preview enlarged 300x220 -> 420x300; user feedback
+        # asked for the prompt to take less space and the preview to take more.
         col = Eto.Forms.DynamicLayout()
         col.Spacing = Eto.Drawing.Size(0, 4)
-        col.Width = 320
+        col.Width = 440
 
         # STEP 1 eyebrow
         step1_lbl = Eto.Forms.Label(Text="STEP 1 / CAPTURE")
@@ -575,7 +777,7 @@ class AiRenderForm(Eto.Forms.Form):
         col.Add(step1_lbl)
 
         self.capture_preview = Eto.Forms.ImageView()
-        self.capture_preview.Size = Eto.Drawing.Size(300, 220)
+        self.capture_preview.Size = Eto.Drawing.Size(420, 300)
         col.Add(self.capture_preview)
         self.preview_label = Eto.Forms.Label(Text="Click Update Capture to begin")
         self.preview_label.TextColor = _hex_to_color("#CBCBCB")
@@ -655,7 +857,7 @@ class AiRenderForm(Eto.Forms.Form):
         bt_lib = Eto.Forms.Button(Text="Load from Library...")
         bt_lib.Click += self._on_library_style
         ref_btns.Add(bt_lib)
-        self.bt_clear_style = Eto.Forms.Button(Text="X Clear")
+        self.bt_clear_style = Eto.Forms.Button(Text="Clear")
         self.bt_clear_style.Click += self._on_clear_style
         self.bt_clear_style.Visible = False
         ref_btns.Add(self.bt_clear_style)
@@ -743,19 +945,24 @@ class AiRenderForm(Eto.Forms.Form):
         ptop.BeginHorizontal()
         ptop.Add(Eto.Forms.Label(Text="Prompt",
                                  TextColor=_hex_to_color("#CBCBCB")))
-        self.bt_spell = Eto.Forms.Button(Text="Spell")
+        self.bt_spell = Eto.Forms.Button(Text="Spell Check")
+        self.bt_spell.ToolTip = "Check spelling and grammar"
         self.bt_spell.Click += self._on_spell
         ptop.Add(self.bt_spell)
-        self.bt_lengthen = Eto.Forms.Button(Text="Lengthen")
+        self.bt_lengthen = Eto.Forms.Button(Text="Improve Prompt")
+        self.bt_lengthen.ToolTip = "Use AI to improve your prompt"
         self.bt_lengthen.Click += self._on_lengthen
         ptop.Add(self.bt_lengthen)
-        self.bt_shorten = Eto.Forms.Button(Text="Shorten")
+        self.bt_shorten = Eto.Forms.Button(Text="Summarize Prompt")
+        self.bt_shorten.ToolTip = "Use AI to summarize and reduce prompt length (75% of original)"
         self.bt_shorten.Click += self._on_shorten
         ptop.Add(self.bt_shorten)
-        self.bt_reset_prompt = Eto.Forms.Button(Text="Reset")
+        self.bt_reset_prompt = Eto.Forms.Button(Text="Clear Prompt")
+        self.bt_reset_prompt.ToolTip = "Clear the prompt textbox"
         self.bt_reset_prompt.Click += self._on_reset_prompt
         ptop.Add(self.bt_reset_prompt)
         self.bt_undo_prompt = Eto.Forms.Button(Text="Undo")
+        self.bt_undo_prompt.ToolTip = "Undo the last AI change"
         self.bt_undo_prompt.Click += self._on_undo_prompt
         self.bt_undo_prompt.Enabled = False
         ptop.Add(self.bt_undo_prompt)
@@ -767,7 +974,9 @@ class AiRenderForm(Eto.Forms.Form):
         col.Add(ptop)
 
         self.tbox_prompt = Eto.Forms.TextArea()
-        self.tbox_prompt.Size = Eto.Drawing.Size(0, 100)
+        # 2026-04-30: shrunk 100 -> 80 (user feedback: prompt area too tall).
+        # Still scrollable for long prompts via TextArea's intrinsic scrollbar.
+        self.tbox_prompt.Size = Eto.Drawing.Size(0, 80)
         self.tbox_prompt.AcceptsReturn = True
         col.Add(self.tbox_prompt, yscale=True)
 
@@ -823,7 +1032,7 @@ class AiRenderForm(Eto.Forms.Form):
     def _build_filter_bar(self):
         row = Eto.Forms.DynamicLayout()
         row.BeginHorizontal()
-        self.gallery_header = Eto.Forms.Label(Text="History")
+        self.gallery_header = Eto.Forms.Label(Text="Gallery")
         self.gallery_header.Font = Eto.Drawing.Font(Eto.Drawing.SystemFont.Bold, 12)
         row.Add(self.gallery_header)
         self.gallery_count = Eto.Forms.Label(Text="loading...")
@@ -884,7 +1093,7 @@ class AiRenderForm(Eto.Forms.Form):
         row.Spacing = Eto.Drawing.Size(10, 0)
         row.Padding = Eto.Drawing.Padding(2, 4, 2, 4)
         row.BeginHorizontal()
-        self.cb_auto_save = Eto.Forms.CheckBox(Text="Auto-save to Gallery")
+        self.cb_auto_save = Eto.Forms.CheckBox(Text="Auto-save to Cloud")
         self.cb_auto_save.Checked = True
         self.cb_auto_save.CheckedChanged += self._on_auto_save_changed
         self.cb_auto_save.ToolTip = (
@@ -903,7 +1112,7 @@ class AiRenderForm(Eto.Forms.Form):
         bt_open_folder = Eto.Forms.Button(Text="Open Output Folder")
         bt_open_folder.Click += self._on_open_folder
         row.Add(bt_open_folder)
-        self.quota_label = Eto.Forms.Label(Text="Quota: —")
+        self.quota_label = Eto.Forms.Label(Text="Quota: -")
         self.quota_label.TextColor = _hex_to_color("#9A9A9A")
         row.Add(self.quota_label)
         row.EndHorizontal()
@@ -913,8 +1122,40 @@ class AiRenderForm(Eto.Forms.Form):
     # Lifecycle
     # ------------------------------------------------------------------
 
+    def _on_closing(self, sender, e):
+        # If there are pending/active jobs, confirm.
+        in_flight = AI_RENDER.count_inflight(self._jobs, self._jobs_lock)
+        if in_flight > 0:
+            res = Eto.Forms.MessageBox.Show(
+                self,
+                "{} render(s) still running or pending.\n\n"
+                "Yes = finish them in the background (dialog closes).\n"
+                "No  = drop pending jobs and close now.\n"
+                "Cancel = keep the dialog open.".format(in_flight),
+                "Closing render",
+                Eto.Forms.MessageBoxButtons.YesNoCancel)
+            if res == Eto.Forms.DialogResult.Cancel:
+                e.Cancel = True
+                return
+            if res == Eto.Forms.DialogResult.No:
+                # Mark all pending as failed so the worker exits promptly.
+                Monitor.Enter(self._jobs_lock)
+                try:
+                    for j in self._jobs:
+                        if j.status == AI_RENDER.STATUS_PENDING:
+                            j.status = AI_RENDER.STATUS_FAILED
+                            j.error_msg = "Cancelled on close"
+                finally:
+                    Monitor.Exit(self._jobs_lock)
+
     def _on_closed(self, sender, e):
         self._form_closed = True
+        # 2026-05-14 — unregister auth-complete listener FIRST so a callback
+        # racing the close path cannot fire against a half-torn-down form.
+        try:
+            AUTH.unregister_auth_complete_listener(self._on_auth_complete)
+        except Exception:
+            pass
         try:
             self._tick_timer.Stop()
         except Exception:
@@ -932,15 +1173,141 @@ class AiRenderForm(Eto.Forms.Form):
                 Rhino.Display.DisplayPipeline.PostDrawObjects -= self._draw_handler
         except Exception:
             pass
+
+        # 2026-05-12: Only stop workers if the user explicitly chose NOT to 
+        # finish in background (handled by STATUS_FAILED marks above) or 
+        # if no jobs remain.
+        Monitor.Enter(self._jobs_lock)
         try:
-            self._image_worker.stop()
-            self._video_worker.stop()
-        except Exception:
-            pass
+            any_active = any(j.status in (AI_RENDER.STATUS_PENDING, AI_RENDER.STATUS_ACTIVE)
+                            for j in self._jobs)
+        finally:
+            Monitor.Exit(self._jobs_lock)
+        
+        if not any_active:
+            try:
+                self._image_worker.stop()
+                self._video_worker.stop()
+            except Exception:
+                pass
+
         # Identity check — only clear sticky if it still points to us
         # (prevents close+reopen race from clobbering a freshly-created form).
         if sc.sticky.has_key("EA_AI_RENDER_FORM") and sc.sticky["EA_AI_RENDER_FORM"] is self:
             sc.sticky.Remove("EA_AI_RENDER_FORM")
+
+    # ------------------------------------------------------------------
+    # Animate (Image → Video)
+    # ------------------------------------------------------------------
+
+    def _ctx_animate(self, row):
+        # Need a local image to use as firstFrame.
+        if row.result_path and os.path.exists(row.result_path):
+            self._show_animate_dialog(row, row.result_path)
+            return
+        if row.cloud_item:
+            self.status_label.Text = "Downloading image for animation..."
+            token = AUTH.get_token()
+            if not token:
+                self.status_label.Text = "Sign in required."
+                return
+            def on_done(_bmp, path):
+                if path:
+                    self._invoke_ui(lambda: self._show_animate_dialog(row, path))
+                else:
+                    self._invoke_ui(lambda: setattr(self.status_label, 'Text',
+                                                    "Failed to fetch image."))
+            G.fetch_full_item_async(token, row.id, on_done)
+
+    def _show_animate_dialog(self, row, image_path):
+        dlg = Eto.Forms.Dialog[bool]()
+        dlg.Title = "Animate (Image → Video)"
+        dlg.Padding = Eto.Drawing.Padding(12)
+        dlg.Resizable = False
+        dlg.BackgroundColor = _hex_to_color("#464646")
+
+        layout = Eto.Forms.DynamicLayout()
+        layout.Spacing = Eto.Drawing.Size(6, 6)
+
+        def _lbl(txt):
+            l = Eto.Forms.Label(Text=txt)
+            l.TextColor = _hex_to_color("#DAE8FD")
+            return l
+
+        layout.Add(_lbl("Motion Prompt (describe movement):"))
+        tb_prompt = Eto.Forms.TextBox()
+        tb_prompt.Text = "Slow cinematic pan across the scene, realistic movement."
+        layout.Add(tb_prompt)
+
+        layout.BeginHorizontal()
+        layout.BeginVertical(spacing=Eto.Drawing.Size(6, 6))
+        layout.Add(_lbl("Duration:"))
+        cb_dur = Eto.Forms.DropDown()
+        cb_dur.Items.Add("4 seconds")
+        cb_dur.Items.Add("6 seconds")
+        cb_dur.Items.Add("8 seconds")
+        cb_dur.SelectedIndex = 0
+        layout.Add(cb_dur)
+        layout.EndVertical()
+
+        layout.BeginVertical(spacing=Eto.Drawing.Size(6, 6))
+        layout.Add(_lbl("Resolution:"))
+        cb_res = Eto.Forms.DropDown()
+        cb_res.Items.Add("720p")
+        cb_res.Items.Add("1080p")
+        cb_res.SelectedIndex = 0
+        layout.Add(cb_res)
+        layout.EndVertical()
+        layout.EndHorizontal()
+
+        layout.AddSeparator()
+        
+        btn_row = Eto.Forms.DynamicLayout()
+        btn_row.BeginHorizontal()
+        btn_row.Add(None, xscale=True)
+        ok = Eto.Forms.Button(Text="Queue Video")
+        cancel = Eto.Forms.Button(Text="Cancel")
+        def on_ok(s, a):
+            duration = [4, 6, 8][cb_dur.SelectedIndex]
+            resolution = ["720p", "1080p"][cb_res.SelectedIndex]
+            self._enqueue_video(image_path, tb_prompt.Text, duration, resolution,
+                                row.view_name or "", row.StyleName or "")
+            dlg.Close(True)
+        ok.Click += on_ok
+        cancel.Click += lambda s, a: dlg.Close(False)
+        btn_row.Add(ok)
+        btn_row.Add(cancel)
+        btn_row.EndHorizontal()
+        layout.Add(btn_row)
+
+        dlg.Content = layout
+        RHINO_UI.apply_dark_style(dlg)
+        dlg.ShowModal(self)
+
+    def _enqueue_video(self, image_path, motion_prompt, duration, resolution,
+                       view_name, style_name):
+        if not AI_RENDER.can_enqueue(self._jobs, self._jobs_lock):
+            self.status_label.Text = "Queue full."
+            return
+        job = AI_RENDER.RenderJob(
+            original_path=image_path,
+            prompt=motion_prompt,
+            style_preset=style_name,
+            view_name=view_name,
+            kind=AI_RENDER.KIND_VIDEO,
+            host="rhino",
+            video_duration=duration,
+            video_resolution=resolution,
+            auto_save_gallery=self._auto_save_enabled)
+        Monitor.Enter(self._jobs_lock)
+        try:
+            self._jobs.append(job)
+        finally:
+            Monitor.Exit(self._jobs_lock)
+        self._video_worker.wake()
+        self.status_label.Text = "Video queued (job #{}).".format(job.job_id[:6])
+        self._rebuild_rows()
+        self._update_active_jobs_label()
 
     # ------------------------------------------------------------------
     # Preferences (2026-04-28) — write-through helpers used by every
@@ -1355,11 +1722,11 @@ class AiRenderForm(Eto.Forms.Form):
     def _run_prompt_api(self, btn, api_fn, action_name):
         prompt = (self.tbox_prompt.Text or "").strip()
         if not prompt:
-            self.status_label.Text = "Nothing to {}.".format(action_name.lower())
+            self.status_label.Text = "Enter a prompt first."
             return
         btn.Enabled = False
         old_text = btn.Text
-        btn.Text = "…"
+        btn.Text = "..."
         self._push_prompt_undo()
         self.status_label.Text = "{}...".format(action_name)
 
@@ -1400,12 +1767,11 @@ class AiRenderForm(Eto.Forms.Form):
             try:
                 new_text = _safe_unicode(api_fn(token, prompt))
                 self._invoke_ui(lambda: setattr(self.tbox_prompt, 'Text', new_text))
-                self._invoke_ui(lambda: setattr(self.status_label, 'Text',
-                                                "{} applied.".format(action_name)))
+                self._invoke_ui(lambda: setattr(self.status_label, 'Text', "Done."))
             except Exception as ex:
                 err_text = _safe_unicode(ex)[:200]
                 self._invoke_ui(lambda: setattr(self.status_label, 'Text',
-                                                u"{} failed: {}".format(action_name, err_text)))
+                                                u"Failed: {}".format(err_text)))
             finally:
                 self._invoke_ui(lambda: self._restore_btn(btn, old_text))
         System.Threading.ThreadPool.QueueUserWorkItem(
@@ -1418,20 +1784,20 @@ class AiRenderForm(Eto.Forms.Form):
     def _on_spell(self, sender, e):
         self._run_prompt_api(self.bt_spell,
                              lambda tok, p: AI_CHAT.spell_check_with_token(tok, p),
-                             "Spell check")
+                             "Checking")
 
     def _on_lengthen(self, sender, e):
         is_int = bool(self.cb_interior.Checked)
         self._run_prompt_api(self.bt_lengthen,
                              lambda tok, p: AI_CHAT.improve_prompt_with_token(
                                  tok, p, mode="image", action="improve", is_interior=is_int),
-                             "Lengthen")
+                             "Improving")
 
     def _on_shorten(self, sender, e):
         self._run_prompt_api(self.bt_shorten,
                              lambda tok, p: AI_CHAT.improve_prompt_with_token(
                                  tok, p, mode="image", action="summarize"),
-                             "Shorten")
+                             "Summarizing")
 
     # ------------------------------------------------------------------
     # Style reference
@@ -1874,11 +2240,11 @@ class AiRenderForm(Eto.Forms.Form):
             return
         prompt = (self.tbox_prompt.Text or "").strip()
         if not prompt:
-            self.status_label.Text = "Enter a prompt."
+            self.status_label.Text = "Please enter a prompt first."
             _trace("Queue.ABORT no_prompt")
             return
         if not AI_RENDER.can_enqueue(self._jobs, self._jobs_lock):
-            self.status_label.Text = "Queue full ({} active).".format(AI_RENDER.ACTIVE_CAP)
+            self.status_label.Text = "Queue full ({} active). Wait for one to finish.".format(AI_RENDER.ACTIVE_CAP)
             _trace("Queue.ABORT queue_full")
             return
         _trace("Queue.preflight_ok prompt_len={} style_idx={}".format(
@@ -2020,7 +2386,8 @@ class AiRenderForm(Eto.Forms.Form):
                     self._row_view_original,
                     self._row_view_result,
                     self._row_save,
-                    self._row_context_menu)
+                    self._row_context_menu,
+                    self._row_copy)
                 self._rows_layout.Items.Add(Eto.Forms.StackLayoutItem(panel,
                                                                       Eto.Forms.HorizontalAlignment.Stretch))
                 built += 1
@@ -2246,7 +2613,7 @@ class AiRenderForm(Eto.Forms.Form):
             prompts.append(r.full_prompt or r.PromptPreview or "")
             subtitles.append(r.Subtitle or "")
             viewer_rows.append(r)
-            if r is row:
+            if getattr(r, "id", None) == getattr(row, "id", "MISS"):
                 start_idx = len(paths) - 1
         Rhino.RhinoApp.WriteLine(
             "[ai_render] gathered {} paths ({} with alternates), start_idx={}".format(
@@ -2453,6 +2820,38 @@ class AiRenderForm(Eto.Forms.Form):
             return
         self._save_path_as(src, row)
 
+    def _row_copy(self, row):
+        src = row.result_path
+        if not src or not os.path.exists(src):
+            if row.cloud_item:
+                self._fetch_and_copy(row)
+                return
+            self.status_label.Text = "No local result to copy."
+            return
+        if IMAGE.copy_image_to_clipboard(src):
+            self.status_label.Text = "Copied to clipboard."
+        else:
+            self.status_label.Text = "Copy failed."
+
+    def _fetch_and_copy(self, row):
+        self.status_label.Text = "Downloading for copy..."
+        token = AUTH.get_token()
+        if not token:
+            self.status_label.Text = "Sign in required."
+            return
+        def on_done(_bmp, path):
+            if path:
+                def finish():
+                    if IMAGE.copy_image_to_clipboard(path):
+                        self.status_label.Text = "Copied to clipboard."
+                    else:
+                        self.status_label.Text = "Copy failed."
+                self._invoke_ui(finish)
+            else:
+                self._invoke_ui(lambda: setattr(
+                    self.status_label, 'Text', "Download failed."))
+        G.fetch_full_item_async(token, row.id, on_done)
+
     def _save_path_as(self, src, row):
         dlg = Eto.Forms.SaveFileDialog()
         ext = os.path.splitext(src)[1]
@@ -2508,15 +2907,21 @@ class AiRenderForm(Eto.Forms.Form):
             enabled=has_local_result or has_cloud)
         add("Save bundle (.zip)...", lambda: self._ctx_save_bundle(row),
             enabled=has_local_result and has_local_original)
+        add("Copy result to clipboard", lambda: self._row_copy(row),
+            enabled=has_local_result or has_cloud)
         cm.Items.AddSeparator()
         is_failed = bool(row.job_ref and row.job_ref.status == AI_RENDER.STATUS_FAILED)
         rerun_label = "Retry" if is_failed else "Re-run with same prompt"
         add(rerun_label, lambda: self._ctx_rerun(row),
             enabled=not is_active and (has_local_original or has_cloud))
+        add("Animate (Image → Video)...", lambda: self._ctx_animate(row),
+            enabled=not is_active and (has_local_result or has_cloud))
         cm.Items.AddSeparator()
         add("Open in ennead-ai.com Studio", lambda: self._ctx_open_studio(row),
             enabled=bool(gallery_id))
         cm.Items.AddSeparator()
+        add("Remove from local cache only", lambda: self._ctx_remove_local(row),
+            enabled=has_local_result or has_local_original)
         add("Delete from Gallery (all devices)...",
             lambda: self._ctx_delete_gallery(row, gallery_id),
             enabled=bool(gallery_id))
@@ -2544,6 +2949,58 @@ class AiRenderForm(Eto.Forms.Form):
                 aspect, long_edge, interior, style_ref,
                 row.full_prompt or "(empty)"),
             "Prompt for {}".format(row.id[:8]))
+
+    def _row_copy(self, row):
+        src = row.result_path
+        if not src or not os.path.exists(src):
+            if row.cloud_item:
+                self._fetch_and_copy(row)
+                return
+            self.status_label.Text = "No result to copy."
+            return
+        if IMAGE.copy_image_to_clipboard(src):
+            self.status_label.Text = "Copied to clipboard."
+        else:
+            self.status_label.Text = "Copy failed."
+
+    def _fetch_and_copy(self, row):
+        self.status_label.Text = "Downloading for copy..."
+        token = AUTH.get_token()
+        if not token:
+            self.status_label.Text = "Sign in required."
+            return
+        def on_done(bmp, path):
+            if path:
+                def finish():
+                    if IMAGE.copy_image_to_clipboard(path):
+                        self.status_label.Text = "Copied to clipboard."
+                    else:
+                        self.status_label.Text = "Copy failed."
+                self._invoke_ui(finish)
+            else:
+                self._invoke_ui(lambda: setattr(self.status_label, 'Text',
+                                                "Failed to fetch image."))
+        G.fetch_full_item_async(token, row.id, on_done)
+
+    def _ctx_remove_local(self, row):
+        """Purge local result/original/sidecar files for this row.
+        Item remains in cloud Gallery.
+        """
+        try:
+            if row.job_ref and row.job_ref.job_folder and os.path.isdir(row.job_ref.job_folder):
+                shutil.rmtree(row.job_ref.job_folder, ignore_errors=True)
+            self.status_label.Text = "Local files removed for this row."
+            # Remove from in-memory list so it stops appearing as local.
+            if row.job_ref:
+                Monitor.Enter(self._jobs_lock)
+                try:
+                    if row.job_ref in self._jobs:
+                        self._jobs.remove(row.job_ref)
+                finally:
+                    Monitor.Exit(self._jobs_lock)
+            self._rebuild_rows()
+        except Exception as ex:
+            self.status_label.Text = "Remove failed: {}".format(str(ex)[:200])
 
     def _ctx_save_bundle(self, row):
         if not (row.original_path and row.result_path

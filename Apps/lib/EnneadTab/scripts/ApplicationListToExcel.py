@@ -55,6 +55,7 @@ from fuzzywuzzy import process
 
 # Priority application patterns that should appear first
 PRIORITY_PATTERNS = [
+    r"^Revit 2027$", r"^Autodesk Revit 2027$",
     r"^Revit 2026$", r"^Autodesk Revit 2026$",
     r"^Revit 2025$", r"^Autodesk Revit 2025$",
     r"^Revit 2024$", r"^Autodesk Revit 2024$",

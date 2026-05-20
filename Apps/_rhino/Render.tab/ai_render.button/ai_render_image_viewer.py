@@ -29,8 +29,8 @@ Design notes (2026-04-28 v5):
   dialog open reads the latest source even when ResetEngine fails to
   flush the in-process module cache.
 - Keyboard shortcuts: Left/Right navigate, Tab swaps Input/Result,
-  F or Space toggles fit/1:1, P toggles prompt panel, S saves, O opens
-  in OS app, Esc closes.
+  P toggles prompt panel, S saves, O opens in OS app, Esc closes.
+  (1:1 / fit toggle removed 2026-04-30 -- always fits to container.)
 """
 
 import os
@@ -40,7 +40,16 @@ import Rhino  # pyright: ignore
 import Eto    # pyright: ignore
 import System  # pyright: ignore
 
+import clr  # pyright: ignore
+try:
+    clr.AddReference("System.Drawing")
+    import System.Drawing as _SD  # pyright: ignore
+    _SD_OK = True
+except Exception:
+    _SD_OK = False
+
 from EnneadTab.RHINO import RHINO_UI
+from EnneadTab import IMAGE
 
 
 # v4 self-identifying load trace - every fresh import announces its
@@ -49,7 +58,7 @@ from EnneadTab.RHINO import RHINO_UI
 # viewer module changes, the Rhino command line shows exactly which
 # version is running. Format: BUILD_TAG must include the iteration
 # version so a cached old viewer can be spotted at a glance.
-_VIEWER_BUILD_TAG = "v4.6-scrollable-panels-and-hint-wrap"
+_VIEWER_BUILD_TAG = "v4.8-wrap-labels-xscale-fix-v12"
 
 
 # v4.1 (2026-04-30) - file logging.
@@ -106,10 +115,6 @@ def _trace(msg):
         try:
             fp.write("{}  {}\n".format(ts, line))
             fp.flush()
-            try:
-                os.fsync(fp.fileno())
-            except Exception:
-                pass
         finally:
             fp.close()
     except Exception:
@@ -152,10 +157,12 @@ class _ViewerState(object):
             self.idx = max(0, min(int(start_index), len(self.paths) - 1))
         else:
             self.idx = 0
+        _trace("_ViewerState init: paths={} start_idx={} final_idx={}".format(
+            len(self.paths), start_index, self.idx))
 
-        # Modes — persist across navigation so the user sees the same
-        # side / fit setting / prompt visibility after Next/Prev.
-        self.fit_mode = True
+        # Modes -- persist across navigation so the user sees the same
+        # side / prompt visibility after Next/Prev.
+        # 2026-04-30: fit_mode toggle removed; viewer always fits to container.
         self.show_alternate = False  # False = primary (paths), True = alternates
         self.prompt_visible = True
 
@@ -196,10 +203,10 @@ class _ViewerState(object):
         self.lbl_counter = None
         self.bt_prev = None
         self.bt_next = None
-        self.bt_fit = None
         self.bt_swap = None
         self.bt_prompt = None
         self.bt_save = None
+        self.bt_copy = None
         self.bt_open = None
         self.image_view = None
         self.scroll = None
@@ -271,7 +278,6 @@ def _render_current(state):
         state.lbl_meta.Text = state.current_subtitle()
         state.bt_prev.Enabled = state.idx > 0
         state.bt_next.Enabled = state.idx < n - 1
-        state.bt_fit.Text = "1:1" if state.fit_mode else "Fit"
         state.bt_swap.Text = "View Input" if not state.show_alternate else "View Result"
         # Save/Open enabled only when the current path is a real local file.
         local_ok = bool(path and os.path.exists(path))
@@ -303,10 +309,9 @@ def _init_transform(state):
     """v4 Pattern 1 (DragZoomImageView, rafntor/Eto.Containers):
     Build the Matrix that maps bitmap-space -> drawable-space.
 
-    fit_mode: scale = min(dw/bw, dh/bh, 1.0); translate to center.
-    1:1 mode: scale = 1.0; translate to (0, 0). Bitmap clips at the
-    edges if it exceeds the drawable. (Pan-via-mouse-drag is a
-    follow-up; v4 ships without it to keep the migration scoped.)
+    Always fits the bitmap to the drawable: scale = min(dw/bw, dh/bh),
+    translate to center. (1:1 toggle removed 2026-04-30; the user-facing
+    button was the only consumer and feedback wanted it gone.)
 
     Critically: this function NEVER mutates state.drawable.Size.
     The Drawable inherits its size from its parent layout cell
@@ -343,48 +348,25 @@ def _init_transform(state):
         return
     try:
         m = Eto.Drawing.Matrix.Create()
-        if state.fit_mode:
-            # v4.2 (2026-04-30): drop the 1.0 cap that the rafntor
-            # DragZoomImageView pattern uses. Cap was correct for
-            # photo-viewer use cases where upscaling a small image
-            # produces visible blur (better to show 1:1 native than
-            # an upscaled blur). HERE the bitmap is often a 512px
-            # cloud thumbnail - capping at 1.0 leaves it as a tiny
-            # patch in a 2667x590 viewport (~19% width fill). For an
-            # architectural-render viewer "fit" must mean "fill the
-            # available area while preserving aspect", regardless of
-            # whether that requires upscaling. Eto's DrawImage uses
-            # bilinear by default which is acceptable for thumb -> fit.
-            # If full-res cloud download lands later (separate bug),
-            # the upscale becomes much smaller and looks crisp.
-            scale = min(float(dw) / bw, float(dh) / bh)
-            new_w = bw * scale
-            new_h = bh * scale
-            tx = (dw - new_w) / 2.0
-            ty = (dh - new_h) / 2.0
-            m.Translate(float(tx), float(ty))
-            m.Scale(float(scale), float(scale))
-            _trace("_init_transform fit: bmp={}x{} drawable={}x{} scale={:.4f} translate=({:.1f},{:.1f}) drawn={:.0f}x{:.0f}".format(
-                bw, bh, dw, dh, scale, tx, ty, new_w, new_h))
-        else:
-            # v4.3 (2026-04-30): 1:1 mode centers the bitmap rather
-            # than pinning to top-left.
-            # v4 used the rafntor default (identity matrix, draw at
-            # (0,0)) which left small bitmaps pinned to the upper-
-            # left of a huge viewer with empty black space everywhere
-            # else. User reported this as "still issue on 1:1 being
-            # top left corner" - correct, that pattern only makes
-            # sense if mouse-drag pan is implemented (DragZoomImageView
-            # has it, our v4 doesn't yet). Centering at native size
-            # is the right default until pan lands. If bitmap is
-            # larger than drawable in either axis, translate goes
-            # negative and the bitmap clips off-screen edges - user
-            # sees the central pixels. (Pan still deferred to v5.)
-            tx = (dw - bw) / 2.0
-            ty = (dh - bh) / 2.0
-            m.Translate(float(tx), float(ty))
-            _trace("_init_transform 1:1: bmp={}x{} drawable={}x{} translate=({:.1f},{:.1f}) (centered at native size)".format(
-                bw, bh, dw, dh, tx, ty))
+        # v4.2 (2026-04-30): drop the 1.0 cap that the rafntor
+        # DragZoomImageView pattern uses. Cap was correct for
+        # photo-viewer use cases where upscaling a small image
+        # produces visible blur (better to show 1:1 native than
+        # an upscaled blur). HERE the bitmap is often a 512px
+        # cloud thumbnail - capping at 1.0 leaves it as a tiny
+        # patch in a 2667x590 viewport (~19% width fill). For an
+        # architectural-render viewer "fit" must mean "fill the
+        # available area while preserving aspect", regardless of
+        # whether that requires upscaling.
+        scale = min(float(dw) / bw, float(dh) / bh)
+        new_w = bw * scale
+        new_h = bh * scale
+        tx = (dw - new_w) / 2.0
+        ty = (dh - new_h) / 2.0
+        m.Translate(float(tx), float(ty))
+        m.Scale(float(scale), float(scale))
+        _trace("_init_transform fit: bmp={}x{} drawable={}x{} scale={:.4f} translate=({:.1f},{:.1f}) drawn={:.0f}x{:.0f}".format(
+            bw, bh, dw, dh, scale, tx, ty, new_w, new_h))
         state._transform = m
     except Exception as ex:
         _trace("_init_transform FAILED: " + str(ex))
@@ -516,7 +498,7 @@ def _build_form(state):
     f = Eto.Forms.Form()
     state.form = f
     try:
-        f.Title = "EnneaDuck - Render Viewer"
+        f.Title = "EnneaDuck: Render Viewer"
     except Exception:
         pass
     try:
@@ -531,7 +513,7 @@ def _build_form(state):
     # the Rhino doc behind it. Setting a hard FF-alpha background here
     # AND wrapping Content in an opaque Panel below kills both leak paths.
     try:
-        f.BackgroundColor = _hex_to_color("#FF1A1A1A")
+        f.BackgroundColor = _hex_to_color("#1A1A1A")
     except Exception:
         pass
     try:
@@ -562,6 +544,7 @@ def _build_form(state):
         state.lbl_title.Font = Eto.Drawing.Font(
             Eto.Drawing.SystemFont.Bold, 13)
         state.lbl_title.TextColor = _hex_to_color("#DAE8FD")
+        state.lbl_title.Wrap = Eto.Forms.WrapMode.Word
     except Exception:
         pass
     bar.Add(state.lbl_title, xscale=True)
@@ -571,6 +554,7 @@ def _build_form(state):
         state.lbl_side.Font = Eto.Drawing.Font(
             Eto.Drawing.SystemFont.Bold, 10)
         state.lbl_side.TextColor = _hex_to_color("#FFE59C")
+        state.lbl_side.Wrap = Eto.Forms.WrapMode.Word
     except Exception:
         pass
     bar.Add(state.lbl_side)
@@ -578,6 +562,7 @@ def _build_form(state):
     state.lbl_counter = Eto.Forms.Label(Text="")
     try:
         state.lbl_counter.TextColor = _hex_to_color("#9A9A9A")
+        state.lbl_counter.Wrap = Eto.Forms.WrapMode.Word
     except Exception:
         pass
     bar.Add(state.lbl_counter)
@@ -590,6 +575,7 @@ def _build_form(state):
         state.lbl_meta.TextColor = _hex_to_color("#9A9A9A")
         state.lbl_meta.Font = Eto.Drawing.Font(
             Eto.Drawing.SystemFont.Default, 9)
+        state.lbl_meta.Wrap = Eto.Forms.WrapMode.Word
     except Exception:
         pass
     bar.Add(state.lbl_meta, xscale=True)
@@ -618,7 +604,7 @@ def _build_form(state):
     #   primitive on Rhino 8 per the carry-forward memory.
     bar_panel = Eto.Forms.Scrollable()
     try:
-        bar_panel.BackgroundColor = _hex_to_color("#FF2A2A2A")
+        bar_panel.BackgroundColor = _hex_to_color("#2A2A2A")
         bar_panel.Border = Eto.Forms.BorderType.None
         bar_panel.ExpandContentWidth = True
         bar_panel.ExpandContentHeight = True
@@ -631,7 +617,7 @@ def _build_form(state):
     # implicit horizontal mode left bar_panel and ctrl_panel at their
     # natural width with burgundy form chrome visible at the edges.
     root.BeginVertical()
-    root.Add(bar_panel)
+    root.Add(bar_panel, xscale=True)
 
     # ---------------- Image area ----------------
     # ----- Image-area architecture decision history -----
@@ -658,7 +644,7 @@ def _build_form(state):
     # so this is acceptable for first ship of v4.
     state.drawable = Eto.Forms.Drawable()
     try:
-        state.drawable.BackgroundColor = _hex_to_color("#FF1A1A1A")
+        state.drawable.BackgroundColor = _hex_to_color("#1A1A1A")
     except Exception:
         pass
     state.drawable.Paint += _make_paint_handler(state)
@@ -675,14 +661,14 @@ def _build_form(state):
     # so any accidental .Size / .Content access raises clearly rather
     # than silently misbehaving.
     state.scroll = None
-    root.Add(state.drawable, yscale=True)
+    root.Add(state.drawable, xscale=True, yscale=True)
 
     # ---------------- Prompt panel ----------------
     state.tbox_prompt = Eto.Forms.TextArea()
     try:
         state.tbox_prompt.ReadOnly = True
         state.tbox_prompt.Wrap = True
-        state.tbox_prompt.BackgroundColor = _hex_to_color("#FF222222")
+        state.tbox_prompt.BackgroundColor = _hex_to_color("#222222")
         state.tbox_prompt.TextColor = _hex_to_color("#CBCBCB")
         state.tbox_prompt.Font = Eto.Drawing.Font(
             Eto.Drawing.SystemFont.Default, 10)
@@ -696,7 +682,7 @@ def _build_form(state):
     # proven paint-reliable primitive per carry-forward memory.
     state.prompt_panel = Eto.Forms.Scrollable()
     try:
-        state.prompt_panel.BackgroundColor = _hex_to_color("#FF222222")
+        state.prompt_panel.BackgroundColor = _hex_to_color("#222222")
         state.prompt_panel.Border = Eto.Forms.BorderType.None
         state.prompt_panel.ExpandContentWidth = True
         state.prompt_panel.ExpandContentHeight = True
@@ -720,15 +706,14 @@ def _build_form(state):
         state.prompt_panel.Height = 110
     except Exception:
         pass
-    root.Add(state.prompt_panel)
+    root.Add(state.prompt_panel, xscale=True)
 
     # ---------------- Bottom controls ----------------
-    # 2026-04-28 v6 layout: Prev/Next at the FAR extremes of the bar,
-    # large enough that they're the obvious navigation affordance. The
-    # secondary toggles (swap / fit / prompt) cluster in the middle
-    # with spacers. "Open in OS" removed — non-tech users were confused
-    # by the term; Save covers the export use case, and the O keyboard
-    # shortcut still works for power users.
+    # 2026-04-28 v6 layout: Prev/Next at the FAR extremes of the bar.
+    # 2026-04-30: nav buttons shrunk to default size (user feedback that
+    # they were too big); 1:1 toggle removed (always fit). Tooltips and
+    # arrow-key shortcuts cover discoverability. The secondary toggles
+    # (swap / prompt) cluster in the middle with spacers.
     ctrl = Eto.Forms.DynamicLayout()
     try:
         ctrl.Padding = Eto.Drawing.Padding(14, 8)
@@ -737,15 +722,9 @@ def _build_form(state):
         pass
     ctrl.BeginHorizontal()
 
-    # FAR LEFT: prominent Previous button.
+    # FAR LEFT: Previous button (default size, 2026-04-30).
     state.bt_prev = Eto.Forms.Button(Text="<  Previous")
     state.bt_prev.ToolTip = "Previous image in history (Left arrow)"
-    try:
-        state.bt_prev.Size = Eto.Drawing.Size(120, 36)
-        state.bt_prev.Font = Eto.Drawing.Font(
-            Eto.Drawing.SystemFont.Bold, 11)
-    except Exception:
-        pass
     state.bt_prev.Click += _make_prev_handler(state)
     ctrl.Add(state.bt_prev)
 
@@ -757,11 +736,6 @@ def _build_form(state):
     state.bt_swap.Click += _make_swap_handler(state)
     ctrl.Add(state.bt_swap)
 
-    state.bt_fit = Eto.Forms.Button(Text="1:1")
-    state.bt_fit.ToolTip = "Toggle fit-to-window vs actual size (F or Space)"
-    state.bt_fit.Click += _make_fit_handler(state)
-    ctrl.Add(state.bt_fit)
-
     state.bt_prompt = Eto.Forms.Button(Text="Hide Prompt")
     state.bt_prompt.ToolTip = "Show or hide the prompt text panel (P)"
     state.bt_prompt.Click += _make_prompt_handler(state)
@@ -772,6 +746,11 @@ def _build_form(state):
     state.bt_save.Click += _make_save_handler(state)
     ctrl.Add(state.bt_save)
 
+    state.bt_copy = Eto.Forms.Button(Text="Copy")
+    state.bt_copy.ToolTip = "Copy image to clipboard"
+    state.bt_copy.Click += _make_copy_handler(state)
+    ctrl.Add(state.bt_copy)
+
     # bt_open kept for the O keyboard shortcut handler but not on the
     # toolbar (the label "Open in OS" confused non-technical users).
     state.bt_open = Eto.Forms.Button(Text="")
@@ -780,15 +759,9 @@ def _build_form(state):
 
     ctrl.Add(None, xscale=True)  # spacer
 
-    # FAR RIGHT: prominent Next button.
+    # FAR RIGHT: Next button (default size, 2026-04-30).
     state.bt_next = Eto.Forms.Button(Text="Next  >")
     state.bt_next.ToolTip = "Next image in history (Right arrow)"
-    try:
-        state.bt_next.Size = Eto.Drawing.Size(120, 36)
-        state.bt_next.Font = Eto.Drawing.Font(
-            Eto.Drawing.SystemFont.Bold, 11)
-    except Exception:
-        pass
     state.bt_next.Click += _make_next_handler(state)
     ctrl.Add(state.bt_next)
 
@@ -800,7 +773,7 @@ def _build_form(state):
     hint = Eto.Forms.Label(
         Text="Left / Right arrows navigate history   |   "
              "Tab swaps input / result   |   "
-             "F or Space toggles fit   |   P toggles prompt   |   "
+             "P toggles prompt   |   "
              "S saves   |   Esc closes")
     try:
         hint.TextColor = _hex_to_color("#7A7A7A")
@@ -828,7 +801,7 @@ def _build_form(state):
     # at render time on Rhino 8.
     ctrl_panel = Eto.Forms.Scrollable()
     try:
-        ctrl_panel.BackgroundColor = _hex_to_color("#FF2A2A2A")
+        ctrl_panel.BackgroundColor = _hex_to_color("#2A2A2A")
         ctrl_panel.Border = Eto.Forms.BorderType.None
         ctrl_panel.ExpandContentWidth = True
         ctrl_panel.ExpandContentHeight = True
@@ -836,7 +809,7 @@ def _build_form(state):
     except Exception:
         pass
     ctrl_panel.Content = ctrl
-    root.Add(ctrl_panel)
+    root.Add(ctrl_panel, xscale=True)
     root.EndVertical()
 
     # 2026-04-28 v10 — Empirical evidence after 4 iterations:
@@ -851,7 +824,7 @@ def _build_form(state):
     # that trade-off in exchange for getting opacity right.
     outer = Eto.Forms.Scrollable()
     try:
-        outer.BackgroundColor = _hex_to_color("#FF1A1A1A")
+        outer.BackgroundColor = _hex_to_color("#1A1A1A")
         outer.Border = Eto.Forms.BorderType.None
         # ----- outer.ExpandContent decision history -----
         # v1 (3678cb888): kept ExpandContent = True; the loop was
@@ -895,7 +868,7 @@ def _build_form(state):
     # runs AFTER f.Show() when the tree is fully walkable. Kept
     # here as belt-and-suspenders (paints the 2 reachable
     # controls; harmless if it duplicates the Shown-time pass).
-    _force_opaque_tree(outer, _hex_to_color("#FF1A1A1A"))
+    _force_opaque_tree(outer, _hex_to_color("#1A1A1A"))
 
     try:
         f.Shown += _make_shown_handler(state)
@@ -960,7 +933,7 @@ def _make_paint_handler(state):
         except Exception:
             return
         try:
-            g.Clear(_hex_to_color("#FF1A1A1A"))
+            g.Clear(_hex_to_color("#1A1A1A"))
         except Exception:
             pass
         bmp = state.loaded_bmp
@@ -1116,6 +1089,114 @@ def _walk_layout_for_diag(control, _depth=0, _stats=None):
     return _stats
 
 
+def _paint_diag_v11(control, _depth=0, _root_size=None, _seen=None):
+    """v11 paint diag (2026-04-30). Pixel-level screen readback of every
+    container in the parent chain. WHY THIS IS NEEDED:
+
+    v4.5 shipped property-getter readback (control.BackgroundColor) on the
+    immediate Drawable + Scrollable + Drawable trio. Result: getter returned
+    target dark-grey on every container, BUT the user still reported a
+    burgundy region. That proves BackgroundColor is STORED but not PAINTED
+    on whatever container is actually rendering the burgundy pixels. The
+    existing readback could not see the smoking gun.
+
+    v11 fixes this by capturing actual screen pixels via
+    System.Drawing.Graphics.CopyFromScreen at the screen-space center of
+    each control, comparing the rendered pixel against the property color.
+    A row where property says #1E1E1E but rendered shows ~#5A2030 (burgundy)
+    points at the exact container that needs the paint fix.
+
+    Walks Content + Items recursively. Logs to ai_render_trace.log with a
+    "paint_diag." prefix so entries are grep-filterable. Ship-and-wait
+    (per feedback_iterative_bugfix_measurement_first.md) -- DO NOT propose
+    a paint-fix before this log returns from a real Rhino session.
+    """
+    if not _SD_OK:
+        _trace("paint_diag. ABORT System.Drawing not available")
+        return
+    if _seen is None:
+        _seen = set()
+    cid = id(control)
+    if cid in _seen:
+        return
+    _seen.add(cid)
+    cls_name = type(control).__name__ if control is not None else "None"
+    if control is None:
+        return
+    indent = "  " * _depth
+
+    # Property-color readback (v4.5 path).
+    prop_color = "?"
+    try:
+        bg = control.BackgroundColor
+        prop_color = "rgba({:.2f},{:.2f},{:.2f},{:.2f})".format(
+            float(bg.Rb), float(bg.Gb), float(bg.Bb), float(bg.Ab))
+    except Exception:
+        pass
+
+    # Screen-space rendered-pixel readback (v11 path).
+    rendered_hex = "?"
+    rect_str = "?"
+    try:
+        sz = control.Size
+        w, h = int(sz.Width), int(sz.Height)
+        if w > 0 and h > 0:
+            # Sample the center pixel; if a control paints heterogeneously
+            # the center will still differ from siblings and identify the
+            # offending container.
+            pt_local = Eto.Drawing.Point(w // 2, h // 2)
+            try:
+                pt_screen = control.PointToScreen(pt_local)
+                sx, sy = int(pt_screen.X), int(pt_screen.Y)
+                rect_str = "{}x{} @screen({},{})".format(w, h, sx, sy)
+                bmp1 = _SD.Bitmap(1, 1)
+                g = _SD.Graphics.FromImage(bmp1)
+                try:
+                    g.CopyFromScreen(sx, sy, 0, 0, _SD.Size(1, 1))
+                    px = bmp1.GetPixel(0, 0)
+                    rendered_hex = "#{:02X}{:02X}{:02X}".format(
+                        int(px.R), int(px.G), int(px.B))
+                finally:
+                    g.Dispose()
+                    bmp1.Dispose()
+            except Exception as ex:
+                rect_str = "{}x{} (PointToScreen fail: {})".format(w, h, ex)
+    except Exception as ex:
+        rect_str = "Size read fail: " + str(ex)
+
+    _trace("paint_diag. {}{} {} prop={} rendered={}".format(
+        indent, cls_name, rect_str, prop_color, rendered_hex))
+
+    # Recurse.
+    try:
+        child = getattr(control, "Content", None)
+        if child is not None and child is not control:
+            _paint_diag_v11(child, _depth + 1, _root_size, _seen)
+    except Exception:
+        pass
+    try:
+        items = getattr(control, "Items", None)
+        if items is not None:
+            for it in items:
+                inner = getattr(it, "Control", it)
+                if inner is not None and inner is not control:
+                    _paint_diag_v11(inner, _depth + 1, _root_size, _seen)
+    except Exception:
+        pass
+    try:
+        rows = getattr(control, "Rows", None)
+        if rows is not None:
+            for row in rows:
+                cells = getattr(row, "Cells", None)
+                if cells:
+                    for cell in cells:
+                        inner = getattr(cell, "Control", cell)
+                        if inner is not None and inner is not control:
+                            _paint_diag_v11(inner, _depth + 1, _root_size, _seen)
+    except Exception:
+        pass
+
+
 def _make_shown_handler(state):
     def _on_shown(sender, e):
         if not state.first_render_done:
@@ -1144,16 +1225,38 @@ def _make_shown_handler(state):
             #   every container.
             try:
                 _trace("===== Shown-time _force_opaque_tree =====")
-                _force_opaque_tree(state.form, _hex_to_color("#FF1A1A1A"))
+                _force_opaque_tree(state.form, _hex_to_color("#1A1A1A"))
             except Exception as ex:
                 _trace("Shown-time _force_opaque_tree FAILED: " + str(ex))
             # v4.4 layout diagnostic - kept on (cheap one-shot, useful
             # for future iterations).
-            try:
-                _trace("===== Shown-time layout walk =====")
-                _walk_layout_for_diag(state.form)
-            except Exception as ex:
-                _trace("layout walk FAILED: " + str(ex))
+            # 2026-05-12: Disabling verbose diag tracing to prevent UI hangs.
+            # try:
+            #     _trace("===== Shown-time layout walk =====")
+            #     _walk_layout_for_diag(state.form)
+            # except Exception as ex:
+            #     _trace("layout walk FAILED: " + str(ex))
+            # v11 (2026-04-30) pixel-readback paint diag. Defer 600ms via
+            # UITimer so the form has fully painted before we sample
+            # screen pixels (sampling during/before paint returns
+            # background-window pixels, not our Form's pixels).
+            # try:
+            #     _trace("===== Shown-time paint_diag_v11 (deferred 600ms) =====")
+            #     t = Eto.Forms.UITimer()
+            #     t.Interval = 0.6
+            #     def _fire(s, ev):
+            #         try:
+            #             t.Stop()
+            #         except Exception:
+            #             pass
+            #         try:
+            #             _paint_diag_v11(state.form)
+            #         except Exception as ex:
+            #             _trace("paint_diag_v11 FAILED: " + str(ex))
+            #     t.Elapsed += _fire
+            #     t.Start()
+            # except Exception as ex:
+            #     _trace("paint_diag_v11 schedule FAILED: " + str(ex))
         _render_current(state)
     return _on_shown
 
@@ -1220,7 +1323,7 @@ def _make_resize_handler(state):
         # assignment (handles synchronous SizeChanged refire paths).
         if getattr(state, "_applying_size", False):
             return
-        if state.first_render_done and state.fit_mode and state.loaded_bmp is not None:
+        if state.first_render_done and state.loaded_bmp is not None:
             _apply_image_to_view(state, state.loaded_bmp)
             try:
                 state.drawable.Invalidate()
@@ -1243,18 +1346,6 @@ def _make_next_handler(state):
             state.idx += 1
             _render_current(state)
     return _on_next
-
-
-def _make_fit_handler(state):
-    def _on_toggle_fit(sender, e):
-        state.fit_mode = not state.fit_mode
-        if state.loaded_bmp is not None:
-            _apply_image_to_view(state, state.loaded_bmp)
-        try:
-            state.bt_fit.Text = "1:1" if state.fit_mode else "Fit"
-        except Exception:
-            pass
-    return _on_toggle_fit
 
 
 def _make_swap_handler(state):
@@ -1286,6 +1377,17 @@ def _make_save_handler(state):
         except Exception as ex:
             _trace("save handler raised: " + str(ex))
     return _on_save
+
+
+def _make_copy_handler(state):
+    def _on_copy(sender, e):
+        path = state.current_path()
+        if not path or not os.path.exists(path):
+            _trace("copy handler: no current path")
+            return
+        ok = IMAGE.copy_image_to_clipboard(path)
+        _trace("copy handler: ok={} path={}".format(ok, path))
+    return _on_copy
 
 
 def _make_open_handler(state):
@@ -1327,9 +1429,6 @@ def _make_key_handler(state):
                 state.form.Close()
             except Exception:
                 pass
-            e.Handled = True
-        elif k == Eto.Forms.Keys.F or k == Eto.Forms.Keys.Space:
-            _make_fit_handler(state)(sender, e)
             e.Handled = True
         elif k == Eto.Forms.Keys.P:
             _make_prompt_handler(state)(sender, e)

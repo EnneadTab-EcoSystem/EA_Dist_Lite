@@ -16,6 +16,9 @@ Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pul
 # InDesign lock files
 *.idlk
 
+# Rhino backup files
+*.3dmbak
+
 # C extensions
 *.so
 

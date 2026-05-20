@@ -18,6 +18,7 @@ layout:
   - mini_bank
   - beer_tab
   - unit_test
+  - theme_test
   - open_ecosystem_folder
   - app_store
   - remote_fix_code

@@ -1,6 +1,6 @@
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="EnneadTab"
+        Title="EnneaDuck: View Render"
         Foreground="#000"
         Margin="0"
         Width="1100" MinWidth="900"
@@ -192,6 +192,7 @@
         <Grid Margin="16">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>  <!-- Header -->
+                <RowDefinition Height="Auto"/>  <!-- Auth banner (Item A 2026-04-30) -->
                 <RowDefinition Height="Auto"/>  <!-- Controls -->
                 <RowDefinition Height="Auto"/>  <!-- Separator -->
                 <RowDefinition Height="*"/>     <!-- Gallery (fills remaining) -->
@@ -216,26 +217,52 @@
                                TextWrapping="Wrap" FontSize="11"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                    <Button Style="{StaticResource LinkButton}" Content="Open ennead-ai.com →"
+                    <Button Style="{StaticResource LinkButton}" Content="Open ennead-ai.com &gt;"
                             Click="open_web_Click" Margin="0,0,12,0"/>
                     <Button Content="✕" Click="close_Click" Width="28"
                             Background="Transparent" Foreground="{StaticResource MutedTextColor}"/>
                 </StackPanel>
             </Grid>
 
+            <!-- ============== AUTH BANNER (Item A, 2026-04-30) ============== -->
+            <!-- Hidden by default. Shown when AUTH.get_token() is None.
+                 Self-dismisses via DispatcherTimer polling (1s) once OAuth
+                 callback writes the token. Always uses AUTH.request_auth()
+                 for the sign-in click; never webbrowser.open() a static URL
+                 (the URL needs a per-call ?port=NNNNN query, generated at
+                 request_auth() time). -->
+            <Border Grid.Row="1" x:Name="auth_banner" Visibility="Collapsed"
+                    Background="#FF3A2E14" CornerRadius="6" Padding="12,10"
+                    Margin="0,0,0,10">
+                <StackPanel>
+                    <TextBlock x:Name="auth_heading" Text="Sign in to EnneaDuck"
+                               Foreground="#FFE0B070" FontWeight="Bold" FontSize="13"/>
+                    <TextBlock x:Name="auth_body"
+                               Text="AI Render uses your Ennead account. Click below to sign in."
+                               Foreground="{StaticResource MutedTextColor}"
+                               TextWrapping="Wrap" FontSize="11" Margin="0,4,0,0"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <Button x:Name="auth_button" Content="Sign in"
+                                Click="auth_signin_Click" Padding="14,4"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- ============== CONTROLS (two-column: capture thumb + prompt stack) ============== -->
-            <Grid Grid.Row="1" Margin="0,0,0,8">
+            <Grid Grid.Row="2" Margin="0,0,0,8">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="280"/>
+                    <ColumnDefinition Width="420"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
                 <!-- LEFT: Capture thumb + update button + resolution/aspect + style ref -->
+                <!-- 2026-04-30: column 280 -> 420, preview 168h -> 300h. User
+                     feedback: enlarge capture preview, shrink prompt area. -->
                 <StackPanel Grid.Column="0" Margin="0,0,12,0">
                     <TextBlock x:Name="preview_label" Text="Click Update Capture to begin"
                                Foreground="{StaticResource MutedTextColor}"
                                FontSize="11" Margin="0,0,0,4"/>
-                    <Border Background="#FF2A2A2A" CornerRadius="6" Padding="4" Height="168">
+                    <Border Background="#FF2A2A2A" CornerRadius="6" Padding="4" Height="300">
                         <Image x:Name="capture_preview" Stretch="Uniform"
                                HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
@@ -329,20 +356,25 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
-                        <TextBox Grid.Column="0" x:Name="tbox_prompt" Height="120"
+                        <TextBox Grid.Column="0" x:Name="tbox_prompt" Height="90"
                                  TextWrapping="Wrap" AcceptsReturn="True"
                                  VerticalScrollBarVisibility="Auto"/>
                         <StackPanel Grid.Column="1" Margin="4,0,0,0">
                             <Button Style="{StaticResource SmallButton}" x:Name="bt_spell"
-                                    Content="Spell Check" Click="spell_Click"/>
+                                    Content="Spell Check" Click="spell_Click"
+                                    ToolTip="Check spelling and grammar"/>
                             <Button Style="{StaticResource SmallButton}" x:Name="bt_lengthen"
-                                    Content="Lengthen" Click="lengthen_Click"/>
+                                    Content="Improve Prompt" Click="lengthen_Click"
+                                    ToolTip="Use AI to improve your prompt"/>
                             <Button Style="{StaticResource SmallButton}" x:Name="bt_shorten"
-                                    Content="Shorten" Click="shorten_Click"/>
+                                    Content="Summarize Prompt" Click="shorten_Click"
+                                    ToolTip="Use AI to summarize and reduce prompt length (75% of original)"/>
                             <Button Style="{StaticResource SmallButton}" x:Name="bt_reset_prompt"
-                                    Content="Reset" Click="reset_prompt_Click"/>
+                                    Content="Clear Prompt" Click="reset_prompt_Click"
+                                    ToolTip="Clear the prompt textbox"/>
                             <Button Style="{StaticResource SmallButton}" x:Name="bt_undo_prompt"
-                                    Content="↶ Undo" Click="undo_prompt_Click" IsEnabled="False"/>
+                                    Content="Undo" Click="undo_prompt_Click" IsEnabled="False"
+                                    ToolTip="Undo the last AI change"/>
                         </StackPanel>
                     </Grid>
 
@@ -357,17 +389,17 @@
                                    Foreground="{StaticResource MutedTextColor}"
                                    FontSize="11" TextTrimming="CharacterEllipsis"/>
                         <Button Grid.Column="1" Style="{StaticResource PrimaryButton}"
-                                x:Name="bt_render" Content="Queue Render  →"
+                                x:Name="bt_render" Content="Queue Render  &gt;"
                                 Click="render_Click"/>
                     </Grid>
                 </StackPanel>
             </Grid>
 
             <!-- ============== SEPARATOR ============== -->
-            <Separator Grid.Row="2" Margin="0,4,0,8"/>
+            <Separator Grid.Row="3" Margin="0,4,0,8"/>
 
             <!-- ============== GALLERY ============== -->
-            <Grid Grid.Row="3">
+            <Grid Grid.Row="4">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>  <!-- filter bar -->
                     <RowDefinition Height="*"/>     <!-- list -->
@@ -384,7 +416,7 @@
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" x:Name="gallery_header"
-                               Text="History"
+                               Text="Gallery"
                                FontWeight="Bold" FontSize="13" VerticalAlignment="Center"/>
                     <TextBlock Grid.Column="1" x:Name="gallery_count"
                                Text="loading..." Margin="8,0,0,0"
@@ -492,6 +524,11 @@
                                                 Visibility="{Binding SaveVisibility}"
                                                 Click="row_save_Click"/>
                                         <Button Style="{StaticResource SmallButton}"
+                                                Content="Copy" FontSize="10" Width="44"
+                                                ToolTip="Copy image to clipboard"
+                                                Visibility="{Binding SaveVisibility}"
+                                                Click="row_copy_Click"/>
+                                        <Button Style="{StaticResource SmallButton}"
                                                 Content="More" FontSize="10" Width="44"
                                                 ToolTip="More actions: Show prompt, Re-run, Animate, Open in Studio, Delete..."
                                                 Click="row_more_Click"/>
@@ -504,14 +541,14 @@
             </Grid>
 
             <!-- ============== FOOTER ============== -->
-            <Grid Grid.Row="4" Margin="0,8,0,0">
+            <Grid Grid.Row="5" Margin="0,8,0,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
-                <CheckBox Grid.Column="0" x:Name="cb_auto_save" Content="Auto-save to Gallery"
+                <CheckBox Grid.Column="0" x:Name="cb_auto_save" Content="Auto-save to Cloud"
                           IsChecked="True" Checked="auto_save_Changed" Unchecked="auto_save_Changed"
                           VerticalAlignment="Center"
                           ToolTip="Saves every new render to your cloud Gallery (visible from web Studio, Revit, Rhino, mobile). Applies to newly-queued renders only - in-flight jobs keep their setting. Turn OFF to keep this render local-only (won't appear on other devices)."/>

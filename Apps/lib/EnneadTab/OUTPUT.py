@@ -279,6 +279,337 @@ class Style:
     Footnote = "foot_note"
     Link = "custom_link"
 
+
+# ---------------------------------------------------------------------------
+# Output HTML theming
+# ---------------------------------------------------------------------------
+# Each theme is a flat dict of semantic tokens. Token keys (snake_case) are
+# emitted as CSS custom properties on :root (`--token-name`) and referenced
+# from the stylesheet via `var(--token-name)`. To add a theme, add a new entry
+# below with the same key set so every var() resolves.
+
+# IronPython 2.7 / CPython 3 string-type compat. json.load() returns unicode
+# under IronPython 2.7, so a plain isinstance(..., str) check silently drops
+# every value loaded from disk.
+try:
+    _STRING_TYPES = basestring  # noqa: F821 - Py2 only
+except NameError:
+    _STRING_TYPES = str
+
+
+THEME_TOKEN_KEYS = (
+    "surface",            # page background
+    "text_primary",       # body text / paragraphs / li
+    "text_muted",         # subdued text
+    "heading_primary",    # h1 / strong headings / list items
+    "heading_secondary",  # h2 / h3 / footnotes
+    "link",               # link color
+    "link_hover",         # link hover color
+    "footer_muted",       # floating footer text
+    "error_surface",      # error card background
+    "error_border",       # error card left border
+    "error_text",         # error card text + copy button text
+    "accent",             # copy button background, decorative accent
+    "accent_strong",      # copy button hover, strong accent
+    "logo_glow",          # rgba() drop-shadow color around floating logo
+    "card_hover_shadow",  # rgba() shadow for hovered error card
+    "font_family",        # body font stack
+)
+
+THEMES = {
+    # Original warm browns - kept for users who liked the EnneadTab look.
+    "classic": {
+        "surface": "#2B1C10",
+        "text_primary": "#F4E1D2",
+        "text_muted": "#987284",
+        "heading_primary": "#E1D4C1",
+        "heading_secondary": "#987284",
+        "link": "white",
+        "link_hover": "#A9B8C2",
+        "footer_muted": "#b89eab",
+        "error_surface": "#6E493A",
+        "error_border": "#987284",
+        "error_text": "#F4E1D2",
+        "accent": "#987284",
+        "accent_strong": "#E1D4C1",
+        "logo_glow": "rgba(152,114,132,0.5)",
+        "card_hover_shadow": "rgba(152,114,132,0.15)",
+        "font_family": "Helvetica, Arial, sans-serif",
+    },
+    # VSCode-inspired: dark grey surface, neutral grey info text, dark orange
+    # errors. This is the new default per user request.
+    "console_dark": {
+        "surface": "#1e1e1e",
+        "text_primary": "#cccccc",
+        "text_muted": "#8a8a8a",
+        "heading_primary": "#e8e8e8",
+        "heading_secondary": "#9cdcfe",
+        "link": "#4ec9b0",
+        "link_hover": "#dcdcaa",
+        "footer_muted": "#808080",
+        "error_surface": "#5c2e0f",
+        "error_border": "#d97706",
+        "error_text": "#fed7aa",
+        "accent": "#d97706",
+        "accent_strong": "#fbbf24",
+        "logo_glow": "rgba(217,119,6,0.45)",
+        "card_hover_shadow": "rgba(217,119,6,0.18)",
+        "font_family": "Consolas, 'Courier New', monospace",
+    },
+    # Neutral slate option - softer than console_dark, no syntax-highlight
+    # accent colors. Good if console_dark feels too saturated.
+    "slate": {
+        "surface": "#2a2d34",
+        "text_primary": "#d8dee9",
+        "text_muted": "#9aa3b2",
+        "heading_primary": "#eceff4",
+        "heading_secondary": "#88c0d0",
+        "link": "#a3be8c",
+        "link_hover": "#ebcb8b",
+        "footer_muted": "#7a8090",
+        "error_surface": "#5a2a1c",
+        "error_border": "#e07a3f",
+        "error_text": "#f4d6c1",
+        "accent": "#e07a3f",
+        "accent_strong": "#f0a060",
+        "logo_glow": "rgba(224,122,63,0.45)",
+        "card_hover_shadow": "rgba(224,122,63,0.18)",
+        "font_family": "'Segoe UI', Helvetica, Arial, sans-serif",
+    },
+}
+
+DEFAULT_THEME_NAME = "console_dark"
+
+# Preset keys available for set_theme(), CONFIG "output_html_theme", and
+# plot(theme=...).  "classic" = original browns; "console_dark" = default
+# grey + dark-orange errors; "slate" = neutral slate alternative.
+THEME_NAMES = tuple(sorted(THEMES.keys()))
+
+
+# ---------------------------------------------------------------------------
+# Event -> Theme contract
+# ---------------------------------------------------------------------------
+# Scripts should NOT hard-code a theme name. Instead they call
+# `plot(event="error")` / `plot(event="tip")` etc., and OUTPUT.py picks the
+# right preset. This gives one place to retune which color "errors" or "tips"
+# wear without grepping every pushbutton.
+#
+# To rebind without editing source, set CONFIG.get_setting(
+# "output_event_theme_map", { ... }) at the user level - it merges over the
+# defaults below. Unknown event names fall back to DEFAULT_THEME_NAME.
+
+EVENT_THEME_MAP = {
+    "default": "console_dark",
+    "info":    "console_dark",
+    "error":   "classic",
+    "warning": "slate",
+    "tip":     "slate",
+    "success": "console_dark",
+    "qaqc":    "classic",
+    "debug":   "console_dark",
+}
+
+
+def get_event_theme(event):
+    """Resolve an event name (e.g. "error") to a THEMES preset name.
+
+    Honors CONFIG override at "output_event_theme_map". Unknown event names
+    fall back to DEFAULT_THEME_NAME so callers never crash on typos.
+    """
+    if event is None:
+        return DEFAULT_THEME_NAME
+    merged = dict(EVENT_THEME_MAP)
+    try:
+        import CONFIG
+        override = CONFIG.get_setting("output_event_theme_map", None) or {}
+        for k, v in override.items():
+            if isinstance(v, _STRING_TYPES) and v in THEMES:
+                merged[k] = v
+    except Exception:
+        pass
+    theme = merged.get(event, DEFAULT_THEME_NAME)
+    if theme not in THEMES:
+        return DEFAULT_THEME_NAME
+    return theme
+
+
+def _read_theme_override_file():
+    """Optionally merge per-user hex tweaks from a JSON file in the dump folder.
+
+    Only keys in THEME_TOKEN_KEYS are honored; unknown keys are silently dropped
+    so a typo in the override file cannot break the page.
+    """
+    overrides = {}
+    try:
+        override_path = FOLDER.get_local_dump_folder_file("output_theme_override.json")
+        if not os.path.exists(override_path):
+            return overrides
+        with io.open(override_path, "r", encoding="utf-8") as f:
+            raw = json.load(f) or {}
+        for k, v in raw.items():
+            if k in THEME_TOKEN_KEYS and isinstance(v, _STRING_TYPES):
+                overrides[k] = v
+    except Exception:
+        return overrides
+    return overrides
+
+
+def _resolve_theme(theme_name=None, runtime_overrides=None):
+    """Return a fully resolved theme dict: preset + JSON file + runtime overrides.
+
+    Precedence (lowest -> highest): preset defaults -> override JSON file ->
+    runtime overrides passed in by the caller.
+    """
+    name = theme_name or DEFAULT_THEME_NAME
+    base = dict(THEMES.get(name, THEMES[DEFAULT_THEME_NAME]))
+    for k, v in _read_theme_override_file().items():
+        base[k] = v
+    if runtime_overrides:
+        for k, v in runtime_overrides.items():
+            if k in THEME_TOKEN_KEYS and isinstance(v, _STRING_TYPES):
+                base[k] = v
+    return base
+
+
+def _emit_theme_css(theme_dict, selector=":root"):
+    """Emit a `selector { --token: value; ... }` block for a resolved theme."""
+    parts = [selector, " {"]
+    for key in THEME_TOKEN_KEYS:
+        parts.append("--{0}: {1};".format(key.replace("_", "-"), theme_dict[key]))
+    parts.append("}")
+    return "".join(parts)
+
+
+def _emit_static_css():
+    """Stylesheet body that references theme tokens via var(). Theme-agnostic."""
+    return (
+        "body { background-color: var(--surface); font-family: var(--font-family); "
+        "color: var(--text-primary); margin-left:10%; margin-right:10%; }"
+        "h1 { font-size: 35px; font-weight: bold; color: var(--heading-primary); }"
+        "h2 { font-size: 20px; color: var(--heading-secondary); }"
+        "h3 { font-size: 15px; color: var(--heading-secondary); }"
+        "ul { list-style-type: none; margin: 20; padding: 10; }"
+        "li { margin-left: 40px; color: var(--heading-primary); }"
+        "foot_note { font-size: 8px; color: var(--heading-secondary); }"
+        "custom_link { color: var(--link); text-decoration: none; "
+        "transition: all 0.3s ease; display: inline-block; }"
+        "custom_link:hover { color: var(--link-hover); transform: translateY(-2px); "
+        "text-shadow: 0 0 8px rgba(255,255,255,0.5); }"
+        """
+        #floating-logo-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
+            overflow: hidden;
+        }
+        #floating-logo {
+            position: absolute;
+            transition: transform 0.1s ease-out;
+            opacity: 0.8;
+            filter: drop-shadow(0 0 10px var(--logo-glow));
+            transform-origin: center center;
+        }
+        .floating-footer {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: var(--footer-muted);
+            font-size: 24px;
+            opacity: 0;
+            z-index: 1000;
+        }
+        .message-animate {
+            animation: fadeFloat 4s ease-in-out forwards;
+        }
+        @keyframes fadeFloat {
+            0% { opacity: 0; transform: translateY(10px); }
+            20% { opacity: 0.7; transform: translateY(0); }
+            80% { opacity: 0.7; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-10px); }
+        }
+        .error-card {
+            background: var(--error-surface);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px 0;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            animation: shake 1.2s;
+            position: relative;
+            border-left: 5px solid var(--error-border);
+            transition: all 0.3s ease;
+            color: var(--error-text);
+            padding-right: 80px;
+        }
+        .error-card::before {
+            content: '!';
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            font-size: 24px;
+            transition: transform 0.3s ease;
+        }
+        .error-card:hover {
+            transform: scale(1.02) translateX(5px);
+            box-shadow: 0 6px 12px var(--card-hover-shadow);
+            background: var(--surface);
+            border-left: 5px solid var(--heading-primary);
+        }
+        .error-card:hover::before {
+            transform: rotate(15deg) scale(1.2);
+            animation: bounce 0.8s infinite;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+            animation-timing-function: ease-in-out;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0) rotate(15deg); }
+            50% { transform: translateY(-5px) rotate(15deg); }
+        }
+        .copy-btn {
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 5px 10px;
+            background: var(--accent);
+            border: none;
+            border-radius: 5px;
+            color: var(--error-text);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .copy-btn:hover {
+            background: var(--accent-strong);
+            color: var(--surface);
+        }
+        .custom_link {
+            color: var(--link);
+            text-decoration: underline;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+        .custom_link:hover {
+            color: var(--link-hover);
+            transform: translateY(-2px);
+            text-shadow: 0 0 8px rgba(255,255,255,0.5);
+            animation: jump 0.5s ease;
+        }
+        @keyframes jump {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-2px); }
+        }
+        """
+    )
+
 class Output:
     """Singleton class managing EnneadTab's output system.
     
@@ -298,6 +629,14 @@ class Output:
     _instance = None
     _out = [] # the container for everything that iEnneadTabng
     _report_path = FOLDER.get_local_dump_folder_file("EnneadTab Output.html")
+    # Active theme name (preset key in THEMES). Lazily resolved against CONFIG
+    # the first time the HTML is built, so a user setting written via
+    # CONFIG.set_setting("output_html_theme", ...) is picked up automatically.
+    _active_theme_name = None
+    # Optional dict of token-level overrides applied on top of the preset at
+    # render time. Populated via apply_theme_overrides().
+    _theme_overrides = None
+    # Legacy alias kept for backward compatibility with any external readers.
     _graphic_settings = {
             'background_color': 'rgb(50, 50, 50)',
             'font_family': 'Helvetica, Arial, sans-serif',
@@ -332,7 +671,7 @@ class Output:
             Output: The single instance of the Output class.
         """
         if not cls._instance:
-            cls._instance = super().__new__(cls)
+            cls._instance = super(Output, cls).__new__(cls)
         return cls._instance
 
     def write(self, content, style = Style.MainBody, as_str=False):
@@ -368,20 +707,105 @@ class Output:
         """
         return not Output._out
 
-    def plot(self):
+    def plot(self, theme=None, event=None):
         """Generates and displays the HTML report if output buffer is not empty.
-        
+
         This method:
         1. Checks if there is content to display
         2. Generates the HTML report with current content
         3. Opens the report in the default web browser
+
+        Args:
+            theme (str or None): Optional preset name from THEMES (same keys as
+                THEME_NAMES). When given, this single render uses that palette
+                only; the globally active theme from set_theme() / CONFIG is
+                unchanged. Wins over `event` if both are provided.
+            event (str or None): Semantic event name from EVENT_THEME_MAP
+                (e.g. "error", "tip", "warning", "qaqc"). Looked up via
+                get_event_theme(); the resulting preset is used for this
+                render only. Use this in production code rather than naming
+                colors directly - it keeps the meaning visible and lets you
+                rebind a class of events centrally via CONFIG
+                "output_event_theme_map".
+
+        Resolution order if both are None: set_theme() override -> CONFIG
+        "output_html_theme" -> DEFAULT_THEME_NAME.
         """
         if self.is_empty():
             return
-        self._generate_html_report()
+        resolved = theme
+        if resolved is None and event is not None:
+            resolved = get_event_theme(event)
+        self._generate_html_report(theme_name=resolved)
         self._print_html_report()
 
-    def _generate_html_report(self, save_path = None):
+    @classmethod
+    def _current_theme_name(cls):
+        """Resolve the active theme name.
+
+        Order of precedence:
+            1. A name explicitly set via set_theme()
+            2. CONFIG setting "output_html_theme" (per-user)
+            3. DEFAULT_THEME_NAME
+        """
+        if cls._active_theme_name:
+            return cls._active_theme_name
+        try:
+            import CONFIG
+            name = CONFIG.get_setting("output_html_theme", DEFAULT_THEME_NAME)
+            if name in THEMES:
+                return name
+        except Exception:
+            pass
+        return DEFAULT_THEME_NAME
+
+    @classmethod
+    def set_theme(cls, theme_name, persist=False):
+        """Set the active theme for subsequent output renders.
+
+        Args:
+            theme_name (str): Key in THEMES (e.g. "classic", "console_dark").
+            persist (bool): If True, also write the choice to CONFIG so the
+                preference survives across sessions. Defaults to False.
+        """
+        if theme_name not in THEMES:
+            raise ValueError(
+                "Unknown output theme '{0}'. Available: {1}".format(
+                    theme_name, ", ".join(THEME_NAMES)
+                )
+            )
+        cls._active_theme_name = theme_name
+        if persist:
+            try:
+                import CONFIG
+                CONFIG.set_setting("output_html_theme", theme_name)
+            except Exception:
+                pass
+
+    @classmethod
+    def get_theme(cls):
+        """Return the resolved theme as (name, token_dict)."""
+        name = cls._current_theme_name()
+        return name, _resolve_theme(name, cls._theme_overrides)
+
+    @classmethod
+    def apply_theme_overrides(cls, overrides):
+        """Layer ad-hoc token overrides on top of the active preset.
+
+        Args:
+            overrides (dict): Mapping of token name -> CSS value. Unknown keys
+                are ignored. Pass None or {} to clear.
+        """
+        if not overrides:
+            cls._theme_overrides = None
+            return
+        clean = {}
+        for k, v in overrides.items():
+            if k in THEME_TOKEN_KEYS and isinstance(v, _STRING_TYPES):
+                clean[k] = v
+        cls._theme_overrides = clean or None
+
+    def _generate_html_report(self, save_path=None, theme_name=None):
         """Generates the HTML report with current output content.
         
         Creates a styled HTML file with:
@@ -390,139 +814,30 @@ class Output:
             - Copy buttons for error messages
             - Responsive design
             - EnneadTab branding
+
+        Args:
+            save_path (str or None): Output HTML path; default is Output._report_path.
+            theme_name (str or None): When set, use this THEMES key for CSS tokens
+                for this file only. When None, use Output._current_theme_name().
         """
         if save_path is None:
             save_path = Output._report_path
+        if theme_name is None:
+            resolved_name = self._current_theme_name()
+        else:
+            if theme_name not in THEMES:
+                raise ValueError(
+                    "Unknown output theme '{0}'. Available: {1}".format(
+                        theme_name, ", ".join(THEME_NAMES)
+                    )
+                )
+            resolved_name = theme_name
+        theme = _resolve_theme(resolved_name, Output._theme_overrides)
         with io.open(save_path, 'w', encoding='utf-8') as report_file:
             report_file.write("<html><head><title>EnneadTab Output</title></head><body>")
             report_file.write("<style>")
-            report_file.write("body {{ background-color: #2B1C10; font-family: {}; color: #F4E1D2; margin-left:10%;margin-right:10%;}}"
-                              .format(Output._graphic_settings['font_family']))
-            report_file.write("h1 {{ font-size: 35px; font-weight: bold; color: #E1D4C1; }}")
-            report_file.write("h2 {{ font-size: 20px; color: #987284; }}")
-            report_file.write("h3 {{ font-size: 15px; color: #987284; }}")
-            report_file.write("ul {{ list-style-type: none; margin: 20; padding: 10; }}")
-            report_file.write("li {{ margin-left: 40px; color: #E1D4C1; }}") 
-            report_file.write("foot_note {{ font-size: 8px; color: #987284; }}") 
-            report_file.write("custom_link {{ color: white; text-decoration: none; transition: all 0.3s ease; display: inline-block; }}")
-            report_file.write("custom_link:hover {{ color: #A9B8C2; transform: translateY(-2px); text-shadow: 0 0 8px rgba(255,255,255,0.5); }}")
-            
-            report_file.write("""
-                #floating-logo-container {
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    pointer-events: none;
-                    z-index: 9999;
-                    overflow: hidden;
-                }
-                #floating-logo {
-                    position: absolute;
-                    transition: transform 0.1s ease-out;
-                    opacity: 0.8;
-                    filter: drop-shadow(0 0 10px rgba(152,114,132,0.5));
-                    transform-origin: center center;
-                }
-                .floating-footer {
-                    position: fixed;
-                    bottom: 20px;
-                    left: 0;
-                    width: 100%;
-                    text-align: center;
-                    color: #b89eab;
-                    font-size: 24px;
-                    opacity: 0;
-                    z-index: 1000;
-                }
-
-                .message-animate {
-                    animation: fadeFloat 4s ease-in-out forwards;
-                }
-
-                @keyframes fadeFloat {
-                    0% { opacity: 0; transform: translateY(10px); }
-                    20% { opacity: 0.7; transform: translateY(0); }
-                    80% { opacity: 0.7; transform: translateY(0); }
-                    100% { opacity: 0; transform: translateY(-10px); }
-                }
-                .error-card {
-                    background: #6E493A;
-                    border-radius: 10px;
-                    padding: 15px;
-                    margin: 20px 0;
-                    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-                    animation: shake 1.2s;
-                    position: relative;
-                    border-left: 5px solid #987284;
-                    transition: all 0.3s ease;
-                    color: #F4E1D2;
-                    padding-right: 80px;
-                }
-                .error-card::before {
-                    content: '!';
-                    position: absolute;
-                    right: 10px;
-                    top: 10px;
-                    font-size: 24px;
-                    transition: transform 0.3s ease;
-                }
-                .error-card:hover {
-                    transform: scale(1.02) translateX(5px);
-                    box-shadow: 0 6px 12px rgba(152,114,132,0.15);
-                    background: #2B1C10;
-                    border-left: 5px solid #E1D4C1;
-                }
-                .error-card:hover::before {
-                    transform: rotate(15deg) scale(1.2);
-                    animation: bounce 0.8s infinite;
-                }
-                @keyframes shake {
-                    0%, 100% { transform: translateX(0); }
-                    25% { transform: translateX(-5px); }
-                    75% { transform: translateX(5px); }
-                    animation-timing-function: ease-in-out;
-                }
-                @keyframes bounce {
-                    0%, 100% { transform: translateY(0) rotate(15deg); }
-                    50% { transform: translateY(-5px) rotate(15deg); }
-                }
-                .copy-btn {
-                    position: absolute;
-                    right: 40px;
-                    top: 50%;
-                    transform: translateY(-50%);
-                    padding: 5px 10px;
-                    background: #987284;
-                    border: none;
-                    border-radius: 5px;
-                    color: #F4E1D2;
-                    cursor: pointer;
-                    transition: all 0.3s ease;
-                }
-                .copy-btn:hover {
-                    background: #E1D4C1;
-                    color: #2B1C10;
-                }
-                .custom_link {
-                    color: white;
-                    text-decoration: underline; /* Added underline */
-                    transition: all 0.3s ease;
-                    display: inline-block;
-                }   
-                .custom_link:hover {
-                    color: #A9B8C2;
-                    transform: translateY(-2px);
-                    text-shadow: 0 0 8px rgba(255,255,255,0.5);
-                    animation: jump 0.5s ease;
-                }
-                @keyframes jump {
-                    0%, 100% { transform: translateY(0); }
-                    50% { transform: translateY(-2px); }
-                }
-                
-            """)
+            report_file.write(_emit_theme_css(theme))
+            report_file.write(_emit_static_css())
             report_file.write("</style>")
 
             report_file.write(FUNCS)
@@ -595,8 +910,9 @@ class Output:
             # Default case: full width with maintained aspect ratio
             return "<img src='file://{}' style='width: 100%; height: auto;'>".format(input)
             
-        # Handle hyperlinks (http/https and file://)
-        if isinstance(input, str):
+        # Handle hyperlinks (http/https and file://). Use _STRING_TYPES so the
+        # check also accepts `unicode` under IronPython 2.7.
+        if isinstance(input, _STRING_TYPES):
             if "http" in input:
                 return "<a href='{}' target='_blank' class='custom_link'>{}</a>".format(input, input)
             if input.startswith("file://"):
@@ -705,6 +1021,208 @@ def unit_test():
 
 
 
+def generate_theme_preview_html(save_path=None, open_in_browser=True):
+    """Render a single HTML page that demonstrates every preset theme.
+
+    The page includes a top-right dropdown that switches the active theme by
+    flipping ``document.body.dataset.theme``; each theme's tokens are scoped to
+    a ``body[data-theme="..."]`` selector so the same CSS rules render with
+    different variables. Use this to compare and approve color schemes before
+    promoting one to the default or persisting via CONFIG.
+
+    Args:
+        save_path (str): Optional output path. Defaults to a file in the
+            EnneadTab dump folder.
+        open_in_browser (bool): Open the file after writing it. Default True.
+
+    Returns:
+        str: Absolute path to the written HTML file.
+    """
+    if save_path is None:
+        save_path = FOLDER.get_local_dump_folder_file(
+            "EnneadTab Output Theme Preview.html"
+        )
+
+    theme_names = list(THEMES.keys())
+    initial = DEFAULT_THEME_NAME if DEFAULT_THEME_NAME in THEMES else theme_names[0]
+
+    with io.open(save_path, "w", encoding="utf-8") as f:
+        f.write("<html><head><meta charset='utf-8'>")
+        f.write("<title>EnneadTab Output - Theme Preview</title></head>")
+        f.write("<body data-theme='{0}'>".format(initial))
+        f.write("<style>")
+        for name in theme_names:
+            theme = _resolve_theme(name)
+            f.write(_emit_theme_css(theme, "body[data-theme=\"{0}\"]".format(name)))
+        f.write(_emit_static_css())
+        f.write(
+            """
+            .theme-switcher {
+                position: fixed;
+                top: 12px;
+                right: 12px;
+                z-index: 10000;
+                background: var(--surface);
+                color: var(--text-primary);
+                border: 1px solid var(--heading-secondary);
+                border-radius: 6px;
+                padding: 8px 12px;
+                font-family: var(--font-family);
+                box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+            }
+            .theme-switcher label {
+                margin-right: 8px;
+                font-size: 13px;
+                color: var(--text-muted);
+            }
+            .theme-switcher select {
+                background: var(--surface);
+                color: var(--text-primary);
+                border: 1px solid var(--accent);
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-family: var(--font-family);
+            }
+            .swatches {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                margin: 16px 0 24px 0;
+            }
+            .swatch {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                color: var(--text-muted);
+                background: rgba(255,255,255,0.04);
+                border: 1px solid rgba(255,255,255,0.08);
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-family: var(--font-family);
+            }
+            .swatch-chip {
+                width: 14px;
+                height: 14px;
+                border-radius: 3px;
+                border: 1px solid rgba(0,0,0,0.4);
+            }
+            """
+        )
+        f.write("</style>")
+
+        f.write("<div class='theme-switcher'>")
+        f.write("<label for='themeSelect'>Theme:</label>")
+        f.write(
+            "<select id='themeSelect' "
+            "onchange='document.body.dataset.theme = this.value'>"
+        )
+        for name in theme_names:
+            sel = " selected" if name == initial else ""
+            f.write("<option value='{0}'{1}>{0}</option>".format(name, sel))
+        f.write("</select>")
+        f.write("</div>")
+
+        f.write("<h1>EnneadTab Output - Theme Preview</h1>")
+        f.write(
+            "<p>Use the dropdown in the top-right to switch themes. "
+            "All sample content below is rendered with the active palette.</p>"
+        )
+
+        # Event -> Theme contract table. This is the answer to "which event
+        # uses which theme?" - it's data, the table renders the live mapping.
+        f.write("<h2>Event &rarr; Theme contract</h2>")
+        f.write(
+            "<p>Scripts should call <code>output.plot(event=&quot;...&quot;)</code> "
+            "with one of the event names below. OUTPUT.py looks the event up in "
+            "<code>EVENT_THEME_MAP</code> and renders with the matching preset. "
+            "To rebind without editing source, set CONFIG "
+            "<code>output_event_theme_map</code>.</p>"
+        )
+        f.write(
+            "<table style='border-collapse: collapse; margin: 16px 0; "
+            "font-family: var(--font-family); color: var(--text-primary);'>"
+        )
+        f.write(
+            "<thead><tr>"
+            "<th style='text-align:left; padding:6px 14px; "
+            "border-bottom:1px solid var(--text-muted);'>event=</th>"
+            "<th style='text-align:left; padding:6px 14px; "
+            "border-bottom:1px solid var(--text-muted);'>theme</th>"
+            "<th style='text-align:left; padding:6px 14px; "
+            "border-bottom:1px solid var(--text-muted);'>swatch</th>"
+            "</tr></thead><tbody>"
+        )
+        for event_name in sorted(EVENT_THEME_MAP.keys()):
+            mapped_theme = EVENT_THEME_MAP[event_name]
+            swatch_hex = THEMES[mapped_theme]["surface"]
+            border_hex = THEMES[mapped_theme]["error_border"]
+            f.write(
+                "<tr>"
+                "<td style='padding:6px 14px;'><code>&quot;{0}&quot;</code></td>"
+                "<td style='padding:6px 14px;'>{1}</td>"
+                "<td style='padding:6px 14px;'>"
+                "<span style='display:inline-block; width:22px; height:14px; "
+                "background:{2}; border:1px solid {3}; border-radius:3px; "
+                "vertical-align:middle;'></span></td>"
+                "</tr>".format(event_name, mapped_theme, swatch_hex, border_hex)
+            )
+        f.write("</tbody></table>")
+
+        f.write("<div class='swatches'>")
+        for token in (
+            "surface", "text_primary", "heading_primary", "heading_secondary",
+            "link", "accent", "error_surface", "error_border",
+        ):
+            label = token.replace("_", " ")
+            f.write(
+                "<span class='swatch'>"
+                "<span class='swatch-chip' style='background: var(--{0});'></span>"
+                "{1}</span>".format(token.replace("_", "-"), label)
+            )
+        f.write("</div>")
+
+        f.write("<hr>")
+        f.write("<h1>Title style (h1)</h1>")
+        f.write("<h2>Subtitle style (h2)</h2>")
+        f.write("<h3>SubSubtitle style (h3)</h3>")
+        f.write(
+            "<p>Default body text. This paragraph shows how everyday output "
+            "reads against the surface color on the active theme.</p>"
+        )
+        f.write(
+            "<foot_note>Footnote style - small ancillary annotations</foot_note>"
+        )
+
+        f.write("<hr>")
+        f.write("<p>List sample:</p>")
+        f.write("<ul>")
+        for i, v in enumerate(["alpha", "beta", "gamma", 99, 440, 123]):
+            f.write("<li>{0} : {1}</li>".format(i + 1, v))
+        f.write("</ul>")
+
+        f.write("<hr>")
+        f.write(
+            "<p>Link sample: "
+            "<a href='https://www.google.com' class='custom_link'>"
+            "https://www.google.com</a></p>"
+        )
+
+        f.write("<hr>")
+        f.write(
+            "<div class='error-card'>Sample error: this is a fake error "
+            "message - the kind typically raised by a try/except block."
+            "<button class='copy-btn' "
+            "onclick=\"this.textContent='Copied!'\">Copy</button></div>"
+        )
+        f.write("<hr>")
+        f.write("</body></html>")
+
+    if open_in_browser:
+        webbrowser.open("file://{0}".format(save_path))
+    return save_path
+
+
 def display_output_on_browser():
     """Forces the current output to be displayed in the browser.
     
@@ -728,4 +1246,10 @@ def display_output_on_browser():
       
 #######################################################
 if __name__ == "__main__":
-    unit_test()
+    import sys
+    if "--preview" in sys.argv or "preview" in sys.argv:
+        path = generate_theme_preview_html()
+        print("Theme preview written to:")
+        print(path)
+    else:
+        unit_test()

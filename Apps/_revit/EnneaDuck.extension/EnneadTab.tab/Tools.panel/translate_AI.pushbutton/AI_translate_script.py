@@ -235,7 +235,45 @@ class AiTranslator(WPFWindow):
 
         self.update_category_header()
 
+        # 2026-05-14 — register auth-complete listener so the dialog tells
+        # the user to click Translate again the moment the OAuth callback
+        # writes a token. Mirrors the AI Render dialogs (Rhino+Revit). The
+        # listener fires on the AUTH worker thread; marshal to the WPF
+        # dispatcher before touching debug_textbox.
+        try:
+            AUTH.register_auth_complete_listener(self._on_auth_complete)
+        except Exception:
+            pass
+        try:
+            self.Closed += self._on_window_closed
+        except Exception:
+            pass
+
         self.Show()
+
+    def _on_auth_complete(self):
+        """Fires on the AUTH worker thread after sign-in completes. Tells
+        the user (in the dialog itself, not just a toast) to click Translate
+        again. Marshaled back onto the WPF dispatcher because the worker
+        thread cannot touch debug_textbox directly."""
+        try:
+            def _update():
+                try:
+                    self.debug_textbox.Text = (
+                        "Sign-in complete. Click Translate to continue."
+                    )
+                except Exception:
+                    pass
+            self.Dispatcher.BeginInvoke(System.Action(_update))
+        except Exception:
+            pass
+
+    def _on_window_closed(self, sender, args):
+        """Unregister listener so it cannot fire against a disposed window."""
+        try:
+            AUTH.unregister_auth_complete_listener(self._on_auth_complete)
+        except Exception:
+            pass
 
 
 
@@ -323,6 +361,27 @@ class AiTranslator(WPFWindow):
     @ERROR_HANDLE.try_catch_error()
     def translate_views_sheets_Click(self, sender, e):
         # This Raise() method launch a signal to Revit to tell him you want to do something in the API context
+
+        # 2026-05-14 — hoist the auth check to the top so we DON'T paint
+        # every unapproved row with "translating..." just to abandon them
+        # when fire_AI_translator returns None for missing auth. Without
+        # this, the user clicks Translate (no token), sees every row
+        # change to "translating...englishName", clicks Translate again
+        # post-auth, but the "translating..." prefix has already corrupted
+        # english_name on the DataGridObj instances. Now: gate auth FIRST.
+        if not AUTH.get_token():
+            if not AUTH.is_auth_in_progress():
+                AUTH.request_auth()
+                self.debug_textbox.Text = (
+                    "Sign in via the browser, then click Translate again."
+                )
+            else:
+                self.debug_textbox.Text = (
+                    "Sign-in in progress. Finish in the browser, then "
+                    "click Translate again."
+                )
+            return
+
         """dummy"""
         temp = []
         for item in self.data_grid.ItemsSource:
@@ -557,21 +616,26 @@ class AiTranslator(WPFWindow):
         """
         session_token = AUTH.get_token()
         if not session_token:
+            # 2026-05-14 — was a 120-sec busy-wait with time.sleep(1) inside a
+            # WPF event handler, which froze the entire AI Translator dialog
+            # while the user was still in the browser. Now event-driven:
+            # kick off auth, tell the user to click Translate again, return.
+            # When the OAuth callback fires, AUTH._save_token() pops a toast
+            # AND invokes _on_auth_complete (registered in __init__) which
+            # updates debug_textbox to "Sign-in complete. Click Translate."
+            # The user clicks again, the token is cached, the translation
+            # proceeds — no UI freeze, no 120-sec timeout.
             if not AUTH.is_auth_in_progress():
                 AUTH.request_auth()
-            # Wait for browser auth to complete (polling file cache)
-            max_wait = 120
-            elapsed = 0
-            while elapsed < max_wait:
-                self.debug_textbox.Text = "Waiting for browser sign-in... {}s/{}s".format(elapsed, max_wait)
-                time.sleep(1)
-                elapsed += 1
-                session_token = AUTH.get_token()
-                if session_token:
-                    break
-            if not session_token:
-                self.debug_textbox.Text = "Sign-in timed out. Please try again."
-                return None
+                self.debug_textbox.Text = (
+                    "Sign in via the browser, then click Translate again."
+                )
+            else:
+                self.debug_textbox.Text = (
+                    "Sign-in already in progress. Finish in the browser, "
+                    "then click Translate again."
+                )
+            return None
 
         # Build sample translations for context
         target_lang = self.target_language_name

@@ -87,8 +87,14 @@ APPS = [
         # writing to L:\ static HTML that nobody read). InfraWatch_Collect runs
         # the unified collect_all.py which POSTs to enneadtab.com/infra/api/ingest/*
         # — drive health + machine spec + events in one go, every 15 min.
+        #
+        # 2026-05-18: switched task target to run_collectors.bat (stdlib-only, no
+        # exe compile required). The .bat tries py/python from the system image
+        # first; falls back to InfraWatch_Collect.exe if Python is not on PATH.
+        # RegisterAutoStartup reads file_name relative to ExeProducts/, so we use
+        # a relative path to reach the collectors dir from there.
         "app_name": "InfraWatch_Collect",
-        "file_name": "InfraWatch_Collect.exe",
+        "file_name": r"..\DumpScripts\collectors\run_collectors.bat",
         "shortcut_name": "EnneadTab_InfraWatch_Collect",
         "task_name": "EnneadTab_InfraWatch_Collect_Task",
         "description": "EnneadTab InfraWatch — drive health + machine spec + events to enneadtab.com/infra (silent)",

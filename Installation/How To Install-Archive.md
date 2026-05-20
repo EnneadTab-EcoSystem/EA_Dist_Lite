@@ -29,7 +29,8 @@
 ## 1. Overall Introduction
 Overall, you will need Ecosystem downloaded as foundation(Chapter 2). <br>
 For Rhino, there is no additional requirement.<br>
-For Revit, you will need pyrevit as well. (Min version 5.0.1 if planning on use for Revit 2025 and above.)
+For Revit, you will need pyrevit as well. (Min version 6.0.0 if planning on use for Revit 2027 and above. Min version 5.0.1 for Revit 2025/2026.)  
+*(Note: Check for new Revit version and pyRevit compatibility annually.)*
 
 ## 2. Basic Setup
 
@@ -81,8 +82,10 @@ You can get pyrevit from here and pick the first one under "Download" section. T
 
 > [!NOTE]
 > Attention, **Revit 2025 and above** users!  
-> Due to the significant .Net framework changes from 2024 to 2025, pyRevit 4.x only support 2024 and below. pyRevit 5 will support all Revit version.  
-> Make sure you have COMPLETELY removed pyrevit 4.x before adaption version **5.0.1**
+> Due to the significant .Net framework changes from 2024 to 2025, pyRevit 4.x only support 2024 and below. 
+> - **Revit 2025/2026**: Need pyRevit 5.0.1 or above.
+> - **Revit 2027**: Need pyRevit 6.0.0 or above.
+> Make sure you have COMPLETELY removed pyrevit 4.x before installing pyRevit 5 or 6.
 
 ### 3.1 Install EnneadTab for Revit
 
