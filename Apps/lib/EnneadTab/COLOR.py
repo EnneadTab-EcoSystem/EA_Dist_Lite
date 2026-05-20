@@ -360,11 +360,16 @@ def _gather_data(raw_data, key_column, is_zero_indexed):
 
     return out
             
-def get_color_template_data(template = None):
+def get_color_template_data(template = None, worksheet = "HEALTHCARE"):
     """Get color template data from department standards.
 
     Args:
         template (str, optional): The template path. Defaults to None.
+        worksheet (str, optional): Worksheet name to read inside the
+            template. Defaults to "HEALTHCARE" for backward compatibility
+            with the original 2151 button. Pass other sheet names (e.g.
+            "CANCER CENTER") to read alternate sheets that share the same
+            6-column Ennead healthcare dual-pair layout.
 
     Returns:
         dict: The resulting color data.
@@ -381,12 +386,14 @@ def get_color_template_data(template = None):
     
     if safe_template.endswith(".xls") or safe_template.endswith(".xlsx"):
         import EXCEL
-        raw_data = EXCEL.read_data_from_excel(safe_template, 
-                                                worksheet = "HEALTHCARE", 
+        raw_data = EXCEL.read_data_from_excel(safe_template,
+                                                worksheet = worksheet,
                                                 return_dict=True)
 
-        
-
+        # Safe-degrade when the worksheet is missing/empty so callers that
+        # merge multiple sheets don't crash on the first absent one.
+        if not raw_data:
+            return {"department_color_map": {}, "program_color_map": {}}
 
         first_key = sorted(raw_data.keys())[0]
         is_zero_indexed = first_key[0] == 0

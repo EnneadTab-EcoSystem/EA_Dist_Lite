@@ -619,12 +619,16 @@ def _read_data_from_excel_locally(filepath, worksheet, return_dict, headless):
             return {} if return_dict else []
 
         # Surface any non-fatal hints the handler attached (e.g. Conditional
-        # Formatting present, theme-color resolution failures). These are the
-        # most common reason a read succeeds but downstream code reports
-        # "No valid color entries" -- without these hints the user has no clue.
+        # Formatting present, theme-color resolution failures). The print()
+        # always goes to pyRevit output for triage; the toast is gated behind
+        # USER.IS_DEVELOPER because most legacy CF rules don't actually paint
+        # data cells (e.g. dead "highlight if value == 'F4C756'" rules) and
+        # surfacing them as a popup misleads end users into thinking CF is
+        # the cause of an unrelated downstream issue.
         for warn in handler_warnings:
             print("ExcelHandler warning: {}".format(warn))
-            NOTIFICATION.messenger("Excel warning: {}".format(warn))
+            if USER.IS_DEVELOPER:
+                NOTIFICATION.messenger("Excel warning: {}".format(warn))
 
         raw_data = DATA_FILE.get_data("excel_handler_output")
         # Convert string keys back to tuple keys
