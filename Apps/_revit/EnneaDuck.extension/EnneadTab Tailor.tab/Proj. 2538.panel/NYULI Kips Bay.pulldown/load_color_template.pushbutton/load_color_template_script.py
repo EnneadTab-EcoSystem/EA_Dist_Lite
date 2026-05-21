@@ -101,6 +101,29 @@ NAMING_MAP = {
     "program_color_map":    ["Program Type_Primary"],
 }
 
+# Per-scheme parameter override.
+#
+# Why this exists:
+#   - ColorFillScheme.ParameterId returns None on this Revit version, so
+#     we can't read the underlying parameter from the scheme directly.
+#   - Pure inference (count matches against entry values) is ambiguous
+#     when both Department + Program schemes share entries like 'Lobby'
+#     or 'Imaging' that happen to live on the same custom parameter on
+#     rooms. Inference would mis-pick the higher-match parameter for
+#     BOTH schemes, causing the Program transfer to overwrite Department
+#     data on Rooms_$LS_Occupancy Type.
+#
+# How to extend for a new project:
+#   - Add an entry: "<scheme.Name>": "<exact parameter name on element>"
+#   - Use Revit > Manage > Shared Parameters or look at a placed room's
+#     parameter list to find the exact name.
+#   - When set, this override is the ONLY parameter the script will try
+#     for that scheme; inference + Title-based guesses are skipped.
+SCHEME_PARAMETER_OVERRIDE = {
+    "Department Type_Primary": "Rooms_$LS_Occupancy Type",
+    "Program Type_Primary":    "Rooms_$LS_Occupancy Load_Dummy",
+}
+
 
 def _read_all_sheets(excel_path, source_sheets):
     """Read every source sheet once; return per_sheet[sheet] = data dict."""
@@ -354,6 +377,35 @@ _SCHEME_DIAG_DONE = {}    # scheme_name -> True once diagnostic printed
 _INFERRED_PARAM_CACHE = {}  # scheme_name -> inferred parameter NAME
 
 
+def _resolve_param_candidates(doc, color_scheme):
+    """Return parameter-name candidates to probe, in priority order.
+
+    Priority:
+      1. SCHEME_PARAMETER_OVERRIDE[scheme.Name] -- if set, returned alone
+         (inference / Title / Name guesses are skipped to prevent the
+         wrong parameter being picked up by happen-to-match values).
+      2. Inferred (data-driven), then Title, then Name-derived candidates.
+    """
+    try:
+        sn = color_scheme.Name
+    except Exception:
+        sn = None
+
+    if sn and sn in SCHEME_PARAMETER_OVERRIDE:
+        return [SCHEME_PARAMETER_OVERRIDE[sn]]
+
+    try:
+        pid = color_scheme.ParameterId
+    except Exception:
+        pid = None
+    pname = _get_param_name(doc, pid) if pid is not None else None
+    candidates = _candidate_param_names(color_scheme, pname)
+    inferred = _infer_parameter_name(doc, color_scheme)
+    if inferred and inferred not in candidates:
+        candidates.insert(0, inferred)
+    return candidates
+
+
 def _infer_parameter_name(doc, color_scheme, sample_cap=50):
     """Infer the scheme's underlying parameter by data matching.
 
@@ -536,10 +588,7 @@ def _print_scheme_diagnostic(doc, color_scheme):
     except Exception:
         pass
 
-    candidates = _candidate_param_names(color_scheme, param_name)
-    inferred = _infer_parameter_name(doc, color_scheme)
-    if inferred and inferred not in candidates:
-        candidates.insert(0, inferred)   # data-derived guess goes FIRST
+    candidates = _resolve_param_candidates(doc, color_scheme)
 
     # Scan up to 10 PLACED elements across BOTH OST_Rooms AND OST_Areas
     # (future-proof: a team may use either or both categories for the
@@ -716,7 +765,13 @@ def _find_elements_with_value(doc, color_scheme, value):
         param_id = color_scheme.ParameterId
     except Exception:
         param_id = None
-    if cat_id is None or param_id is None:
+    # We need a category to scan, but param_id may legitimately be None on
+    # newer Revit versions where ColorFillScheme.ParameterId isn't exposed.
+    # The byId path will silently produce <None> values in that case, and
+    # we'll fall through to Path B (LookupParameter by candidate name) and
+    # Path C (Parameters iteration). Both work without param_id.
+    if cat_id is None:
+        _log("scan aborted: color_scheme.CategoryId is None for '{}'".format(value))
         return []
 
     # Strategy: try the byId lookup first (built-in or shared/project via ID).
@@ -728,11 +783,7 @@ def _find_elements_with_value(doc, color_scheme, value):
     # Categories scanned: scheme's stated CategoryId first, then both
     # OST_Rooms and OST_Areas as fallbacks (future-proof for teams that
     # mix rooms + areas under one conceptual color scheme).
-    param_name = _get_param_name(doc, param_id)
-    candidates = _candidate_param_names(color_scheme, param_name)
-    inferred = _infer_parameter_name(doc, color_scheme)
-    if inferred and inferred not in candidates:
-        candidates.insert(0, inferred)   # data-derived guess goes FIRST
+    candidates = _resolve_param_candidates(doc, color_scheme)
 
     scan_categories = [cat_id]
     for fallback_bic in (DB.BuiltInCategory.OST_Rooms, DB.BuiltInCategory.OST_Areas):
@@ -743,8 +794,12 @@ def _find_elements_with_value(doc, color_scheme, value):
         except Exception:
             continue
 
-    def _scan(get_value_fn, scan_cat):
+    def _scan(get_value_fn, scan_cat, path_label):
+        """Scan one category via one value-getter; return (matches, stats)."""
         out = []
+        iterated = 0
+        non_none = 0
+        distinct = set()
         try:
             collector = (
                 DB.FilteredElementCollector(doc)
@@ -752,46 +807,96 @@ def _find_elements_with_value(doc, color_scheme, value):
                 .WhereElementIsNotElementType()
             )
             for elem in collector:
-                if get_value_fn(elem) == value:
-                    out.append(elem)
+                iterated += 1
+                v = get_value_fn(elem)
+                if v is not None:
+                    non_none += 1
+                    distinct.add(v)
+                    if v == value:
+                        out.append(elem)
         except Exception as e:
-            print ("Error scanning elements for value '{}': {}".format(value, e))
-        return out
+            print ("Error scanning elements for value '{}' via {}: {}".format(value, path_label, e))
+        return out, iterated, non_none, distinct
+
+    # Path C as a final fallback: iterate elem.Parameters directly (what
+    # _infer_parameter_name does). LookupParameter can fail silently on
+    # certain element types where parameters live in a non-standard
+    # binding (groups, design-option shadow copies, etc.); direct
+    # iteration is the brute-force safety net.
+    def _make_param_iter_getter(name):
+        def _g(elem):
+            try:
+                for p in elem.Parameters:
+                    try:
+                        if p.Definition.Name == name:
+                            return _read_param_string(p)
+                    except Exception:
+                        continue
+            except Exception:
+                pass
+            return None
+        return _g
+
+    distinct_values_seen = set()
 
     for scan_cat in scan_categories:
         # Path A: byId (built-in or direct ElementId lookup)
-        results = _scan(
+        results, n_iter, n_nn, dist = _scan(
             lambda elem: _read_param_string(_get_scheme_parameter(elem, param_id, doc=doc)),
-            scan_cat,
+            scan_cat, "byId",
+        )
+        distinct_values_seen.update(dist)
+        _log(
+            "scan[byId, cat={}, value='{}']: iterated={}, non_none={}, "
+            "matches={}, distinct_sample={}".format(
+                scan_cat, value, n_iter, n_nn, len(results),
+                sorted(list(dist))[:20],
+            )
         )
         if results:
-            _log(
-                "scan byId-path matched {} element(s) for '{}' in cat={}".format(
-                    len(results), value, scan_cat
-                )
-            )
             return results
 
-        # Path B: LookupParameter by candidate name -- handles project /
-        # shared params where the ParameterId binding doesn't resolve on
-        # the instance.
+        # Path B: LookupParameter by candidate name
         for name in candidates:
             def _by_name(elem, _n=name):
                 try:
                     return _read_param_string(elem.LookupParameter(_n))
                 except Exception:
                     return None
-            rs = _scan(_by_name, scan_cat)
-            if rs:
-                _log(
-                    "scan LookupParameter('{}') matched {} element(s) for "
-                    "'{}' in cat={}".format(name, len(rs), value, scan_cat)
+            rs, n_iter, n_nn, dist = _scan(_by_name, scan_cat, "LookupParameter({})".format(name))
+            distinct_values_seen.update(dist)
+            _log(
+                "scan[LookupParameter('{}'), cat={}, value='{}']: "
+                "iterated={}, non_none={}, matches={}, distinct_sample={}".format(
+                    name, scan_cat, value, n_iter, n_nn, len(rs),
+                    sorted(list(dist))[:20],
                 )
+            )
+            if rs:
+                return rs
+
+        # Path C: iterate elem.Parameters directly for each candidate name
+        for name in candidates:
+            rs, n_iter, n_nn, dist = _scan(
+                _make_param_iter_getter(name), scan_cat,
+                "param-iter({})".format(name),
+            )
+            distinct_values_seen.update(dist)
+            _log(
+                "scan[param-iter('{}'), cat={}, value='{}']: "
+                "iterated={}, non_none={}, matches={}, distinct_sample={}".format(
+                    name, scan_cat, value, n_iter, n_nn, len(rs),
+                    sorted(list(dist))[:20],
+                )
+            )
+            if rs:
                 return rs
 
     _log(
         "scan returned 0 elements for '{}' across all lookup paths and "
-        "categories {}".format(value, scan_categories)
+        "categories {}. Distinct values observed during scan: {}".format(
+            value, scan_categories, sorted(list(distinct_values_seen))[:50]
+        )
     )
     return []
 
@@ -946,10 +1051,44 @@ def _apply_orphan_decisions(doc, approved):
                 param_id = color_scheme.ParameterId
             except Exception:
                 param_id = None
+
+            # Build the same candidate list the scan side uses so we write
+            # to the SAME parameter we read from. Per-scheme override
+            # (when configured) prevents writing to a wrong parameter.
+            candidates = _resolve_param_candidates(doc, color_scheme)
+
+            def _writable_param(elem):
+                """Find a writable parameter on elem via all 3 paths."""
+                if param_id is not None:
+                    try:
+                        p = _get_scheme_parameter(elem, param_id, doc=doc)
+                        if p is not None and not p.IsReadOnly:
+                            return p
+                    except Exception:
+                        pass
+                for name in candidates:
+                    try:
+                        p = elem.LookupParameter(name)
+                        if p is not None and not p.IsReadOnly:
+                            return p
+                    except Exception:
+                        continue
+                for name in candidates:
+                    try:
+                        for p in elem.Parameters:
+                            try:
+                                if p.Definition.Name == name and not p.IsReadOnly:
+                                    return p
+                            except Exception:
+                                continue
+                    except Exception:
+                        continue
+                return None
+
             transferred = 0
             for elem in elements:
-                p = _get_scheme_parameter(elem, param_id, doc=doc) if param_id is not None else None
-                if p is None or p.IsReadOnly:
+                p = _writable_param(elem)
+                if p is None:
                     continue
                 try:
                     if p.Set(new_name):
