@@ -519,8 +519,12 @@ class AiRenderForm(WPFWindow):
 
     def _load_presets_async(self):
         def worker(state):
-            presets = _load_presets_from_api()
-            self._invoke_ui(lambda: self._apply_presets(presets))
+            try:
+                presets = _load_presets_from_api()
+                self._invoke_ui(lambda: self._apply_presets(presets))
+            except Exception as ex:
+                _trace("worker.load_presets SWALLOWED {}".format(ex))
+                self._invoke_ui(lambda: self._apply_presets([]))
         System.Threading.ThreadPool.QueueUserWorkItem(
             System.Threading.WaitCallback(worker))
 

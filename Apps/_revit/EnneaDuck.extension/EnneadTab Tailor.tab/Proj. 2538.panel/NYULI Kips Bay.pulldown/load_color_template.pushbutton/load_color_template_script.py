@@ -111,7 +111,7 @@ NAMING_MAP = {
 #     or 'Imaging' that happen to live on the same custom parameter on
 #     rooms. Inference would mis-pick the higher-match parameter for
 #     BOTH schemes, causing the Program transfer to overwrite Department
-#     data on Rooms_$LS_Occupancy Type.
+#     data on Area_$Department.
 #
 # How to extend for a new project:
 #   - Add an entry: "<scheme.Name>": "<exact parameter name on element>"
@@ -120,8 +120,8 @@ NAMING_MAP = {
 #   - When set, this override is the ONLY parameter the script will try
 #     for that scheme; inference + Title-based guesses are skipped.
 SCHEME_PARAMETER_OVERRIDE = {
-    "Department Type_Primary": "Rooms_$LS_Occupancy Type",
-    "Program Type_Primary":    "Rooms_$LS_Occupancy Load_Dummy",
+    "Department Type_Primary": "Area_$Department",
+    "Program Type_Primary":    "Area_$Department_Program Type",
 }
 
 
@@ -411,7 +411,7 @@ def _infer_parameter_name(doc, color_scheme, sample_cap=50):
 
     color_scheme.Title is the legend label, NOT the parameter name (a
     Kips Bay project uses Title='Department Type' while the actual
-    parameter is 'Rooms_$LS_Occupancy Type'). ParameterId may also be
+    parameter is 'Area_$Department'). ParameterId may also be
     missing in some Revit versions.
 
     Strategy: collect every entry's StringValue from the scheme. Walk
