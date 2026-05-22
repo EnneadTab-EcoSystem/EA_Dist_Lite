@@ -124,6 +124,12 @@ SCHEME_PARAMETER_OVERRIDE = {
     "Program Type_Primary":    "Area_$Department_Program Type",
 }
 
+# Prefix applied to Revit scheme entries that have no counterpart in the
+# current Excel definition. Visually obvious in the Revit legend + survives
+# a round-trip: if the stripped name later appears in Excel the entry is
+# restored to solid fill + Excel color.
+_ORPHAN_PREFIX = "NO MATCH IN EXCEL-"
+
 
 def _read_all_sheets(excel_path, source_sheets):
     """Read every source sheet once; return per_sheet[sheet] = data dict."""
@@ -749,7 +755,6 @@ def _print_scheme_diagnostic(doc, color_scheme):
             "\n".join(samples) if samples else "  (no placed elements in category)",
         )
     )
-    output.print_md("**" + diag_block.split("\n", 1)[0] + "**\n" + diag_block.split("\n", 1)[1])
     _log("=== " + diag_block + " ===")
 
 
@@ -1136,6 +1141,158 @@ def _apply_orphan_decisions(doc, approved):
                 )
 
 
+def _mark_orphan_entries(doc, merged_data):
+    """INSIDE transaction: rename/restore scheme entries based on Excel match.
+
+    Three behaviours per entry:
+
+    1. Orphan (entry NOT in Excel, no prefix yet):
+       - Rename to _ORPHAN_PREFIX + original_name.
+       - Set FillPatternId to DB.ElementId.InvalidElementId (no-fill / outline
+         only) so orphans are visually distinct from valid entries.
+
+    2. Already-orphaned (entry name starts with _ORPHAN_PREFIX, still no match):
+       - Do NOT rename again (idempotent).
+       - Ensure FillPatternId stays InvalidElementId in case it drifted.
+
+    3. Restore (entry currently named _ORPHAN_PREFIX + X, Excel NOW has X):
+       - Strip the prefix, rename back to X.
+       - Restore FillPatternId to solid fill.
+       - Update color to the Excel value for X.
+
+    Normal matched entries are NOT touched here (handled by _update_entry_color).
+    """
+    invalid_id = DB.ElementId.InvalidElementId
+
+    for lookup_key, scheme_names in NAMING_MAP.items():
+        template_data = merged_data.get(lookup_key, {}) or {}
+        if not template_data:
+            continue
+
+        for scheme_name in scheme_names:
+            color_scheme = REVIT_SELECTION.get_color_scheme_by_name(scheme_name)
+            if not color_scheme:
+                continue
+
+            # Take a snapshot of entries before we mutate -- iterating a live
+            # collection while modifying it can skip or double-visit entries.
+            try:
+                entries_snapshot = list(color_scheme.GetEntries())
+            except Exception as e:
+                output.print_md(
+                    "### orphan-mark: could not read entries for [{}]: {}".format(
+                        scheme_name, e
+                    )
+                )
+                continue
+
+            for entry in entries_snapshot:
+                try:
+                    current_name = entry.GetStringValue()
+                except Exception:
+                    continue
+
+                # --- Case 3: currently orphaned, check if Excel now has it ---
+                if current_name.startswith(_ORPHAN_PREFIX):
+                    base_name = current_name[len(_ORPHAN_PREFIX):]
+                    if base_name in template_data:
+                        # Restore: strip prefix, solid fill, Excel color.
+                        new_color = COLOR.tuple_to_color(
+                            template_data[base_name]["color"]
+                        )
+                        try:
+                            entry.SetStringValue(base_name)
+                            entry.Color = new_color
+                            entry.FillPatternId = (
+                                REVIT_SELECTION.get_solid_fill_pattern_id(doc)
+                            )
+                            color_scheme.UpdateEntry(entry)
+                            output.print_md(
+                                "**<<<** [{}] restored orphan [{}] -> [{}] "
+                                "with **{}** (solid fill)".format(
+                                    scheme_name,
+                                    current_name,
+                                    base_name,
+                                    _markdown_text(
+                                        "COLOR RGB={}".format(
+                                            template_data[base_name]["color"]
+                                        ),
+                                        template_data[base_name]["color"],
+                                    ),
+                                )
+                            )
+                            _log(
+                                "orphan-mark: RESTORED [{}] '{}' -> '{}'".format(
+                                    scheme_name, current_name, base_name
+                                )
+                            )
+                        except Exception as e:
+                            output.print_md(
+                                "### orphan-mark: failed to restore [{}] in [{}]: "
+                                "{}".format(current_name, scheme_name, e)
+                            )
+                    else:
+                        # Still orphaned -- ensure non-solid fill is set
+                        # (idempotent: already prefixed, just re-assert pattern).
+                        try:
+                            if entry.FillPatternId != invalid_id:
+                                entry.FillPatternId = invalid_id
+                                color_scheme.UpdateEntry(entry)
+                                _log(
+                                    "orphan-mark: re-asserted no-fill on still-orphan "
+                                    "[{}] '{}'".format(scheme_name, current_name)
+                                )
+                        except Exception as e:
+                            _log(
+                                "orphan-mark: could not re-assert no-fill on [{}] "
+                                "'{}': {}".format(scheme_name, current_name, e)
+                            )
+                    # Either way this entry is fully handled -- move on.
+                    continue
+
+                # --- Case 1: not prefixed, check if it is missing from Excel ---
+                if current_name in template_data:
+                    # Exact match -- _update_entry_color handles color sync.
+                    # Also ensure solid fill in case this entry was previously
+                    # orphaned, restored, but fill never got fixed on an old run.
+                    try:
+                        if entry.FillPatternId == invalid_id:
+                            entry.FillPatternId = (
+                                REVIT_SELECTION.get_solid_fill_pattern_id(doc)
+                            )
+                            color_scheme.UpdateEntry(entry)
+                            _log(
+                                "orphan-mark: restored solid-fill on matched entry "
+                                "[{}] '{}'".format(scheme_name, current_name)
+                            )
+                    except Exception:
+                        pass
+                    continue
+
+                # Entry is NOT in Excel and NOT already prefixed -- mark it.
+                new_orphan_name = _ORPHAN_PREFIX + current_name
+                try:
+                    entry.SetStringValue(new_orphan_name)
+                    entry.FillPatternId = invalid_id
+                    color_scheme.UpdateEntry(entry)
+                    output.print_md(
+                        "**~~~** [{}] orphan marked: [{}] -> [{}] "
+                        "(no-fill pattern)".format(
+                            scheme_name, current_name, new_orphan_name
+                        )
+                    )
+                    _log(
+                        "orphan-mark: MARKED [{}] '{}' -> '{}'".format(
+                            scheme_name, current_name, new_orphan_name
+                        )
+                    )
+                except Exception as e:
+                    output.print_md(
+                        "### orphan-mark: failed to mark orphan [{}] in [{}]: "
+                        "{}".format(current_name, scheme_name, e)
+                    )
+
+
 def _add_missing_entry(color_scheme, template_data, current_entry_names, storage_type):
     for entry_name in template_data.keys():
         if entry_name in current_entry_names:
@@ -1161,6 +1318,11 @@ def _update_entry_color(color_scheme, template_data):
         entry_title = existing_entry.GetStringValue()
         lookup = template_data.get(entry_title, None)
         if not lookup:
+            # Orphan-prefixed entries have no Excel match by design; the
+            # _mark_orphan_entries pass already handled them -- skip silently
+            # so we don't flood output with spurious ??? warnings.
+            if entry_title.startswith(_ORPHAN_PREFIX):
+                continue
             output.print_md(
                 "### ??? entry [{}] in current scheme has no match in merged "
                 "template. New entry, or different spelling? Skipped.\n".format(
@@ -1168,6 +1330,17 @@ def _update_entry_color(color_scheme, template_data):
                 )
             )
             continue
+
+        # Matched entry -- ensure solid fill is set (restores entries that
+        # were previously orphaned and had their fill set to non-solid).
+        try:
+            solid_id = REVIT_SELECTION.get_solid_fill_pattern_id(doc)
+            if existing_entry.FillPatternId != solid_id:
+                existing_entry.FillPatternId = solid_id
+                color_scheme.UpdateEntry(existing_entry)
+        except Exception:
+            pass
+
         new_color = COLOR.tuple_to_color(lookup["color"])
         if COLOR.is_same_color(existing_entry.Color, new_color):
             continue
@@ -1271,7 +1444,16 @@ def load_color_template():
         # 1. Apply approved orphan transfers + deletes first so subsequent
         #    add/update sees a clean slate.
         _apply_orphan_decisions(doc, approved_actions)
-        # 2. Then standard add-new + update-color for entries that already
+        # 2. Mark (or restore) remaining orphan entries -- entries that exist
+        #    in Revit but have no corresponding row in the Excel template are
+        #    renamed to _ORPHAN_PREFIX + original_name and set to non-solid
+        #    fill. Entries that were previously orphaned but whose base name
+        #    now appears in Excel are restored to solid fill + Excel color.
+        #    This runs BEFORE _update_color_scheme so restored entries are
+        #    then picked up by the normal add/update pass.
+        output.print_md("### Applying orphan-mark pass...")
+        _mark_orphan_entries(doc, merged_data)
+        # 3. Then standard add-new + update-color for entries that already
         #    matched the Excel template exactly.
         for lookup_key, scheme_names in NAMING_MAP.items():
             for scheme_name in scheme_names:

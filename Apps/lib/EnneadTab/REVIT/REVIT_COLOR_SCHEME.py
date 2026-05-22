@@ -11,13 +11,18 @@ if _root not in sys.path:
     sys.path.append(_root)
 
 import NOTIFICATION, COLOR, OUTPUT
-import REVIT_SELECTION
-import REVIT_APPLICATION
+
+# Revit-only names: set safe defaults so CPython import (for testing) succeeds.
+UIDOC = None
+DOC = None
+
 try:
+    import REVIT_SELECTION
+    import REVIT_APPLICATION
     from Autodesk.Revit import DB # pyright: ignore
     from Autodesk.Revit import UI # pyright: ignore
-    
-    UIDOC = REVIT_APPLICATION.get_uidoc() 
+
+    UIDOC = REVIT_APPLICATION.get_uidoc()
     DOC = REVIT_APPLICATION.get_doc()
     from pyrevit import script
 except:
@@ -361,3 +366,387 @@ def load_color_template(doc, naming_map, excel_path, is_remove_unused = False):
     """
     updater = ColorSchemeUpdater(doc, naming_map, excel_path, is_remove_unused)
     updater.load_color_template_from_excel()
+
+
+# ---------------------------------------------------------------------------
+# Excel -> color dict parsers (Phase 2 firm-wide Excel2ColorScheme dialog)
+# ---------------------------------------------------------------------------
+
+# Office-standard parameter names used by the dual-channel dialog defaults.
+OFFICE_STD_DEPT_PARAMETER = "Area_$Department"
+OFFICE_STD_PROGRAM_PARAMETER = "Area_$Department_Program Type"
+
+_SINGLE_NAME_HEADER_ALIASES = ("parameter value", "entryname", "entry name")
+_SINGLE_COLOR_HEADER_ALIASES = ("color", "color(no rgb)", "color (no rgb)")
+
+
+def _norm_header(value):
+    """Normalize a header cell value for case-insensitive, whitespace-tolerant matching."""
+    if value is None:
+        return ""
+    return str(value).strip().lower()
+
+
+def _detect_header_row(raw_data, max_rows, name_aliases, color_aliases):
+    """Scan first `max_rows` rows for a row containing both a name header and color header."""
+    for row in range(1, max_rows + 1):
+        headers = {}
+        for (r, c), cell in raw_data.items():
+            if r == row:
+                headers[c] = _norm_header(cell.get("value"))
+        if not headers:
+            continue
+        has_name = any(h in name_aliases for h in headers.values())
+        has_color = any(h in color_aliases for h in headers.values())
+        if has_name and has_color:
+            return row, headers
+    return None, {}
+
+
+def _rgb_tuple_to_hex(rgb):
+    """Convert (r, g, b) ints to '#rrggbb'. Returns None if any component is None."""
+    if not rgb:
+        return None
+    r, g, b = rgb[0], rgb[1], rgb[2]
+    if r is None or g is None or b is None:
+        return None
+    try:
+        return "#{:02x}{:02x}{:02x}".format(int(r), int(g), int(b))
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_single_channel_raw(raw_data, worksheet_name):
+    """Pure parser for the single-channel Excel format.
+
+    Input: raw_data dict shaped {(row, col): {'value': ..., 'color': (r,g,b)}}
+           as returned by EXCEL.read_data_from_excel(..., return_dict=True).
+    Returns: (color_dict, diagnostics)
+        color_dict: {entry_name: '#rrggbb'} or None if file/header-level failure.
+        diagnostics: list of human-readable warning strings.
+    """
+    diagnostics = []
+    if not raw_data:
+        diagnostics.append(
+            "Excel read returned no data for worksheet '{}'.\n"
+            "Possible causes: file moved or locked, worksheet renamed/removed "
+            "after picking, or ExcelHandler did not respond.".format(worksheet_name)
+        )
+        return None, diagnostics
+
+    header_row, headers = _detect_header_row(
+        raw_data, max_rows=5,
+        name_aliases=_SINGLE_NAME_HEADER_ALIASES,
+        color_aliases=_SINGLE_COLOR_HEADER_ALIASES,
+    )
+    if header_row is None:
+        # Show what we did find for easier debugging
+        first_row_cells = sorted(
+            ((c, _norm_header(cell.get("value"))) for (r, c), cell in raw_data.items() if r == 1),
+            key=lambda x: x[0],
+        )
+        diagnostics.append(
+            "Could not detect header row in first 5 rows of worksheet '{}'.\n"
+            "Expected: 'Parameter Value' (or 'EntryName') + 'Color' columns.\n"
+            "Row 1 had: {}".format(worksheet_name, first_row_cells)
+        )
+        return None, diagnostics
+
+    name_col = None
+    color_col = None
+    for col, header_text in headers.items():
+        if name_col is None and header_text in _SINGLE_NAME_HEADER_ALIASES:
+            name_col = col
+        if color_col is None and header_text in _SINGLE_COLOR_HEADER_ALIASES:
+            color_col = col
+
+    data_rows = sorted({r for (r, _c) in raw_data.keys() if r > header_row})
+
+    color_dict = {}
+    skipped = []
+    for row in data_rows:
+        name_cell = raw_data.get((row, name_col), {})
+        color_cell = raw_data.get((row, color_col), {})
+
+        entry_name = name_cell.get("value")
+        if not entry_name or str(entry_name).strip() in ("", "None"):
+            skipped.append("row {}: entry name cell is empty".format(row))
+            continue
+
+        hex_color = _rgb_tuple_to_hex(color_cell.get("color"))
+
+        if not hex_color:
+            value_text = color_cell.get("value")
+            try:
+                string_type = basestring  # IronPython 2 / Python 2
+            except NameError:
+                string_type = str
+            if isinstance(value_text, string_type) and value_text.startswith("#"):
+                hex_color = value_text
+
+        if not hex_color:
+            text_preview = color_cell.get("value", "")
+            skipped.append(
+                "row {} ('{}'): color cell has no fill RGB and text '{}' "
+                "is not a '#RRGGBB' hex. If you painted the cell with "
+                "Conditional Formatting or a Theme color, replace it with "
+                "a direct Fill Color.".format(row, entry_name, text_preview)
+            )
+            continue
+
+        color_dict[str(entry_name).strip()] = hex_color
+
+    if skipped:
+        head = skipped[:10]
+        extra = len(skipped) - len(head)
+        msg = "Skipped {} data row(s) in worksheet '{}':\n  - {}".format(
+            len(skipped), worksheet_name, "\n  - ".join(head)
+        )
+        if extra > 0:
+            msg += "\n  ... and {} more row(s) with the same kind of issue".format(extra)
+        diagnostics.append(msg)
+
+    return color_dict, diagnostics
+
+
+def parse_single_channel_excel(filepath, worksheet):
+    """File I/O wrapper around _parse_single_channel_raw.
+
+    Reads the worksheet via EXCEL.read_data_from_excel then delegates to the
+    pure parser. Only usable from IronPython under Revit (because of EXCEL).
+    """
+    # Lazy import to keep the pure parser CPython-importable.
+    from EnneadTab import EXCEL
+    raw_data = EXCEL.read_data_from_excel(filepath, worksheet=worksheet, return_dict=True)
+    return _parse_single_channel_raw(raw_data, worksheet)
+
+
+def compute_scheme_diff(color_dict, scheme_entries):
+    """Compute the per-entry diff between an Excel-derived color_dict and current scheme state.
+
+    Args:
+        color_dict: {name: '#rrggbb'} from Excel parsing.
+        scheme_entries: list of (name, '#rrggbb') tuples extracted from a Revit color scheme.
+            (Pre-extraction makes this function pure -- callers in Revit do
+             [(e.GetStringValue(), '#%02x%02x%02x' % (e.Color.Red, e.Color.Green, e.Color.Blue))
+              for e in scheme.GetEntries()].)
+
+    Returns:
+        list of (name, action, old_color, new_color) where action in:
+            'add'       - in color_dict, not in scheme
+            'update'    - in both, hex differs (case-insensitive)
+            'unchanged' - in both, hex matches
+            'orphan'    - in scheme, not in color_dict
+
+        Sort: non-orphan first (alphabetical), then orphans (alphabetical).
+    """
+    scheme_map = {name: hex_color for name, hex_color in scheme_entries}
+
+    rows = []
+    for name, new_hex in color_dict.items():
+        if name in scheme_map:
+            old_hex = scheme_map[name]
+            if old_hex.lower() == new_hex.lower():
+                rows.append((name, "unchanged", old_hex, new_hex))
+            else:
+                rows.append((name, "update", old_hex, new_hex))
+        else:
+            rows.append((name, "add", None, new_hex))
+
+    for name, old_hex in scheme_map.items():
+        if name not in color_dict:
+            rows.append((name, "orphan", old_hex, None))
+
+    def sort_key(row):
+        is_orphan = 1 if row[1] == "orphan" else 0
+        return (is_orphan, row[0])
+
+    rows.sort(key=sort_key)
+    return rows
+
+
+def apply_color_dict_to_scheme(doc, color_scheme, color_dict):
+    """Apply a {name: hex} dict to one Revit color scheme.
+
+    CALLER must wrap in DB.Transaction. This function does NOT manage transactions.
+
+    Returns (added_count, updated_count, skipped_count). Prints per-entry actions
+    to the pyRevit output for the user to see.
+
+    Entry names with forbidden characters (\\ : { } [ ] | ; < > ? ` ~) are
+    sanitized -- backslash/colon/brackets/pipe/semicolon become '-', the rest
+    are stripped.
+    """
+    # Lazy imports keep this CPython-importable for static analysis.
+    from Autodesk.Revit import DB  # pyright: ignore
+    from EnneadTab import COLOR
+    from EnneadTab.REVIT import REVIT_SELECTION
+
+    if not color_dict:
+        print("apply_color_dict_to_scheme: empty color_dict, nothing to do.")
+        return (0, 0, 0)
+
+    try:
+        sample_entry = list(color_scheme.GetEntries())[0]
+        storage_type = sample_entry.StorageType
+    except (IndexError, AttributeError):
+        print("apply_color_dict_to_scheme: scheme has no entries; "
+              "add at least one placeholder entry in Revit first.")
+        return (0, 0, 0)
+
+    current_entries = {x.GetStringValue(): x for x in color_scheme.GetEntries()}
+
+    added = 0
+    updated = 0
+    skipped = 0
+
+    forbidden_chars = {
+        '\\': '-', ':': '-', '{': '-', '}': '-', '[': '-', ']': '-',
+        '|': '-', ';': '-', '<': '', '>': '', '?': '', '`': '', '~': '',
+    }
+
+    for entry_name, hex_color in color_dict.items():
+        if not entry_name or not str(entry_name).strip() or entry_name == "None":
+            skipped += 1
+            continue
+        if str(entry_name).strip().startswith('#'):
+            skipped += 1
+            continue
+        if not hex_color or not str(hex_color).startswith('#'):
+            skipped += 1
+            continue
+
+        sanitized = str(entry_name)
+        for forbidden, replacement in forbidden_chars.items():
+            sanitized = sanitized.replace(forbidden, replacement)
+        while '--' in sanitized:
+            sanitized = sanitized.replace('--', '-')
+        while '  ' in sanitized:
+            sanitized = sanitized.replace('  ', ' ')
+        sanitized = sanitized.strip(' -')
+
+        if sanitized != str(entry_name):
+            print("  Sanitized '{}' -> '{}'".format(entry_name, sanitized))
+
+        rgb = COLOR.hex_to_rgb(hex_color)
+        revit_color = COLOR.tuple_to_color(rgb)
+
+        if sanitized in current_entries:
+            existing = current_entries[sanitized]
+            old_color = existing.Color
+            if not COLOR.is_same_color(old_color, revit_color):
+                existing.Color = revit_color
+                color_scheme.UpdateEntry(existing)
+                updated += 1
+                print("  Updated '{}'".format(sanitized))
+        else:
+            try:
+                entry = DB.ColorFillSchemeEntry(storage_type)
+                entry.Color = revit_color
+                entry.SetStringValue(sanitized)
+                entry.FillPatternId = REVIT_SELECTION.get_solid_fill_pattern_id(doc)
+                color_scheme.AddEntry(entry)
+                added += 1
+                print("  Added '{}'".format(sanitized))
+            except Exception as ex:
+                print("  ERROR adding '{}': {}".format(sanitized, str(ex)))
+                skipped += 1
+
+    return (added, updated, skipped)
+
+
+# ---------------------------------------------------------------------------
+# Dialog settings persistence (DataStorage + ExtensibleStorage)
+# ---------------------------------------------------------------------------
+
+# IMMUTABLE -- changing this orphans every project's persisted settings.
+_DIALOG_SETTINGS_SCHEMA_GUID = "af7549c5-290a-4836-8993-2c48b0f99f90"
+_DIALOG_SETTINGS_SCHEMA_NAME = "EnneadTab_Excel2ColorScheme_Settings"
+_DIALOG_SETTINGS_FIELD_NAME = "SettingsJson"
+_DIALOG_SETTINGS_SCHEMA_VERSION = 1
+
+
+def _get_or_define_settings_schema():
+    """Return the ExtensibleStorage Schema, defining it if not already in this session."""
+    from Autodesk.Revit import DB  # pyright: ignore
+    import System  # pyright: ignore
+
+    schema_guid = System.Guid(_DIALOG_SETTINGS_SCHEMA_GUID)
+    schema = DB.ExtensibleStorage.Schema.Lookup(schema_guid)
+    if schema is not None:
+        return schema
+
+    builder = DB.ExtensibleStorage.SchemaBuilder(schema_guid)
+    builder.SetSchemaName(_DIALOG_SETTINGS_SCHEMA_NAME)
+    builder.SetReadAccessLevel(DB.ExtensibleStorage.AccessLevel.Public)
+    builder.SetWriteAccessLevel(DB.ExtensibleStorage.AccessLevel.Public)
+    builder.SetVendorId("EnneadArchitects")
+
+    field_builder = builder.AddSimpleField(_DIALOG_SETTINGS_FIELD_NAME, System.String)
+    field_builder.SetDocumentation("Excel2ColorScheme dialog settings (JSON)")
+
+    return builder.Finish()
+
+
+def _find_settings_datastorage(doc):
+    """Return the DataStorage element holding our settings, or None if not present."""
+    from Autodesk.Revit import DB  # pyright: ignore
+    schema = _get_or_define_settings_schema()
+    collector = DB.FilteredElementCollector(doc).OfClass(DB.ExtensibleStorage.DataStorage)
+    for storage in collector:
+        entity = storage.GetEntity(schema)
+        if entity is not None and entity.IsValid():
+            return storage
+    return None
+
+
+def load_dialog_settings(doc):
+    """Load per-document dialog settings. Returns dict (possibly empty) -- never None."""
+    import json
+    schema = _get_or_define_settings_schema()
+    storage = _find_settings_datastorage(doc)
+    if storage is None:
+        return {}
+    entity = storage.GetEntity(schema)
+    if entity is None or not entity.IsValid():
+        return {}
+    try:
+        raw = entity.Get[str](_DIALOG_SETTINGS_FIELD_NAME)
+    except Exception as ex:
+        print("load_dialog_settings: failed to read field: {}".format(ex))
+        return {}
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+    except Exception as ex:
+        print("load_dialog_settings: JSON decode failed: {}".format(ex))
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return data
+
+
+def save_dialog_settings(doc, settings):
+    """Persist settings dict to DataStorage. CALLER must wrap in DB.Transaction.
+
+    Auto-tags with schema version. Existing DataStorage element is reused;
+    a new one is created on first save.
+    """
+    from Autodesk.Revit import DB  # pyright: ignore
+    import json
+
+    if not isinstance(settings, dict):
+        raise ValueError("save_dialog_settings: settings must be a dict")
+
+    settings = dict(settings)  # shallow copy so we don't mutate caller's dict
+    settings.setdefault("version", _DIALOG_SETTINGS_SCHEMA_VERSION)
+
+    schema = _get_or_define_settings_schema()
+    storage = _find_settings_datastorage(doc)
+    if storage is None:
+        storage = DB.ExtensibleStorage.DataStorage.Create(doc)
+
+    entity = DB.ExtensibleStorage.Entity(schema)
+    entity.Set[str](_DIALOG_SETTINGS_FIELD_NAME, json.dumps(settings))
+    storage.SetEntity(entity)
