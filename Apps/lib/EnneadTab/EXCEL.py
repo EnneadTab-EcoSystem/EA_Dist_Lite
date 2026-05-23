@@ -28,8 +28,6 @@ import os
 import re
 import time
 import io
-# if hasattr(sys, "setdefaultencoding"):
-#     sys.setdefaultencoding("utf-8")
 
 
 
@@ -660,8 +658,6 @@ def _read_data_from_excel_locally(filepath, worksheet, return_dict, headless):
 
 
         return converted_data
-        NOTIFICATION.messenger("Excel file is xlsx, converting to xls, this will take a few moments.\nFor better performance, save as .xls instead of .xlsx.")   
-        filepath = save_as_xls(filepath)
 
     ##################################################
     # due to the rhino 8 and revit 2025 core change, there will be no more running for xls files
@@ -805,7 +801,6 @@ def save_data_to_excel(data, filepath, worksheet=ENVIRONMENT.PLUGIN_NAME, open_a
     """
     def legacy_method():
         # note to self: rework the format method in dataitem so can construct any combonation format
-        # note to self: rework the format method in dataitem so can construct any combonation format
         # see doc here: https://xlsxwriter.readthedocs.io/format.html#format-set-border
         def write_data_item(worksheet, data):
             if any(
@@ -833,26 +828,6 @@ def save_data_to_excel(data, filepath, worksheet=ENVIRONMENT.PLUGIN_NAME, open_a
                 worksheet.write(data.row, data.column, data.item, format)
             else:
                 worksheet.write(data.row, data.column, data.item)
-
-            # if data.cell_color:
-            #     hex_color = COLOR.rgb_to_hex(data.cell_color)
-            #     format = workbook.add_format({'bg_color' : hex_color})
-            #     worksheet.write(data.row,
-            #                     data.column,
-            #                     data.item,
-            #                     format)
-            # elif data.text_color:
-            #     hex_color = COLOR.rgb_to_hex(data.text_color)
-            #     format = workbook.add_format({'color' : hex_color})
-            #     worksheet.write(data.row,
-            #                     data.column,
-            #                     data.item,
-            #                     format)
-
-            # else:
-            #     worksheet.write(data.row,
-            #                     data.column,
-            #                     data.item)
 
         workbook = xlsxwriter.Workbook(filepath)
 
@@ -1317,28 +1292,6 @@ test_dict = {
 }
 
 
-
-# Old unit test function
-# def unit_test():
-#     return
-#     import xlrd
-
-
-#     # Replace this with your SharePoint URL
-#     sharepoint_url = "https://enneadarch-my.sharepoint.com/:x:/g/personal/scott_mackenzie_ennead_com/Eey-gTYaVIdGuU9Jg65gig8BIUBmc32Aie-0nNsjVSgUfQ?rtime=4PY2woUX3Eg"
-
-#     # Open the Excel file from the URL
-#     str = WEB.get_request(sharepoint_url)
-#     print(str)
-#     workbook = xlrd.open_workbook(file_contents=str)
-
-#     # Select the first sheet (you can change the sheet index as needed)
-#     sheet = workbook.sheet_by_index(0)
-
-#     # Iterate through rows and print each row
-#     for row_num in range(sheet.nrows):
-#         row = sheet.row_values(row_num)
-#         print(row)
 
 def sample_excel_writer_by_pointer():
     collection = ExcelDataCollection()
