@@ -357,7 +357,7 @@
         "script": "Block.tab\\uniform_transform_geos.button\\uniform_transform_geos_left.py",
         "icon": "Block.tab\\uniform_transform_geos.button\\icon.png",
         "alias": "UniformTransformGeos",
-        "doc": "Apply same rotational transformation for the blocks or geometries. Helpful when you have to reorient many directional blocks, such as changing the direction of cars on street.",
+        "doc": "Apply the same rotation and/or uniform scale to blocks or geometries. Helpful when reorienting or resizing many instances, such as changing direction or size of cars on a street.",
         "tab": "Block.tab",
         "tab_icon": "Block.tab\\icon.png",
         "is_popular": false

@@ -50,8 +50,8 @@ def is_hate_duck_pop():
     return not CONFIG.get_setting("toggle_bt_is_duck_allowed", False)
 
 FUNFONTS = [
-    "Berlin Sans FB"
-    "Ravie", 
+    "Berlin Sans FB",
+    "Ravie",
     "Small Fonts",
     "Snap ITC",
     "Viner Hand ITC",
