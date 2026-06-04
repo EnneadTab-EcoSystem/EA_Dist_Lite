@@ -257,7 +257,7 @@ If Shell and Site models should be coordinated but aren't:
 
 ## Daily Scheduling
 
-To integrate with the main EnneadTab scheduler (`DarkSide/_schedule_publish.py`), add this publish script to the scheduler's workflow.
+To integrate with the main EnneadTab scheduler (`DarkSide/publish/_schedule_publish.py`), add this publish script to the scheduler's workflow.
 
 ## Files
 

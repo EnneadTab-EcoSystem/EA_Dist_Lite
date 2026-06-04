@@ -186,7 +186,7 @@ def alert_missing_schedule_update():
 
     # Fall back to local file if gist fetch failed
     if data is None:
-        history = os.path.join(ENVIRONMENT.ROOT, "DarkSide", "publish_history.json")
+        history = os.path.join(ENVIRONMENT.ROOT, "DarkSide", "publish", "publish_history.json")
         if not os.path.exists(history):
             return
         try:

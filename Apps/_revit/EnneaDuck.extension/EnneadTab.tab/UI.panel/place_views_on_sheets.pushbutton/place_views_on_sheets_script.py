@@ -3,6 +3,8 @@
 
 __doc__ = "Monitor for new views in the project and allow quick renaming through a non-blocking interface."
 __title__ = "Place Views\nOn Sheets"
+# Modeless dialog: keep engine alive so deferred callbacks don't hit UnboundNameException after the command returns (0xE0434352).
+__persistentengine__ = True
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()

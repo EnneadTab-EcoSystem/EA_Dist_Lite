@@ -4,6 +4,19 @@
 __doc__ = "View rendering through Ennead's in-house style library. Queue multiple renders, see your full cloud gallery across devices, refine prompts with the ennead-ai.com helpers, load style references from the Ennead library."
 __title__ = "AI\nRender"
 
+# 2026-06-03 — ROOT CAUSE of the recurring 0xE0434352 Revit crash (CER
+# 1780521027455 / 1780524566541 / 1780525396250). This is a MODELESS dialog:
+# its DispatcherTimers, Dispatcher.BeginInvoke callbacks (_invoke_ui), and
+# ThreadPool workers all fire AFTER the pushbutton command returns. Without a
+# persistent engine, pyRevit (esp. in rocketmode) tears down the script's
+# module scope once the command exits, so those deferred callbacks hit
+# `UnboundNameException: name '_trace' is not defined` (confirmed via WinDbg on
+# the CER minidump) the instant they touch ANY module global -> unhandled
+# managed exception -> Revit hard-crash ~3s after the dialog shows. Every other
+# EnneaDuck modeless dialog (search, translate_AI, family_browser, ...) already
+# sets this; ai_render was the lone tool missing it. One line.
+__persistentengine__ = True
+
 import os
 import time
 import shutil

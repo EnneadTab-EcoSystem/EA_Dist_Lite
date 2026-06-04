@@ -3,6 +3,8 @@
 
 __doc__ = "Assign targets for symbol families. Pick a symbol family and assign glass/opaque targets."
 __title__ = "Assign Target"
+# Modeless dialog: keep engine alive so deferred callbacks don't hit UnboundNameException after the command returns (0xE0434352).
+__persistentengine__ = True
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()

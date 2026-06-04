@@ -13,6 +13,8 @@ Let Sen.Z know if you would like to add more to the category list."""
 
 
 __title__ = "Prefilter\nSelection"
+# Modeless dialog: keep engine alive so deferred callbacks don't hit UnboundNameException after the command returns (0xE0434352).
+__persistentengine__ = True
 __tip__ = True
 __is_popular__ = True
 
