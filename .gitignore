@@ -9,6 +9,9 @@ __pycache__/
 # credential files
 credential.json
 aps_credentials.json
+
+# ExeProducts: built artifacts / junction to EA_Dist on publish machines (not source)
+Apps/lib/ExeProducts/
 # App-specific credentials and OAuth tokens (do not commit)
 Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/nyu_hq_daily_publisher/configs/credentials.json
 Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/nyu_hq_daily_publisher/configs/user_oauth.json
