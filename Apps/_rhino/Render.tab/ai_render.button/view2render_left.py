@@ -113,6 +113,38 @@ def _trace(msg):
 STUDIO_URL = "https://ennead-ai.com"
 
 
+# 2026-06-04: visible build stamp so we can tell at a glance whether the
+# RUNNING code is fresh or a stale distributed copy (Rhino loads from
+# EA_Dist, which can lag the dev repo by days). Derived from this file's
+# own mtime at import -- no manual bumping, always truthful about the file
+# actually loaded. Shown in the footer; if the date looks old, the copy is
+# stale and needs re-deploying.
+def _compute_build_tag():
+    # Newest mtime across every dialog file in this folder (view2render, the
+    # image viewer, the gallery module), not just this .py -- so a fix that
+    # lands only in ai_render_image_viewer.py still bumps the visible stamp
+    # (2026-06-04). Any file change in the button folder moves the stamp.
+    try:
+        d = os.path.dirname(os.path.abspath(__file__))
+        newest = 0
+        for fn in os.listdir(d):
+            if fn.lower().endswith(".py"):
+                try:
+                    mt = os.path.getmtime(os.path.join(d, fn))
+                    if mt > newest:
+                        newest = mt
+                except Exception:
+                    pass
+        if newest <= 0:
+            newest = os.path.getmtime(os.path.abspath(__file__))
+        return time.strftime("%m-%d %H:%M", time.localtime(newest))
+    except Exception:
+        return "?"
+
+
+_BUILD_TAG = _compute_build_tag()
+
+
 # ----------------------------------------------------------------------
 # Preference persistence (2026-04-28)
 # ----------------------------------------------------------------------
@@ -580,6 +612,23 @@ class AiRenderForm(Eto.Forms.Form):
 
         self._invoke_ui(_refresh_all)
 
+    def _on_sign_out(self, sender, e):
+        """Clear the cached desktop token and CLOSE the dialog (2026-06-04).
+
+        Per user direction: signing out must close the modeless tool, not
+        refresh it in place -- (1) it protects plugin/account info by tearing
+        the window down, (2) it forces the user to reopen and re-auth cleanly,
+        and (3) refreshing WPF/Eto state in place after clearing the token was
+        crashing Revit. Keep this minimal: clear token, then close."""
+        try:
+            AUTH.clear_token()
+        except Exception:
+            pass
+        try:
+            self.Close()
+        except Exception:
+            pass
+
     # ------------------------------------------------------------------
     # UI construction
     # ------------------------------------------------------------------
@@ -597,6 +646,16 @@ class AiRenderForm(Eto.Forms.Form):
         bt_web = Eto.Forms.LinkButton(Text="Open ennead-ai.com >")
         bt_web.Click += lambda s, e: webbrowser.open(STUDIO_URL)
         hdr.Add(bt_web)
+        # Sign out / switch account (2026-06-04): placed by the ennead-ai.com
+        # link per user preference. The auth banner only shows when signed OUT,
+        # so this is the only way to re-auth onto a different account (e.g. when
+        # the gallery shows the wrong/empty history).
+        self.bt_sign_out = Eto.Forms.LinkButton(Text="Sign out")
+        self.bt_sign_out.ToolTip = (
+            "Sign out and clear the cached login, then sign in again to switch "
+            "account (e.g. if the gallery shows the wrong/empty history).")
+        self.bt_sign_out.Click += self._on_sign_out
+        hdr.Add(self.bt_sign_out)
         hdr.EndHorizontal()
         root.Add(hdr)
 
@@ -1109,6 +1168,19 @@ class AiRenderForm(Eto.Forms.Form):
         self.cache_size_label.ToolTip = "Click to manage local gallery cache (clearing is safe — cloud copy is canonical)"
         self.cache_size_label.Click += self._on_manage_cache
         row.Add(self.cache_size_label, xscale=True)
+        # Build stamp (2026-06-04): tiny dim label so a stale distributed copy
+        # is obvious. Fresh deploy -> recent date; old date -> EA_Dist lagging.
+        self.lbl_build = Eto.Forms.Label(Text="build {}".format(_BUILD_TAG))
+        try:
+            self.lbl_build.TextColor = _hex_to_color("#5A5A5A")
+            self.lbl_build.Font = Eto.Drawing.Font(
+                Eto.Drawing.SystemFont.Default, 8)
+            self.lbl_build.ToolTip = (
+                "Build timestamp of the running view2render_left.py. If this "
+                "looks old, Rhino is loading a stale EA_Dist copy.")
+        except Exception:
+            pass
+        row.Add(self.lbl_build)
         bt_open_folder = Eto.Forms.Button(Text="Open Output Folder")
         bt_open_folder.Click += self._on_open_folder
         row.Add(bt_open_folder)
@@ -3095,14 +3167,27 @@ class AiRenderForm(Eto.Forms.Form):
         self._update_active_jobs_label()
 
     def _ctx_open_studio(self, row):
+        # Parity with Revit ai_render_script._ctx_open_studio (2026-06-04): the
+        # menu used to silent-return when the row had no cloud gallery_id (rows
+        # not yet uploaded), so the user saw nothing happen. Now we explain why,
+        # and surface any open failure.
         gallery_id = (row.cloud_item or {}).get("id") if row.cloud_item else (
             row.job_ref.gallery_id if row.job_ref else None)
         if not gallery_id:
+            self.status_label.Text = ("This render isn't in the cloud Gallery yet "
+                                      "- enable Auto-save or wait for upload.")
             return
+        # Route confirmed 2026-06-04 against EnneadTab-RenderPolisher source (see
+        # the Revit sibling for the full note): no per-item deep-link exists. The
+        # standalone app exposes /home /studio /museum /about /contact and NO
+        # /gallery; /studio renders the whole cloud gallery and ignores any URL
+        # id. The prior /gallery/<id> guess 404'd. Open /studio. Keep both sides
+        # identical per the Rhino<->Revit parity rule.
         try:
-            webbrowser.open("{}/gallery/{}".format(STUDIO_URL, gallery_id))
-        except Exception:
-            pass
+            webbrowser.open("{}/studio".format(STUDIO_URL))
+            self.status_label.Text = "Opening your Gallery in ennead-ai.com Studio..."
+        except Exception as ex:
+            self.status_label.Text = "Couldn't open browser: {}".format(str(ex)[:150])
 
     def _ctx_delete_gallery(self, row, gallery_id):
         if not gallery_id:

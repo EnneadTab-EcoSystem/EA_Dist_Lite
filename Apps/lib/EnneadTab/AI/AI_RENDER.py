@@ -399,18 +399,103 @@ def get_quota_with_token(token, timeout_ms=10000):
 # Section G -- Cloud Gallery API (list / items / save / community / delete)
 # =====================================================================
 
+def _lib_trace(msg):
+    """2026-06-04 diagnostic: the gallery dialogs' own trace can't see inside
+    this lib, so an empty fetch is indistinguishable from no-token / request
+    error / server ok=False. Append a line to a dedicated lib log so we can
+    tell exactly why the cloud gallery came back empty. Cheap; remove once the
+    history-loading root cause is confirmed."""
+    try:
+        appdata = os.environ.get("APPDATA") or os.path.expanduser("~")
+        d = os.path.join(appdata, "EnneadTab")
+        if not os.path.exists(d):
+            os.makedirs(d)
+        f = open(os.path.join(d, "ai_render_lib_trace.log"), "a")
+        try:
+            f.write("{}  {}\n".format(
+                time.strftime("%H:%M:%S"), msg))
+        finally:
+            f.close()
+    except Exception:
+        pass
+
+
 def list_gallery_index_with_token(token, limit=200, offset=0, timeout_ms=15000):
-    """Lightweight index -- items have inline thumbnailData (data URL). Empty on failure."""
+    """Lightweight index -- items have inline thumbnailData (data URL). Empty on failure.
+
+    NOTE: the server hard-caps a single request at 200 items
+    (RenderPolisher app/api/gallery/index/route.ts:104, `Math.min(200, limit)`),
+    so this returns AT MOST 200 regardless of `limit`. To fetch a full history
+    longer than 200 items, call list_gallery_index_paged() which loops offset.
+    """
     if not token:
+        _lib_trace("with_token: NO TOKEN")
         return []
     url = "{}/api/gallery/index?limit={}&offset={}".format(RENDER_URL, int(limit), int(offset))
     try:
         data = get_json(url, token=token, timeout_ms=timeout_ms)
-    except AIRequestError:
+    except AIRequestError as e:
+        _lib_trace("with_token: AIRequestError offset={} {}".format(offset, str(e)[:160]))
         return []
+    except Exception as e:
+        _lib_trace("with_token: OTHER-EXC offset={} {}: {}".format(
+            offset, type(e).__name__, str(e)[:160]))
+        raise
     if not data.get("ok"):
+        _lib_trace("with_token: ok=False offset={} keys={} err={}".format(
+            offset, list(data.keys()), str(data.get("error"))[:120]))
         return []
-    return data.get("items") or []
+    items = data.get("items") or []
+    _lib_trace("with_token: OK offset={} limit={} got={}".format(offset, limit, len(items)))
+    return items
+
+
+# Server page-size cap for /api/gallery/index (see route.ts Math.min(200, limit)).
+# A single request silently truncates any history longer than this, so callers
+# that want the full gallery MUST paginate.
+_SERVER_INDEX_PAGE_CAP = 200
+
+
+def list_gallery_index_paged(token, total=500, start_offset=0, timeout_ms=15000):
+    """Fetch up to `total` index items, paginating past the server's 200/page cap.
+
+    Root cause (2026-06-04): both the Revit and Rhino gallery dialogs requested
+    limit=500 in a single call, but the server clamps each request to 200 and the
+    clients never advanced the offset -- so any user with >200 renders only ever
+    saw their newest 200. This loops offset in <=200 chunks until `total` items
+    are collected or the server runs out (a short page == last page). The `total`
+    ceiling is the runaway guard. Empty list on failure / no token.
+    """
+    if not token:
+        _lib_trace("paged: NO TOKEN")
+        return []
+    _lib_trace("paged: START total={} start_offset={}".format(total, start_offset))
+    out = []
+    offset = int(start_offset)
+    total = int(total)
+    while len(out) < total:
+        want = min(_SERVER_INDEX_PAGE_CAP, total - len(out))
+        # 2026-06-04 robustness fix: a LATER page (offset > 0) is a request
+        # the old single-fetch code never made. If any one page throws an
+        # exception that list_gallery_index_with_token doesn't wrap as
+        # AIRequestError (timeout subclass, transport error, JSON decode),
+        # it must NOT kill the whole load -- otherwise pagination is strictly
+        # more failure-prone than the old single fetch and regresses history
+        # loading. Catch per-page and return what we already have; worst case
+        # this degrades to exactly the old "newest page only" behavior.
+        try:
+            items = list_gallery_index_with_token(
+                token, limit=want, offset=offset, timeout_ms=timeout_ms)
+        except Exception:
+            break  # keep pages collected so far; never fail the whole load
+        if not items:
+            break  # failure or exhausted
+        out.extend(items)
+        if len(items) < want:
+            break  # short page -> server has no more
+        offset += len(items)
+    _lib_trace("paged: END total_out={}".format(len(out)))
+    return out
 
 
 def get_gallery_items_with_token(token, ids, timeout_ms=30000):
@@ -673,10 +758,17 @@ def filter_rows(rows, seconds_back=None, query=""):
 
 
 def fetch_gallery_index_async(token, on_done, limit=200, offset=0):
-    """Background fetch of /api/gallery/index. on_done(items_or_None) on ThreadPool."""
+    """Background fetch of /api/gallery/index. on_done(items_or_None) on ThreadPool.
+
+    `limit` is the TOTAL number of items wanted, not a single-request size. The
+    server caps each request at 200, so we paginate internally (see
+    list_gallery_index_paged) to honor the requested total. Both the Revit and
+    Rhino dialogs pass limit=500, so this now returns their full history up to
+    500 items instead of a silently-truncated first 200.
+    """
     def worker(state):
         try:
-            items = list_gallery_index_with_token(token, limit=limit, offset=offset)
+            items = list_gallery_index_paged(token, total=limit, start_offset=offset)
             on_done(items)
         except Exception:
             on_done(None)

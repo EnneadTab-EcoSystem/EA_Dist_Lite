@@ -93,6 +93,37 @@ def _trace(msg):
 # Web deep-link to Studio — opened via the header link.
 STUDIO_URL = "https://ennead-ai.com"
 
+
+# 2026-06-04: visible build stamp (mirrors the Rhino sibling) so a stale
+# loaded copy is obvious at a glance. Derived from this file's own mtime at
+# import -- no manual bumping. Revit loads from the dev repo so this is
+# normally fresh; the stamp still confirms which copy is live.
+def _compute_build_tag():
+    # Use the NEWEST mtime across every dialog file in this folder (script,
+    # XAML, helpers), not just this .py -- otherwise an XAML-only or
+    # helper-only change leaves the stamp stale and the freshness signal lies
+    # (2026-06-04: a panel-resize lived only in AiRenderForm.xaml and the stamp
+    # didn't move). Any file change in the button folder now bumps the stamp.
+    try:
+        d = os.path.dirname(os.path.abspath(__file__))
+        newest = 0
+        for fn in os.listdir(d):
+            if fn.lower().endswith((".py", ".xaml")):
+                try:
+                    mt = os.path.getmtime(os.path.join(d, fn))
+                    if mt > newest:
+                        newest = mt
+                except Exception:
+                    pass
+        if newest <= 0:
+            newest = os.path.getmtime(os.path.abspath(__file__))
+        return time.strftime("%m-%d %H:%M", time.localtime(newest))
+    except Exception:
+        return "?"
+
+
+_BUILD_TAG = _compute_build_tag()
+
 RESOLUTION_OPTIONS = [
     ("Low (768 px)", 768),
     ("Medium (1024 px)", 1024),
@@ -102,6 +133,9 @@ RESOLUTION_OPTIONS = [
 ASPECT_OPTIONS = ["16:9", "4:3", "3:2", "1:1", "9:16", "21:9"]
 DEFAULT_RESOLUTION_LABEL = "High (1500 px)"
 DEFAULT_ASPECT = "16:9"
+# Default Rendering Style category to preselect on open (user pref 2026-06-04).
+# Falls back to "All" if the preset library doesn't expose this category.
+DEFAULT_CATEGORY = "Technical Drawing"
 
 PROMPT_UNDO_CAP = 10
 
@@ -280,6 +314,12 @@ class AiRenderForm(WPFWindow):
         # themselves automatically.
         try:
             AUTH.register_auth_complete_listener(self._on_auth_complete)
+        except Exception:
+            pass
+
+        # Build stamp in the footer (parity with Rhino) so a stale copy shows.
+        try:
+            self.build_label.Text = "build {}".format(_BUILD_TAG)
         except Exception:
             pass
 
@@ -465,6 +505,24 @@ class AiRenderForm(WPFWindow):
             return
         self._refresh_auth_banner()
 
+    def sign_out_Click(self, sender, e):
+        """Clear the cached desktop token and CLOSE the dialog (2026-06-04).
+
+        Per user direction: signing out closes the modeless tool rather than
+        refreshing it in place -- protects account info, forces a clean reopen
+        + re-auth, and avoids the crash that refreshing WPF state in place after
+        clearing the token caused (CER 1780608322870). Minimal: clear, close.
+        Mirror of the Rhino handler view2render_left.py::_on_sign_out per the
+        parity rule."""
+        try:
+            AUTH.clear_token()
+        except Exception:
+            pass
+        try:
+            self.Close()
+        except Exception:
+            pass
+
     def _on_auth_tick(self, sender, e):
         self._refresh_auth_banner()
 
@@ -562,7 +620,13 @@ class AiRenderForm(WPFWindow):
         self.cb_category.Items.Add("All")
         for c in cats:
             self.cb_category.Items.Add(c)
-        self.cb_category.SelectedIndex = 0
+        # Preselect DEFAULT_CATEGORY if the library exposes it, else "All".
+        sel = 0
+        for i in range(self.cb_category.Items.Count):
+            if str(self.cb_category.Items[i]).strip().lower() == DEFAULT_CATEGORY.lower():
+                sel = i
+                break
+        self.cb_category.SelectedIndex = sel
         self._refresh_style_list()
 
     def _refresh_style_list(self):
@@ -1120,6 +1184,27 @@ class AiRenderForm(WPFWindow):
             self._filter_seconds = secs
             self._rebuild_rows()
 
+    def toggle_large_thumbs_Changed(self, sender, e):
+        """Feature 1 (2026-06-04): swap the gallery ListView ItemTemplate
+        between the small (84x60) and large (168x120) thumbnail templates.
+
+        Session-state only -- there's no ai_render_prefs.json read/write helper
+        in this dialog, so per spec we don't add persistence. Wrapped in
+        try/except like every other modeless handler: an uncaught throw here
+        (e.g. FindResource returning None mid-teardown) would propagate to the
+        CLR as 0xE0434352 and hard-crash Revit.
+        """
+        try:
+            if self._form_closed:
+                return
+            large = bool(self.cb_large_thumbs.IsChecked)
+            key = "GalleryRowLarge" if large else "GalleryRowSmall"
+            tmpl = self.FindResource(key)
+            if tmpl is not None:
+                self.lv_gallery.ItemTemplate = tmpl
+        except Exception as ex:
+            _trace("toggle_large_thumbs SWALLOWED {}".format(ex))
+
     def search_Changed(self, sender, e):
         self._filter_query = (self.tbox_search.Text or "").strip()
         self._rebuild_rows()
@@ -1157,39 +1242,58 @@ class AiRenderForm(WPFWindow):
         self._show_row_context_menu(row, sender)
 
     def row_view_original_Click(self, sender, e):
-        row = getattr(sender, "DataContext", None)
-        if row and row.original_path and os.path.exists(row.original_path):
-            try:
-                os.startfile(row.original_path)
-            except Exception:
-                pass
-        elif row and row.cloud_item:
-            # Download original on demand, then open.
-            self._fetch_and_open_full(row)
+        # Feature 2 (2026-06-04): open the in-app WPF viewer instead of
+        # handing the file off to os.startfile / the OS default app.
+        try:
+            row = getattr(sender, "DataContext", None)
+            if not row:
+                return
+            rows = self._gallery_rows_snapshot()
+            start = self._index_of_row(rows, row)
+            self._open_image_viewer(rows, start, "original")
+        except Exception as ex:
+            _trace("row_view_original_Click SWALLOWED {}".format(ex))
 
     def row_view_result_Click(self, sender, e):
-        row = getattr(sender, "DataContext", None)
-        if row and row.result_path and os.path.exists(row.result_path):
-            try:
-                os.startfile(row.result_path)
-            except Exception:
-                pass
-        elif row and row.cloud_item:
-            self._fetch_and_open_full(row)
+        try:
+            row = getattr(sender, "DataContext", None)
+            if not row:
+                return
+            rows = self._gallery_rows_snapshot()
+            start = self._index_of_row(rows, row)
+            self._open_image_viewer(rows, start, "result")
+        except Exception as ex:
+            _trace("row_view_result_Click SWALLOWED {}".format(ex))
+
+    def _gallery_rows_snapshot(self):
+        """Snapshot the current ListView ItemsSource into a plain Python list
+        so the viewer can navigate a stable set even if the gallery rebuilds
+        (a tick or refresh) while the viewer is open."""
+        try:
+            src = self.lv_gallery.ItemsSource
+            if src is None:
+                return []
+            return [r for r in src]
+        except Exception:
+            return []
+
+    def _index_of_row(self, rows, row):
+        try:
+            for i in range(len(rows)):
+                if rows[i] is row:
+                    return i
+        except Exception:
+            pass
+        return 0
 
     def _fetch_and_open_full(self, row):
-        self.status_label.Text = "Loading full-size image..."
-        token = AUTH.get_token()
-        if not token:
-            self.status_label.Text = "Sign in required."
-            return
-        def on_done(bmp, path):
-            if path:
-                self._invoke_ui(lambda: self._open_path(path))
-            else:
-                self._invoke_ui(lambda: setattr(self.status_label, 'Text',
-                                                "Failed to load image."))
-        G.fetch_full_item_async(token, row.id, on_done)
+        # Retained for any callers; routes through the in-app viewer now.
+        try:
+            rows = self._gallery_rows_snapshot()
+            start = self._index_of_row(rows, row)
+            self._open_image_viewer(rows, start, "result")
+        except Exception as ex:
+            _trace("_fetch_and_open_full SWALLOWED {}".format(ex))
 
     def _open_path(self, path):
         if self._form_closed:
@@ -1199,6 +1303,251 @@ class AiRenderForm(WPFWindow):
             self.status_label.Text = "Opened {}".format(os.path.basename(path))
         except Exception as ex:
             self.status_label.Text = "Open failed: {}".format(ex)
+
+    # ------------------------------------------------------------------
+    # In-app enlarged image viewer (Feature 2, 2026-06-04)
+    # Mirrors the BEHAVIOR of the Rhino Eto viewer (ai_render_image_viewer.py):
+    # prev/next walks the current filtered gallery rows, Tab swaps
+    # Input(original)/Output(result), Left/Right navigate, Esc closes. Built
+    # with plain System.Windows.Window + closure handlers (no WPFWindow subclass
+    # needed). EVERY handler/callback is wrapped in try/except — an uncaught
+    # throw from a modeless dialog's button/key/async callback hard-crashes
+    # Revit (CLR 0xE0434352).
+    # ------------------------------------------------------------------
+
+    def _open_image_viewer(self, rows, start_index, mode):
+        try:
+            if self._form_closed:
+                return
+            rows = list(rows or [])
+            if not rows:
+                self.status_label.Text = "Nothing to view."
+                return
+            if start_index < 0 or start_index >= len(rows):
+                start_index = 0
+
+            from System.Windows import (Window as SysWindow, Thickness,
+                                        WindowStartupLocation, HorizontalAlignment,
+                                        VerticalAlignment, GridLength, GridUnitType)
+            from System.Windows.Controls import (Grid as SysGrid, Image as SysImage,
+                                                  StackPanel, Button as SysButton,
+                                                  TextBlock, RowDefinition,
+                                                  Orientation as SysOrient)
+            from System.Windows.Media import Brushes, Stretch as SysStretch
+            from System.Windows.Input import Key
+
+            win = SysWindow()
+            win.Title = "EnneaDuck — Image Viewer"
+            win.Width = 1000
+            win.Height = 760
+            win.WindowStartupLocation = WindowStartupLocation.CenterOwner
+            win.Owner = self
+            win.Background = Brushes.Black
+
+            # State held in a single-element list / dict so closures can mutate
+            # without `nonlocal` (IronPython 2.7 has no nonlocal keyword).
+            state = {"idx": int(start_index), "mode": mode}
+
+            root = SysGrid()
+            rd_img = RowDefinition()
+            rd_img.Height = GridLength(1, GridUnitType.Star)
+            rd_bar = RowDefinition()
+            rd_bar.Height = GridLength.Auto
+            root.RowDefinitions.Add(rd_img)
+            root.RowDefinitions.Add(rd_bar)
+
+            img = SysImage()
+            img.Stretch = SysStretch.Uniform
+            img.Margin = Thickness(8)
+            SysGrid.SetRow(img, 0)
+            root.Children.Add(img)
+
+            bar = StackPanel()
+            bar.Orientation = SysOrient.Horizontal
+            bar.HorizontalAlignment = HorizontalAlignment.Center
+            bar.Margin = Thickness(8)
+            SysGrid.SetRow(bar, 1)
+
+            def mk_btn(text, w):
+                b = SysButton()
+                b.Content = text
+                b.Width = w
+                b.Height = 28
+                b.Margin = Thickness(6, 0, 6, 0)
+                return b
+
+            bt_prev = mk_btn(u"◀ Prev", 90)
+            bt_next = mk_btn(u"Next ▶", 90)
+            bt_toggle = mk_btn("Showing: Result", 150)
+            bt_close = mk_btn("Close", 90)
+
+            caption = TextBlock()
+            caption.Foreground = Brushes.White
+            caption.VerticalAlignment = VerticalAlignment.Center
+            caption.Margin = Thickness(16, 0, 16, 0)
+            caption.FontSize = 12
+
+            bar.Children.Add(bt_prev)
+            bar.Children.Add(bt_toggle)
+            bar.Children.Add(caption)
+            bar.Children.Add(bt_next)
+            bar.Children.Add(bt_close)
+            root.Children.Add(bar)
+            win.Content = root
+
+            def set_caption(text):
+                try:
+                    caption.Text = text
+                except Exception:
+                    pass
+
+            def current_row():
+                try:
+                    return rows[state["idx"]]
+                except Exception:
+                    return None
+
+            def update_nav():
+                try:
+                    bt_prev.IsEnabled = state["idx"] > 0
+                    bt_next.IsEnabled = state["idx"] < (len(rows) - 1)
+                    bt_toggle.Content = ("Showing: Result"
+                                         if state["mode"] == "result"
+                                         else "Showing: Original")
+                except Exception:
+                    pass
+
+            def show_current():
+                # Load the image for (current row, current mode). Local path
+                # first; cloud fetch fallback; placeholder if neither.
+                try:
+                    update_nav()
+                    row = current_row()
+                    if row is None:
+                        img.Source = None
+                        set_caption("No image")
+                        return
+                    if state["mode"] == "result":
+                        local = getattr(row, "result_path", None)
+                    else:
+                        local = getattr(row, "original_path", None)
+                    label = "{}/{}  ·  {}  ·  {}".format(
+                        state["idx"] + 1, len(rows),
+                        ("Result" if state["mode"] == "result" else "Original"),
+                        getattr(row, "view_name", None) or getattr(row, "StyleName", None) or "")
+                    if local and os.path.exists(local):
+                        bmp = G.bitmap_from_path(local)
+                        img.Source = bmp
+                        set_caption(label)
+                        return
+                    # No local file — try cloud fetch if this row has an id.
+                    if getattr(row, "cloud_item", None) and getattr(row, "id", None):
+                        set_caption(u"Loading…  " + label)
+                        token = AUTH.get_token()
+                        if not token:
+                            set_caption("Sign in required.")
+                            return
+                        # Capture the request's idx+mode so a late async result
+                        # doesn't clobber the image if the user already moved on.
+                        req_idx = state["idx"]
+                        req_mode = state["mode"]
+                        req_id = row.id
+
+                        def on_done(bmp, path):
+                            def apply_():
+                                try:
+                                    if state["idx"] != req_idx or state["mode"] != req_mode:
+                                        return  # user navigated away; ignore
+                                    if bmp is not None:
+                                        img.Source = bmp
+                                        set_caption(label)
+                                    elif path and os.path.exists(path):
+                                        b2 = G.bitmap_from_path(path)
+                                        img.Source = b2
+                                        set_caption(label)
+                                    else:
+                                        set_caption("No image")
+                                except Exception:
+                                    pass
+                            # Marshal onto the UI thread via the dialog's helper
+                            # (also guards against the main form being closed).
+                            self._invoke_ui(apply_)
+                        try:
+                            G.fetch_full_item_async(token, req_id, on_done)
+                        except Exception as ex:
+                            set_caption("Load failed.")
+                            _trace("viewer.fetch SWALLOWED {}".format(ex))
+                        return
+                    # Nothing to show.
+                    img.Source = None
+                    set_caption("No image")
+                except Exception as ex:
+                    _trace("viewer.show_current SWALLOWED {}".format(ex))
+
+            def go_prev(*_a):
+                try:
+                    if state["idx"] > 0:
+                        state["idx"] -= 1
+                        show_current()
+                except Exception as ex:
+                    _trace("viewer.go_prev SWALLOWED {}".format(ex))
+
+            def go_next(*_a):
+                try:
+                    if state["idx"] < (len(rows) - 1):
+                        state["idx"] += 1
+                        show_current()
+                except Exception as ex:
+                    _trace("viewer.go_next SWALLOWED {}".format(ex))
+
+            def toggle_mode(*_a):
+                try:
+                    state["mode"] = ("original" if state["mode"] == "result"
+                                     else "result")
+                    show_current()
+                except Exception as ex:
+                    _trace("viewer.toggle_mode SWALLOWED {}".format(ex))
+
+            def do_close(*_a):
+                try:
+                    win.Close()
+                except Exception:
+                    pass
+
+            bt_prev.Click += lambda s, a: go_prev()
+            bt_next.Click += lambda s, a: go_next()
+            bt_toggle.Click += lambda s, a: toggle_mode()
+            bt_close.Click += lambda s, a: do_close()
+
+            def on_key(s, a):
+                try:
+                    k = a.Key
+                    if k == Key.Left:
+                        go_prev()
+                        a.Handled = True
+                    elif k == Key.Right:
+                        go_next()
+                        a.Handled = True
+                    elif k == Key.Tab:
+                        toggle_mode()
+                        a.Handled = True
+                    elif k == Key.Escape:
+                        a.Handled = True
+                        do_close()
+                except Exception as ex:
+                    _trace("viewer.on_key SWALLOWED {}".format(ex))
+
+            win.KeyDown += on_key
+
+            show_current()
+            # Modal relative to the dialog; viewer owns its own message loop.
+            win.ShowDialog()
+        except Exception as ex:
+            _trace("_open_image_viewer SWALLOWED {}".format(ex))
+            try:
+                self.status_label.Text = "Viewer failed: {}".format(str(ex)[:150])
+            except Exception:
+                pass
 
     @ERROR_HANDLE.try_catch_error()
     def row_save_Click(self, sender, e):
@@ -1737,14 +2086,28 @@ class AiRenderForm(WPFWindow):
         self._update_active_jobs_label()
 
     def _ctx_open_studio(self, row):
+        # Feature 3 (2026-06-04): the menu used to silent-return when the row
+        # had no cloud gallery_id (rows not yet uploaded), so the user saw
+        # nothing happen. Now we explain why, and surface any open failure.
         gallery_id = (row.cloud_item or {}).get("id") if row.cloud_item else (
             row.job_ref.gallery_id if row.job_ref else None)
         if not gallery_id:
+            self.status_label.Text = ("This render isn't in the cloud Gallery yet "
+                                      "- enable Auto-save or wait for upload.")
             return
+        # Route confirmed 2026-06-04 against EnneadTab-RenderPolisher source:
+        # there is NO per-item deep-link. The app (next.config.ts basePath
+        # removed 2026-04-02, standalone at ennead-ai.com root) exposes page
+        # routes /home /studio /museum /about /contact and NO /gallery; the
+        # /studio page renders the user's whole cloud gallery and does not read
+        # an item id from the URL (no searchParams/[id] route). So the prior
+        # /gallery/<id> guess 404'd. Open /studio - the user lands on the
+        # gallery and finds the item there.
         try:
-            webbrowser.open("{}/gallery/{}".format(STUDIO_URL, gallery_id))
-        except Exception:
-            pass
+            webbrowser.open("{}/studio".format(STUDIO_URL))
+            self.status_label.Text = "Opening your Gallery in ennead-ai.com Studio..."
+        except Exception as ex:
+            self.status_label.Text = "Couldn't open browser: {}".format(str(ex)[:150])
 
     def _ctx_remove_local(self, row):
         # Remove only the local files under this job's folder (don't touch cloud).

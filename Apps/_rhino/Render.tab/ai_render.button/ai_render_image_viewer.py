@@ -265,6 +265,19 @@ def _load_bitmap(path):
 def _render_current(state):
     n = len(state.paths)
     path = state.current_path()
+    # 2026-06-04 diagnostic: the trace logs only bmp dimensions, so an
+    # Input<->Result swap that loads two different files of identical size
+    # is indistinguishable from a swap that silently falls back to the same
+    # file (alternates[idx] is None). Log the RESOLVED path + alt state so a
+    # re-captured trace can tell "toggle works" from "toggle no-ops". Cheap;
+    # remove once the Input/Result toggle root cause is confirmed.
+    try:
+        _trace("render idx={} show_alt={} has_alt={} path={}".format(
+            state.idx, state.show_alternate,
+            state.has_alternate_at(state.idx),
+            os.path.basename(path) if path else None))
+    except Exception:
+        pass
     title = state.current_title() or (
         os.path.basename(path) if path else "(no image)")
     side_label = "Result" if not state.show_alternate else "Input"
@@ -602,12 +615,20 @@ def _build_form(state):
     #     horizontal scroll never triggers in practice
     #   The Scrollable+ExpandContent IS the proven paint-reliable
     #   primitive on Rhino 8 per the carry-forward memory.
-    bar_panel = Eto.Forms.Scrollable()
+    # v5 (2026-06-04): de-Scrollable. The 4-agent review confirmed the
+    # 578-SizeChanged runaway + giant horizontal scrollbar was the
+    # picoe/Eto #477 feedback loop from FOUR nested Scrollable(ExpandContent)
+    # panels resonating. The "only Scrollable paints BackgroundColor on
+    # Rhino 8" premise is stale -- the live view2render_left.py main dialog
+    # paints with plain Panel + RHINO_UI.apply_dark_style. So this inner bar
+    # is now a plain Panel (no ExpandContent -> cannot feed the width loop);
+    # the single `outer` Scrollable below remains the paint-reliable
+    # #1A1A1A backplane and _force_opaque_tree colors the children. The
+    # accepted trade-off (uniform dark grey, no per-bar tint) was already
+    # documented at the outer-Scrollable comment.
+    bar_panel = Eto.Forms.Panel()
     try:
         bar_panel.BackgroundColor = _hex_to_color("#2A2A2A")
-        bar_panel.Border = Eto.Forms.BorderType.None
-        bar_panel.ExpandContentWidth = True
-        bar_panel.ExpandContentHeight = True
         bar_panel.Padding = Eto.Drawing.Padding(0)
     except Exception:
         pass
@@ -680,12 +701,11 @@ def _build_form(state):
     # in v4.5 log: readback returned target color but user reports
     # burgundy still visible). Scrollable+ExpandContent is the
     # proven paint-reliable primitive per carry-forward memory.
-    state.prompt_panel = Eto.Forms.Scrollable()
+    # v5 (2026-06-04): plain Panel, not Scrollable(ExpandContent) -- see the
+    # bar_panel note. Removes one of the four #477 loop contributors.
+    state.prompt_panel = Eto.Forms.Panel()
     try:
         state.prompt_panel.BackgroundColor = _hex_to_color("#222222")
-        state.prompt_panel.Border = Eto.Forms.BorderType.None
-        state.prompt_panel.ExpandContentWidth = True
-        state.prompt_panel.ExpandContentHeight = True
         state.prompt_panel.Padding = Eto.Drawing.Padding(8, 6)
     except Exception:
         pass
@@ -770,11 +790,13 @@ def _build_form(state):
     # Single thin hint line under the controls so the keyboard shortcuts
     # are discoverable without crowding the buttons.
     ctrl.BeginHorizontal()
+    # v5 (2026-06-04): shortened from the full one-line sentence (~722 px
+    # natural width) that was the secondary width driver. The arrow/Tab/P/S
+    # shortcuts are already on every button's ToolTip, so this is just a
+    # thin reminder -- keep it narrow so the control row never exceeds the
+    # viewport.
     hint = Eto.Forms.Label(
-        Text="Left / Right arrows navigate history   |   "
-             "Tab swaps input / result   |   "
-             "P toggles prompt   |   "
-             "S saves   |   Esc closes")
+        Text="< >  history    Tab  in/out    P  prompt    S  save    Esc  close")
     try:
         hint.TextColor = _hex_to_color("#7A7A7A")
         hint.Font = Eto.Drawing.Font(Eto.Drawing.SystemFont.Default, 9)
@@ -799,12 +821,14 @@ def _build_form(state):
     # for paint reliability. Same reasoning as bar_panel and
     # prompt_panel - TableLayout silently ignores BackgroundColor
     # at render time on Rhino 8.
-    ctrl_panel = Eto.Forms.Scrollable()
+    # v5 (2026-06-04): plain Panel, not Scrollable(ExpandContent). This was
+    # the DOMINANT width driver of the loop -- the button row + hint label
+    # sat in an ExpandContentWidth Scrollable whose natural width (2667 px
+    # fixed-point) forced the giant horizontal scrollbar. As a plain Panel it
+    # can no longer feed width back into the outer Scrollable.
+    ctrl_panel = Eto.Forms.Panel()
     try:
         ctrl_panel.BackgroundColor = _hex_to_color("#2A2A2A")
-        ctrl_panel.Border = Eto.Forms.BorderType.None
-        ctrl_panel.ExpandContentWidth = True
-        ctrl_panel.ExpandContentHeight = True
         ctrl_panel.Padding = Eto.Drawing.Padding(0)
     except Exception:
         pass
@@ -1010,6 +1034,27 @@ def _make_drawable_size_handler(state):
         if size_state["count"] <= 5 or sig != size_state["last_size"]:
             _trace("drawable.SizeChanged #{} -> {}".format(
                 size_state["count"], sig))
+        # ----- size-equality loop-breaker (2026-06-03) -----
+        # v4 claimed the rafntor/Drawable pattern was "structurally
+        # loop-free", but the trace log proves otherwise on this Rhino 8
+        # / WPF build: SizeChanged keeps firing at a ~170ms cadence with
+        # an IDENTICAL size signature (2219x603), each fire calling
+        # _init_transform + Invalidate, and Invalidate re-triggers
+        # SizeChanged - the picoe/Eto #477 feedback loop the decision
+        # history identified but never guarded in the v4 handler. The
+        # continuous Invalidate storm starves the WPF dispatcher so
+        # button Click / KeyDown events back up and prev/next/swap feel
+        # dead, while the relayout churn mispositions the image.
+        # The decision history (see _make_resize_handler v3 notes)
+        # already named the size-equality guard as "the actual
+        # loop-breaker" - apply it here. We rebuild the transform +
+        # Invalidate ONLY when the size genuinely changed (or no
+        # transform has been built yet). Idempotent same-size refires
+        # become true no-ops, so the loop cannot sustain itself.
+        if (sig is not None
+                and sig == size_state["last_size"]
+                and state._transform is not None):
+            return
         size_state["last_size"] = sig
         if state.loaded_bmp is None:
             return

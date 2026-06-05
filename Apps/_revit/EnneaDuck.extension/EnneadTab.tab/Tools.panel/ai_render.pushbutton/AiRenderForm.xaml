@@ -4,8 +4,8 @@
         Foreground="#000"
         Margin="0"
         Width="1100" MinWidth="900"
-        Height="780" MinHeight="560"
-        MaxHeight="980"
+        Height="980" MinHeight="760"
+        MaxHeight="1120"
         ShowInTaskbar="True"
         BorderThickness="0"
         Background="{x:Null}"
@@ -178,6 +178,147 @@
             <Setter Property="Background" Value="#FF5A5A5A"/>
             <Setter Property="Height" Value="1"/>
         </Style>
+
+        <!-- ============== GALLERY ROW TEMPLATES (small / large thumbnail) ==============
+             Two keyed DataTemplates for the gallery ListView. The "Large" toggle in the
+             filter bar swaps lv_gallery.ItemTemplate between these via FindResource in
+             toggle_large_thumbs_Changed (code-behind). GalleryRowSmall is the default
+             (thumbnails 84x60); GalleryRowLarge doubles them to 168x120 and gives the
+             info/status columns more room. Every binding + Click handler is identical
+             between the two so no code-behind handler depends on which is active. -->
+        <DataTemplate x:Key="GalleryRowSmall">
+            <Grid Margin="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="92"/>   <!-- original -->
+                    <ColumnDefinition Width="92"/>   <!-- result -->
+                    <ColumnDefinition Width="*"/>    <!-- info -->
+                    <ColumnDefinition Width="150"/>  <!-- status/timer -->
+                    <ColumnDefinition Width="150"/>  <!-- inline Save + Copy + More -->
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Background="#FF222222" Width="84" Height="60">
+                    <Image Source="{Binding OriginalThumb}" Stretch="UniformToFill"
+                           MouseLeftButtonUp="row_view_original_Click"/>
+                </Border>
+                <Border Grid.Column="1" Background="#FF222222" Width="84" Height="60">
+                    <Grid>
+                        <Image Source="{Binding ResultThumb}" Stretch="UniformToFill"
+                               MouseLeftButtonUp="row_view_result_Click"/>
+                        <TextBlock Text="{Binding KindIcon}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                   Margin="0,0,3,1" FontSize="14"
+                                   Foreground="White"/>
+                    </Grid>
+                </Border>
+                <Grid Grid.Column="2" Margin="8,0,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="{Binding StyleName}" FontWeight="Bold" FontSize="12"/>
+                    <TextBlock Grid.Row="1" Text="{Binding PromptPreview}"
+                               Foreground="{StaticResource MutedTextColor}"
+                               FontSize="11" TextWrapping="Wrap"
+                               MaxHeight="30" TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Top" Margin="0,2,0,0"/>
+                    <TextBlock Grid.Row="2" Text="{Binding Subtitle}"
+                               Foreground="{StaticResource DimTextColor}"
+                               FontSize="10" VerticalAlignment="Bottom"/>
+                </Grid>
+                <StackPanel Grid.Column="3" VerticalAlignment="Bottom">
+                    <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="Bold"
+                               Foreground="{Binding StatusColor}"/>
+                    <ProgressBar Visibility="{Binding ProgressVisibility}"
+                                 Value="{Binding ProgressPct}" Maximum="100"
+                                 Height="6" Margin="0,2,8,0"
+                                 IsIndeterminate="{Binding ProgressIndeterminate}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <Button Style="{StaticResource SmallButton}"
+                            Content="Save" FontSize="10" Width="44"
+                            ToolTip="Save result to disk"
+                            Visibility="{Binding SaveVisibility}"
+                            Click="row_save_Click"/>
+                    <Button Style="{StaticResource SmallButton}"
+                            Content="Copy" FontSize="10" Width="44"
+                            ToolTip="Copy image to clipboard"
+                            Visibility="{Binding SaveVisibility}"
+                            Click="row_copy_Click"/>
+                    <Button Style="{StaticResource SmallButton}"
+                            Content="More" FontSize="10" Width="44"
+                            ToolTip="More actions: Show prompt, Re-run, Animate, Open in Studio, Delete..."
+                            Click="row_more_Click"/>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <DataTemplate x:Key="GalleryRowLarge">
+            <Grid Margin="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="176"/>  <!-- original -->
+                    <ColumnDefinition Width="176"/>  <!-- result -->
+                    <ColumnDefinition Width="*"/>    <!-- info -->
+                    <ColumnDefinition Width="150"/>  <!-- status/timer -->
+                    <ColumnDefinition Width="150"/>  <!-- inline Save + Copy + More -->
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0" Background="#FF222222" Width="168" Height="120">
+                    <Image Source="{Binding OriginalThumb}" Stretch="UniformToFill"
+                           MouseLeftButtonUp="row_view_original_Click"/>
+                </Border>
+                <Border Grid.Column="1" Background="#FF222222" Width="168" Height="120">
+                    <Grid>
+                        <Image Source="{Binding ResultThumb}" Stretch="UniformToFill"
+                               MouseLeftButtonUp="row_view_result_Click"/>
+                        <TextBlock Text="{Binding KindIcon}"
+                                   HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                                   Margin="0,0,4,2" FontSize="18"
+                                   Foreground="White"/>
+                    </Grid>
+                </Border>
+                <Grid Grid.Column="2" Margin="8,0,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="{Binding StyleName}" FontWeight="Bold" FontSize="13"/>
+                    <TextBlock Grid.Row="1" Text="{Binding PromptPreview}"
+                               Foreground="{StaticResource MutedTextColor}"
+                               FontSize="11" TextWrapping="Wrap"
+                               MaxHeight="72" TextTrimming="CharacterEllipsis"
+                               VerticalAlignment="Top" Margin="0,2,0,0"/>
+                    <TextBlock Grid.Row="2" Text="{Binding Subtitle}"
+                               Foreground="{StaticResource DimTextColor}"
+                               FontSize="10" VerticalAlignment="Bottom"/>
+                </Grid>
+                <StackPanel Grid.Column="3" VerticalAlignment="Bottom">
+                    <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="Bold"
+                               Foreground="{Binding StatusColor}"/>
+                    <ProgressBar Visibility="{Binding ProgressVisibility}"
+                                 Value="{Binding ProgressPct}" Maximum="100"
+                                 Height="6" Margin="0,2,8,0"
+                                 IsIndeterminate="{Binding ProgressIndeterminate}"/>
+                </StackPanel>
+                <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Bottom">
+                    <Button Style="{StaticResource SmallButton}"
+                            Content="Save" FontSize="10" Width="44"
+                            ToolTip="Save result to disk"
+                            Visibility="{Binding SaveVisibility}"
+                            Click="row_save_Click"/>
+                    <Button Style="{StaticResource SmallButton}"
+                            Content="Copy" FontSize="10" Width="44"
+                            ToolTip="Copy image to clipboard"
+                            Visibility="{Binding SaveVisibility}"
+                            Click="row_copy_Click"/>
+                    <Button Style="{StaticResource SmallButton}"
+                            Content="More" FontSize="10" Width="44"
+                            ToolTip="More actions: Show prompt, Re-run, Animate, Open in Studio, Delete..."
+                            Click="row_more_Click"/>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
     </Window.Resources>
 
     <Border BorderThickness="1" CornerRadius="15" Margin="20" Name="main_border"
@@ -219,8 +360,18 @@
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <Button Style="{StaticResource LinkButton}" Content="Open ennead-ai.com &gt;"
                             Click="open_web_Click" Margin="0,0,12,0"/>
-                    <Button Content="✕" Click="close_Click" Width="28"
-                            Background="Transparent" Foreground="{StaticResource MutedTextColor}"/>
+                    <!-- Sign out / switch account (2026-06-04): placed by the ennead-ai.com
+                         link per user preference. -->
+                    <Button x:Name="sign_out_button" Style="{StaticResource LinkButton}"
+                            Content="Sign out" Click="sign_out_Click" Margin="0,0,12,0"
+                            ToolTip="Sign out and clear the cached login, then sign in again to switch account (e.g. if the gallery shows the wrong/empty history)."/>
+                    <!-- 2026-06-04: explicit text "Close" button. The prior ✕ glyph
+                         rendered as an unrecognizable sliver under the window's RomanD
+                         font ("missing close button"); a text label reads clearly and
+                         RomanD renders letters fine. -->
+                    <Button Content="Close" Click="close_Click" ToolTip="Close this window"
+                            Width="64" Height="28" FontSize="12" FontWeight="Bold"
+                            Background="#33FFFFFF" Foreground="#FFEDEDED"/>
                 </StackPanel>
             </Grid>
 
@@ -414,6 +565,7 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Grid.Column="0" x:Name="gallery_header"
                                Text="Gallery"
@@ -422,16 +574,24 @@
                                Text="loading..." Margin="8,0,0,0"
                                FontSize="11" VerticalAlignment="Center"
                                Foreground="{StaticResource MutedTextColor}"/>
-                    <ComboBox Grid.Column="2" x:Name="cb_date_filter" Width="140"
+                    <!-- 2026-06-04: big/small thumbnail toggle. Swaps lv_gallery.ItemTemplate
+                         between GalleryRowSmall (default) and GalleryRowLarge in code-behind
+                         (toggle_large_thumbs_Changed). Session-state only (no prefs helper). -->
+                    <CheckBox Grid.Column="2" x:Name="cb_large_thumbs" Content="Large"
+                              Margin="4,0" VerticalAlignment="Center"
+                              Checked="toggle_large_thumbs_Changed"
+                              Unchecked="toggle_large_thumbs_Changed"
+                              ToolTip="Show larger gallery thumbnails"/>
+                    <ComboBox Grid.Column="3" x:Name="cb_date_filter" Width="140"
                               Margin="4,0" VerticalAlignment="Center"
                               SelectionChanged="date_filter_Changed"/>
-                    <TextBox Grid.Column="3" x:Name="tbox_search" Width="180" Height="22"
+                    <TextBox Grid.Column="4" x:Name="tbox_search" Width="180" Height="22"
                              Margin="4,0" VerticalAlignment="Center"
                              TextChanged="search_Changed"
                              ToolTip="Search prompt text or view name"/>
-                    <Button Grid.Column="4" Style="{StaticResource SmallButton}"
-                            Content="⟳ Refresh" Click="refresh_gallery_Click"/>
                     <Button Grid.Column="5" Style="{StaticResource SmallButton}"
+                            Content="⟳ Refresh" Click="refresh_gallery_Click"/>
+                    <Button Grid.Column="6" Style="{StaticResource SmallButton}"
                             x:Name="bt_active_jobs" Content="Active jobs (0)"
                             Click="scroll_to_active_Click"/>
                 </Grid>
@@ -448,9 +608,14 @@
                     </StackPanel>
                 </Border>
 
-                <!-- Gallery list (virtualized) -->
-                <Border Grid.Row="1" Background="#FF2A2A2A" CornerRadius="6">
+                <!-- Gallery list (virtualized). MinHeight floors the row so the
+                     tall left capture column can't starve the history list to a
+                     sliver (2026-06-04: user reported "cannot see history lists"
+                     — the gallery *-row was collapsing under the controls at
+                     default window height). -->
+                <Border Grid.Row="1" Background="#FF2A2A2A" CornerRadius="6" MinHeight="280">
                     <ListView x:Name="lv_gallery" Background="Transparent" BorderThickness="0"
+                              ItemTemplate="{StaticResource GalleryRowSmall}"
                               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                               ScrollViewer.VerticalScrollBarVisibility="Auto"
                               VirtualizingStackPanel.IsVirtualizing="True"
@@ -469,73 +634,6 @@
                                 </Style.Triggers>
                             </Style>
                         </ListView.ItemContainerStyle>
-                        <ListView.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="4">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="92"/>   <!-- original -->
-                                        <ColumnDefinition Width="92"/>   <!-- result -->
-                                        <ColumnDefinition Width="*"/>    <!-- info -->
-                                        <ColumnDefinition Width="150"/>  <!-- status/timer -->
-                                        <ColumnDefinition Width="100"/>  <!-- inline save + more -->
-                                    </Grid.ColumnDefinitions>
-
-                                    <Border Grid.Column="0" Background="#FF222222" Width="84" Height="60">
-                                        <Image Source="{Binding OriginalThumb}" Stretch="UniformToFill"
-                                               MouseLeftButtonUp="row_view_original_Click"/>
-                                    </Border>
-                                    <Border Grid.Column="1" Background="#FF222222" Width="84" Height="60">
-                                        <Grid>
-                                            <Image Source="{Binding ResultThumb}" Stretch="UniformToFill"
-                                                   MouseLeftButtonUp="row_view_result_Click"/>
-                                            <TextBlock Text="{Binding KindIcon}"
-                                                       HorizontalAlignment="Right" VerticalAlignment="Bottom"
-                                                       Margin="0,0,3,1" FontSize="14"
-                                                       Foreground="White"/>
-                                        </Grid>
-                                    </Border>
-                                    <Grid Grid.Column="2" Margin="8,0,0,0">
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="*"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-                                        <TextBlock Grid.Row="0" Text="{Binding StyleName}" FontWeight="Bold" FontSize="12"/>
-                                        <TextBlock Grid.Row="1" Text="{Binding PromptPreview}"
-                                                   Foreground="{StaticResource MutedTextColor}"
-                                                   FontSize="11" TextWrapping="Wrap"
-                                                   VerticalAlignment="Top" Margin="0,2,0,0"/>
-                                        <TextBlock Grid.Row="2" Text="{Binding Subtitle}"
-                                                   Foreground="{StaticResource DimTextColor}"
-                                                   FontSize="10" VerticalAlignment="Bottom"/>
-                                    </Grid>
-                                    <StackPanel Grid.Column="3" VerticalAlignment="Bottom">
-                                        <TextBlock Text="{Binding StatusText}" FontSize="11" FontWeight="Bold"
-                                                   Foreground="{Binding StatusColor}"/>
-                                        <ProgressBar Visibility="{Binding ProgressVisibility}"
-                                                     Value="{Binding ProgressPct}" Maximum="100"
-                                                     Height="6" Margin="0,2,8,0"
-                                                     IsIndeterminate="{Binding ProgressIndeterminate}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="4" Orientation="Horizontal" VerticalAlignment="Bottom">
-                                        <Button Style="{StaticResource SmallButton}"
-                                                Content="Save" FontSize="10" Width="44"
-                                                ToolTip="Save result to disk"
-                                                Visibility="{Binding SaveVisibility}"
-                                                Click="row_save_Click"/>
-                                        <Button Style="{StaticResource SmallButton}"
-                                                Content="Copy" FontSize="10" Width="44"
-                                                ToolTip="Copy image to clipboard"
-                                                Visibility="{Binding SaveVisibility}"
-                                                Click="row_copy_Click"/>
-                                        <Button Style="{StaticResource SmallButton}"
-                                                Content="More" FontSize="10" Width="44"
-                                                ToolTip="More actions: Show prompt, Re-run, Animate, Open in Studio, Delete..."
-                                                Click="row_more_Click"/>
-                                    </StackPanel>
-                                </Grid>
-                            </DataTemplate>
-                        </ListView.ItemTemplate>
                     </ListView>
                 </Border>
             </Grid>
@@ -545,6 +643,7 @@
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
@@ -565,6 +664,11 @@
                            Text="Quota: -" Margin="12,0,0,0" VerticalAlignment="Center"
                            FontSize="11" Foreground="{StaticResource DimTextColor}"
                            ToolTip="Office-wide daily render quota"/>
+                <!-- Build stamp (2026-06-04): visible so a stale loaded copy is obvious. -->
+                <TextBlock Grid.Column="4" x:Name="build_label"
+                           Text="build -" Margin="12,0,0,0" VerticalAlignment="Center"
+                           FontSize="10" Foreground="{StaticResource DimTextColor}"
+                           ToolTip="Build timestamp of the running ai_render_script.py. If this looks old, Revit is loading a stale copy."/>
             </Grid>
         </Grid>
     </Border>
