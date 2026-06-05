@@ -1,14 +1,15 @@
 @echo off
 REM ===================================================================
 REM  EnneadTab Doctor - user-facing diagnostic script
-REM  Version: 1.0.0   Released: 2026-04-27
+REM  Version: 1.1.0   Released: 2026-06-05
 REM
 REM  Run this when EnneadTab is misbehaving in Revit/Rhino. It checks
 REM  the most common issues, prints a friendly report, and saves a copy
 REM  to your Desktop you can attach to a support email.
 REM
-REM  This script does NOT change anything. It only looks at your setup.
-REM  It runs as YOU (no admin required).
+REM  If it finds a broken install, it will download (when needed) and run
+REM  the EnneadTab OS installer to repair it -- the only thing it changes.
+REM  Everything else is read-only. It runs as YOU (no admin required).
 REM
 REM  Usage:
 REM     Double-click enneadtab-doctor.bat
@@ -17,8 +18,8 @@ REM ===================================================================
 
 setlocal enabledelayedexpansion
 
-set "DOCTOR_VERSION=1.0.0"
-set "DOCTOR_RELEASE=2026-04-27"
+set "DOCTOR_VERSION=1.1.0"
+set "DOCTOR_RELEASE=2026-06-05"
 
 REM Resolve "this script's folder" once. Trailing backslash matters.
 set "DOCTOR_DIR=%~dp0"

@@ -3,9 +3,13 @@
 #  Invoked by Installation\enneadtab-doctor.bat
 #
 #  Design rules (do not relax without reading the comments):
-#    * No auto-fix. Diagnostic only.
+#    * Diagnose first; the ONLY repair action allowed is running the
+#      EnneadTab OS installer (downloading it first if it is missing) when an
+#      installer-fixable check FAILs -- see the Auto-repair section near the
+#      end (added per designtech 2026-06-05). No other check mutates anything.
 #    * No UAC elevation. Stay user-mode (per memory
-#      feedback_uac_elevation_loses_user).
+#      feedback_uac_elevation_loses_user) -- the installer itself is a
+#      user-mode install, so the auto-repair keeps that promise.
 #    * Side-effect verification, not exit codes (per memory
 #      feedback_exit_code_not_proof_of_success).
 #    * If a check is skipped because a precondition is missing,
@@ -112,6 +116,22 @@ $DumpFolder   = Join-Path $EcoSysFolder 'Dump'
 $ComputerName = $env:COMPUTERNAME
 $UserName     = $env:USERNAME
 
+# --- OS installer location + remediation hint ----------------------------
+# Many checks below tell the user to run the OS installer. But if the
+# installer EXE itself is missing from the Installation folder, "run the
+# installer" is circular, useless advice. In that case point the user to the
+# wiki download page instead (per designtech, 2026-06-05) -- the wiki
+# installation page is the single canonical place to get the installer.
+$DoctorDir       = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Definition }
+$InstallationDir = Split-Path -Parent $DoctorDir
+$OsInstallerExe  = Join-Path $InstallationDir 'EnneadTab_OS_Installer.exe'
+$WikiInstallUrl  = 'https://enneadtab.com/wiki/installation'
+if (Test-Path -LiteralPath $OsInstallerExe) {
+    $InstallerHint = "Run Installation\EnneadTab_OS_Installer.exe."
+} else {
+    $InstallerHint = "The EnneadTab installer is not on this PC. Open the EnneadTab wiki to download it, then run it: $WikiInstallUrl"
+}
+
 # --- Header --------------------------------------------------------------
 
 $now = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
@@ -123,7 +143,8 @@ Write-Line "Report file:   $ReportFile"
 if ($SelfTest) { Write-Line "Mode:          SELF-TEST (forced failures, do not interpret as real)" Yellow }
 Write-Line ''
 Write-Line "What this is:  a quick health check of your EnneadTab install." DarkGray
-Write-Line "What this is NOT: a fixer. Nothing here changes your machine." DarkGray
+Write-Line "If it finds a broken install, it will download (if needed) and run" DarkGray
+Write-Line "the EnneadTab OS installer to repair it. Nothing else is changed." DarkGray
 Write-Line ''
 Write-Line ('-' * 67) Cyan
 Write-Line "Running checks..." Cyan
@@ -134,7 +155,7 @@ Write-Line ('-' * 67) Cyan
 if ($SelfTest) {
     Add-Result -Title "EnneadTab folder is in place" -Status FAIL `
         -Detail "SELF-TEST: simulating missing core folder" `
-        -NextStep "Re-run the EnneadTab OS Installer (Installation\EnneadTab_OS_Installer.exe)."
+        -NextStep $InstallerHint
 } else {
     if (Test-Path -LiteralPath $CoreFolder) {
         $coreFiles = @(Get-ChildItem -LiteralPath $CoreFolder -File -ErrorAction SilentlyContinue)
@@ -144,12 +165,12 @@ if ($SelfTest) {
         } else {
             Add-Result -Title "EnneadTab folder is in place" -Status FAIL `
                 -Detail "Folder $CoreFolder exists but only has $($coreFiles.Count) files (expected dozens)." `
-                -NextStep "Run Installation\EnneadTab_OS_Installer.exe to refresh the install."
+                -NextStep $InstallerHint
         }
     } else {
         Add-Result -Title "EnneadTab folder is in place" -Status FAIL `
             -Detail "Cannot find $CoreFolder. EnneadTab is not installed for this user." `
-            -NextStep "Run Installation\EnneadTab_OS_Installer.exe to install EnneadTab."
+            -NextStep $InstallerHint
     }
 }
 
@@ -342,7 +363,7 @@ if ($SelfTest) {
             if ($stale.Count -gt 0) { $detail += "`nStale tasks: $($stale -join ', ')" }
             Add-Result -Title "Background tasks are scheduled" -Status FAIL `
                 -Detail $detail `
-                -NextStep "Run Installation\EnneadTab_OS_Installer.exe (it re-registers all background tasks)."
+                -NextStep "$InstallerHint It re-registers all background tasks."
         } elseif ($stale.Count -gt 0) {
             $detail = "Stale tasks: $($stale -join ', ')"
             if ($missingRecent.Count -gt 0) { $detail += "`nMissing (recently added): $($missingRecent -join ', ')" }
@@ -353,7 +374,7 @@ if ($SelfTest) {
             # Only recent tasks missing - almost certainly because auto-updater hasn't synced.
             Add-Result -Title "Background tasks are scheduled" -Status WARN `
                 -Detail "Recently-added tasks not yet on this machine: $($missingRecent -join ', '). The OS installer will create them next time it runs." `
-                -NextStep "If the auto-updater check above is OK, no action needed. Otherwise run Installation\EnneadTab_OS_Installer.exe."
+                -NextStep "If the auto-updater check above is OK, no action needed. Otherwise: $InstallerHint"
         }
     }
 }
@@ -475,23 +496,23 @@ if ($SelfTest) {
 if ($SelfTest) {
     Add-Result -Title "EnneadTab Python engine is intact" -Status FAIL `
         -Detail "SELF-TEST: simulating missing python.exe in _engine" `
-        -NextStep "Run Installation\EnneadTab_OS_Installer.exe."
+        -NextStep $InstallerHint
 } else {
     if (-not (Test-Path -LiteralPath $EngineFolder)) {
         Add-Result -Title "EnneadTab Python engine is intact" -Status WARN `
             -Detail "Engine folder $EngineFolder is missing. Some EnneadTab features (mainly AI tooling) will not work." `
-            -NextStep "Run Installation\EnneadTab_OS_Installer.exe."
+            -NextStep $InstallerHint
     } else {
         $pyExe   = Join-Path $EngineFolder 'python.exe'
         $pyDll   = @(Get-ChildItem -LiteralPath $EngineFolder -Filter 'python3*.dll' -File -ErrorAction SilentlyContinue) | Select-Object -First 1
         if (-not (Test-Path -LiteralPath $pyExe)) {
             Add-Result -Title "EnneadTab Python engine is intact" -Status FAIL `
                 -Detail "Engine folder exists but python.exe is missing at $pyExe." `
-                -NextStep "Run Installation\EnneadTab_OS_Installer.exe."
+                -NextStep $InstallerHint
         } elseif (-not $pyDll) {
             Add-Result -Title "EnneadTab Python engine is intact" -Status FAIL `
                 -Detail "Engine folder has python.exe but no python3*.dll alongside. The runtime will fail to load." `
-                -NextStep "Run Installation\EnneadTab_OS_Installer.exe."
+                -NextStep $InstallerHint
         } else {
             Add-Result -Title "EnneadTab Python engine is intact" -Status OK `
                 -Detail "Found python.exe and $($pyDll.Name) in $EngineFolder."
@@ -508,7 +529,7 @@ if ($SelfTest) {
 if ($SelfTest) {
     Add-Result -Title "Background-task EXE files are present" -Status FAIL `
         -Detail "SELF-TEST: simulating one missing EXE and one 0-byte EXE" `
-        -NextStep "Run Installation\EnneadTab_OS_Installer.exe."
+        -NextStep $InstallerHint
 } else {
     # Core EXEs that have been in EA_Dist for many months. Missing -> FAIL.
     $coreExes = @(
@@ -527,7 +548,7 @@ if ($SelfTest) {
     if (-not (Test-Path -LiteralPath $ExeFolder)) {
         Add-Result -Title "Background-task EXE files are present" -Status FAIL `
             -Detail "ExeProducts folder $ExeFolder does not exist. EnneadTab background tasks cannot run." `
-            -NextStep "Run Installation\EnneadTab_OS_Installer.exe."
+            -NextStep $InstallerHint
     } else {
         $missingCore   = New-Object System.Collections.Generic.List[string]
         $missingRecent = New-Object System.Collections.Generic.List[string]
@@ -561,13 +582,13 @@ if ($SelfTest) {
             }
             Add-Result -Title "Background-task EXE files are present" -Status FAIL `
                 -Detail $detail `
-                -NextStep "Run Installation\EnneadTab_OS_Installer.exe."
+                -NextStep $InstallerHint
         } else {
             # Only recently-added EXEs are missing. Almost certainly because
             # the auto-updater hasn't synced yet on this machine.
             Add-Result -Title "Background-task EXE files are present" -Status WARN `
                 -Detail "Recently-added EXEs not yet on this machine: $($missingRecent -join ', '). The auto-updater will fetch them next time it syncs." `
-                -NextStep "If the auto-updater check above is OK, no action needed - just wait. Otherwise run Installation\EnneadTab_OS_Installer.exe to force a sync."
+                -NextStep "If the auto-updater check above is OK, no action needed - just wait. Otherwise: $InstallerHint"
         }
     }
 }
@@ -614,6 +635,26 @@ if ($SelfTest) {
     }
 }
 
+# --- Check 12: the OS installer itself is available for self-repair ------
+# A missing installer EXE is CRITICAL (per designtech 2026-06-05): it is the
+# machine's self-heal tool, so its absence must elevate to the auto-repair
+# section below (which downloads it), not sit as a passive note. FAIL when the
+# installer next to this tool is gone.
+if ($SelfTest) {
+    Add-Result -Title "EnneadTab OS installer is available" -Status FAIL `
+        -Detail "SELF-TEST: simulating a missing OS installer EXE (critical)" `
+        -NextStep $InstallerHint
+} else {
+    if (Test-Path -LiteralPath $OsInstallerExe) {
+        Add-Result -Title "EnneadTab OS installer is available" -Status OK `
+            -Detail "Found the installer next to this tool -- the doctor can self-repair from it."
+    } else {
+        Add-Result -Title "EnneadTab OS installer is available" -Status FAIL `
+            -Detail "Critical: the OS installer EXE is not on this PC ($OsInstallerExe). Without it the install cannot self-repair locally -- elevating to auto-repair (download) below." `
+            -NextStep $InstallerHint
+    }
+}
+
 # --- Summary -------------------------------------------------------------
 
 Write-Line ''
@@ -642,6 +683,56 @@ if ($fail -gt 0 -or $warn -gt 0) {
         if ($r.Status -eq 'FAIL' -or $r.Status -eq 'WARN') {
             Write-Line ("[{0}] {1}" -f $r.Status, $r.Title) Magenta
             if ($r.NextStep) { Write-Line ("  -> {0}" -f $r.NextStep) Magenta }
+        }
+    }
+}
+
+# --- Auto-repair: download + run the OS installer ONLY when it is MISSING -----
+# Per designtech (2026-06-05): a missing installer EXE is the ONE critical
+# condition that elevates to auto-repair. EVERY OTHER diagnosis stays read-only
+# and just presents its action item to the user -- the doctor does NOT auto-run
+# the installer for a broken folder / engine / EXE / pyRevit / network finding.
+# Only when the installer itself is gone does the doctor fetch the SAME EXE the
+# wiki serves and run it. User-mode, no elevation. The only step that changes
+# the machine. Off in self-test.
+$installerMissing = -not (Test-Path -LiteralPath $OsInstallerExe)
+
+if (-not $SelfTest -and $installerMissing) {
+    Write-Header "Auto-repair: restoring the EnneadTab OS installer"
+    $installerToRun = $null
+
+    # We only reach here when the installer is missing -- download the same EXE
+    # the wiki download page serves, to a temp file, then run it below.
+    $dlUrl = 'https://raw.githubusercontent.com/Ennead-Architects-LLP/EA_Dist/main/Installation/EnneadTab_OS_Installer.exe'
+    $dest  = Join-Path $env:TEMP 'EnneadTab_OS_Installer.exe'
+    Write-Line "The OS installer is not on this PC -- downloading it now..." Cyan
+    Write-Line "    from: $dlUrl" DarkGray
+    try {
+        $oldPref = $ProgressPreference
+        $ProgressPreference = 'SilentlyContinue'   # skip the slow per-byte progress bar
+        Invoke-WebRequest -Uri $dlUrl -OutFile $dest -UseBasicParsing -TimeoutSec 180 -ErrorAction Stop
+        $ProgressPreference = $oldPref
+        $sz = (Get-Item -LiteralPath $dest -ErrorAction Stop).Length
+        if ($sz -lt 102400) { throw "the downloaded file is only $sz bytes, which looks incomplete" }
+        $installerToRun = $dest
+        Write-Line ("Downloaded OK ({0:N0} bytes)." -f $sz) Green
+    } catch {
+        Write-Line "Automatic download failed: $($_.Exception.Message)" Red
+        Write-Line "Please download and run the installer yourself from the wiki:" Magenta
+        Write-Line "    $WikiInstallUrl" Magenta
+    }
+
+    if ($installerToRun) {
+        Write-Line "Launching the installer to repair your EnneadTab install..." Cyan
+        Write-Line "(This is the only step that changes your machine -- follow any prompts it shows.)" DarkGray
+        try {
+            $proc = Start-Process -FilePath $installerToRun -PassThru -Wait -ErrorAction Stop
+            $col = if ($proc.ExitCode -eq 0) { 'Green' } else { 'Yellow' }
+            Write-Line ("Installer finished (exit code {0})." -f $proc.ExitCode) $col
+            Write-Line "Re-run this doctor to confirm the problems are now fixed." DarkGray
+        } catch {
+            Write-Line "Could not launch the installer: $($_.Exception.Message)" Red
+            Write-Line "Run it yourself: $installerToRun" Magenta
         }
     }
 }
