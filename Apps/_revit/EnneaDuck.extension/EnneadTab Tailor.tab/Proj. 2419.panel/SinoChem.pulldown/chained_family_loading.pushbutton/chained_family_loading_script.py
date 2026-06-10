@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Loads open family documents into each other in a predefined dependency order for the selected SinoChem design scenario (reveal, tower, or podium). Optionally closes each source family after it has been loaded into its target."
 __title__ = "Chained Family Loading"
 
 import proDUCKtion # pyright: ignore 

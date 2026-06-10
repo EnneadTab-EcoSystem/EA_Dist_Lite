@@ -1,6 +1,6 @@
 
 __title__ = "SimplifyBlocks"
-__doc__ = "This button does SimplifyBlocks when left click"
+__doc__ = "Reduce mesh density inside block definitions to lighten heavy models. Select block instances and set a target face percentage with the slider; each unique block definition is simplified once and the change applies to every instance."
 
 
 from EnneadTab import ERROR_HANDLE, LOG

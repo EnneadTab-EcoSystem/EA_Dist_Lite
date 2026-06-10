@@ -3,7 +3,7 @@
 
 
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Developer test utility for the REVIT_SCHEMA extensible storage helpers. Gets or creates a sample schema and writes a test value onto every grid in the document. Not intended for production use."
 __title__ = "test_schema"
 
 # from pyrevit import forms #

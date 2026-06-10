@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "PlaceHolder Documentation, To Be Updated."
+__doc__ = "Compare Revit area data against the NYU HQ program requirement Excel, update color schemes and area parameters from the match results, and open a consolidated HTML fulfillment report. Optionally writes actual design areas back to the Excel DESIGN column and exports department-level matrix spreadsheets to the project file exchange folder."
 __title__ = "Monitor Area"
 
 

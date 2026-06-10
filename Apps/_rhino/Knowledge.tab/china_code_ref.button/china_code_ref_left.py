@@ -1,6 +1,6 @@
 
 __title__ = "ChinaCodeRef"
-__doc__ = "This button does ChinaCodeRef when left click"
+__doc__ = "Browse and open China building code reference PDFs from your local BuildingCode folder. Pick a document from the list to open it, or jump to the folder to add more PDFs. Creates the folder on first run."
 import os
 import subprocess
 from EnneadTab import EXE, FOLDER, ENVIRONMENT, NOTIFICATION

@@ -3,7 +3,7 @@
 
 
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "For each PlanSet 7 view in the Lenox Hill model, set the EC link to display By Linked View using a predefined map of host view to linked view names. Saves the repetitive work of assigning linked views one by one in Visibility/Graphics."
 __title__ = "Assign Linked Views to PlanSet 7"
 
 # from pyrevit import forms #

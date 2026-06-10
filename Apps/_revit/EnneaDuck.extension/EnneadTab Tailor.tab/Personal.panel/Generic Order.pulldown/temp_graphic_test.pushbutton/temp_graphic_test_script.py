@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Developer test utility that creates a bitmap image from sample text and displays it as a temporary in-canvas graphic using the REVIT_VIEW helpers. Not intended for production use."
 __title__ = "Temp Graphic Test"
 
 import proDUCKtion # pyright: ignore 

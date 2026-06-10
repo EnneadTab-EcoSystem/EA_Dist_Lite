@@ -3,7 +3,7 @@
 
 
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "For selected views, update the Title on Sheet by replacing phase codes PH1 through PH5 with their Lenox Hill milestone names such as Existing and Milestone 1-3. Pick views from the current selection or a list."
 __title__ = "Rename Views"
 
 from pyrevit import forms #

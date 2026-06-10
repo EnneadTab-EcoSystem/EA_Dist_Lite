@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Check area names in the DGSF Scheme for the LI NYU project and stamp every editable area whose Name is empty or unmarked with a _DO NOT FILL prefix. This flags the Name parameter as off-limits for manual data entry."
 __title__ = "DGSF Area Data Name Check"
 
 import proDUCKtion # pyright: ignore 

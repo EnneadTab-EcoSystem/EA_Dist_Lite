@@ -1,4 +1,4 @@
-__doc__ = "xxx"
+__doc__ = "Renames every model group type by prefixing the creator username from the worksharing history, so group names show who made them. Groups already carrying the creator name or excluded-member variants are skipped."
 
 
 

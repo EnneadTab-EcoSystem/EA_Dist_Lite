@@ -35,7 +35,13 @@ def hex_to_eto_color(hex_str):
         Eto.Drawing.Color
     """
     a, r, g, b = COLOR.hex_to_rgba(hex_str)
-    return Eto.Drawing.Color.FromArgb(a, r, g, b)
+    # Eto's FromArgb signature is (red, green, blue, alpha=255) --
+    # deliberately DIFFERENT from System.Drawing's (alpha, r, g, b).
+    # Passing the tuple in System.Drawing order put alpha into the red
+    # channel, so every "#1A1A1A"-style dark grey rendered as ~10%-alpha
+    # bright red -- the "burgundy bleed" chased across the ai_render
+    # viewer's v1-v11 paint iterations (2026-04-28 .. 2026-06-04).
+    return Eto.Drawing.Color.FromArgb(r, g, b, a)
 
 
 def apply_dark_style(UI):

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Prints the title of every family document currently open in the Revit session. Useful for checking which families are open before running the chained family tools."
 __title__ = "Print All Family Name"
 
 import proDUCKtion # pyright: ignore 

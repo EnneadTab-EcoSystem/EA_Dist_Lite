@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Opens every family referenced by the Chained Family Loading order from the current document, saves each one as a local RFA copy, and recursively repeats for nested families before activating the saved copies. Prepares the family documents needed before running Chained Family Loading."
 __title__ = "Chained Family Opening"
 
 import proDUCKtion # pyright: ignore 

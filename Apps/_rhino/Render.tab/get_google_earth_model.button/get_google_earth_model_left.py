@@ -1,6 +1,6 @@
 
 __title__ = "GetGoogleEarthModel"
-__doc__ = "This button does GetGoogleEarthModel when left click"
+__doc__ = "Open a video tutorial on capturing Google Earth 3D context models through Blender. A companion Blender script (blosm.py) in this button folder cleans up the imported materials before bringing the model into Rhino."
 
 
 from EnneadTab import ERROR_HANDLE, LOG

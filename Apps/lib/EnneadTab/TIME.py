@@ -53,10 +53,22 @@ def get_formatted_time(input_time):
     #  if input is float, convert to datetime object first:
     if isinstance(input_time, float):
         input_time = datetime.datetime.fromtimestamp(input_time)
-    
+
     year, month, day = '{:02d}'.format(input_time.year), '{:02d}'.format(input_time.month), '{:02d}'.format(input_time.day)
     hour, minute, second = '{:02d}'.format(input_time.hour), '{:02d}'.format(input_time.minute), '{:02d}'.format(input_time.second)
     return "{}-{}-{}_{}-{}-{}".format(year, month, day, hour, minute, second)
+
+
+def get_utc_timestamp_iso():
+    """-->2023-05-16T15:33:55Z  (UTC, timezone-explicit ISO 8601).
+
+    Use this for any timestamp sent off-machine (e.g. InfraWatch ingest):
+    the trailing Z removes the timezone ambiguity of get_formatted_current_time,
+    which returns a naive local wall-clock string that a UTC server mis-reads
+    across a multi-timezone fleet. The literal 'Z' is a format char, not a
+    strftime directive, so this stays IronPython 2.7 safe.
+    """
+    return datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def get_human_readable_datetime(input_time=None, include_seconds=False):

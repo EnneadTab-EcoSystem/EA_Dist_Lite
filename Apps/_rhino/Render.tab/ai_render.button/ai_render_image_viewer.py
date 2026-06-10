@@ -58,7 +58,7 @@ from EnneadTab import IMAGE
 # viewer module changes, the Rhino command line shows exactly which
 # version is running. Format: BUILD_TAG must include the iteration
 # version so a cached old viewer can be spotted at a glance.
-_VIEWER_BUILD_TAG = "v4.8-wrap-labels-xscale-fix-v12"
+_VIEWER_BUILD_TAG = "v6.0-panel-outer-true-colors"
 
 
 # v4.1 (2026-04-30) - file logging.
@@ -309,8 +309,16 @@ def _render_current(state):
 
     bmp = _load_bitmap(path)
     if bmp is None:
+        # 2026-06-10: the old `state.image_view.Image = None` targeted
+        # the Drawable, which has no Image property - the assignment
+        # always threw (swallowed) and the PREVIOUS row's bitmap stayed
+        # on screen under the NEW row's labels. Unreachable while nav
+        # was stuck at n=1; live now that Prev/Next walks real rows.
+        # Clear the bitmap + transform and repaint to the empty state.
+        state.loaded_bmp = None
+        state._transform = None
         try:
-            state.image_view.Image = None
+            state.drawable.Invalidate()
         except Exception:
             pass
         return
@@ -846,32 +854,27 @@ def _build_form(state):
     # color distinctions are lost (everything reads uniform dark grey)
     # because we can't reliably paint differentiated bars. Accepting
     # that trade-off in exchange for getting opacity right.
-    outer = Eto.Forms.Scrollable()
+    #
+    # v6 (2026-06-10): the v10 evidence table above is SUPERSEDED. The
+    # "Panel / TableLayout don't paint" observations were artifacts of
+    # RHINO_UI.hex_to_eto_color passing (a, r, g, b) into Eto's
+    # FromArgb(red, green, blue, alpha) — every container was painting
+    # ~10%-alpha bright red (the burgundy itself), so which containers
+    # "painted reliably" only depended on what backplane sat behind
+    # them. With the channel order fixed, plain Panel paints opaque.
+    #
+    # The outer Scrollable had to go regardless: its ExpandContentWidth
+    # measures content at INFINITE width, so wrapping labels and the
+    # prompt TextArea demand single-line natural width — content
+    # settled at 1405px inside the 1280px form (trace 2026-06-10
+    # 14:25, drawable.SizeChanged -> (1405, 603)) and the user got a
+    # giant horizontal scrollbar. A plain Panel measures children at
+    # viewport width: labels wrap, no scrollbar can exist by
+    # construction. (The v1-v3 ExpandContent decision history that
+    # lived here is preserved in git at 9c6181030 and earlier.)
+    outer = Eto.Forms.Panel()
     try:
         outer.BackgroundColor = _hex_to_color("#1A1A1A")
-        outer.Border = Eto.Forms.BorderType.None
-        # ----- outer.ExpandContent decision history -----
-        # v1 (3678cb888): kept ExpandContent = True; the loop was
-        #   amplified here because the outer's content (the whole
-        #   dialog body) reflows on every inner-Scrollable layout
-        #   pass, feeding back into the WPF UpdateSizes mechanism.
-        # v2 (0c678b26b): dropped ExpandContent here. The 11088x9010
-        #   trace dimensions were the OUTER scrollable accumulating
-        #   layout drift on a wrapper whose content depended on its
-        #   own size - classic #477 signature at ~7x dialog size.
-        #   The loop died, BUT:
-        #     (a) form chrome (burgundy) bled through where outer
-        #         used to paint - per the carry-forward memory's
-        #         empirical finding, ExpandContent IS the only
-        #         paint-reliable primitive on this Rhino 8 build
-        #     (b) inner button rows wider than viewport triggered
-        #         an oversized horizontal scrollbar at natural width
-        # v3 (this commit): ExpandContent restored on outer too.
-        #   We accept the layout-level loop risk and rely on the
-        #   centralized resize-handler guard to break the cycle.
-        #   See _on_resized for the actual loop-breaking logic.
-        outer.ExpandContentWidth = True
-        outer.ExpandContentHeight = True
         outer.Padding = Eto.Drawing.Padding(0)
     except Exception:
         pass
@@ -1273,14 +1276,18 @@ def _make_shown_handler(state):
                 _force_opaque_tree(state.form, _hex_to_color("#1A1A1A"))
             except Exception as ex:
                 _trace("Shown-time _force_opaque_tree FAILED: " + str(ex))
-            # v4.4 layout diagnostic - kept on (cheap one-shot, useful
-            # for future iterations).
-            # 2026-05-12: Disabling verbose diag tracing to prevent UI hangs.
-            # try:
-            #     _trace("===== Shown-time layout walk =====")
-            #     _walk_layout_for_diag(state.form)
-            # except Exception as ex:
-            #     _trace("layout walk FAILED: " + str(ex))
+            # v4.4 layout diagnostic - disabled 2026-05-12 (verbose
+            # tracing caused UI hangs). v6 2026-06-10: re-enabled behind
+            # an env var as the contingency if a horizontal scrollbar
+            # ever returns - one shot, logs every control's width and
+            # names the widest. Set EA_VIEWER_LAYOUT_DIAG=1 before
+            # launching Rhino to arm it.
+            if os.environ.get("EA_VIEWER_LAYOUT_DIAG"):
+                try:
+                    _trace("===== Shown-time layout walk (EA_VIEWER_LAYOUT_DIAG) =====")
+                    _walk_layout_for_diag(state.form)
+                except Exception as ex:
+                    _trace("layout walk FAILED: " + str(ex))
             # v11 (2026-04-30) pixel-readback paint diag. Defer 600ms via
             # UITimer so the form has fully painted before we sample
             # screen pixels (sampling during/before paint returns

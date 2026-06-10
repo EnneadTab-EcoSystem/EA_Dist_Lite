@@ -2618,6 +2618,35 @@ class AiRenderForm(Eto.Forms.Form):
     def _row_view_result(self, row):
         self._invoke_ui(lambda: self._open_in_viewer(row, "result"))
 
+    def _gallery_rows_snapshot(self):
+        """Snapshot the rows currently DISPLAYED in the gallery, in
+        display order. Mirrors the Revit sibling's _gallery_rows_snapshot
+        (which reads lv_gallery.ItemsSource); the Eto equivalent walks
+        the StackLayout items and pulls each GalleryRowPanel's _row.
+        Skeleton placeholders (plain Scrollables) carry no _row and are
+        skipped, as are rows whose panel failed to build (they never
+        reached Items).
+
+        2026-06-10: _open_in_viewer previously iterated self._all_rows --
+        the CLOUD gallery cache, empty until a cloud fetch lands -- so a
+        fresh local render opened the viewer with one path and no
+        alternate (trace: show_viewer paths=1 alts=0). The viewer then
+        correctly disabled Prev/Next (n=1) and the Input/Result toggle
+        had nothing to swap to. Walking the live UI keeps the viewer
+        bound to exactly what the user sees, date/search filters
+        included.
+        """
+        rows = []
+        try:
+            for item in self._rows_layout.Items:
+                ctrl = getattr(item, "Control", item)
+                r = getattr(ctrl, "_row", None)
+                if r is not None:
+                    rows.append(r)
+        except Exception as ex:
+            _trace("gallery_rows_snapshot FAILED {}".format(ex))
+        return rows
+
     @ERROR_HANDLE.try_catch_error()
     def _open_in_viewer(self, row, prefer):
         """prefer = 'original' or 'result'. Shows the native viewer with
@@ -2632,6 +2661,12 @@ class AiRenderForm(Eto.Forms.Form):
         if _SHOW_VIEWER is None:
             Rhino.RhinoApp.WriteLine(
                 "[ai_render] viewer module not loaded - falling back to os.startfile")
+            self._legacy_open(row, prefer)
+            return
+        if getattr(row, "kind", None) == "video":
+            # Eto.Drawing.Bitmap can't decode mp4 -- the image viewer
+            # would show a blank (or, worse, the previous row's bitmap).
+            # Hand video rows to the OS player like the pre-viewer path.
             self._legacy_open(row, prefer)
             return
         show_viewer = _SHOW_VIEWER
@@ -2657,7 +2692,13 @@ class AiRenderForm(Eto.Forms.Form):
         # thumbnail (~512px) as the displayed image so Prev/Next can
         # actually walk the whole history. Full-res download still
         # available via Save Image... button.
-        for r in (self._all_rows or []):
+        # 2026-06-10 — source switched from self._all_rows (cloud cache,
+        # empty for fresh local sessions) to the displayed-row snapshot;
+        # see _gallery_rows_snapshot docstring for the trace evidence.
+        start_matched = False
+        for r in self._gallery_rows_snapshot():
+            if getattr(r, "kind", None) == "video":
+                continue  # image viewer can't decode video results
             primary_kind = "result" if prefer == "result" else "input"
             alt_kind = "input" if prefer == "result" else "result"
             primary_local = (r.result_path if prefer == "result"
@@ -2687,8 +2728,17 @@ class AiRenderForm(Eto.Forms.Form):
             prompts.append(r.full_prompt or r.PromptPreview or "")
             subtitles.append(r.Subtitle or "")
             viewer_rows.append(r)
-            if getattr(r, "id", None) == getattr(row, "id", "MISS"):
+            # First match wins. Identity first, but the 1Hz rebuild
+            # creates FRESH row objects every tick and the click is
+            # deferred via _invoke_ui, so the stable id equality is the
+            # workhorse, not a nicety. If the clicked row got filtered
+            # out by an intervening rebuild, start_idx stays 0 (defined
+            # behavior: viewer opens at the top of the visible set).
+            if not start_matched and (
+                    r is row or
+                    getattr(r, "id", None) == getattr(row, "id", "MISS")):
                 start_idx = len(paths) - 1
+                start_matched = True
         Rhino.RhinoApp.WriteLine(
             "[ai_render] gathered {} paths ({} with alternates), start_idx={}".format(
                 len(paths),
@@ -2711,8 +2761,16 @@ class AiRenderForm(Eto.Forms.Form):
             if clicked_path:
                 Rhino.RhinoApp.WriteLine(
                     "[ai_render] no exists() match - trying single-path mode")
+                # 2026-06-10: carry the clicked row's OTHER side as the
+                # alternate when it exists on disk -- the old [None] left
+                # the Input/Result toggle a no-op even with both files
+                # sitting in the job folder.
+                alt_fallback = (row.original_path if prefer == "result"
+                                else row.result_path)
+                if not (alt_fallback and os.path.exists(alt_fallback)):
+                    alt_fallback = None
                 paths = [clicked_path]
-                alternates = [None]
+                alternates = [alt_fallback]
                 titles = [row.StyleName or "-"]
                 prompts = [row.full_prompt or row.PromptPreview or ""]
                 subtitles = [row.Subtitle or ""]

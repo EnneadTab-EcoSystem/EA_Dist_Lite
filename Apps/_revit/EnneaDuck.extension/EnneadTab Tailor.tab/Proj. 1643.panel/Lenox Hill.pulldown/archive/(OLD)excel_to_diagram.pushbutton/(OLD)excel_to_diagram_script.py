@@ -3,7 +3,7 @@
 
 
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Older version of Excel To Diagram, kept for reference. Reads an earlier Lenox Hill program Excel file and updates AreaShader family types in the program shading view to build the colored program bubble diagram."
 __title__ = "(OLD)Excel2Diagram"
 
 # from pyrevit import forms #

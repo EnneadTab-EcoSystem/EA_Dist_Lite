@@ -1,4 +1,4 @@
-__doc__ = "xxx"
+__doc__ = "Legacy Proj. 2135 tool that writes each selected scopebox name into the MC_$BuildingID parameter of areas, rooms, floors, walls and furniture located inside that scopebox, with site-level elements forced to SITE. Afterwards it reports and marks elements whose building ID does not match their associated level."
 __title__ = "03.0_Assign Bldg ID data\n by Scopebox"
 
 from pyrevit import forms, DB, revit, script

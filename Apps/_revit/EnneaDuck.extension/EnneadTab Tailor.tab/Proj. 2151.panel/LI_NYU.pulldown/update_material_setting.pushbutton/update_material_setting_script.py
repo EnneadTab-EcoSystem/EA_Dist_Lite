@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Apply the standard LI NYU site material presets to this model. Updates the Curb, Road and Grass materials with the agreed shading colors and solid surface pattern settings in one click."
 __title__ = "Update Material Setting"
 
 import proDUCKtion # pyright: ignore 

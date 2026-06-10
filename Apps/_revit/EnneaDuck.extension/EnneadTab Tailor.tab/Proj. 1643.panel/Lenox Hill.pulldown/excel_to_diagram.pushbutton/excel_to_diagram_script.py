@@ -3,7 +3,7 @@
 
 
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Read the Lenox Hill program Excel file and update the AreaShader and TitleMaker families in the program shading view to build a colored bubble diagram, sizing each bubble by program area and filling in count, unit area, NSF/DGSF and notes. Also reports name mismatches between the Excel list and the family types in the project."
 __title__ = "Excel2Diagram"
 
 # from pyrevit import forms #

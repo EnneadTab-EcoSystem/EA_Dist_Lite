@@ -238,7 +238,7 @@ def _build_infrawatch_payload(environment, function_name, result):
     except Exception:
         username = ""
     return {
-        "occurred_at": TIME.get_formatted_current_time(),
+        "occurred_at": TIME.get_utc_timestamp_iso(),
         "environment": environment or "",
         "function_name": function_name or "",
         "result": result if result is not None else "",

@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Inspect the room data sheet annotation family by listing every text element in the open family document, including its parameters and the family parameters referenced by each Label. Run inside a family document to verify label wiring before loading it into the project."
 __title__ = "Room Data Sheet Helper"
 
 import proDUCKtion # pyright: ignore 

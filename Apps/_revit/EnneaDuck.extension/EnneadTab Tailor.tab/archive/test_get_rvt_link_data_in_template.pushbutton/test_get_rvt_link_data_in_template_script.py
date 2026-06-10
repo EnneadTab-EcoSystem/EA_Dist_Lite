@@ -3,7 +3,7 @@
 
 
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Developer test utility that reads the RVT Links category hidden state and graphic overrides from a view template named tester and prints the results. Not intended for production use."
 __title__ = "test_get_rvt_link_data_in_template"
 
 # from pyrevit import forms #

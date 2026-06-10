@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Developer test utility that exercises pyRevit keynote and interop module imports for Revit 2025 compatibility checks. The main body only runs an empty placeholder transaction. Not intended for production use."
 __title__ = "Test Encoder 2025"
 
 import proDUCKtion # pyright: ignore 

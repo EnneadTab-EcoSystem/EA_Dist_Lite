@@ -3,7 +3,7 @@
 
 
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "For every area in the active view, create rounded-corner curves at each boundary corner and place them as new area boundary lines, grouped per area. Useful for giving area diagrams a soft, filleted look without redrawing boundaries by hand."
 __title__ = "Fillet Area Corner"
 
 # from pyrevit import forms #

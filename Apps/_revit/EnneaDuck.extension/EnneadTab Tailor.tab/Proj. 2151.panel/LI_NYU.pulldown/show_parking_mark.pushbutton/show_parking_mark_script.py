@@ -1,7 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Sen Zhang has not writed documentation for this tool, but he should!"
+__doc__ = "Show a level-by-level visualization of all parking spaces in the model, plotting each space at its plan location with its ParkingMarker value as the label. One chart opens per ParkingLevel so parking numbering can be reviewed quickly."
 __title__ = "Show Parking Mark"
 
 import proDUCKtion # pyright: ignore 

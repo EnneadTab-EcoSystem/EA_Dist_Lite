@@ -4,7 +4,7 @@ from pyrevit import script
 from pyrevit import forms
 
 
-__doc__ = "xxx"
+__doc__ = "Legacy Proj. 2135 tool that searches the views placed on selected sheets for keynote tags with the hardcoded key value CW-7A. Each match is printed with its keynote text, host view and clickable links for review."
 
 sel_sheets = forms.select_sheets(title='Select Sheets That You Want To Find User Keynotes.')
 
