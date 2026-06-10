@@ -158,21 +158,18 @@ class Rhino2Revit_UI(forms.WPFWindow):
         if not self.is_pass_convert_precheck():
             return
 
-        t = DB.Transaction(doc, "Convert GEO to native Revit")
-        t.Start()
         tool_start_time = time.time()
         self.detail_list = ""
-     
+
         def _work(item):
             start_time = time.time()
             self.detail_list += "\t{}\n".format(item.display_name)
 
             if "Use Source File Name" in item.selected_OST_name:
                 try:
-                    parent_category = doc.OwnerFamily.FamilyCategory
-                    new_subc = REVIT_CATEGORY.get_or_create_subcategory_with_material(doc, parent_category, item.display_name_naked)
+                    REVIT_CATEGORY.get_or_create_subcategory_with_material(doc, item.display_name_naked)
                 except Exception as e:
-                    pass
+                    print("Cannot create subcategory [{}]: {}".format(item.display_name_naked, e))
                 finally:
                     item.selected_OST_name = item.display_name_naked
 
@@ -184,9 +181,18 @@ class Rhino2Revit_UI(forms.WPFWindow):
             time_span = time.time() - start_time
             NOTIFICATION.messenger("{} import finished!!\nImport used {}".format(item.display_name, TIME.get_readable_time(time_span)))
 
-        UI.progress_bar(self.data_grid.ItemsSource, _work, label_func=lambda x: "Working on [{}]".format(x.display_name))   
-        
-        t.Commit()
+        # try/finally-guarded transaction (NOT pyrevit.revit -- module too
+        # heavy, repo convention is bare DB.Transaction): a conversion failure
+        # used to escape to the decorator with the transaction still open, so
+        # the NEXT click hit "Starting a new transaction is not permitted".
+        t = DB.Transaction(doc, "Convert GEO to native Revit")
+        t.Start()
+        try:
+            UI.progress_bar(self.data_grid.ItemsSource, _work, label_func=lambda x: "Working on [{}]".format(x.display_name))
+            t.Commit()
+        except Exception:
+            t.RollBack()
+            raise
         tool_time_span = time.time() - tool_start_time
         REVIT_FORMS.notification(main_text="Rhino2Revit Finished.",
                                 sub_text="Files processeds:\n{}\nTotal time:\n{}".format(self.detail_list, TIME.get_readable_time(tool_time_span)))
@@ -318,10 +324,11 @@ class Rhino2Revit_UI(forms.WPFWindow):
         t = DB.Transaction(doc, "Convert to User Created Sub-C")
         t.Start()
         try:
-            new_subc = REVIT_CATEGORY.get_or_create_subcategory_with_material(doc, new_subc_name)
-        except Exception as e:
-            print("Error creating new subcategory: {}".format(e))
-        t.Commit()
+            REVIT_CATEGORY.get_or_create_subcategory_with_material(doc, new_subc_name)
+            t.Commit()
+        except Exception:
+            t.RollBack()
+            raise
 
         if not self.data_grid.ItemsSource:
             return

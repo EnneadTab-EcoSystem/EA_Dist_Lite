@@ -11,7 +11,7 @@ from pyrevit import EXEC_PARAMS
 import io
 
 #from pyrevit.coreutils import appdata
-import pickle
+import json
 from pyrevit.coreutils import envvars
 import time
 import proDUCKtion # pyright: ignore 
@@ -56,10 +56,17 @@ def main():
     #output.print_md("this loaded script")
 
     datafile = script.get_instance_data_file("sub_c_list")
-    
-    # Using context manager for safer file handling
-    with io.open(datafile, 'r', encoding="utf-8") as f:
-        old_sub_c_list = pickle.load(f)
+
+    # json, not pickle: IronPython's protocol-0 pickle emits raw high bytes for
+    # non-ASCII category names (0xC3...), which broke text-mode round-trips
+    # fleet-wide (UnicodeDecodeError). json with ensure_ascii stays pure ASCII.
+    # A file written by the old pickle code (or a missing/partial file) lands
+    # in the except branch and is treated as an empty baseline once.
+    try:
+        with io.open(datafile, 'r', encoding="utf-8") as f:
+            old_sub_c_list = json.load(f)
+    except Exception:
+        old_sub_c_list = []
     
     all_Cs = doc.Settings.Categories
     current_sub_c_list = get_subc(all_Cs)

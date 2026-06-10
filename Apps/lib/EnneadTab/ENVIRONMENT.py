@@ -120,6 +120,29 @@ AUDIO_FOLDER = os.path.join(CORE_FOLDER, "audios")
 DOCUMENT_FOLDER = os.path.join(CORE_FOLDER, "documents")
 SCRIPT_FOLDER = os.path.join(CORE_FOLDER, "scripts")
 
+DIST_VERSION_FILE = os.path.join(CORE_FOLDER, "DIST_VERSION.json")
+
+_DIST_VERSION_CACHE = [None]
+
+def get_dist_version():
+    """Version stamp of the installed EA_Dist publish, or "dev".
+
+    DarkSide/publish/________publish.py writes DIST_VERSION.json next to the
+    lib on every publish run; a source/dev tree has no such file. Lazy and
+    cached so a truncated or corrupt file (partial installer extract) can
+    never break importers -- every failure collapses to "dev".
+    """
+    if _DIST_VERSION_CACHE[0] is None:
+        version = "dev"
+        try:
+            if os.path.exists(DIST_VERSION_FILE):
+                with open(DIST_VERSION_FILE, "r") as f:
+                    version = str(json.load(f).get("version", "dev"))
+        except Exception:
+            version = "dev"
+        _DIST_VERSION_CACHE[0] = version
+    return _DIST_VERSION_CACHE[0]
+
 
 EXE_PRODUCT_FOLDER = os.path.join(LIB_FOLDER, "ExeProducts")
 WINDOW_TEMP_FOLDER = os.path.join("C:\\", "temp", "{}_Dump".format(PLUGIN_NAME))
@@ -211,7 +234,8 @@ if IS_OFFLINE_MODE:
     SHARED_DUMP_FOLDER = DUMP_FOLDER
 
 
-ERROR_LOG_GOOGLE_FORM_SUBMIT = "https://docs.google.com/forms/d/e/1FAIpQLScLvUOwyY84oqCVhoLie2KzLIyYkTBt3fxengOhmhIXaVzhdA/formResponse"
+# Error-log submit form retired 2026-06-10 (replaced by ErrorDump API);
+# the result URL stays for the legacy sheet-viewer buttons.
 ERROR_LOG_GOOGLE_FORM_RESULT = "https://docs.google.com/forms/d/1nEbgC-Nbaiwrr5FFVfVgqc_hUqzBrtvus8aHY6aL4lE/edit?pli=1#responses"
 
 

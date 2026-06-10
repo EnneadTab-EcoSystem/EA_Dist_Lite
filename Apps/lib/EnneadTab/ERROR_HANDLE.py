@@ -451,6 +451,32 @@ def try_catch_error(is_silent=False, is_pass = False):
         return error_wrapper
     return decorator
 
+_LAST_UPDATE_DUCK_CACHE = [None]
+
+def _get_last_update_duck_cached():
+    """Timestamp of the newest successful update record (.duck filename).
+
+    Deliberate cycle-free twin of VERSION_CONTROL.get_last_update_time():
+    VERSION_CONTROL imports ERROR_HANDLE, so this module re-implements the
+    tiny read instead of importing back. Cached for the process lifetime --
+    an error storm must not pay a listdir per event.
+    """
+    if _LAST_UPDATE_DUCK_CACHE[0] is None:
+        import os
+        result = ""
+        try:
+            if ENVIRONMENT is not None and hasattr(ENVIRONMENT, "ECO_SYS_FOLDER"):
+                records = [f for f in os.listdir(ENVIRONMENT.ECO_SYS_FOLDER)
+                           if f.endswith(".duck") and "_ERROR" not in f]
+                if records:
+                    records.sort()
+                    result = records[-1].replace(".duck", "")
+        except Exception:
+            result = ""
+        _LAST_UPDATE_DUCK_CACHE[0] = result
+    return _LAST_UPDATE_DUCK_CACHE[0]
+
+
 def send_error_to_error_dump(error_message, func_name, user_name, is_silent=False):
     """Send error to the universal ErrorDump service at enneadtab.com.
 
@@ -501,6 +527,17 @@ def send_error_to_error_dump(error_message, func_name, user_name, is_silent=Fals
                 base_context["revit_version"] = str(ENVIRONMENT.get_revit_version())
             if hasattr(ENVIRONMENT, "get_pyrevit_version"):
                 base_context["pyrevit_version"] = str(ENVIRONMENT.get_pyrevit_version())
+    except Exception:
+        pass
+    try:
+        if ENVIRONMENT is not None and hasattr(ENVIRONMENT, "get_dist_version"):
+            base_context["dist_version"] = str(ENVIRONMENT.get_dist_version())
+    except Exception:
+        pass
+    try:
+        last_update = _get_last_update_duck_cached()
+        if last_update:
+            base_context["last_update"] = str(last_update)
     except Exception:
         pass
 

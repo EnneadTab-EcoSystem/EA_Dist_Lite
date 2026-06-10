@@ -14,9 +14,10 @@ from pyrevit import EXEC_PARAMS
 # from pyrevit.coreutils import appdata
 from pyrevit.coreutils import envvars
 import time
-import pickle
-import proDUCKtion # pyright: ignore 
+import json
+import proDUCKtion # pyright: ignore
 proDUCKtion.validify()
+from EnneadTab import ERROR_HANDLE
 from EnneadTab.REVIT import REVIT_EVENT
 envvars.set_pyrevit_env_var("FAMILY_LOAD_BEGIN", time.time())
 datafile = script.get_instance_data_file("sub_c_list")
@@ -31,6 +32,7 @@ def get_subc(category):
             temp.append("[{0}]--->[{1}]".format(c.Name, sub_c.Name))
     return temp
 
+@ERROR_HANDLE.try_catch_error(is_silent=True)
 def main():
     if not REVIT_EVENT.is_family_load_hook_enabled():
         return
@@ -40,9 +42,12 @@ def main():
 
     data = get_subc(all_Cs)
 
-    f = io.open(datafile, 'w', encoding="utf-8")
-    pickle.dump(data, f)
-    f.close()
+    # json, not pickle: IronPython's protocol-0 pickle emits raw high bytes
+    # for non-ASCII category names (0xC3...), corrupting text-mode files and
+    # crashing the reader hook (family-loaded.py) with UnicodeDecodeError.
+    # ensure_ascii keeps the payload pure ASCII so utf-8 text mode is safe.
+    with io.open(datafile, 'w', encoding="utf-8") as f:
+        f.write(unicode(json.dumps(data, ensure_ascii=True)))
 ############### main ###################
 if __name__ == "__main__":
     main()

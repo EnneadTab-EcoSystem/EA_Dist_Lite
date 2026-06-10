@@ -148,16 +148,67 @@ def is_update_too_soon():
 def alert_user_to_update():
     last_update_timestamp_str = get_last_update_time()
     if last_update_timestamp_str is None:
+        # No success record at all. The installer deletes success .duck files
+        # older than 8h at the start of every run, so a machine whose updates
+        # keep FAILING ends up with only _ERROR.duck files here -- that is the
+        # worst starvation cohort and used to be invisible. A brand-new
+        # machine before its first update has no ducks of either kind and
+        # stays silent.
+        if _has_error_duck():
+            _report_update_starvation("installer runs but never succeeds")
         return
-    
+
     last_update_unix = timestamp_string_to_unix(last_update_timestamp_str)
     if last_update_unix is None:
         return
-        
+
     time_since_last_update = time.time() - last_update_unix
     if time_since_last_update > 2592000.0:  # 30 days in seconds (30 * 24 * 60 * 60)
         NOTIFICATION.messenger("You have not updated EnneadTab for a long time. Please update it. Duck eggs have been hatched")
+        _report_update_starvation("no successful update", days_stale=int(time_since_last_update // 86400.0))
         return
+
+
+def _has_error_duck():
+    try:
+        return any(f.endswith("_ERROR.duck") for f in os.listdir(ENVIRONMENT.ECO_SYS_FOLDER))
+    except Exception:
+        return False
+
+
+def _report_update_starvation(reason, days_stale=None):
+    """Send a silent ErrorDump event when this machine is starving for updates.
+
+    Daemon thread + once-per-day gate: the send can burn up to ~20s of
+    transport timeouts on exactly the broken-network machines most likely to
+    starve, and must never slow down the doc-sync/save/startup paths that
+    reach update_dist_repo.
+    """
+    try:
+        data = DATA_FILE.get_data("last_starvation_report") or {}
+        if (time.time() - data.get("time", 0)) < 86400.0:
+            return
+        DATA_FILE.set_data({"time": time.time()}, "last_starvation_report")
+
+        message = "EnneadTab update starvation: {}".format(reason)
+        if days_stale is not None:
+            message += " ({} days since last successful update)".format(days_stale)
+
+        def _send():
+            try:
+                ERROR_HANDLE.send_error_to_error_dump(
+                    error_message=message,
+                    func_name="update_starvation",
+                    user_name=USER.USER_NAME,
+                    is_silent=True)
+            except Exception:
+                pass
+
+        worker = threading.Thread(target=_send)
+        worker.daemon = True
+        worker.start()
+    except Exception:
+        ERROR_HANDLE.print_note("Failed to report update starvation: {}".format(traceback.format_exc()))
 
 
 def get_last_update_time(return_file=False):
