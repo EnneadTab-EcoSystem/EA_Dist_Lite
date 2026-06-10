@@ -44,7 +44,9 @@ def random_warming_quote():
 def warming_quote():
     """Display a random encouraging quote with author on a new line.
     """
-    quote, author = random_warming_quote().split("|")
+    parts = random_warming_quote().split("|")
+    quote = parts[0]
+    author = parts[1] if len(parts) > 1 else "Unknown"
     
     # Wrap the text
     wrapper = textwrap.TextWrapper(width = 100)

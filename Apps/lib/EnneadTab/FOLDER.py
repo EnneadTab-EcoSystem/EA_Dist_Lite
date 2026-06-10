@@ -354,7 +354,7 @@ def copy_file_to_local_dump_folder(original_path, file_name=None, ignore_warning
         Exception: If file is in use and ignore_warning is False
     """
     if file_name is None:
-        file_name = original_path.rsplit("\\", 1)[1]
+        file_name = os.path.basename(original_path)
 
     local_path = get_local_dump_folder_file(file_name)
     try:

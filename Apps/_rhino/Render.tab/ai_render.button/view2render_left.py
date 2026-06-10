@@ -231,9 +231,11 @@ def _items_text(dropdown, idx):
     try:
         if idx >= dropdown.Items.Count:
             return ""
+        item = dropdown.Items[idx]
     except Exception:
-        pass
-    item = dropdown.Items[idx]
+        # If Count or the indexer throws (stale/disposed control), treat as
+        # no selection instead of letting the access crash outside the guard.
+        return ""
     return getattr(item, "Text", item) if item is not None else ""
 
 

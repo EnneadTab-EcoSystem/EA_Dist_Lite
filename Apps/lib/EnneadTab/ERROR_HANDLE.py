@@ -118,16 +118,6 @@ def get_one_drive_desktop_folder():
             pass
     return None
 
-def get_error_log_google_form_submit():
-    """Safely get error log Google form URL with fallback."""
-    if ENVIRONMENT is not None:
-        try:
-            return ENVIRONMENT.ERROR_LOG_GOOGLE_FORM_SUBMIT
-        except:
-            print(traceback.format_exc())
-            pass
-    return None
-
 def get_usage_log_google_form_submit():
     """Safely get usage log Google form URL with fallback."""
     if ENVIRONMENT is not None:
@@ -179,31 +169,6 @@ def _safe_decrement_recursion_depth():
     global _error_handler_recursion_depth
     _ensure_recursion_depth_is_int()
     _error_handler_recursion_depth -= 1
-
-# Google Form field IDs for error logging
-ERROR_LOG_FORM_FIELDS = {
-    'entry.1706374190': 'error',         # Traceback field
-    'entry.539936697': 'function_name',  # FunctionName field  
-    'entry.730257591': 'user_name',      # UserName field
-}
-
-
-def _build_error_form_data(error, func_name, user_name):
-    """Build form data dictionary for error logging Google Form.
-    
-    Args:
-        error (str): The error message to send
-        func_name (str): The name of the function where the error occurred
-        user_name (str): The name of the user experiencing the error
-        
-    Returns:
-        dict: Form data dictionary with field IDs and values
-    """
-    return {
-        'entry.1706374190': error,         # Traceback field
-        'entry.539936697': func_name,      # FunctionName field  
-        'entry.730257591': user_name,      # UserName field
-    }
 
 def get_alternative_traceback():
     """Generate a formatted stack trace for the current exception.
@@ -413,15 +378,6 @@ def try_catch_error(is_silent=False, is_pass = False):
                     EMAIL.email_error(error_time + error, func.__name__, USER.USER_NAME, subject_line=subject_line)
                 except Exception as e:
                     print_note("Cannot send email: {}".format(get_alternative_traceback()))
-
-                # DEPRECATED 2026-04-06: Google Form error logging scheduled for removal by 2026-04-30.
-                # ErrorDump API (below) is the replacement -- confirmed receiving end-user errors
-                # from multiple machines (szhang, nicole.levine, Han.Isozen, yhuang) since 2026-03-27.
-                # Retire this call once we verify no one on the team still reads the Google Sheet.
-                try:
-                    send_error_to_google_form(error, func.__name__, USER.USER_NAME)
-                except Exception as e:
-                    pass
 
                 try:
                     send_error_to_error_dump(
@@ -645,238 +601,6 @@ def send_error_to_error_dump(error_message, func_name, user_name, is_silent=Fals
         prev_attempts.append({"type": "urllib3", "error": repr(e)[:200]})
 
 
-def send_error_to_google_form(error, func_name, user_name):
-    """DEPRECATED 2026-04-06: Scheduled for removal by 2026-04-30.
-
-    Use send_error_to_error_dump() instead. ErrorDump API provides deduplication,
-    auto-classification, queryable dashboard, and 5s timeout (vs 30s here).
-
-    Send error information to Google Form for automated error tracking.
-    Automatically detects the best available HTTP library based on environment:
-    - Rhino: Uses urllib2/urllib (IronPython 2.7 style)
-    - Revit: Uses urllib3 (if available)
-    - Terminal/IDE: Uses built-in urllib modules (Python 3 style)
-
-    Args:
-        error (str): The error message to send
-        func_name (str): The name of the function where the error occurred
-        user_name (str): The name of the user experiencing the error
-    """
-    try:
-        # Try different HTTP libraries based on environment availability
-        if _try_urllib3_implementation(error, func_name, user_name):
-            return
-        elif _try_urllib2_implementation(error, func_name, user_name):
-            return
-        elif _try_urllib_request_implementation(error, func_name, user_name):
-            return
-        else:
-            print_note("No suitable HTTP library found for sending error to Google Form")
-            
-    except Exception as e:
-        # Don't let Google Form errors break the main error handling
-        print_note("Failed to send error to Google Form: {}".format(e))
-        pass
-
-
-def _try_urllib3_implementation(error, func_name, user_name):
-    """Try to use urllib3 for sending error data (Revit environment).
-    
-    Args:
-        error (str): The error message to send
-        func_name (str): The name of the function where the error occurred
-        user_name (str): The name of the user experiencing the error
-        
-    Returns:
-        bool: True if successful, False if urllib3 not available or failed
-    """
-    try:
-        import urllib3
-        import time
-        
-        # Google Form URL
-        g_form_url = get_error_log_google_form_submit()
-        if g_form_url is None:
-            print_note("ENVIRONMENT not available, skipping Google Form submission")
-            return False
-        
-        # Build form data using common helper function
-        form_data = _build_error_form_data(error, func_name, user_name)
-        
-        # Create HTTP manager
-        http = urllib3.PoolManager()
-        
-        # Headers
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-            'Accept-Language': 'en-US,en;q=0.5',
-            'Accept-Encoding': 'gzip, deflate',
-            'Connection': 'keep-alive',
-            'Upgrade-Insecure-Requests': '1'
-        }
-        
-        # Encode form data using urllib.parse.urlencode
-        import urllib.parse
-        encoded_data = urllib.parse.urlencode(form_data).encode('utf-8')
-        
-        # Send request
-        response = http.request('POST', g_form_url, body=encoded_data, headers=headers, timeout=30.0)
-        
-        if response.status == 200:
-            response_content = response.data.decode('utf-8')
-            if "Thank you" in response_content or "submitted" in response_content.lower():
-                print_note("Error data sent to Google Form successfully (urllib3)")
-            else:
-                print_note("Form submission completed but may not have been recorded (urllib3)")
-            return True
-        else:
-            print_note("Failed to send error data to Google Form - Status: {} (urllib3)".format(response.status))
-            return False
-            
-    except ImportError:
-        # urllib3 not available
-        return False
-    except Exception as e:
-        print_note("Error sending to Google Form (urllib3): {}".format(e))
-        return False
-
-
-def _try_urllib2_implementation(error, func_name, user_name):
-    """Try to use urllib2 for sending error data (Rhino environment).
-    
-    Args:
-        error (str): The error message to send
-        func_name (str): The name of the function where the error occurred
-        user_name (str): The name of the user experiencing the error
-        
-    Returns:
-        bool: True if successful, False if urllib2 not available or failed
-    """
-    try:
-        import urllib2 #pyright: ignore
-        import urllib
-        import time
-        
-        # Google Form URL
-        g_form_url = get_error_log_google_form_submit()
-        if g_form_url is None:
-            print_note("ENVIRONMENT not available, skipping Google Form submission")
-            return False
-        
-        # Build form data using common helper function
-        form_data = _build_error_form_data(error, func_name, user_name)
-        
-        # Encode the data (IronPython 2.7 compatible)
-        data = urllib.urlencode(form_data)
-        
-        # Create the request with comprehensive headers
-        req = urllib2.Request(g_form_url, data)
-        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
-        req.add_header('Content-Type', 'application/x-www-form-urlencoded')
-        req.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
-        req.add_header('Accept-Language', 'en-US,en;q=0.5')
-        req.add_header('Accept-Encoding', 'gzip, deflate')
-        req.add_header('Connection', 'keep-alive')
-        req.add_header('Upgrade-Insecure-Requests', '1')
-        
-        # Send the request
-        response = urllib2.urlopen(req, timeout=30)
-        # Google Forms returns a 200 status even on successful submission
-        if response.getcode() == 200:
-            # Read response to check for success indicators
-            response_content = response.read()
-            if "Thank you" in response_content or "submitted" in response_content.lower():
-                # print_note("Error data sent to Google Form successfully (urllib2)")
-                pass
-            else:
-                # print_note("Form submission completed but may not have been recorded (urllib2)")
-                pass
-            return True
-        else:
-            print_note("Failed to send error data to Google Form - Status: {} (urllib2)".format(response.getcode()))
-            return False
-            
-    except ImportError:
-        # urllib2 not available
-        return False
-    except urllib2.URLError as e:
-        print_note("Network error sending to Google Form (urllib2): {}".format(e))
-        return False
-    except Exception as e:
-        print_note("Error sending to Google Form (urllib2): {}".format(e))
-        return False
-
-
-def _try_urllib_request_implementation(error, func_name, user_name):
-    """Try to use urllib.request for sending error data (Terminal/IDE environment).
-    
-    Args:
-        error (str): The error message to send
-        func_name (str): The name of the function where the error occurred
-        user_name (str): The name of the user experiencing the error
-        
-    Returns:
-        bool: True if successful, False if urllib.request not available or failed
-    """
-    try:
-        import urllib.request
-        import urllib.parse
-        import time
-        
-        # Google Form URL
-        g_form_url = get_error_log_google_form_submit()
-        if g_form_url is None:
-            print_note("ENVIRONMENT not available, skipping Google Form submission")
-            return False
-        
-        # Build form data using common helper function
-        form_data = _build_error_form_data(error, func_name, user_name)
-        
-        # Encode the data (Python 3.x compatible)
-        data = urllib.parse.urlencode(form_data).encode('utf-8')
-        
-        # Create the request with comprehensive headers
-        req = urllib.request.Request(g_form_url, data)
-        req.add_header('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36')
-        req.add_header('Content-Type', 'application/x-www-form-urlencoded')
-        req.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8')
-        req.add_header('Accept-Language', 'en-US,en;q=0.5')
-        req.add_header('Accept-Encoding', 'gzip, deflate')
-        req.add_header('Connection', 'keep-alive')
-        req.add_header('Upgrade-Insecure-Requests', '1')
-        
-        # Send the request
-        response = urllib.request.urlopen(req, timeout=30)
-        # Google Forms returns a 200 status even on successful submission
-        if response.getcode() == 200:
-            # Read response to check for success indicators
-            response_content = response.read().decode('utf-8')
-            if "Thank you" in response_content or "submitted" in response_content.lower():
-                print_note("Error data sent to Google Form successfully (urllib.request)")
-            else:
-                print_note("Form submission completed but may not have been recorded (urllib.request)")
-            return True
-        else:
-            print_note("Failed to send error data to Google Form - Status: {} (urllib.request)".format(response.getcode()))
-            return False
-            
-    except ImportError:
-        # urllib.request not available
-        return False
-    except urllib.error.URLError as e:
-        print_note("Network error sending to Google Form (urllib.request): {}".format(e))
-        return False
-    except Exception as e:
-        print_note("Error sending to Google Form (urllib.request): {}".format(e))
-        return False
-
-
-
-
-
-
 def print_note(*args):
     """Print debug information visible only to developers.
 
@@ -968,4 +692,4 @@ def print_note(*args):
 
 
 if __name__ == "__main__":
-    send_error_to_google_form("test error", "test_function", "test_user")
+    pass

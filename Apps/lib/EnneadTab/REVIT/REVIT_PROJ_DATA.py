@@ -177,7 +177,10 @@ def get_project_data_name(doc):
         para.Set(doc.Title)  # Set initial value to document title
 
     # Get the parameter value
-    return REVIT_PARAMETER.get_project_info_para_by_name(doc, PROJECT_DATA_PARA_NAME).AsString()
+    para = REVIT_PARAMETER.get_project_info_para_by_name(doc, PROJECT_DATA_PARA_NAME)
+    if para is None:
+        return None
+    return para.AsString()
 
 def get_project_data_file(doc):
     """Generate the project data file name based on project identifier.

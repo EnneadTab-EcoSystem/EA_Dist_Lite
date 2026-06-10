@@ -75,7 +75,14 @@ def register_view_image_routes(api):
 
         # Find the exported file (Revit may append suffix)
         exported_file = None
-        for f in os.listdir(temp_dir):
+        try:
+            temp_files = os.listdir(temp_dir)
+        except Exception as e:
+            return routes.make_response(
+                data={"error": "Failed to read export folder: {}".format(str(e))},
+                status_code=500,
+            )
+        for f in temp_files:
             if f.endswith(".png"):
                 exported_file = os.path.join(temp_dir, f)
                 break

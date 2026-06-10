@@ -17,6 +17,8 @@ def get_setting(key, default_value=None):
         key_default_value (tuple): (key, default value), a tuple of default result, this is used to get the key of value looking for. If do not provide this tuple, then return the raw while data"""
 
     data = DATA_FILE.get_data(GLOBAL_SETTING_FILE)
+    if data is None:
+        return default_value
     return data.get(key, default_value)
 
 

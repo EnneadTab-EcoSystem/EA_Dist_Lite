@@ -14,7 +14,11 @@ import ENVIRONMENT
 try:
     DEVNULL = subprocess.DEVNULL
 except AttributeError:
+    # IronPython 2.7 fallback - keep one handle open for the module lifetime
+    # and close it at interpreter exit so the handle does not leak.
     DEVNULL = open(os.devnull, 'wb')
+    import atexit
+    atexit.register(DEVNULL.close)
 
 # Compatibility helper for subprocess.run (not available in IronPython 2.7)
 def _run_command(cmd, capture_output=False, text=False, check=False):
@@ -76,12 +80,14 @@ def run_powershell_script(script_name, no_wait = True):
                            stderr=DEVNULL)
         else:
             # Use call for blocking execution - compatible with IronPython 2.7
-            subprocess.call(["powershell", 
+            return_code = subprocess.call(["powershell",
                           "-ExecutionPolicy", "Bypass",
                           "-NoProfile",
                           "-NonInteractive",
-                          "-File", full_path], 
+                          "-File", full_path],
                             shell=True)
+            if return_code != 0:
+                print("Warning: script [{}] exited with non-zero code: {}".format(script_name, return_code))
     except subprocess.CalledProcessError as e:
         print("Error running script: {}".format(e))
         return

@@ -641,6 +641,9 @@ def _read_data_from_excel_locally(filepath, worksheet, return_dict, headless):
             
         if not return_dict:
             # convert the converted_data to a list of lists, sorted by row, adding missing rows with empty strings. the coumn count need to match the max column count in the data
+            if not converted_data:
+                # empty sheet (or no convertible keys), max() would raise ValueError
+                return []
             max_column = max(column for row, column in converted_data.keys())
             max_row = max(row for row, column in converted_data.keys())
             OUT = []
