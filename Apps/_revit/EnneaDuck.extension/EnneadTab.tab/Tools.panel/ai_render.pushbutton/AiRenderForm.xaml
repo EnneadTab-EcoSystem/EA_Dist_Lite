@@ -614,27 +614,60 @@
                      — the gallery *-row was collapsing under the controls at
                      default window height). -->
                 <Border Grid.Row="1" Background="#FF2A2A2A" CornerRadius="6" MinHeight="280">
-                    <ListView x:Name="lv_gallery" Background="Transparent" BorderThickness="0"
-                              ItemTemplate="{StaticResource GalleryRowSmall}"
-                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto"
-                              VirtualizingStackPanel.IsVirtualizing="True"
-                              VirtualizingStackPanel.VirtualizationMode="Recycling">
-                        <ListView.ItemContainerStyle>
-                            <Style TargetType="ListViewItem">
-                                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-                                <Setter Property="Padding" Value="0"/>
-                                <Setter Property="Margin" Value="0,1"/>
-                                <Setter Property="Background" Value="#FF333333"/>
-                                <Setter Property="BorderThickness" Value="0"/>
-                                <Style.Triggers>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#FF3F3F3F"/>
-                                    </Trigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ListView.ItemContainerStyle>
-                    </ListView>
+                    <Grid>
+                        <ListView x:Name="lv_gallery" Background="Transparent" BorderThickness="0"
+                                  ItemTemplate="{StaticResource GalleryRowSmall}"
+                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                  VirtualizingStackPanel.IsVirtualizing="True"
+                                  VirtualizingStackPanel.VirtualizationMode="Recycling">
+                            <ListView.ItemContainerStyle>
+                                <Style TargetType="ListViewItem">
+                                    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                                    <Setter Property="Padding" Value="0"/>
+                                    <Setter Property="Margin" Value="0,1"/>
+                                    <Setter Property="Background" Value="#FF333333"/>
+                                    <Setter Property="BorderThickness" Value="0"/>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#FF3F3F3F"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ListView.ItemContainerStyle>
+                        </ListView>
+                        <!-- Skeleton loading overlay: dimmed placeholder rows shown during the
+                             initial cloud-fetch so an empty gallery doesn't read as "you have
+                             nothing". Mirrors the Rhino dialog's _render_skeleton_rows
+                             (view2render_left.py) per the CLAUDE.md Rhino<->Revit parity rule.
+                             Toggled in code-behind (_show_gallery_loading / _hide_gallery_loading);
+                             hidden the moment real rows (cloud or in-flight job) arrive. -->
+                        <Border x:Name="gallery_loading_overlay" Visibility="Collapsed"
+                                Background="#FF2A2A2A" CornerRadius="6" VerticalAlignment="Top">
+                            <StackPanel Margin="0,2,0,0">
+                                <Border Height="64" Background="#FF333333" CornerRadius="4" Margin="0,1">
+                                    <TextBlock Text="Loading recent renders…" FontSize="11"
+                                               Foreground="{StaticResource MutedTextColor}"
+                                               Margin="16,0,0,0" VerticalAlignment="Center"/>
+                                </Border>
+                                <Border Height="64" Background="#FF333333" CornerRadius="4" Margin="0,1">
+                                    <TextBlock Text="Loading recent renders…" FontSize="11"
+                                               Foreground="{StaticResource MutedTextColor}"
+                                               Margin="16,0,0,0" VerticalAlignment="Center"/>
+                                </Border>
+                                <Border Height="64" Background="#FF333333" CornerRadius="4" Margin="0,1">
+                                    <TextBlock Text="Loading recent renders…" FontSize="11"
+                                               Foreground="{StaticResource MutedTextColor}"
+                                               Margin="16,0,0,0" VerticalAlignment="Center"/>
+                                </Border>
+                                <Border Height="64" Background="#FF333333" CornerRadius="4" Margin="0,1">
+                                    <TextBlock Text="Loading recent renders…" FontSize="11"
+                                               Foreground="{StaticResource MutedTextColor}"
+                                               Margin="16,0,0,0" VerticalAlignment="Center"/>
+                                </Border>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
                 </Border>
             </Grid>
 

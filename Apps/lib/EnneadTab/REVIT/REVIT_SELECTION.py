@@ -560,6 +560,15 @@ def get_tooltip_info(doc, element):
     return "Created by : {}\nLast Edit by: {}\nCurrently owned by: {}".format(info.Creator, info.LastChangedBy, info.Owner)
     # return info.Creator, info.LastChangedBy , info.Owner
 
+def get_ownership_info(doc, element_id):
+    """Tuple version of get_tooltip_info, keyed by ElementId.
+
+    Returns (creator, last_changed_by, owner); owner is "" when nobody is
+    holding the element. Doc must be workshared or the API call throws.
+    """
+    info = DB.WorksharingUtils.GetWorksharingTooltipInfo(doc, element_id)
+    return info.Creator, info.LastChangedBy, info.Owner or ""
+
 def get_owner(x):
     if x is None:
         return ""

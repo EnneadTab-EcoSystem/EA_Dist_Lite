@@ -207,7 +207,17 @@ class AiRenderForm(WPFWindow):
         # Gallery rows (cloud-canonical) — kept in a plain list, bound to ListView
         # by wholesale ItemsSource replacement (Review #1 recommended pattern).
         self._all_rows = []  # jobs + cloud items merged
-        self._filter_seconds = 7 * 86400
+        # 2026-06-10: derive the initial date-filter window from
+        # DEFAULT_DATE_FILTER ("All time" -> None) so it MATCHES the dropdown's
+        # initial selection. The dropdown is set to DEFAULT_DATE_FILTER but its
+        # SelectionChanged handler (date_filter_Changed) is wired after the
+        # index is set and never fires on init -- a hardcoded `7 * 86400` here
+        # meant the dropdown read "All time" while the gallery silently filtered
+        # to the last 7 days. Invisible while the cloud index OOM'd (0 rows);
+        # once the OOM fix landed and 160 rows returned, "All time" was hiding
+        # everything older than a week. Keep in sync with the dropdown. Mirrors
+        # the Rhino fix in view2render_left.py per the parity rule.
+        self._filter_seconds = dict(G.DATE_FILTERS).get(G.DEFAULT_DATE_FILTER)
         self._filter_query = ""
         self._auto_save_enabled = True
         # Init tick state explicitly so first tick doesn't trigger a redundant
@@ -704,7 +714,17 @@ class AiRenderForm(WPFWindow):
         target = os.path.join(folder, "Original.jpeg")
 
         opts = DB.ImageExportOptions()
-        opts.ExportRange = DB.ExportRange.CurrentView
+        # VisibleRegionOfCurrentView exports only the on-screen (pan/zoom +
+        # crop) portion of the ACTIVE view — the Revit equivalent of Rhino's
+        # viewport capture. CurrentView always fit-to-page'd the WHOLE view
+        # extent, so partial framing (zoom into a corner, render just that)
+        # was impossible in Revit while it worked in Rhino (user report
+        # 2026-06-10; Autodesk ExportRange enum, confirmed on revitapidocs +
+        # McNeel/Kike Garcia: visible-region only works on the active UI view,
+        # which is doc.ActiveView above). Per the Rhino<->Revit parity rule
+        # this is framework-specific: Rhino already captures the live viewport,
+        # so no Rhino-side change is needed.
+        opts.ExportRange = DB.ExportRange.VisibleRegionOfCurrentView
         opts.FilePath = target
         opts.HLRandWFViewsFileType = DB.ImageFileType.JPEGMedium
         opts.ShadowViewsFileType = DB.ImageFileType.JPEGMedium
@@ -714,8 +734,17 @@ class AiRenderForm(WPFWindow):
         try:
             doc.ExportImage(opts)
         except Exception as ex:
-            self.status_label.Text = "Export failed: {}".format(str(ex)[:150])
-            return
+            # Some view types reject the visible-region range; fall back to the
+            # whole-view export so capture never hard-fails (loses partial
+            # framing for that view type, but still produces an image).
+            try:
+                opts.ExportRange = DB.ExportRange.CurrentView
+                doc.ExportImage(opts)
+                self.status_label.Text = ("Captured full view "
+                                          "(visible-region unsupported here).")
+            except Exception as ex2:
+                self.status_label.Text = "Export failed: {}".format(str(ex2)[:150])
+                return
 
         # Revit appends the view name; pick the newest JPEG in the folder (sorted by mtime desc).
         candidates = []
@@ -1152,6 +1181,28 @@ class AiRenderForm(WPFWindow):
                                self._filter_seconds, self._filter_query)
         self.lv_gallery.ItemsSource = merged
         self.gallery_count.Text = "· {} items".format(len(merged))
+        # Any real content (cloud history OR an in-flight job) dismisses the
+        # skeleton loading overlay so it never covers live rows.
+        if len(merged) > 0:
+            self._hide_gallery_loading()
+
+    def _show_gallery_loading(self):
+        """Show the dimmed skeleton placeholder rows during the initial cloud
+        fetch. Mirrors the Rhino dialog's _render_skeleton_rows. Best-effort —
+        a UI failure here must never escape into the WPF message pump (CLR
+        0xE0434352 crash class on this modeless dialog)."""
+        try:
+            if self._form_closed:
+                return
+            self.gallery_loading_overlay.Visibility = Visibility.Visible
+        except Exception as ex:
+            _trace("show_gallery_loading SWALLOWED {}".format(ex))
+
+    def _hide_gallery_loading(self):
+        try:
+            self.gallery_loading_overlay.Visibility = Visibility.Collapsed
+        except Exception as ex:
+            _trace("hide_gallery_loading SWALLOWED {}".format(ex))
 
     def _refresh_gallery_async(self, initial=False):
         token = AUTH.get_token()
@@ -1161,8 +1212,17 @@ class AiRenderForm(WPFWindow):
                 if not AUTH.is_auth_in_progress():
                     AUTH.request_auth()
             return
+        # Skeleton loading state only on first load with a token (auth banner
+        # covers the no-token case). A manual Refresh with rows already on
+        # screen must NOT blank them with placeholders, so gate on `initial`.
+        if initial:
+            self._show_gallery_loading()
         def on_done(rows):
             if rows is None:
+                # Fetch failed — drop the skeleton so the gallery doesn't sit
+                # on "Loading recent renders…" forever; existing rows (if any)
+                # stay put.
+                self._invoke_ui(self._hide_gallery_loading)
                 return
             self._invoke_ui(lambda: self._apply_gallery_rows(rows))
         G.fetch_gallery_index_async(token, on_done, limit=500)
@@ -1172,6 +1232,8 @@ class AiRenderForm(WPFWindow):
         self._all_rows = rows
         self._rebuild_rows()
         self._update_cache_size()
+        # Cloud fetch resolved (even if it returned 0 rows) — clear skeleton.
+        self._hide_gallery_loading()
 
     # ------------------------------------------------------------------
     # Filter bar

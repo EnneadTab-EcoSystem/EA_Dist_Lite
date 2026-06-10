@@ -1,0 +1,210 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+
+        Title="EnneadTab"
+        Foreground="#000"
+        Margin="0"
+        SizeToContent="WidthAndHeight"
+        ShowInTaskbar="True"
+        BorderThickness="0"
+        Background="{x:Null}"
+        WindowStartupLocation="CenterScreen"
+        ScrollViewer.VerticalScrollBarVisibility="Disabled"
+        HorizontalContentAlignment="Center"
+        UseLayoutRounding="False"
+        FontFamily="RomanD"
+        AllowsTransparency="True"
+        WindowStyle="None"
+        MouseLeftButtonDown="mouse_down_main_panel"
+        Cursor="ScrollAll">
+    <Window.Resources>
+        <SolidColorBrush x:Key="AboutWindowTextColor" Color="#FFDAE8FD"/>
+        <SolidColorBrush x:Key="AboutWindowHightlightColor" Color="#f39c12"/>
+        <SolidColorBrush x:Key="AboutWindowMainPanelColor" Color="#FF464646"/>
+        <Style TargetType="{x:Type TextBlock}">
+            <Setter Property="Foreground"
+                    Value="{StaticResource AboutWindowTextColor}"/>
+        </Style>
+        <Style TargetType="{x:Type CheckBox}">
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Foreground"
+                    Value="{StaticResource AboutWindowTextColor}"/>
+        </Style>
+        <Style TargetType="{x:Type Button}">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Background" Value="{StaticResource AboutWindowTextColor}"/>
+            <Setter Property="BorderBrush" Value="#cccccc"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource AboutWindowMainPanelColor}"/>
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="10,0,10,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10"
+                                Margin="5"
+                                Height="20"
+                                SnapsToDevicePixels="true">
+                            <ContentPresenter Name="Presenter"
+                                              Margin="{TemplateBinding Padding}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              RecognizesAccessKey="True"
+                                              SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource AboutWindowHightlightColor}" />
+                                <Setter Property="BorderBrush" Value="{StaticResource AboutWindowHightlightColor}" />
+                                <Setter Property="Foreground" Value="White" />
+                                <Setter Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="{x:Type TextBox}">
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Padding" Value="10,0,10,0"/>
+            <Setter Property="Height" Value="20"/>
+            <Style.Resources>
+                <Style TargetType="{x:Type Border}">
+                    <Setter Property="CornerRadius" Value="10" />
+                </Style>
+            </Style.Resources>
+        </Style>
+        <Style TargetType="{x:Type TabControl}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+        </Style>
+        <Style TargetType="{x:Type TabItem}">
+            <Setter Property="Foreground" Value="{StaticResource AboutWindowMainPanelColor}"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style TargetType="{x:Type DataGrid}">
+            <Setter Property="AutoGenerateColumns" Value="False"/>
+            <Setter Property="IsReadOnly" Value="True"/>
+            <Setter Property="EnableRowVirtualization" Value="True"/>
+            <Setter Property="EnableColumnVirtualization" Value="True"/>
+            <Setter Property="Height" Value="420"/>
+            <Setter Property="MaxWidth" Value="1100"/>
+            <Setter Property="Cursor" Value="Cross"/>
+        </Style>
+    </Window.Resources>
+    <Border BorderThickness="1"
+            CornerRadius="15"
+            Margin="20,20,20,20">
+        <Border.Background>
+            <SolidColorBrush Color="#FF464646" Opacity="1"/>
+        </Border.Background>
+        <Border.Effect>
+            <DropShadowEffect Color="#FFFFE59C" BlurRadius="15" Opacity="0.8"/>
+        </Border.Effect>
+        <Grid Margin="20,20,20,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="50"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Image Grid.Column="0"
+                   Height="100"
+                   x:Name="logo_img"
+                   VerticalAlignment="Bottom"
+                   HorizontalAlignment="Left" />
+
+            <StackPanel Margin="0, 20, 0, 0"
+                        Grid.Column="1">
+                <TextBlock x:Name="title_text" Text="AAAAAAAAAAAAAAAAAAAAA" Foreground="#FFFFE59C" FontSize="20" TextWrapping="Wrap" FontWeight="Bold" />
+                <TextBlock x:Name="sub_text"
+                           Text="aaaaaaaaaaaaaaaaaa"
+                           Foreground="#FFCBCBCB"
+                           TextWrapping="Wrap"
+                           MaxWidth="900"
+                           HorizontalAlignment="Left"/>
+
+                <Separator/>
+
+                <TabControl>
+                    <TabItem Header="Elements">
+                        <StackPanel Margin="0,10,0,0">
+                            <WrapPanel>
+                                <TextBlock Text="Search: " VerticalAlignment="Center"/>
+                                <TextBox x:Name="tbox_search_elements" Width="220"
+                                         TextChanged="search_changed"
+                                         ToolTip="Search any column"/>
+                                <TextBlock Text="  Category: " VerticalAlignment="Center"/>
+                                <ComboBox x:Name="combo_category" Width="200"
+                                          SelectionChanged="filter_changed"/>
+                                <CheckBox x:Name="checkbox_owned_only" Content="Owned elements only"
+                                          Margin="15,0,0,0" VerticalAlignment="Center"
+                                          Click="filter_changed"/>
+                                <CheckBox x:Name="checkbox_collapse_similar" Content="Collapse similar"
+                                          Margin="15,0,0,0" VerticalAlignment="Center"
+                                          Click="filter_changed"
+                                          ToolTip="Group rows that read identically into one row with an item count; Select / Zoom act on the whole group"/>
+                            </WrapPanel>
+                            <TextBlock x:Name="tblock_element_count" Text="" Margin="0,5,0,5" Foreground="#FFCBCBCB"/>
+                            <DataGrid x:Name="grid_elements">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Category" Binding="{Binding category}"/>
+                                    <DataGridTextColumn Header="Name" Binding="{Binding name}"/>
+                                    <DataGridTextColumn Header="Creator" Binding="{Binding creator}"/>
+                                    <DataGridTextColumn Header="Owner" Binding="{Binding owner}"/>
+                                    <DataGridTextColumn Header="Last Changed By" Binding="{Binding last_changed_by}"/>
+                                    <DataGridTextColumn Header="View" Binding="{Binding view_name}"/>
+                                    <DataGridTextColumn Header="Workset" Binding="{Binding workset}"/>
+                                    <DataGridTextColumn Header="Id" Binding="{Binding id_text}"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+                                <Button Content="Select" Click="select_click"/>
+                                <Button Content="Zoom To" Click="zoom_click"/>
+                                <Button Content="Open View" Click="open_element_view_click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </TabItem>
+                    <TabItem Header="Views">
+                        <StackPanel Margin="0,10,0,0">
+                            <WrapPanel>
+                                <TextBlock Text="Search: " VerticalAlignment="Center"/>
+                                <TextBox x:Name="tbox_search_views" Width="220"
+                                         TextChanged="search_changed"
+                                         ToolTip="Search any column"/>
+                            </WrapPanel>
+                            <TextBlock x:Name="tblock_view_count" Text="" Margin="0,5,0,5" Foreground="#FFCBCBCB"/>
+                            <DataGrid x:Name="grid_views">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="View Name" Binding="{Binding view_name}"/>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding view_type}"/>
+                                    <DataGridTextColumn Header="Creator" Binding="{Binding creator}"/>
+                                    <DataGridTextColumn Header="Owner" Binding="{Binding owner}"/>
+                                    <DataGridTextColumn Header="Last Changed By" Binding="{Binding last_changed_by}"/>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,5,0,0">
+                                <Button Content="Open View" Click="open_view_view_click"/>
+                            </StackPanel>
+                        </StackPanel>
+                    </TabItem>
+                </TabControl>
+
+                <Separator/>
+
+                <TextBlock x:Name="debug_textbox" Text="" Foreground="#FFCBCBCB" />
+                <WrapPanel HorizontalAlignment="Center" Margin="0,5,0,5">
+                    <TextBlock Text="Scan scope: " VerticalAlignment="Center"/>
+                    <ComboBox x:Name="combo_scope" Width="150" VerticalAlignment="Center"
+                              ToolTip="Applied when you click Refresh"/>
+                    <Button Content="Refresh (rescan)" Click="refresh_click" Height="30"/>
+                    <Button Content="Close" Click="close_click" Height="30"/>
+                </WrapPanel>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

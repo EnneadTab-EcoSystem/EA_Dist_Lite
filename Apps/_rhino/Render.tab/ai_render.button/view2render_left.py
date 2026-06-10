@@ -420,7 +420,23 @@ class AiRenderForm(Eto.Forms.Form):
         # "history loaded but empty" so the gallery can show skeleton
         # placeholder rows during the initial fetch instead of "0 items".
         self._history_loaded = False
-        self._filter_seconds = 7 * 86400
+        # 2026-06-10: seed the tick diff state to () so the FIRST 1Hz tick is a
+        # no-op when no job is active. Previously it defaulted to None, so the
+        # first idle tick (~1s after open) saw `() != None`, fired a rebuild
+        # with empty _all_rows, and WIPED the just-rendered skeleton -- leaving
+        # a confusing "0 items" gallery for the rest of the ~cloud-fetch window
+        # before history finally appeared.
+        self._last_tick_state = ()
+        # 2026-06-10: derive the initial date-filter window from
+        # DEFAULT_DATE_FILTER ("All time" -> None) so it MATCHES the dropdown's
+        # initial selection. The dropdown is set to DEFAULT_DATE_FILTER but its
+        # SelectionChanged handler is wired AFTER SelectedIndex is set, so it
+        # never fires on init -- a hardcoded `7 * 86400` here meant the dropdown
+        # read "All time" while the gallery silently filtered to the last 7 days.
+        # That bug was invisible while the cloud index OOM'd (0 rows to filter);
+        # once the OOM fix landed and 160 rows returned, "All time" was hiding
+        # everything older than a week. Keep this in sync with the dropdown.
+        self._filter_seconds = dict(G.DATE_FILTERS).get(G.DEFAULT_DATE_FILTER)
         self._filter_query = ""
         self._auto_save_enabled = bool(self._prefs.get("auto_save", True))
         self._last_tick_state = None  # explicit init (Round 3 P2-9)
@@ -482,6 +498,24 @@ class AiRenderForm(Eto.Forms.Form):
         self._tick_timer.Interval = 1.0
         self._tick_timer.Elapsed += self._on_tick
         self._tick_timer.Start()
+
+        # 2026-06-10: chunked-rebuild driver. Building 160 GalleryRowPanels into
+        # the non-virtualized StackLayout in one synchronous pass froze the UI
+        # thread (the Revit sibling's ListView is virtualized, so it never
+        # froze). The rows are now built in time-boxed slices: _rebuild_rows
+        # builds the first slice in-cycle, then this UITimer fills the rest,
+        # yielding the message pump between slices so the dialog stays
+        # responsive. UITimer (not AsyncInvoke) because AsyncInvoke posts at
+        # Normal dispatcher priority and drains ahead of paint/input -- chained
+        # AsyncInvoke batches would still freeze. State lives on self (single
+        # source of truth); a new _rebuild_rows overwrites it and an in-flight
+        # slice loop stops on the next tick.
+        self._rebuild_merged = []
+        self._rebuild_pos = 0
+        self._rebuild_total = 0
+        self._rebuild_timer = Eto.Forms.UITimer()
+        self._rebuild_timer.Interval = 0.01
+        self._rebuild_timer.Elapsed += self._on_rebuild_timer_tick
 
         self.Closed += self._on_closed
         self.Closing += self._on_closing
@@ -1548,15 +1582,24 @@ class AiRenderForm(Eto.Forms.Form):
             pass
 
     def _on_tick(self, sender, e):
-        """Diff against last tick — only rebuild when (status, progress, elapsed)
+        """Diff against last tick — only rebuild when (status, progress)
         actually changed. Mirrors the Revit fix from Round 1 to stop the
-        1Hz full-rebuild perf hit on Rhino (Round 2 P0-perf-3)."""
+        1Hz full-rebuild perf hit on Rhino (Round 2 P0-perf-3).
+
+        2026-06-10: dropped `int(j.elapsed_sec())` from the diff tuple. It
+        changed every second while a job was ACTIVE, so the tick rebuilt the
+        WHOLE gallery once per second. Harmless when the list was small, but
+        with the chunked rebuild (large "All time" lists) it would clear and
+        restart the build every second and the gallery would never finish
+        painting. Progress is still reflected via `progress_pct`; the
+        ProgressBar.Indeterminate animates itself without a rebuild. (Slice of
+        the #1423 1Hz-rebuild-storm cleanup.)"""
         if self._form_closed:
             return
         Monitor.Enter(self._jobs_lock)
         try:
             current_state = tuple(
-                (j.job_id, j.status, j.progress_pct, int(j.elapsed_sec()))
+                (j.job_id, j.status, j.progress_pct)
                 for j in self._jobs
                 if j.status == AI_RENDER.STATUS_ACTIVE)
         finally:
@@ -2437,24 +2480,77 @@ class AiRenderForm(Eto.Forms.Form):
                                self._filter_seconds, self._filter_query)
         _trace("rebuild.merged total={} job_rows={} cloud_only={}".format(
             len(merged), len(job_rows), len(cloud_only)))
-        # Wholesale rebuild of the StackLayout — clear + add.
+        # While the initial cloud history is still loading, never collapse to an
+        # empty "0 items" list -- hold the skeleton loading state so the gallery
+        # reads as "loading", not "you have nothing". Any rebuild that fires
+        # before _apply_gallery_rows lands (a stray tick, a large-thumbs toggle)
+        # used to wipe the skeleton ~1s after open and show "0 items" for the
+        # rest of the fetch window. Only the genuine "loaded but empty" case
+        # (history_loaded True, 0 rows) shows the empty list.
+        if not merged and not self._history_loaded:
+            try:
+                self._rebuild_timer.Stop()
+            except Exception:
+                pass
+            self._render_skeleton_rows()
+            try:
+                self.gallery_count.Text = "loading..."
+            except Exception:
+                pass
+            _trace("rebuild.skeleton-hold (history not loaded)")
+            return
+        # Chunked rebuild: a new build supersedes any in-flight one. Stop the
+        # timer and install `merged` as the single source of truth -- because
+        # everything runs on the one UI thread and the timer reads self state
+        # (no captured closures), an older chunked build simply stops the
+        # moment its state is overwritten here; no stale or duplicate rows.
+        try:
+            self._rebuild_timer.Stop()
+        except Exception:
+            pass
+        self._rebuild_merged = merged
+        self._rebuild_total = len(merged)
+        self._rebuild_pos = 0
+        # Clear AND fill the first time-boxed slice in THIS pump cycle so the
+        # StackLayout never sits empty across a yield -- an empty-then-paint is
+        # the documented Rhino crash trigger (see the pre-2026-06-10 loop).
         try:
             self._rows_layout.Items.Clear()
             _trace("rebuild.cleared")
         except Exception as ex:
             _trace("rebuild.CLEAR_FAILED {}".format(ex))
             raise
-        built = 0
-        for i, r in enumerate(merged):
+        self._build_rows_chunk()
+        # Remaining rows fill on the UITimer, which yields the message pump
+        # between slices (keeps the dialog responsive on large lists).
+        if self._rebuild_pos < self._rebuild_total:
+            try:
+                self._rebuild_timer.Start()
+            except Exception:
+                pass
+        else:
+            self._finish_rebuild_count()
+
+    # Frame budget per build slice; once exceeded we yield so paint/input run.
+    _REBUILD_SLICE_MS = 14
+
+    def _build_rows_chunk(self):
+        """Build one time-boxed slice of self._rebuild_merged onto the
+        StackLayout, advancing self._rebuild_pos. UI-THREAD ONLY (called from
+        _rebuild_rows and _on_rebuild_timer_tick, both UI-thread). Always
+        builds at least one row so progress is guaranteed even if a single
+        panel costs more than the slice budget."""
+        merged = self._rebuild_merged
+        total = self._rebuild_total
+        t0 = time.time()
+        while self._rebuild_pos < total:
+            i = self._rebuild_pos
+            r = merged[i]
             try:
                 # 2026-04-21 — factory pattern. Direct GalleryRowPanel(...)
-                # call (positional or kwargs) hits IronPython's CLR-derived
-                # constructor binder bug — args dispatch to the .NET base
-                # Eto.Forms.Panel(content) instead of the Python __init__,
-                # raising "takes at most 2 arguments (N given)" for every
-                # row. Confirmed via trace 14:48: gallery rendered empty
-                # while history count read 7. McNeel forum's canonical
-                # workaround is .create() factory + zero-arg __init__.
+                # call hits IronPython's CLR-derived constructor binder bug;
+                # the .create() factory + zero-arg __init__ is the McNeel-forum
+                # workaround. Do NOT revert to GalleryRowPanel(...).
                 panel = GalleryRowPanel.create(
                     r,
                     self._row_view_original,
@@ -2464,21 +2560,66 @@ class AiRenderForm(Eto.Forms.Form):
                     self._row_copy)
                 self._rows_layout.Items.Add(Eto.Forms.StackLayoutItem(panel,
                                                                       Eto.Forms.HorizontalAlignment.Stretch))
-                built += 1
             except Exception as ex:
-                # Don't re-raise — leaving the StackLayout cleared-but-unfilled
-                # is what kills Rhino on the next paint. Skip the bad row,
-                # log it, and let the rest of the rebuild succeed so the UI
-                # ends in a consistent state.
+                # Skip the bad row, keep going — a half-built list still paints;
+                # an aborted rebuild does not.
                 _trace("rebuild.ROW_FAILED idx={} id={} {}".format(
                     i, getattr(r, "id", "?"), ex))
-        # Show built/total so silent row-construction failures are visible.
-        if built == len(merged):
-            self.gallery_count.Text = "· {} items".format(len(merged))
-        else:
-            self.gallery_count.Text = "· {}/{} items (some failed)".format(
-                built, len(merged))
-        _trace("rebuild.END built={} of {}".format(built, len(merged)))
+            self._rebuild_pos += 1
+            if (time.time() - t0) * 1000.0 >= self._REBUILD_SLICE_MS:
+                break
+        # Progress feedback while more slices remain.
+        if self._rebuild_pos < total:
+            try:
+                self.gallery_count.Text = "· loading {}/{}...".format(
+                    self._rebuild_pos, total)
+            except Exception:
+                pass
+
+    def _on_rebuild_timer_tick(self, sender, e):
+        """Drive the remaining rebuild slices. UITimer.Elapsed does NOT inherit
+        _invoke_ui._safe, so guard _form_closed + swallow here, or a tick after
+        close touches disposed controls and hard-crashes Rhino (CLR
+        0xE0434352)."""
+        if self._form_closed:
+            try:
+                self._rebuild_timer.Stop()
+            except Exception:
+                pass
+            return
+        try:
+            if self._rebuild_pos >= self._rebuild_total:
+                self._rebuild_timer.Stop()
+                self._finish_rebuild_count()
+                return
+            self._build_rows_chunk()
+            if self._rebuild_pos >= self._rebuild_total:
+                self._rebuild_timer.Stop()
+                self._finish_rebuild_count()
+        except Exception as ex:
+            try:
+                self._rebuild_timer.Stop()
+            except Exception:
+                pass
+            _trace("rebuild.timer SWALLOWED {}".format(ex))
+
+    def _finish_rebuild_count(self):
+        """Set the final gallery count once the chunked build drains. Built may
+        be < total if some rows failed; read the realized item count."""
+        total = self._rebuild_total
+        try:
+            built = self._rows_layout.Items.Count
+        except Exception:
+            built = total
+        try:
+            if built >= total:
+                self.gallery_count.Text = "· {} items".format(total)
+            else:
+                self.gallery_count.Text = "· {}/{} items (some failed)".format(
+                    built, total)
+        except Exception:
+            pass
+        _trace("rebuild.END built={} of {}".format(built, total))
 
     def _refresh_gallery_async(self):
         token = AUTH.get_token()
