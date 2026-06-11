@@ -162,87 +162,169 @@ def parse_timestamp(timestamp_str):
     # If neither format works, raise an error
     raise ValueError("Cannot parse timestamp: {}".format(timestamp_str))
 
+def _fetch_publish_status_api():
+    """Fetch the latest publish event from InfraWatch.
+
+    Transport order mirrors ERROR_HANDLE.send_error_to_error_dump: .NET
+    HttpWebRequest first, because urllib HTTPS silently fails under
+    IronPython on some office network segments (see memory:
+    feedback_ironpython_networking), then urllib for CPython.
+
+    Uses the direct vercel domain (same as the InfraWatch collectors in
+    infrawatch_common.py): the enneadtab.com proxy would subject the request
+    to EnneadTabHome auth, and this is InfraWatch's deliberately
+    unauthenticated read route.
+
+    Returns:
+        dict: Parsed JSON response, or None on any failure.
+    """
+    url = "https://infrawatch-ennead-projects.vercel.app/infra/api/publish-status/history?limit=1"
+
+    # Transport 1: .NET HttpWebRequest (IronPython 2.7 inside Revit/Rhino)
+    try:
+        import clr  # noqa: F401  (IronPython interop gate)
+        clr.AddReference("System")
+        from System.Net import WebRequest, ServicePointManager, SecurityProtocolType
+        from System.IO import StreamReader
+
+        try:
+            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12
+        except Exception:
+            pass
+
+        req = WebRequest.Create(url)
+        req.Method = "GET"
+        req.Timeout = 5000  # milliseconds
+        resp = req.GetResponse()
+        try:
+            reader = StreamReader(resp.GetResponseStream())
+            body = reader.ReadToEnd()
+        finally:
+            resp.Close()
+        return json.loads(body)
+    except ImportError:
+        pass  # not running under IronPython / .NET - fall through to urllib paths
+    except Exception:
+        pass
+
+    # Transport 2: urllib.request (CPython 3.x)
+    try:
+        from urllib.request import urlopen
+        response = urlopen(url, timeout=5)
+        return json.loads(response.read().decode("utf-8"))
+    except ImportError:
+        pass
+    except Exception:
+        pass
+
+    # Transport 3: urllib2 (legacy CPython 2.7)
+    try:
+        import urllib2
+        response = urllib2.urlopen(url, timeout=5)
+        return json.loads(response.read())
+    except Exception:
+        pass
+
+    return None
+
+
+def _alert_publish_freshness(timestamp_dt, was_success, now_dt, display_timestamp):
+    """Duck-pop if the most recent publish is more than 1 day old or failed.
+
+    now_dt must be in the same time domain as timestamp_dt: the API reports
+    UTC (caller passes utcnow()), the local history file is machine-local
+    time (caller passes now()).
+    """
+    time_diff = now_dt - timestamp_dt
+
+    # Check if more than 1 day old
+    is_old = time_diff.total_seconds() > 24 * 60 * 60  # 1 day in seconds
+
+    # Alert if most recent is more than 1 day old OR if it failed
+    if is_old or not was_success:
+        if is_old and not was_success:
+            message = "Yikes! Last publish was {} ago AND it failed! Time to fix things up!".format(
+                format_time_diff(time_diff)
+            )
+        elif is_old:
+            message = "Hey there! Last publish was {} ago. Maybe time for an update?".format(
+                format_time_diff(time_diff)
+            )
+        else:
+            message = "Oops! Last publish failed at {}. Better check what went wrong!".format(
+                display_timestamp
+            )
+
+        ERROR_HANDLE.print_note("DEBUG: Would show duck pop message: {}".format(message))
+        NOTIFICATION.duck_pop(message)
+    else:
+        ERROR_HANDLE.print_note("DEBUG: All good! Most recent publish at {} was successful and recent.".format(display_timestamp))
+
+
 def alert_missing_schedule_update():
     if not USER.IS_DEVELOPER:
         return
 
-    GIST_RAW_URL = "https://gist.githubusercontent.com/zsenarchitect/d6b5a9f9ac831bb7ad1a4b32dad9c647/raw/publish_status.json"
-
-    # Try fetching from gist first, fall back to local file
-    data = None
+    # Primary source: InfraWatch publish_runs (migrated from EnneadTab-Sync
+    # 2026-06-11; before that, a status gist the publisher stopped updating
+    # in March 2026).
     try:
-        import urllib2
-        response = urllib2.urlopen(GIST_RAW_URL, timeout=5)
-        data = json.loads(response.read())
-    except ImportError:
-        try:
-            from urllib.request import urlopen
-            response = urlopen(GIST_RAW_URL, timeout=5)
-            data = json.loads(response.read().decode("utf-8"))
-        except Exception:
-            pass
-    except Exception:
-        pass
+        data = _fetch_publish_status_api()
+        if data:
+            last_publish = (data.get("stats") or {}).get("last_publish")
+            if last_publish and last_publish.get("created_at"):
+                created_at = str(last_publish.get("created_at"))
+                # created_at is ISO 8601 UTC (e.g. 2026-03-24T18:44:59.246Z);
+                # slice to whole seconds to avoid strptime %f/%z quirks on
+                # IronPython, and compare against utcnow() to match domains
+                timestamp_dt = datetime.datetime.strptime(created_at[:19], "%Y-%m-%dT%H:%M:%S")
+                _alert_publish_freshness(
+                    timestamp_dt,
+                    last_publish.get("success", False),
+                    datetime.datetime.utcnow(),
+                    created_at,
+                )
+                return
+            # last_publish is null when the table is empty: fall through to
+            # the local file rather than alarming on missing data
+    except Exception as e:
+        ERROR_HANDLE.print_note("Error reading publish status API: {}".format(e))
 
-    # Fall back to local file if gist fetch failed
-    if data is None:
-        history = os.path.join(ENVIRONMENT.ROOT, "DarkSide", "publish", "publish_history.json")
-        if not os.path.exists(history):
-            return
-        try:
-            with open(history, "r") as f:
-                data = json.load(f)
-        except Exception as e:
-            ERROR_HANDLE.print_note("Error reading publish history: {}".format(e))
-            return
-    
-    # Get runs data and check if it exists
+    # Fallback: local publish history (only present on the publish machine)
+    history = os.path.join(ENVIRONMENT.ROOT, "DarkSide", "publish", "publish_history.json")
+    if not os.path.exists(history):
+        return
+    try:
+        with open(history, "r") as f:
+            data = json.load(f)
+    except Exception as e:
+        ERROR_HANDLE.print_note("Error reading publish history: {}".format(e))
+        return
+
     runs = data.get("runs", [])
     if not runs:
-        NOTIFICATION.duck_pop("No publish history found! Time to get back to work!")
         return
-    
+
     # Sort records by timestamp (most recent first)
     try:
         sorted_runs = sorted(runs, key=lambda x: parse_timestamp(x["timestamp"]), reverse=True)
     except Exception as e:
         ERROR_HANDLE.print_note("Error sorting publish history: {}".format(e))
         return
-    
-    # Get most recent record
+
     most_recent = sorted_runs[0]
     most_recent_timestamp = most_recent["timestamp"]
-    most_recent_success = most_recent.get("success", False)
-    
-    # Parse timestamp and calculate time difference
+
     try:
         timestamp_dt = parse_timestamp(most_recent_timestamp)
-        current_time = datetime.datetime.now()
-        time_diff = current_time - timestamp_dt
-        
-        # Check if more than 1 day old
-        is_old = time_diff.total_seconds() > 24 * 60 * 60  # 1 day in seconds
-        
-        # Alert if most recent is more than 1 day old OR if it failed
-        if is_old or not most_recent_success:
-            if is_old and not most_recent_success:
-                message = "Yikes! Last publish was {} ago AND it failed! Time to fix things up!".format(
-                    format_time_diff(time_diff)
-                )
-            elif is_old:
-                message = "Hey there! Last publish was {} ago. Maybe time for an update?".format(
-                    format_time_diff(time_diff)
-                )
-            else:
-                message = "Oops! Last publish failed at {}. Better check what went wrong!".format(
-                    most_recent_timestamp
-                )
-            
-            ERROR_HANDLE.print_note("DEBUG: Would show duck pop message: {}".format(message))
-            NOTIFICATION.duck_pop(message)
-        else:
-            ERROR_HANDLE.print_note("DEBUG: All good! Most recent publish at {} was successful and recent.".format(most_recent_timestamp))
-            
+        # local-file timestamps are written in machine-local time
+        # (_schedule_publish.py uses now()), so the baseline here stays now()
+        _alert_publish_freshness(
+            timestamp_dt,
+            most_recent.get("success", False),
+            datetime.datetime.now(),
+            most_recent_timestamp,
+        )
     except Exception as e:
         ERROR_HANDLE.print_note("Error processing timestamp: {}".format(e))
         return

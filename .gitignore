@@ -219,9 +219,8 @@ test_*.py
 *_temp.*
 *_test.*
 
-# AutoDist state files (machine-local, publish status shared via GitHub Gist)
+# AutoDist state files (machine-local, publish status reported to EnneadTab-Sync API)
 DarkSide/publish/publish_history.json
-DarkSide/publish/publish_history.json.gist_tmp
 DarkSide/publish/scheduler_state.json
 DarkSide/token.json
 
