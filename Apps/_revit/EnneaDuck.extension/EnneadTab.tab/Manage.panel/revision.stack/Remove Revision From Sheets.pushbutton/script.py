@@ -1,4 +1,10 @@
-"""Remove selected revisions from selected sheets."""
+__title__ = "Remove Revision From Sheets"
+__doc__ = """Remove selected revisions from many sheets at once.
+
+Pick one or more revisions, then pick the target sheets (placeholder
+sheets included). Revisions placed by a revision cloud cannot be
+removed this way; those sheets are listed separately at the end so
+you can track down the clouds."""
 
 from pyrevit import revit, DB
 from pyrevit import forms

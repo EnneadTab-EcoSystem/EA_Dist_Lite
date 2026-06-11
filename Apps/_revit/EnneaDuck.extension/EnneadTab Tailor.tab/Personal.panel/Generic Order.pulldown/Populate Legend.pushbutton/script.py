@@ -1,7 +1,9 @@
-"""List Family Symbols on a Legend View
-"""
 __title__ = "Populate Legend But Vertically"
-__doc__ = "Similar to pyChilizer function but it has been slightly modified to do things vertically."
+__doc__ = """Lay out every family type of a category on the active legend view, stacked vertically.
+
+Open a legend view that already holds at least one legend component as
+the seed, pick a category, and one legend component per family type is
+placed in a vertical column. Vertical variant of the pyChilizer tool."""
 from pyrevit import revit, DB, UI, forms, script
 from pyrevit.framework import List
 from collections import OrderedDict

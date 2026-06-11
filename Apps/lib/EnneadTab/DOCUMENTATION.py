@@ -357,7 +357,11 @@ def set_revit_knowledge():
     data_dict = {}
     for root, dirs, files in os.walk(ENVIRONMENT.REVIT_PRIMARY_EXTENSION):
         for file in files:
-            if not file.endswith("_script.py"):
+            # "script.py" is pyRevit's canonical bundle script name; some
+            # sample-derived buttons use it instead of "<name>_script.py".
+            # Archived bare-name bundles stay out of the knowledge pool.
+            is_bare_script = file == "script.py" and "archive" not in root.lower()
+            if not (file.endswith("_script.py") or is_bare_script):
                 continue
             if "floating_script.py" in file:
                 continue

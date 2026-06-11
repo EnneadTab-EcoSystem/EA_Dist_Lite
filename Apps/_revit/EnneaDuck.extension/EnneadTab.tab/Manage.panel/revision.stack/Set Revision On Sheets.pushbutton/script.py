@@ -1,4 +1,10 @@
-"""Set selected revisions on selected sheets."""
+__title__ = "Set Revision On Sheets"
+__doc__ = """Add selected revisions to many sheets at once.
+
+Pick one or more revisions, then pick the target sheets (placeholder
+sheets included). The revisions are added to each sheet's additional
+revision list in a single transaction, and every updated sheet is
+listed in the output window."""
 
 from pyrevit import revit, DB
 from pyrevit import forms
@@ -6,9 +12,6 @@ from EnneadTab.REVIT import REVIT_APPLICATION
 from pyrevit import script
 from pyrevit.framework import List
 from pyrevit.revit.db import query
-
-revisions = forms.select_revisions(button_name='Select Revision',
-                                   multiple=True)
 
 
 def update_sheet_revisions(revisions, sheets=None, state=True):
@@ -37,23 +40,23 @@ def update_sheet_revisions(revisions, sheets=None, state=True):
 
     return updated_sheets
 
-if revisions:
-    sheets = forms.select_sheets(button_name='Set Revision',
-                                 include_placeholder=True)
-    if sheets:
-        with revit.Transaction('Set Revision on Sheets'):
-            updated_sheets = update_sheet_revisions(revisions,
-                                                    sheets)
-        if updated_sheets:
-            print('SELECTED REVISION ADDED TO THESE SHEETS:')
-            print('-' * 100)
-            for s in updated_sheets:
-                snum = s.Parameter[DB.BuiltInParameter.SHEET_NUMBER]\
-                        .AsString().rjust(10)
-                sname = s.Parameter[DB.BuiltInParameter.SHEET_NAME]\
-                         .AsString().ljust(50)
-                print('NUMBER: {0}   NAME:{1}'.format(snum, sname))
-
 
 if __name__== "__main__":
-    pass
+    revisions = forms.select_revisions(button_name='Select Revision',
+                                       multiple=True)
+    if revisions:
+        sheets = forms.select_sheets(button_name='Set Revision',
+                                     include_placeholder=True)
+        if sheets:
+            with revit.Transaction('Set Revision on Sheets'):
+                updated_sheets = update_sheet_revisions(revisions,
+                                                        sheets)
+            if updated_sheets:
+                print('SELECTED REVISION ADDED TO THESE SHEETS:')
+                print('-' * 100)
+                for s in updated_sheets:
+                    snum = s.Parameter[DB.BuiltInParameter.SHEET_NUMBER]\
+                            .AsString().rjust(10)
+                    sname = s.Parameter[DB.BuiltInParameter.SHEET_NAME]\
+                             .AsString().ljust(50)
+                    print('NUMBER: {0}   NAME:{1}'.format(snum, sname))

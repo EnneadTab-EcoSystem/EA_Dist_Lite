@@ -1,4 +1,9 @@
-__doc__ = "Print out the filter override surface foreground pattern color for the current view."
+__title__ = "10_GET FILTER COLOR"
+__doc__ = """List the surface override color of every filter in the active view.
+
+Prints each view filter by name with its surface foreground pattern
+RGB values, so you can copy exact colors when matching or rebuilding
+filter overrides in another view or project."""
 
 
 from pyrevit import forms, DB, revit, script

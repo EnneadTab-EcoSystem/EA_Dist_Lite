@@ -10,7 +10,11 @@ output.close_others()
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 __title__ = "remove dup value"
-__doc__ = 'remove dup value in warning'
+__doc__ = """Resolve duplicate Mark and Number warnings by making the values unique.
+
+Scans the document warning list for duplicate Mark/Number entries and
+appends the element ID to each offending value so the warning clears.
+Elements currently edited by someone else are skipped and reported."""
 
 
 
