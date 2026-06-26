@@ -105,7 +105,7 @@ APPS = [
         "description": "EnneadTab InfraWatch hourly events + drive connectivity to enneadtab.com/infra",
         "task_type": TaskType.REPEAT,
         "interval_minutes": 60,
-        "canary_hosts": ["MININT-5V26DTJ"],
+        "canary_hosts": ["MININT-5V26DTJ", "EANY-PW-0HJ97N"],
         "active": True
     },
     {
@@ -118,7 +118,7 @@ APPS = [
         "description": "EnneadTab InfraWatch heavy collectors to enneadtab.com/infra",
         "task_type": TaskType.REPEAT,
         "interval_minutes": 360,
-        "canary_hosts": ["MININT-5V26DTJ"],
+        "canary_hosts": ["MININT-5V26DTJ", "EANY-PW-0HJ97N"],
         "active": True
     },
     {
@@ -131,7 +131,7 @@ APPS = [
         "description": "EnneadTab weekly Revit journal upload to enneadtab.com/infra",
         "task_type": TaskType.WEEKLY,
         "stagger_weekly": True,
-        "canary_hosts": ["MININT-5V26DTJ"],
+        "canary_hosts": ["MININT-5V26DTJ", "EANY-PW-0HJ97N"],
         "active": True
     },
     {
