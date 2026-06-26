@@ -2,73 +2,89 @@
 """InfraWatch fleet bootstrap. IronPython 2.7 compatible.
 
 Idempotent task registration called from plugin_startup.py (Revit) and
-_rhino/startup.py. Replaces the RegisterAutoStartup.exe pattern for
-new collectors going forward -- no exe, no PyInstaller, no AV false
-positives, full visibility.
+_rhino/startup.py. Reads infra entries from SYSTEM.APPS (sole config source).
 
-Two layers of safety:
-  1. Canary gate (this file)   -- only enrolls listed hostnames.
-  2. Kill switch (collect_all) -- sentinel file at ROOT disables
-     every collector POST without needing a re-enroll.
+Repair hook only: re-register missing InfraWatch_* tasks on eligible hosts.
+RegisterAutoStartup.exe skips InfraWatch_* entries -- this module owns them.
 
-Once the canary list is broadened to "*", every Revit/Rhino startup on
-every workstation will idempotently register the InfraWatch tasks. To
-retire: empty CANARY_HOSTS or delete this module.
+Safety layers:
+  1. canary_hosts on each APPS entry (or "*" for fleet)
+  2. .infrawatch_kill sentinel disables collector POSTs without re-enroll
 """
 
+import hashlib
 import os
-import socket
 import subprocess
 
 from EnneadTab import ENVIRONMENT
+from EnneadTab.SYSTEM import APPS, TaskType
 
 
-# --- Configuration -----------------------------------------------------------
-
-# Hosts permitted to enroll. Use "*" to enable fleet-wide. Expand the
-# allowlist incrementally as canaries prove healthy.
-CANARY_HOSTS = ["MININT-5V26DTJ"]
-
-# Tasks to register. Each becomes a user-level Windows Scheduled Task
-# pointing at run_collectors.bat with the given args.
-_TASKS = [
-    {
-        "name": "InfraWatch-Heavy",
-        "args": "--heavy",
-        "schedule": "/sc HOURLY /mo 6",
-    },
-    {
-        "name": "InfraWatch-Events",
-        "args": "--events-only",
-        "schedule": "/sc HOURLY /mo 1",
-    },
+# Legacy task names removed during #1816 enrollment cleanup.
+_LEGACY_TASK_NAMES = [
+    "EnneadTab_InfraWatch_Collect_Task",
+    "InfraWatch-Heavy",
+    "InfraWatch-Events",
 ]
 
-# Module-level guard so re-imports inside the same Revit/Rhino session
-# don't re-shell-out 4 times per startup.
 _RAN_THIS_PROCESS = False
 
 
-# --- Helpers ----------------------------------------------------------------
-
-def _bat_path():
-    """Absolute path to the collector launcher inside EA_Dist / dev tree."""
-    return os.path.join(
-        ENVIRONMENT.ROOT,
-        "Apps", "lib", "DumpScripts", "collectors", "run_collectors.bat",
-    )
-
-
 def _hostname():
-    # COMPUTERNAME is the AD-joined Windows hostname; more reliable than
-    # socket.gethostname() which sometimes returns FQDN.
     return os.environ.get("COMPUTERNAME", "")
 
 
-def _is_in_canary():
-    if "*" in CANARY_HOSTS:
+def _is_in_canary(app_config):
+    hosts = app_config.get("canary_hosts")
+    if not hosts:
+        return False
+    if "*" in hosts:
         return True
-    return _hostname() in CANARY_HOSTS
+    return _hostname() in hosts
+
+
+def _infra_apps():
+    apps = []
+    for app in APPS:
+        name = app.get("app_name", "")
+        if not name.startswith("InfraWatch_"):
+            continue
+        if not app.get("active", True):
+            continue
+        task_type = app.get("task_type")
+        if task_type not in (TaskType.REPEAT, TaskType.WEEKLY):
+            continue
+        if "task_name" not in app:
+            continue
+        apps.append(app)
+    return apps
+
+
+def compute_weekly_stagger(hostname=None):
+    """Deterministic weekly day + off-hours time from hostname hash."""
+    hname = hostname or _hostname()
+    digest = hashlib.md5(hname.upper().encode("ascii")).hexdigest()
+    h = int(digest, 16)
+    days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"]
+    weekly_day = days[h % 7]
+    offset_min = (h // 7) % 360
+    weekly_time = "{:02d}:{:02d}".format(2 + offset_min // 60, offset_min % 60)
+    return weekly_day, weekly_time
+
+
+def _weekly_schedule(app):
+    if app.get("stagger_weekly"):
+        return compute_weekly_stagger(_hostname())
+    return app.get("weekly_day", "SUN"), app.get("weekly_time", "02:00")
+
+
+def _bat_path(app_config):
+    rel = app_config.get("file_name", "")
+    if not rel:
+        return ""
+    return os.path.normpath(
+        os.path.join(ENVIRONMENT.ROOT, "Apps", "lib", "ExeProducts", rel)
+    )
 
 
 def _task_exists(name):
@@ -80,13 +96,20 @@ def _task_exists(name):
         return False
 
 
-def _create_task(name, bat, args, schedule):
-    # /tr value gets double-quoted so paths with spaces survive cmd.exe
-    # word-splitting (matches RegisterAutoStartup.py:131 escape pattern).
-    tr = '\\"{}\\" {}'.format(bat, args)
-    cmd = 'schtasks /create /tn "{}" /tr "{}" {} /f >nul 2>&1'.format(
-        name, tr, schedule,
-    )
+def _delete_task(name):
+    cmd = 'schtasks /delete /tn "{}" /f >nul 2>&1'.format(name)
+    try:
+        subprocess.call(cmd, shell=True)
+    except Exception:
+        pass
+
+
+def _create_repeat_task(name, bat, args, interval_minutes):
+    # /sc minute /mo N matches RegisterAutoStartup REPEAT tasks.
+    tr = '\\"{}\\" {}'.format(bat, args).strip()
+    cmd = (
+        'schtasks /create /tn "{}" /tr "{}" /sc minute /mo {} /f >nul 2>&1'
+    ).format(name, tr, int(interval_minutes))
     try:
         rc = subprocess.call(cmd, shell=True)
         return rc == 0
@@ -94,42 +117,54 @@ def _create_task(name, bat, args, schedule):
         return False
 
 
-# --- Public entry ------------------------------------------------------------
+def _create_weekly_task(name, bat, args, weekly_day, weekly_time):
+    tr = '\\"{}\\" {}'.format(bat, args).strip()
+    cmd = (
+        'schtasks /create /tn "{}" /tr "{}" /sc WEEKLY /D {} /ST {} /f >nul 2>&1'
+    ).format(name, tr, weekly_day, weekly_time)
+    try:
+        rc = subprocess.call(cmd, shell=True)
+        return rc == 0
+    except Exception:
+        return False
+
 
 def register_if_needed():
-    """Register InfraWatch scheduled tasks on this machine, if eligible.
-
-    Safe to call repeatedly. Wrapped in broad except so a failure here
-    can never break Revit/Rhino startup. Prints nothing on the success
-    path -- silent enrollment is the goal.
-    """
+    """Register InfraWatch scheduled tasks on this machine, if eligible."""
     global _RAN_THIS_PROCESS
     if _RAN_THIS_PROCESS:
         return
     _RAN_THIS_PROCESS = True
 
     try:
-        if not _is_in_canary():
-            return
-        bat = _bat_path()
-        if not os.path.exists(bat):
-            return
-        for spec in _TASKS:
-            if _task_exists(spec["name"]):
+        for legacy in _LEGACY_TASK_NAMES:
+            if _task_exists(legacy):
+                _delete_task(legacy)
+
+        for app in _infra_apps():
+            if not _is_in_canary(app):
                 continue
-            _create_task(spec["name"], bat, spec["args"], spec["schedule"])
+            bat = _bat_path(app)
+            if not bat or not os.path.exists(bat):
+                continue
+            task_name = app["task_name"]
+            if _task_exists(task_name):
+                continue
+            args = app.get("task_args", "")
+            if app.get("task_type") == TaskType.WEEKLY:
+                weekly_day, weekly_time = _weekly_schedule(app)
+                _create_weekly_task(task_name, bat, args, weekly_day, weekly_time)
+            else:
+                interval = app.get("interval_minutes", 60)
+                _create_repeat_task(task_name, bat, args, interval)
     except:
-        # Never crash startup. Collector POSTs themselves report to ErrorDump
-        # if they fail, so we'll see downstream silence in InfraWatch as the
-        # signal that a fleet of machines didn't enroll.
         pass
 
 
 def unregister_all():
-    """Idempotent removal of every InfraWatch task. Used by retirement."""
-    for spec in _TASKS:
-        cmd = 'schtasks /delete /tn "{}" /f >nul 2>&1'.format(spec["name"])
-        try:
-            subprocess.call(cmd, shell=True)
-        except Exception:
-            pass
+    """Idempotent removal of InfraWatch tasks."""
+    for legacy in _LEGACY_TASK_NAMES:
+        _delete_task(legacy)
+    for app in _infra_apps():
+        if "task_name" in app:
+            _delete_task(app["task_name"])

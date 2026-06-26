@@ -307,7 +307,9 @@ $expectedTasksCore = @(
     'WhatTheLunch_Daily'
 )
 $expectedTasksRecent = @(
-    'EnneadTab_InfraWatch_Collect_Task'
+    'EnneadTab_InfraWatch_Events_Task',
+    'EnneadTab_InfraWatch_Heavy_Task',
+    'EnneadTab_Journal_Collect_Task'
 )
 $expectedTasks = $expectedTasksCore + $expectedTasksRecent
 

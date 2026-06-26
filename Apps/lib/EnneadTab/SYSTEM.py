@@ -25,6 +25,7 @@ class TaskType:
     STARTUP = "startup"    # Run when PC starts
     REPEAT = "repeat"      # Run every X minutes
     DAILY = "daily"        # Run daily at specific time
+    WEEKLY = "weekly"      # Run weekly (staggered for fleet collectors)
 
 APPS = [
     {
@@ -82,24 +83,55 @@ APPS = [
         "active": True
     },
     {
-        # 2026-04-21: replaced legacy MonitorDriveSilent + MonitorDriveDecoderSilent
-        # + DriveStorageHistory + MonitorBlueScreen tasks (all active=False, all
-        # writing to L:\ static HTML that nobody read). InfraWatch_Collect runs
-        # the unified collect_all.py which POSTs to enneadtab.com/infra/api/ingest/*
-        # -- drive health + machine spec + events in one go, every 15 min.
-        #
-        # 2026-05-18: switched task target to run_collectors.bat (stdlib-only, no
-        # exe compile required). The .bat tries py/python from the system image
-        # first; falls back to InfraWatch_Collect.exe if Python is not on PATH.
-        # RegisterAutoStartup reads file_name relative to ExeProducts/, so we use
-        # a relative path to reach the collectors dir from there.
+        # 2026-06-26 (#1816): retired 15-min monolith -- replaced by split Events 60m +
+        # Heavy 6h entries below. Kept inactive so RegisterAutoStartup removes the
+        # legacy scheduled task on next enrollment pass.
         "app_name": "InfraWatch_Collect",
         "file_name": r"..\DumpScripts\collectors\run_collectors.bat",
         "shortcut_name": "EnneadTab_InfraWatch_Collect",
         "task_name": "EnneadTab_InfraWatch_Collect_Task",
-        "description": "EnneadTab InfraWatch -- drive health + machine spec + events to enneadtab.com/infra (silent)",
+        "description": "DEPRECATED -- use InfraWatch_Events + InfraWatch_Heavy",
         "task_type": TaskType.REPEAT,
         "interval_minutes": 15,
+        "active": False
+    },
+    {
+        # Plane B -- hourly connectivity probe + BSOD/events (not plugin usage).
+        "app_name": "InfraWatch_Events",
+        "file_name": r"..\DumpScripts\collectors\run_collectors.bat",
+        "task_args": "--events-only",
+        "shortcut_name": "EnneadTab_InfraWatch_Events",
+        "task_name": "EnneadTab_InfraWatch_Events_Task",
+        "description": "EnneadTab InfraWatch hourly events + drive connectivity to enneadtab.com/infra",
+        "task_type": TaskType.REPEAT,
+        "interval_minutes": 60,
+        "canary_hosts": ["MININT-5V26DTJ"],
+        "active": True
+    },
+    {
+        # Plane B -- 6h heavy sweep: drive latency/capacity + machine spec.
+        "app_name": "InfraWatch_Heavy",
+        "file_name": r"..\DumpScripts\collectors\run_collectors.bat",
+        "task_args": "--heavy",
+        "shortcut_name": "EnneadTab_InfraWatch_Heavy",
+        "task_name": "EnneadTab_InfraWatch_Heavy_Task",
+        "description": "EnneadTab InfraWatch heavy collectors to enneadtab.com/infra",
+        "task_type": TaskType.REPEAT,
+        "interval_minutes": 360,
+        "canary_hosts": ["MININT-5V26DTJ"],
+        "active": True
+    },
+    {
+        # Plane B -- weekly Revit journal upload (pilot % gate inside collector).
+        "app_name": "InfraWatch_Journal",
+        "file_name": r"..\DumpScripts\collectors\run_collectors.bat",
+        "task_args": "--journals-only",
+        "shortcut_name": "EnneadTab_Journal_Collect",
+        "task_name": "EnneadTab_Journal_Collect_Task",
+        "description": "EnneadTab weekly Revit journal upload to enneadtab.com/infra",
+        "task_type": TaskType.WEEKLY,
+        "stagger_weekly": True,
+        "canary_hosts": ["MININT-5V26DTJ"],
         "active": True
     },
     {
@@ -121,9 +153,8 @@ APPS = [
         "task_type": TaskType.STARTUP,
         "active": False
     },
-    # 2026-04-21: DriveStorageHistory + MonitorBlueScreen retired -- folded
-    # into InfraWatch_Collect above. The unified collector handles drive health,
-    # storage snapshots, machine spec, and events in a single 15-min sweep.
+    # 2026-04-21: DriveStorageHistory + MonitorBlueScreen retired. InfraWatch
+    # collectors are Plane B scheduled tasks (InfraWatch_Events / Heavy above).
     {
         "app_name": "AboutMe_ComputerInfo_Silent",
         "file_name": "AboutMe_ComputerInfo_Silent.exe",
