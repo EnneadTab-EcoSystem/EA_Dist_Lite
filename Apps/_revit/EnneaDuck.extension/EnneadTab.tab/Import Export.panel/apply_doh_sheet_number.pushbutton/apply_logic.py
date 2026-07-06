@@ -6,7 +6,8 @@ from collections import namedtuple
 
 SheetRow = namedtuple(
     "SheetRow",
-    ["sheet_id", "live", "internal", "doh", "is_placeholder", "is_changable"],
+    ["sheet_id", "live", "internal", "doh", "is_placeholder", "is_changable",
+     "owner"],
 )
 
 MODE_INTERNAL = "INTERNAL"
@@ -83,6 +84,26 @@ def find_duplicates(rows, source):
     return out
 
 
+def duplicate_detail(rows, source):
+    """For every duplicated value in `source`, name the sheets that carry it,
+    identified by their live SheetNumber -- the unique handle you see in Revit's
+    Sheet browser. (Two sheets can share a stored DOH value because Revit only
+    enforces uniqueness on the live number, not on the custom parameter.)
+    Returns a sorted list of strings, one per duplicated value; empty if none."""
+    dups = find_duplicates(rows, source)
+    id_to_live = {}
+    for r in rows:
+        id_to_live[r.sheet_id] = r.live
+    lines = []
+    for v in sorted(dups.keys()):
+        handles = []
+        for sid in dups[v]:
+            live = id_to_live.get(sid)
+            handles.append(live if not is_empty(live) else ("id " + str(sid)))
+        lines.append("  " + v + "  ->  " + ", ".join(sorted(handles)))
+    return lines
+
+
 def find_collisions(rows, source, reserved_numbers):
     reserved = set(reserved_numbers)
     hits = []
@@ -99,6 +120,55 @@ def find_collisions(rows, source, reserved_numbers):
 
 def find_non_changable(rows):
     return [r.sheet_id for r in rows if not r.is_changable]
+
+
+def _handle(r):
+    """The sheet's user-facing handle: its live SheetNumber, or a fallback id."""
+    return r.live if not is_empty(r.live) else ("id " + str(r.sheet_id))
+
+
+def blank_target_detail(rows, source):
+    """Name the non-placeholder sheets that CAN'T receive the scheme being
+    applied because their target store is empty. Surgical counterpart to the
+    strict full-model completeness check: applying DOH only needs a DOH value
+    (a missing Internal doesn't stop a DOH apply), so this looks at one store."""
+    handles = sorted(_handle(r) for r in rows
+                     if not r.is_placeholder and is_empty(_source_value(r, source)))
+    return ["  " + h for h in handles]
+
+
+def non_changable_detail(rows, relevant_ids=None):
+    """Name the sheets owned by others (not editable in this session) AND who
+    owns each, so the user knows whom to ask. Owner may be blank if the model
+    is not workshared or Revit can't report it -- then say 'unknown user'.
+
+    If `relevant_ids` is given, only sheets in that set are reported: ownership
+    only blocks an Apply for sheets it will actually rewrite -- you need no edit
+    rights on a sheet whose live number already matches the target and is left
+    alone. Pass None (default) to report every owned sheet (overview use)."""
+    pairs = []
+    for r in rows:
+        if r.is_changable:
+            continue
+        if relevant_ids is not None and r.sheet_id not in relevant_ids:
+            continue
+        owner = r.owner if not is_empty(r.owner) else "unknown user"
+        pairs.append((_handle(r), owner))
+    pairs.sort()
+    return ["  " + h + "  (owned by " + o + ")" for h, o in pairs]
+
+
+def collision_detail(rows, source, reserved_numbers):
+    """Name sheets whose target value is already reserved by a placeholder."""
+    id_to_live = {}
+    for r in rows:
+        id_to_live[r.sheet_id] = r.live
+    lines = []
+    for sid, v in find_collisions(rows, source, reserved_numbers):
+        h = id_to_live.get(sid)
+        h = h if not is_empty(h) else ("id " + str(sid))
+        lines.append("  " + h + "  (wants " + v + ", reserved by a placeholder)")
+    return sorted(lines)
 
 
 def make_temp_tokens(sheet_ids, run_guid):
@@ -119,15 +189,25 @@ def temp_prefix_collision(rows, run_guid):
 
 
 def plan_apply(rows, target):
-    written = [r for r in rows if not r.is_placeholder]
+    """Plan ONLY the sheets whose live SheetNumber actually changes -- a sheet
+    already sitting on its target value is left alone (not rewritten, not
+    counted, not prompted about). Placeholders are never written. Returns
+    ('noop', []) when nothing changes so the caller can skip the confirm.
+
+    Safe to exclude unchanged sheets from the two-pass write: any collision
+    between a changing sheet's target and an unchanged sheet's live number would
+    require two sheets to share a target value, which the duplicate gate already
+    forbids before Apply runs."""
     finals = []
-    changed = False
-    for r in written:
+    for r in rows:
+        if r.is_placeholder:
+            continue
         v = _source_value(r, target)
-        finals.append((r.sheet_id, v))
+        if is_empty(v):
+            continue          # nothing to apply -- can't write an empty number
         if r.live != v:
-            changed = True
-    if not changed:
+            finals.append((r.sheet_id, v))
+    if not finals:
         return ("noop", [])
     return ("apply", finals)
 
@@ -154,3 +234,26 @@ def plan_fill_doh(rows):
         if is_empty(r.doh) and not is_empty(r.internal):
             out.append((r.sheet_id, r.internal))
     return out
+
+
+def plan_initialize(rows):
+    """Bootstrap: seed BOTH stores from the live SheetNumber, each store only
+    where it is EMPTY -- an already-filled store is left untouched (no
+    overwrite). Placeholder sheets ARE included (consultant sheets in the index
+    need numbering too); the write layer defensively skips any placeholder whose
+    param Revit won't expose. Sheets owned by others are excluded here -- a write
+    to a non-changable sheet would throw and roll back the whole transaction.
+    Because it never overwrites, it needs no mode guard. Returns a 2-tuple of
+    (internal_assignments, doh_assignments), each a list of (sheet_id, live)."""
+    internal_targets = []
+    doh_targets = []
+    for r in rows:
+        if not r.is_changable:
+            continue
+        if is_empty(r.live):
+            continue
+        if is_empty(r.internal):
+            internal_targets.append((r.sheet_id, r.live))
+        if is_empty(r.doh):
+            doh_targets.append((r.sheet_id, r.live))
+    return (internal_targets, doh_targets)

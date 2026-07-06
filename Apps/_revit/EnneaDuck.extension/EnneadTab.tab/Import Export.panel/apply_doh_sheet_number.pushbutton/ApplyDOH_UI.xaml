@@ -144,7 +144,7 @@
             <!-- Explanation -->
             <TextBlock Grid.Row="1" Margin="0,0,0,12" FontSize="11" TextWrapping="Wrap"
                        Foreground="{StaticResource MutedTextColor}"
-                       Text="Revit keeps ONE unique SheetNumber per sheet. This tool stores the Internal and DOH numbering in two permanent parameters and copies the chosen scheme into the live slot. Capture seeds Internal from the current live number; Fill copies Internal into any empty DOH cells."/>
+                       Text="Revit keeps ONE unique SheetNumber per sheet. This tool stores the Internal and DOH numbering in two permanent parameters and copies the chosen scheme into the live slot. Initialize seeds both stores from the current live number, filling only empty cells (existing values are kept). Apply then copies a stored scheme into the live SheetNumber."/>
 
             <!-- Mode banner: the loudest element (what Apply will act on) -->
             <Border Grid.Row="2" Margin="0,0,0,10" CornerRadius="8" Padding="12,7"
@@ -161,24 +161,38 @@
                            TextWrapping="Wrap" Foreground="{StaticResource TextColor}"/>
             </Border>
 
-            <!-- Report / blocking-reason panel (scrolls) -->
-            <Border Grid.Row="4" Margin="0,0,0,14" CornerRadius="8" Padding="10,8"
-                    Background="{StaticResource PanelColorDeep}" MaxHeight="150">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <TextBlock x:Name="ReportText" FontFamily="Consolas" FontSize="11"
-                               TextWrapping="Wrap" Foreground="{StaticResource MutedTextColor}"/>
-                </ScrollViewer>
-            </Border>
+            <!-- Report / blocking-reason panel (scrolls) + Copy log -->
+            <StackPanel Grid.Row="4" Margin="0,0,0,14">
+                <Grid Margin="0,0,0,4">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="REPORT"
+                               Style="{StaticResource SectionCaption}"
+                               VerticalAlignment="Center"/>
+                    <Button Grid.Column="1" x:Name="CopyLogButton" Content="Copy log"
+                            Click="copy_log_click"
+                            ToolTip="Copy the mode, health, and report text to the clipboard"
+                            MinHeight="22" FontSize="10" Padding="8,0,8,0"
+                            Background="#33FFFFFF" Foreground="#FFEDEDED"
+                            HorizontalAlignment="Right"/>
+                </Grid>
+                <Border CornerRadius="8" Padding="10,8"
+                        Background="{StaticResource PanelColorDeep}" MaxHeight="150">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <TextBlock x:Name="ReportText" FontFamily="Consolas" FontSize="11"
+                                   TextWrapping="Wrap" Foreground="{StaticResource MutedTextColor}"/>
+                    </ScrollViewer>
+                </Border>
+            </StackPanel>
 
             <!-- SETUP group -->
             <StackPanel Grid.Row="5" Margin="0,0,0,10">
                 <TextBlock Text="SETUP" Style="{StaticResource SectionCaption}"/>
-                <Button x:Name="CaptureButton"
-                        Content="Capture current SheetNumber into Internal"
-                        Click="capture_click"/>
-                <Button x:Name="FillDohButton"
-                        Content="Fill empty DOH from Internal"
-                        Click="fill_doh_click"/>
+                <Button x:Name="InitializeButton"
+                        Content="Initialize Internal &amp; DOH from live"
+                        Click="initialize_click"/>
             </StackPanel>
 
             <!-- APPLY group (primary) -->
