@@ -19,11 +19,35 @@ proDUCKtion.validify()
 from EnneadTab import ERROR_HANDLE, SOUND, NOTIFICATION, TIME, OUTPUT
 from EnneadTab.REVIT import REVIT_FORMS, REVIT_EVENT
 
+def _to_unicode(value):
+    # IronPython 2.7: .NET Category.Name can arrive as a byte-str holding
+    # non-ASCII bytes (e.g. 0xED). Coerce to unicode so the set-diff below
+    # compares like-for-like against the unicode names json.load returns from
+    # the (ensure_ascii) data file. Without this, non-ASCII names never match
+    # and get silently over-reported as "new" subcategories.
+    if value is None:
+        return u""
+    if isinstance(value, unicode):
+        return value
+    try:
+        return value.decode("utf-8")
+    except (UnicodeDecodeError, UnicodeError, AttributeError):
+        pass
+    try:
+        return value.decode("mbcs")
+    except (UnicodeDecodeError, UnicodeError, LookupError, AttributeError):
+        pass
+    try:
+        return value.decode("latin-1", "replace")
+    except (AttributeError, UnicodeError):
+        return unicode(value)
+
+
 def get_subc(category):
     temp = []
     for c in category:
         for sub_c in c.SubCategories:
-            temp.append("[{0}]--->[{1}]".format(c.Name , sub_c.Name))
+            temp.append(u"[{0}]--->[{1}]".format(_to_unicode(c.Name), _to_unicode(sub_c.Name)))
     return temp
 
 
