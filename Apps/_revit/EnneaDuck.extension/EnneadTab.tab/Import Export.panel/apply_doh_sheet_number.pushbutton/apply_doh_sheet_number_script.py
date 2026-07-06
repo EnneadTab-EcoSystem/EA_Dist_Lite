@@ -19,6 +19,9 @@ from EnneadTab import ERROR_HANDLE, NOTIFICATION, LOG
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_SELECTION, REVIT_FORMS
 from Autodesk.Revit import DB  # pyright: ignore
 import System  # pyright: ignore
+# Clipboard lives in System.Windows (PresentationCore), already loaded by
+# pyrevit.forms' WPF stack -- safe to import at module scope here.
+from System.Windows import Clipboard  # pyright: ignore
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import apply_logic as AL  # noqa
@@ -45,16 +48,31 @@ def _param_str(sheet, name):
     return v
 
 
+def _owner_of(doc, element_id):
+    """Worksharing owner (borrower) of an element -- the user to ask for
+    ownership -- or '' if the model isn't workshared / Revit can't report it."""
+    try:
+        tip = DB.WorksharingUtils.GetWorksharingTooltipInfo(doc, element_id)
+        return tip.Owner or ""
+    except Exception:
+        return ""
+
+
 def read_rows(doc):
     rows = []
     for s in get_all_sheets(doc):
+        changable = bool(REVIT_SELECTION.is_changable(s))
+        # Only pay for the worksharing lookup on sheets we can't edit -- those
+        # are the ones we need to name an owner for.
+        owner = "" if changable else _owner_of(doc, s.Id)
         rows.append(AL.SheetRow(
             REVIT_APPLICATION.get_element_id_value(s.Id),
             s.SheetNumber,
             _param_str(s, INTERNAL_PARAM),
             _param_str(s, DOH_PARAM),
             bool(s.IsPlaceholder),
-            bool(REVIT_SELECTION.is_changable(s)),
+            changable,
+            owner,
         ))
     return rows
 
@@ -93,23 +111,18 @@ def build_health(rows):
     }
 
 
-def format_report(title, items):
-    lines = [title, ""]
-    for it in items:
-        lines.append(str(it))
-    return "\n".join(lines)
-
-
 def format_health_detail(rows):
     """Multi-line, target-independent breakdown for the report panel: the
     concrete issues that could block an Apply, or a ready message when clean."""
     lines = []
-    idup = AL.find_duplicates(rows, AL.SOURCE_INTERNAL)
+    idup = AL.duplicate_detail(rows, AL.SOURCE_INTERNAL)
     if idup:
-        lines.append("Internal duplicates: " + ", ".join(sorted(idup.keys())))
-    ddup = AL.find_duplicates(rows, AL.SOURCE_DOH)
+        lines.append("Internal duplicates (value -> sheets currently numbered):")
+        lines.extend(idup)
+    ddup = AL.duplicate_detail(rows, AL.SOURCE_DOH)
     if ddup:
-        lines.append("DOH duplicates: " + ", ".join(sorted(ddup.keys())))
+        lines.append("DOH duplicates (value -> sheets currently numbered):")
+        lines.extend(ddup)
     incomplete = AL.find_incomplete(rows)
     if incomplete:
         lines.append("Incomplete (need both numbers): %d sheet(s)" % len(incomplete))
@@ -118,7 +131,7 @@ def format_health_detail(rows):
              and AL.classify(r) == "N"]
     if drift:
         lines.append("Drift (live matches neither store): %d sheet(s) -- "
-                     "Capture to repair" % len(drift))
+                     "Apply will overwrite live with the chosen scheme" % len(drift))
     if AL.infer_mode(rows) == AL.MODE_MIXED:
         lines.append("Mixed: some sheets show Internal, some DOH -- "
                      "Apply will offer to normalize")
@@ -163,41 +176,91 @@ def _write_two_pass(doc, plan):
 
 
 def _write_param(doc, txn_name, param_name, assignments):
-    """assignments: list of (sheet_id, value). Single transaction. Rolls back
-    then RE-RAISES on failure (surfaced by the caller's error handler)."""
+    """assignments: list of (sheet_id, value). Single transaction. Tolerates
+    sheets that don't expose the param, or expose it read-only (some placeholder
+    sheets): those are skipped and their ids returned instead of aborting the
+    run. Any OTHER (unexpected) exception still rolls back and RE-RAISES so the
+    caller's error handler surfaces it. Returns the list of skipped sheet_ids."""
+    skipped = []
     t = DB.Transaction(doc, txn_name)
     t.Start()
     try:
         for sid, value in assignments:
             p = _sheet_by_id(doc, sid).LookupParameter(param_name)
+            if p is None or p.IsReadOnly:
+                skipped.append(sid)
+                continue
             p.Set(value)
         t.Commit()
     except Exception:
         t.RollBack()
         raise
+    return skipped
+
+
+def _plural(n):
+    return "sheet" if n == 1 else "sheets"
+
+
+def _cap(lines, limit=20):
+    """Show at most `limit` detail lines; never silently truncate -- append an
+    explicit '... and N more' so the user knows the list was shortened."""
+    if len(lines) <= limit:
+        return lines
+    return lines[:limit] + ["  ... and %d more" % (len(lines) - limit)]
+
+
+def _block(header, hint, lines):
+    """One blocking issue: a header, a plain-language fix hint, then the exact
+    sheets it applies to (capped)."""
+    return "\n".join([header, "  Fix: " + hint] + _cap(lines))
 
 
 def _apply_gate(rows, source):
-    """Return a list of blocking reasons (empty list => allowed)."""
-    problems = []
-    incomplete = AL.find_incomplete(rows)
-    if incomplete:
-        problems.append("Incomplete: %d sheets missing Internal or DOH." % len(incomplete))
-    dups = AL.find_duplicates(rows, source)
-    if dups:
-        problems.append("Duplicate %s values: %s" % (source, ", ".join(dups.keys())))
-    coll = AL.find_collisions(rows, source, reserved_placeholder_numbers(rows))
-    if coll:
-        problems.append("Collides with placeholder numbers: %d" % len(coll))
-    drift = [r.sheet_id for r in rows
-             if not AL.is_empty(r.internal) and not AL.is_empty(r.doh)
-             and AL.classify(r) == "N"]
-    if drift:
-        problems.append("Drift: %d sheets match neither store (Capture to repair)." % len(drift))
-    non_ch = AL.find_non_changable(rows)
-    if non_ch:
-        problems.append("Owned by others: %d sheets not changable (need ownership)." % len(non_ch))
-    return problems
+    """SURGICAL execution gate: return only the blockers that would actually
+    break THIS write (empty => allowed). Scoped to the sheets that change --
+    problems on sheets we won't touch don't belong here (that's the strict
+    verification report's job). Blocks on: duplicate final numbers (Revit rejects
+    them), a target value reserved by a placeholder, and ownership of a sheet we
+    must rewrite. Incomplete/drift are NOT execution blockers -- a sheet with no
+    target value is simply skipped (reported by run_apply), and drift just means
+    Apply overwrites the live number, which is the whole point."""
+    label = "DOH" if source == AL.SOURCE_DOH else "Internal"
+    blocks = []
+
+    # The plan already excludes placeholders, unchanged sheets, and sheets with
+    # no target value -- so `changing_ids` is exactly what we will rewrite.
+    _, plan = AL.plan_apply(rows, source)
+    changing_ids = set(sid for sid, _ in plan)
+
+    dup_lines = AL.duplicate_detail(rows, source)
+    if dup_lines:
+        blocks.append(_block(
+            "Duplicate %s numbers (%d) -- two sheets can't share one number." % (
+                label, len(dup_lines)),
+            "give one sheet in each pair a unique %s number, or clear it. "
+            "Below: %s value -> the sheets that currently hold it." % (label, label),
+            dup_lines))
+
+    coll_lines = AL.collision_detail(rows, source, reserved_placeholder_numbers(rows))
+    if coll_lines:
+        blocks.append(_block(
+            "Reserved-number clash (%d %s) -- a target %s value is already held "
+            "by a placeholder sheet." % (
+                len(coll_lines), _plural(len(coll_lines)), label),
+            "renumber the placeholder sheet, or change the clashing %s value." % label,
+            coll_lines))
+
+    nc_lines = AL.non_changable_detail(rows, changing_ids)
+    if nc_lines:
+        blocks.append(_block(
+            "Owned by others (%d %s that need renumbering) -- you can't edit "
+            "these yet." % (len(nc_lines), _plural(len(nc_lines))),
+            "take ownership from the Collaborate tab, or ask the owner to "
+            "sync and relinquish, then try again.",
+            nc_lines))
+
+    return blocks
 
 
 def _confirm(main_text, sub_text, ok_label, icon="warning"):
@@ -214,15 +277,23 @@ def _confirm(main_text, sub_text, ok_label, icon="warning"):
 
 def run_apply(target):
     rows = read_rows(DOC)
+    target_label = "DOH" if target == AL.SOURCE_DOH else "Internal"
     problems = _apply_gate(rows, target)
     if problems:
-        NOTIFICATION.messenger(main_text=format_report("Cannot apply:", problems))
+        header = ("Can't apply %s numbering yet -- %d issue(s) to clear first:" % (
+            target_label, len(problems)))
+        NOTIFICATION.messenger(main_text=header + "\n\n" + "\n\n".join(problems))
         return
     kind, plan = AL.plan_apply(rows, target)
+    # Sheets left out because they have no value in the target store -- surfaced
+    # to the user rather than silently dropped.
+    n_blank = len(AL.blank_target_detail(rows, target))
+    blank_note = ((" %d %s skipped (no %s value)." % (
+        n_blank, _plural(n_blank), target_label)) if n_blank else "")
     if kind == "noop":
-        NOTIFICATION.messenger(main_text="Already in the requested mode. Nothing to do.")
+        NOTIFICATION.messenger(
+            main_text="Already in the requested mode. Nothing to change." + blank_note)
         return
-    target_label = "DOH" if target == AL.SOURCE_DOH else "Internal"
     if AL.infer_mode(rows) == AL.MODE_MIXED:
         n_internal = len([r for r in rows
                           if not r.is_placeholder and not AL.is_empty(r.internal)
@@ -240,47 +311,47 @@ def run_apply(target):
     else:
         if not _confirm(
                 "Apply %s numbering" % target_label,
-                "%d sheets will be renumbered. Continue?" % len(plan),
+                "%d %s will change SheetNumber. Continue?" % (
+                    len(plan), _plural(len(plan))),
                 "Apply %s" % target_label):
             return
     _write_two_pass(DOC, plan)
-    NOTIFICATION.messenger(main_text="Applied %s numbering to %d sheets." % (
-        target_label, len(plan)))
+    NOTIFICATION.messenger(
+        main_text=("Applied %s numbering to %d %s." % (
+            target_label, len(plan), _plural(len(plan)))) + blank_note)
 
 
-def run_capture():
+def run_initialize():
+    """Seed both stores from the live SheetNumber, filling only empty cells."""
     rows = read_rows(DOC)
-    mode = AL.infer_mode(rows)
-    kind, payload = AL.plan_capture(rows, mode)
-    if kind == "refused":
-        NOTIFICATION.messenger(main_text=payload)
-        return
-    if not payload:
-        NOTIFICATION.messenger(main_text="Nothing to capture (Internal already complete).")
+    internal_targets, doh_targets = AL.plan_initialize(rows)
+    n_int = len(internal_targets)
+    n_doh = len(doh_targets)
+    if not internal_targets and not doh_targets:
+        NOTIFICATION.messenger(
+            main_text="Nothing to initialize -- Internal and DOH are already "
+                      "filled on every editable sheet.")
         return
     if not _confirm(
-            "Capture current SheetNumber into Internal",
-            "Write the live SheetNumber into Sheet Number_Internal for "
-            "%d sheet(s)?" % len(payload),
-            "Capture", icon="shield"):
+            "Initialize Internal & DOH from live",
+            "Seed Internal on %d sheet(s) and DOH on %d sheet(s) from the "
+            "current SheetNumber (placeholder sheets included)? Only empty "
+            "cells are written; existing values are kept." % (n_int, n_doh),
+            "Initialize", icon="shield"):
         return
-    _write_param(DOC, "Capture Internal", INTERNAL_PARAM, payload)
-    NOTIFICATION.messenger(main_text="Captured %d sheets into Internal." % len(payload))
-
-
-def run_fill_doh():
-    rows = read_rows(DOC)
-    payload = AL.plan_fill_doh(rows)
-    if not payload:
-        NOTIFICATION.messenger(main_text="No empty DOH cells to fill.")
-        return
-    if not _confirm(
-            "Fill empty DOH from Internal",
-            "Fill %d empty DOH cell(s) with the Internal number?" % len(payload),
-            "Fill", icon="shield"):
-        return
-    _write_param(DOC, "Fill DOH", DOH_PARAM, payload)
-    NOTIFICATION.messenger(main_text="Filled %d empty DOH cells." % len(payload))
+    skipped_int = (_write_param(DOC, "Initialize Internal", INTERNAL_PARAM,
+                                internal_targets) if internal_targets else [])
+    skipped_doh = (_write_param(DOC, "Initialize DOH", DOH_PARAM,
+                                doh_targets) if doh_targets else [])
+    written_int = n_int - len(skipped_int)
+    written_doh = n_doh - len(skipped_doh)
+    n_skipped = len(set(skipped_int) | set(skipped_doh))
+    msg = "Initialized: Internal on %d, DOH on %d sheet(s)." % (
+        written_int, written_doh)
+    if n_skipped:
+        msg += (" Skipped %d sheet(s) that don't accept the parameter "
+                "(likely placeholders)." % n_skipped)
+    NOTIFICATION.messenger(main_text=msg)
 
 
 class ApplyDohWindow(forms.WPFWindow):
@@ -301,7 +372,7 @@ class ApplyDohWindow(forms.WPFWindow):
             self.ReportText.Text = ("Add each as a Text parameter bound to the "
                                     "Sheets category, then reopen this tool.")
             for b in (self.ApplyDohButton, self.ApplyInternalButton,
-                      self.CaptureButton, self.FillDohButton):
+                      self.InitializeButton):
                 b.IsEnabled = False
             return
         rows = read_rows(DOC)
@@ -313,12 +384,11 @@ class ApplyDohWindow(forms.WPFWindow):
                 h["total"], h["internal_set"], len(h["internal_dups"]),
                 h["doh_set"], len(h["doh_dups"]), len(h["incomplete"])))
         self.ReportText.Text = format_health_detail(rows)
-        # Capture / Fill are never gated by completeness (they satisfy it).
+        # Initialize is never gated by completeness (it satisfies it).
         # Apply buttons stay enabled (XAML default) -- run_apply() re-runs the
         # gate against the specific target and reports exact blocking reasons
         # on click, so no separate up-front disable is needed.
-        self.CaptureButton.IsEnabled = True
-        self.FillDohButton.IsEnabled = True
+        self.InitializeButton.IsEnabled = True
 
     # Each click handler is individually wrapped so an exception during a
     # transaction surfaces to EnneadTab's error handler (ErrorDump + traceback
@@ -334,14 +404,28 @@ class ApplyDohWindow(forms.WPFWindow):
         run_apply(AL.SOURCE_INTERNAL)
 
     @ERROR_HANDLE.try_catch_error()
-    def capture_click(self, sender, args):
+    def initialize_click(self, sender, args):
         self.Close()
-        run_capture()
+        run_initialize()
 
     @ERROR_HANDLE.try_catch_error()
-    def fill_doh_click(self, sender, args):
-        self.Close()
-        run_fill_doh()
+    def copy_log_click(self, sender, args):
+        # Copy exactly what the panel shows (mode + health + report) so the
+        # user can paste the blocking reasons elsewhere. Does NOT close the
+        # window -- they usually copy, then act on the same open dialog.
+        text = "\n".join([
+            "Apply DOH SheetNum",
+            self.ModeText.Text or "",
+            "",
+            self.HealthText.Text or "",
+            "",
+            self.ReportText.Text or "",
+        ])
+        try:
+            Clipboard.SetDataObject(text, True)  # True => persist after close
+        except Exception:
+            Clipboard.SetText(text)
+        self.CopyLogButton.Content = "Copied"
 
     def close_Click(self, sender, args):
         self.Close()
