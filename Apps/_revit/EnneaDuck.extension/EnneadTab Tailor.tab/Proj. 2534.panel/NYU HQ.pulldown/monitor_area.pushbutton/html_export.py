@@ -530,7 +530,7 @@ class HTMLReportGenerator:
                     <div class="link-content">
                         <div class="link-title">Online Dashboard</div>
                         <div class="link-description">View this dashboard anywhere</div>
-                        <a href="https://ennead-architects-llp.github.io/NYU-HQ/" target="_blank" class="dashboard-link">
+                        <a href="https://enneadtab.com/projects/nyu-hq" target="_blank" class="dashboard-link">
                             <span class="link-text">🚀 Live Dashboard</span>
                             <span class="link-arrow">↗</span>
                         </a>
@@ -541,7 +541,7 @@ class HTMLReportGenerator:
                     <div class="link-content">
                         <div class="link-title">Data Flow Diagram</div>
                         <div class="link-description">See how data flows between Excel, Revit, and the web report</div>
-                        <a href="https://ennead-architects-llp.github.io/NYU-HQ/diagram" target="_blank" class="dashboard-link">
+                        <a href="https://enneadtab.com/projects/nyu-hq/diagram" target="_blank" class="dashboard-link">
                             <span class="link-text">📊 Flow Chart</span>
                             <span class="link-arrow">↗</span>
                         </a>

@@ -488,8 +488,19 @@ def _notify_next_user_from_api(doc, api_result):
     if not queue:
         return
 
+    # Defensively drop ourselves before picking the head. The /complete
+    # endpoint is documented to remove the caller server-side, but the
+    # file-based path (_complete_file_based_queue) filters self out explicitly
+    # and this path must match: if a server race / eventual-consistency window
+    # ever returns a queue that still contains us at index 0, we would email
+    # ourselves "your turn to sync" and show our own name in the popup.
+    remaining = [entry for entry in queue
+                 if entry.get("username", "") != USER.USER_NAME]
+    if not remaining:
+        return
+
     try:
-        next_user = queue[0].get("username", "")
+        next_user = remaining[0].get("username", "")
         if not next_user:
             return
     except Exception:
