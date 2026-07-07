@@ -193,6 +193,10 @@
                 <Button x:Name="InitializeButton"
                         Content="Initialize Internal &amp; DOH from live"
                         Click="initialize_click"/>
+                <Button x:Name="CaptureButton"
+                        Content="Capture live -&gt; Internal (repair drift)"
+                        ToolTip="Save the current SheetNumber into Sheet Number_Internal for off-scheme or empty-Internal sheets. Refused in DOH mode."
+                        Click="capture_click"/>
             </StackPanel>
 
             <!-- APPLY group (primary) -->
