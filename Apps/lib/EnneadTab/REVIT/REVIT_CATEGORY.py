@@ -1,6 +1,60 @@
 from pyrevit import forms
 from Autodesk.Revit import DB # pyright:ignore
 
+
+def to_unicode(value):
+    """Coerce a (possibly byte-str) Revit name to unicode for safe text/json use.
+
+    IronPython 2.7: .NET Category.Name can arrive as a byte-str holding
+    non-ASCII bytes (e.g. 0xED). json.dumps then triggers an implicit
+    str.decode('ascii') and dies with UnicodeDecodeError; set-diffs against the
+    unicode names json.load returns also silently mis-compare. Coerce to unicode
+    first so only unicode is produced. Best-effort decode; never raises.
+
+    Args:
+        value: A category / subcategory name (str, unicode, or None).
+
+    Returns:
+        unicode: The name as unicode.
+    """
+    if value is None:
+        return u""
+    if isinstance(value, unicode):
+        return value
+    try:
+        return value.decode("utf-8")
+    except (UnicodeDecodeError, UnicodeError, AttributeError):
+        pass
+    try:
+        return value.decode("mbcs")
+    except (UnicodeDecodeError, UnicodeError, LookupError, AttributeError):
+        pass
+    try:
+        return value.decode("latin-1", "replace")
+    except (AttributeError, UnicodeError):
+        return unicode(value)
+
+
+def get_subcategory_signatures(doc):
+    """Snapshot every subcategory in the document as stable diff signatures.
+
+    Each entry is u"[<parent category>]--->[<subcategory>]" with both names
+    coerced to unicode (see to_unicode). Used by the family-load hooks to diff
+    the project's subcategories before vs. after a family load.
+
+    Args:
+        doc (Document): The Revit document to enumerate.
+
+    Returns:
+        list: One unicode signature per subcategory, in enumeration order.
+    """
+    signatures = []
+    for category in doc.Settings.Categories:
+        for sub_c in category.SubCategories:
+            signatures.append(u"[{0}]--->[{1}]".format(to_unicode(category.Name), to_unicode(sub_c.Name)))
+    return signatures
+
+
 def pick_category(doc):
     """Displays UI for selecting Revit categories from a predefined list.
     

@@ -16,46 +16,9 @@ from pyrevit.coreutils import envvars
 import time
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
-from EnneadTab import ERROR_HANDLE, SOUND, NOTIFICATION, TIME, OUTPUT
-from EnneadTab.REVIT import REVIT_FORMS, REVIT_EVENT
+from EnneadTab import ERROR_HANDLE, SOUND, NOTIFICATION, TIME, OUTPUT, DATA_CONVERSION
+from EnneadTab.REVIT import REVIT_FORMS, REVIT_EVENT, REVIT_CATEGORY
 
-def _to_unicode(value):
-    # IronPython 2.7: .NET Category.Name can arrive as a byte-str holding
-    # non-ASCII bytes (e.g. 0xED). Coerce to unicode so the set-diff below
-    # compares like-for-like against the unicode names json.load returns from
-    # the (ensure_ascii) data file. Without this, non-ASCII names never match
-    # and get silently over-reported as "new" subcategories.
-    if value is None:
-        return u""
-    if isinstance(value, unicode):
-        return value
-    try:
-        return value.decode("utf-8")
-    except (UnicodeDecodeError, UnicodeError, AttributeError):
-        pass
-    try:
-        return value.decode("mbcs")
-    except (UnicodeDecodeError, UnicodeError, LookupError, AttributeError):
-        pass
-    try:
-        return value.decode("latin-1", "replace")
-    except (AttributeError, UnicodeError):
-        return unicode(value)
-
-
-def get_subc(category):
-    temp = []
-    for c in category:
-        for sub_c in c.SubCategories:
-            temp.append(u"[{0}]--->[{1}]".format(_to_unicode(c.Name), _to_unicode(sub_c.Name)))
-    return temp
-
-
-def difference_list(L1, L2):
-    temp = []
-    temp.extend( list(set(L1) - set(L2)) )
-    temp.extend( list(set(L2) - set(L1)) )
-    return temp
 
 @ERROR_HANDLE.try_catch_error(is_silent=True)
 def main():
@@ -85,21 +48,34 @@ def main():
     # non-ASCII category names (0xC3...), which broke text-mode round-trips
     # fleet-wide (UnicodeDecodeError). json with ensure_ascii stays pure ASCII.
     # A file written by the old pickle code (or a missing/partial file) lands
-    # in the except branch and is treated as an empty baseline once.
+    # in the except branch -> None baseline -> the guard below skips the diff
+    # (with a visible note) instead of dumping the whole object-style list.
     try:
         with io.open(datafile, 'r', encoding="utf-8") as f:
             old_sub_c_list = json.load(f)
     except Exception:
-        old_sub_c_list = []
-    
-    all_Cs = doc.Settings.Categories
-    current_sub_c_list = get_subc(all_Cs)
-    #print current_sub_c_list
+        # None (not []) so the guard below can distinguish "no baseline at all"
+        # from a genuine "baseline present, nothing new" case.
+        old_sub_c_list = None
 
-    #print "\n\n\n\n**************************"
-    new_sub_c_list =  difference_list(current_sub_c_list, old_sub_c_list)
+    current_sub_c_list = REVIT_CATEGORY.get_subcategory_signatures(doc)
 
+    if not old_sub_c_list:
+        # No usable before-snapshot from the pre-load hook (missing / empty /
+        # corrupt file, or the pre-hook failed to write one). Without a baseline
+        # we CANNOT compute which subcategories are new -- the old code dumped
+        # the ENTIRE object-style list here, wrongly labelled as "brought to the
+        # project". Surface a concise, visible note instead of a silent skip
+        # (never-silent-to-operator) and return without the whole-OST dump.
+        NOTIFICATION.messenger("Subcategory diff unavailable for <{}>: no baseline snapshot from the pre-load hook. Reload pyRevit if this repeats.".format(EXEC_PARAMS.event_args.FamilyName))
+        ERROR_HANDLE.print_note("family-loaded hook: empty/missing baseline for {}; skipped whole-OST dump.".format(EXEC_PARAMS.event_args.FamilyName))
+        return
 
+    # Directional diff: only subcategories present NOW but not before are "new".
+    # (The old symmetric difference also reported REMOVED subcategories as
+    # "brought to the project", which is wrong.) compare_list returns
+    # (only_in_A, only_in_B, shared); only_in_A == current - old == the new ones.
+    new_sub_c_list, _removed, _shared = DATA_CONVERSION.compare_list(current_sub_c_list, old_sub_c_list)
 
     if len(new_sub_c_list) == 0:
         return
