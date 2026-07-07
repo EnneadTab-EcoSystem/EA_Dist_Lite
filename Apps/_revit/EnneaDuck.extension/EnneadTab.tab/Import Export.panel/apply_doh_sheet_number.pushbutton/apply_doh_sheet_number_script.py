@@ -126,12 +126,16 @@ def format_health_detail(rows):
     incomplete = AL.find_incomplete(rows)
     if incomplete:
         lines.append("Incomplete (need both numbers): %d sheet(s)" % len(incomplete))
-    drift = [r for r in rows
-             if not AL.is_empty(r.internal) and not AL.is_empty(r.doh)
-             and AL.classify(r) == "N"]
-    if drift:
-        lines.append("Drift (live matches neither store): %d sheet(s) -- "
-                     "Apply will overwrite live with the chosen scheme" % len(drift))
+    drift_lines = AL.drift_detail(rows)
+    if drift_lines:
+        n = len(drift_lines)
+        lines.append(
+            "%d %s show a live number that isn't saved in either scheme "
+            "(hand-edited or newly added). Applying DOH or Internal will "
+            "replace it with that scheme's number -- the current number is "
+            "lost. To keep it, use 'Capture live -> Internal' first." % (
+                n, _plural(n)))
+        lines.extend(_cap(drift_lines))
     if AL.infer_mode(rows) == AL.MODE_MIXED:
         lines.append("Mixed: some sheets show Internal, some DOH -- "
                      "Apply will offer to normalize")
@@ -321,6 +325,41 @@ def run_apply(target):
             target_label, len(plan), _plural(len(plan)))) + blank_note)
 
 
+def run_capture():
+    """Fold the live SheetNumber into Sheet Number_Internal for sheets whose
+    Internal is empty or drifted (class N) -- the repair for drift. Refuses when
+    the model is in DOH mode (capturing then would overwrite the firm's Internal
+    numbers with the client's DOH numbers). Never touches already-correct sheets
+    or placeholders."""
+    rows = read_rows(DOC)
+    kind, payload = AL.plan_capture(rows, AL.infer_mode(rows))
+    if kind == "refused":
+        NOTIFICATION.messenger(main_text=payload)
+        return
+    targets = payload
+    if not targets:
+        NOTIFICATION.messenger(
+            main_text="Nothing to capture -- every sheet's Internal number "
+                      "already matches its live number.")
+        return
+    if not _confirm(
+            "Capture live numbers into Internal",
+            "%d %s will have their current SheetNumber saved into "
+            "Sheet Number_Internal (only sheets that are off-scheme or have an "
+            "empty Internal). Existing correct Internal values are kept. "
+            "Continue?" % (len(targets), _plural(len(targets))),
+            "Capture", icon="shield"):
+        return
+    skipped = _write_param(DOC, "Capture Internal", INTERNAL_PARAM, targets)
+    written = len(targets) - len(skipped)
+    msg = "Captured live numbers into Internal on %d %s." % (
+        written, _plural(written))
+    if skipped:
+        msg += (" Skipped %d %s that don't accept the parameter." % (
+            len(skipped), _plural(len(skipped))))
+    NOTIFICATION.messenger(main_text=msg)
+
+
 def run_initialize():
     """Seed both stores from the live SheetNumber, filling only empty cells."""
     rows = read_rows(DOC)
@@ -372,7 +411,7 @@ class ApplyDohWindow(forms.WPFWindow):
             self.ReportText.Text = ("Add each as a Text parameter bound to the "
                                     "Sheets category, then reopen this tool.")
             for b in (self.ApplyDohButton, self.ApplyInternalButton,
-                      self.InitializeButton):
+                      self.InitializeButton, self.CaptureButton):
                 b.IsEnabled = False
             return
         rows = read_rows(DOC)
@@ -402,6 +441,11 @@ class ApplyDohWindow(forms.WPFWindow):
     def apply_internal_click(self, sender, args):
         self.Close()
         run_apply(AL.SOURCE_INTERNAL)
+
+    @ERROR_HANDLE.try_catch_error()
+    def capture_click(self, sender, args):
+        self.Close()
+        run_capture()
 
     @ERROR_HANDLE.try_catch_error()
     def initialize_click(self, sender, args):

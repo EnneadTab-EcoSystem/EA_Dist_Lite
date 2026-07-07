@@ -171,6 +171,21 @@ def collision_detail(rows, source, reserved_numbers):
     return sorted(lines)
 
 
+def drift_detail(rows):
+    """Name the sheets whose live SheetNumber matches neither stored scheme
+    (class N) -- typically hand-edited or newly added sheets that wandered off
+    both the Internal and DOH numbering. Reported by live SheetNumber handle
+    (sorted) so the user can find them in the Sheet browser. Rows missing either
+    store are not classifiable and are excluded. Empty list if nothing drifted."""
+    lines = []
+    for r in rows:
+        if is_empty(r.internal) or is_empty(r.doh):
+            continue
+        if classify(r) == "N":
+            lines.append("  " + _handle(r))
+    return sorted(lines)
+
+
 def make_temp_tokens(sheet_ids, run_guid):
     tokens = {}
     i = 0
