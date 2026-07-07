@@ -32,9 +32,47 @@ import time
 import json
 
 # Sync Queue API configuration
-SYNC_QUEUE_API_BASE = "https://enneadtab.com/db/api/revit-sync"
+# 2026-07-06 (#1435): primary base flipped to the /sync proxy path. The old
+# /db path is kept as a transparent fallback base so the fleet transition is
+# zero-risk. Both paths are permanent proxies to the SAME backend and are
+# live-verified working -- the fallback is only reached when the primary edge
+# is unreachable at the transport level (not on an HTTP error response, which
+# would be byte-identical from either base).
+SYNC_QUEUE_API_BASE = "https://enneadtab.com/sync/api/revit-sync"
+SYNC_QUEUE_API_BASE_FALLBACK = "https://enneadtab.com/db/api/revit-sync"
 SYNC_QUEUE_API_TIMEOUT_MS = 5000
 SYNC_QUEUE_API_MAX_RETRIES = 2
+
+
+def _is_transport_failure(error):
+    """Decide whether a failed request should be retried against the fallback base.
+
+    Only a transport/connection-level failure (host unreachable, DNS failure,
+    connection refused, timeout) means the primary base itself is unreachable
+    and the fallback base is worth trying. A ProtocolError -- the server
+    returned an HTTP status such as 400/404/500 -- means the primary base IS
+    reachable and answering; since both bases proxy to the same backend, the
+    fallback would return the same response, so we do NOT fall back.
+
+    Args:
+        error: The exception caught from a failed request, or None
+
+    Returns:
+        bool: True if the primary base appears unreachable (fallback eligible)
+    """
+    if error is None:
+        return False
+    try:
+        import clr
+        clr.AddReference("System")
+        from System.Net import WebException, WebExceptionStatus
+        if isinstance(error, WebException):
+            return error.Status != WebExceptionStatus.ProtocolError
+    except Exception:
+        # If we cannot classify the error, do not fall back -- preserve the
+        # pre-fallback behavior of returning None on an unclassified failure.
+        pass
+    return False
 
 
 def _create_web_request(url, method="GET"):
@@ -60,25 +98,28 @@ def _create_web_request(url, method="GET"):
     return request
 
 
-def _api_post(endpoint, data):
-    """POST JSON to EnneadTab-DB sync queue API.
+def _do_api_post(base, endpoint, data):
+    """POST JSON to a single sync queue API base, with per-base retry.
 
-    Uses System.Net.HttpWebRequest for IronPython 2.7 compatibility
-    with proper timeout. Retries once on transient failure (500, timeout).
+    Uses System.Net.HttpWebRequest for IronPython 2.7 compatibility with proper
+    timeout. Retries on transient failure (500, timeout) within this base only.
 
     Args:
+        base: API base URL, e.g. "https://enneadtab.com/sync/api/revit-sync"
         endpoint: API path, e.g. "/request"
         data: Dict to serialize as JSON body
 
     Returns:
-        dict or None: Parsed response, or None on any failure
+        tuple: (result, last_error). On success, (parsed_dict, None); on
+        failure, (None, exception). The caller inspects last_error to decide
+        whether to retry against the fallback base.
     """
     import clr
     clr.AddReference("System")
     from System.Text import Encoding
-    from System.IO import StreamReader, StreamWriter
+    from System.IO import StreamReader
 
-    url = "{}{}".format(SYNC_QUEUE_API_BASE, endpoint)
+    url = "{}{}".format(base, endpoint)
     body = json.dumps(data)
     body_bytes = Encoding.UTF8.GetBytes(body)
 
@@ -98,7 +139,7 @@ def _api_post(endpoint, data):
             text = reader.ReadToEnd()
             reader.Close()
             response.Close()
-            return json.loads(text)
+            return (json.loads(text), None)
         except Exception as e:
             last_error = e
             error_str = str(e)
@@ -107,26 +148,60 @@ def _api_post(endpoint, data):
                 break
             time.sleep(1)
 
+    return (None, last_error)
+
+
+def _api_post(endpoint, data):
+    """POST JSON to the sync queue API, with transparent fallback base.
+
+    Tries the primary base (SYNC_QUEUE_API_BASE, the /sync proxy) first. If the
+    primary base is unreachable at the transport level (connection refused, DNS
+    failure, timeout) -- and NOT when it returns an HTTP error response -- the
+    same call is retried once against the fallback base
+    (SYNC_QUEUE_API_BASE_FALLBACK, the legacy /db proxy). Both proxy to the same
+    backend; the fallback exists to make the /db -> /sync fleet transition
+    zero-risk. Per-base retry-on-transient (500, timeout) is preserved.
+
+    Args:
+        endpoint: API path, e.g. "/request"
+        data: Dict to serialize as JSON body
+
+    Returns:
+        dict or None: Parsed response, or None on any failure
+    """
+    result, last_error = _do_api_post(SYNC_QUEUE_API_BASE, endpoint, data)
+    if last_error is None:
+        return result
+
+    if _is_transport_failure(last_error):
+        ERROR_HANDLE.print_note("Sync queue primary base unreachable ({}), retrying fallback base: {}".format(endpoint, last_error))
+        fb_result, fb_error = _do_api_post(SYNC_QUEUE_API_BASE_FALLBACK, endpoint, data)
+        if fb_error is None:
+            return fb_result
+        last_error = fb_error
+
     ERROR_HANDLE.print_note("Sync queue API call failed ({}): {}".format(endpoint, last_error))
     return None
 
 
-def _api_get(endpoint, params=None):
-    """GET from EnneadTab-DB sync queue API.
+def _do_api_get(base, endpoint, params=None):
+    """GET from a single sync queue API base, with per-base retry.
 
     Args:
+        base: API base URL, e.g. "https://enneadtab.com/sync/api/revit-sync"
         endpoint: API path, e.g. "/status"
         params: Dict of query parameters
 
     Returns:
-        dict or None: Parsed response, or None on any failure
+        tuple: (result, last_error). On success, (parsed_dict, None); on
+        failure, (None, exception).
     """
     import clr
     clr.AddReference("System")
     from System.Text import Encoding
     from System.IO import StreamReader
 
-    url = "{}{}".format(SYNC_QUEUE_API_BASE, endpoint)
+    url = "{}{}".format(base, endpoint)
     if params:
         query_parts = ["{}={}".format(k, v) for k, v in params.items()]
         url = "{}?{}".format(url, "&".join(query_parts))
@@ -140,7 +215,7 @@ def _api_get(endpoint, params=None):
             text = reader.ReadToEnd()
             reader.Close()
             response.Close()
-            return json.loads(text)
+            return (json.loads(text), None)
         except Exception as e:
             last_error = e
             error_str = str(e)
@@ -148,6 +223,35 @@ def _api_get(endpoint, params=None):
             if not is_retryable or attempt == SYNC_QUEUE_API_MAX_RETRIES - 1:
                 break
             time.sleep(1)
+
+    return (None, last_error)
+
+
+def _api_get(endpoint, params=None):
+    """GET from the sync queue API, with transparent fallback base.
+
+    Tries the primary base (SYNC_QUEUE_API_BASE, the /sync proxy) first. On a
+    transport-level failure of the primary base (not on an HTTP error response),
+    retries once against the fallback base (SYNC_QUEUE_API_BASE_FALLBACK, the
+    legacy /db proxy). See _api_post for the full rationale.
+
+    Args:
+        endpoint: API path, e.g. "/status"
+        params: Dict of query parameters
+
+    Returns:
+        dict or None: Parsed response, or None on any failure
+    """
+    result, last_error = _do_api_get(SYNC_QUEUE_API_BASE, endpoint, params)
+    if last_error is None:
+        return result
+
+    if _is_transport_failure(last_error):
+        ERROR_HANDLE.print_note("Sync queue primary base unreachable ({}), retrying fallback base: {}".format(endpoint, last_error))
+        fb_result, fb_error = _do_api_get(SYNC_QUEUE_API_BASE_FALLBACK, endpoint, params)
+        if fb_error is None:
+            return fb_result
+        last_error = fb_error
 
     ERROR_HANDLE.print_note("Sync queue API GET failed ({}): {}".format(endpoint, last_error))
     return None

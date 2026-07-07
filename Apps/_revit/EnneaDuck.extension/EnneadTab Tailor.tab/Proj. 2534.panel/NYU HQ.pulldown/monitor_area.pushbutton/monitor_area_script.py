@@ -127,6 +127,16 @@ def monitor_area(doc):
     This function is designed to run in Revit environment
     """
     
+    # Heads-up notice: this button no longer publishes data to the NYU HQ
+    # website. It still runs the local area comparison + report below; the
+    # published dashboard now lives under enneadtab.com (migrated off the old
+    # GitHub Pages site).
+    NOTIFICATION.messenger(
+        main_text="NYU HQ Monitor Area no longer pushes data to the website. "
+                  "It still runs the local area check and report here. For the "
+                  "latest published dashboard, visit enneadtab.com/projects/nyu-hq"
+    )
+
     # Get data from Excel and Revit
     excel_data, color_hierarchy = get_excel_data()
     
