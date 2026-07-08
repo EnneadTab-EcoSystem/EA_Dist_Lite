@@ -82,10 +82,18 @@ class OperationTimeout:
             )
 
 
+# Session-scoped error loop detector. It MUST live at module scope: a per-call
+# instance (the old behaviour) reset error_history on every sheet, so the
+# max_same_error threshold was never reachable and the loop guard never fired.
+# Hoisting it here lets errors accumulate across every sheet in a run so a
+# repeating failure actually trips the guard.
+_EXPORT_ERROR_DETECTOR = ErrorLoopDetector(max_same_error=5, time_window=30)
+
+
 def safe_export_with_timeout(export_func, sheet, sheet_index, total_sheets, timeout_minutes=5):
     """Safely export a single sheet with timeout protection and error handling."""
-    error_detector = ErrorLoopDetector(max_same_error=5, time_window=30)
-    
+    error_detector = _EXPORT_ERROR_DETECTOR
+
     try:
         with OperationTimeout(timeout_minutes * 60):
             return export_func(sheet, sheet_index, total_sheets)

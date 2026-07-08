@@ -28,7 +28,6 @@ from EnneadTab import DATA_FILE
 import os
 import re
 import json
-from pathlib import Path
 
 class PimNumberFixerWindow(WPFWindow):
     def __init__(self):
