@@ -80,7 +80,11 @@ def get_service_key(service_name):
         data = DATA_FILE.get_data(L_drive_file_path)
     if not data:
         return None
-    return data.get(service_name) or next(iter(data.values()), None)
+    # Return None on a miss rather than falling back to an arbitrary other
+    # service's token: "data.get(name) or next(iter(...))" would hand back a
+    # DIFFERENT service's key when service_name is absent, silently
+    # authenticating against the wrong service.
+    return data.get(service_name)
 
 
 def unit_test():
