@@ -3,7 +3,7 @@
 
 
 
-__doc__ = "Convert line in Rhino into Revit Structure frame. Become a archi-column, strcutre column or frame needs to be defined in previous step at Rhino."
+__doc__ = "Convert line in Rhino into Revit Structure frame. Whether it becomes an archi-column, structure column, or frame needs to be defined in the previous step in Rhino."
 __title__ = "Line2Structure"
 
 from pyrevit import forms #

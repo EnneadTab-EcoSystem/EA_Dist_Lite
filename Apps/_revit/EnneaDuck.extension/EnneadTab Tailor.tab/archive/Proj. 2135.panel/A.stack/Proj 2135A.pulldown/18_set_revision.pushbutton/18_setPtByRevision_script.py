@@ -1,8 +1,8 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Transfer the data between issing parameter and titleblock revision schedule. Also can transfer issue data from last round to current round."
-__title__ = "18_set bullit point by/to revision on sheet"
+__doc__ = "Transfer the data between missing parameter and titleblock revision schedule. Also can transfer issue data from last round to current round."
+__title__ = "18_set bullet point by/to revision on sheet"
 
 from pyrevit import forms, DB, revit, script
 import System
