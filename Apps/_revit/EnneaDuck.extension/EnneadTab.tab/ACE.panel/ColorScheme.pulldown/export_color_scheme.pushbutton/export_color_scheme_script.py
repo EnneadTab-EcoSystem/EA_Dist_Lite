@@ -3,7 +3,7 @@
 
 
 
-__doc__ = "Use me tp export selected Color Scheme To Excel. You have the option to exclude unused color."
+__doc__ = "Use me to export selected Color Scheme To Excel. You have the option to exclude unused color."
 __title__ = "ColorScheme2Excel"
 __tip__ = True
 __is_popular__ = True
