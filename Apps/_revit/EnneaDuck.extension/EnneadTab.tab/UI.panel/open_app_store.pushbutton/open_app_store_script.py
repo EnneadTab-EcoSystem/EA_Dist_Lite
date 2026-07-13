@@ -1,7 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = """Opens the EnneadTab App Store interface, allowing users to browse, install, and manage available add-ons and extensions for Revit. Provides a centralized location for discovering new tools and keeping existing ones up to date."""
+__doc__ = """Open the EnneadTab App Store to browse and install extra tools.
+
+One place to discover what the office has built, add what you need, and keep what you
+already have up to date."""
 __title__ = "Open App Store"
 
 import proDUCKtion # pyright: ignore 

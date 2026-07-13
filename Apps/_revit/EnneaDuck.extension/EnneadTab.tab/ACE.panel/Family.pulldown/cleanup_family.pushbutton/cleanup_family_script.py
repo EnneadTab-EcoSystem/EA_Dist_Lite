@@ -1,9 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = """Purge unused elements from selected families and optionally standardize units. Processes nested families recursively.
-EnneadTab dump folder when the original path is unavailable.
-"""
+__doc__ = """Slim down the families you pick by purging what is unused inside them.
+
+Bloated families make a model slow to open and heavy to sync. This opens each family
+you select, throws out the unused types, materials, and imports hiding inside, then
+reloads the lighter version into the project.
+
+Features:
+- Nested families are cleaned too, all the way down
+- Optionally set every cleaned family to consistent metric or imperial units
+- A summary reports what came out of each family
+
+Usage:
+1. Run the button and tick the families to clean
+2. Choose whether to standardize units
+3. Review the summary when the reload finishes"""
 __title__ = "CleanUp\nFamily"
 __tip__ = True
 

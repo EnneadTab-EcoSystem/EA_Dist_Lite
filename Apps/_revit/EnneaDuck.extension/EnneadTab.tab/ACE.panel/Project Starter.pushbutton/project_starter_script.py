@@ -3,11 +3,16 @@
 
 
 
-__doc__ = """A simple window that give you quick access to all kinds of function needed when a new project is starting.
+__doc__ = """Set up a brand new project in one window instead of a dozen separate dialogs.
 
-+Default Workset Creation
-+New Sheet Created From Excel
-+Quick project info filling"""
+Everything you normally do by hand on day one of a model, gathered in one place. The
+window stays open beside the model so you can work through the setup at your own pace.
+
+Features:
+- Create the office standard worksets in one click
+- Build levels from a grid you fill in
+- Create the whole sheet set from a spreadsheet
+- Fill in the project information fields quickly"""
 
 
 __title__ = "Project\nInitiating"

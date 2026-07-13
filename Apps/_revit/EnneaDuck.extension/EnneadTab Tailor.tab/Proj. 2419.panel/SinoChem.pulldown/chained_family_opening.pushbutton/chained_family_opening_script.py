@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Opens every family referenced by the Chained Family Loading order from the current document, saves each one as a local RFA copy, and recursively repeats for nested families before activating the saved copies. Prepares the family documents needed before running Chained Family Loading."
+__doc__ = """Open every panel family in the loading chain, including nested ones, ready to edit.
+
+Sets up the workspace for Chained Family Loading. Each family in the chain is pulled
+out of the model, saved to your local dump folder, and opened for editing. Families
+nested inside those are opened the same way, all the way down.
+
+Features:
+- Local copies are saved so the model itself is never edited in place
+- A message names each family as it opens
+- Run this before Chained Family Loading"""
 __title__ = "Chained Family Opening"
 
 import proDUCKtion # pyright: ignore 

@@ -1,4 +1,9 @@
-__doc__ = "Renames every model group type by prefixing the creator username from the worksharing history, so group names show who made them. Groups already carrying the creator name or excluded-member variants are skipped."
+__doc__ = """Rename every model group type so it starts with the name of the person who made it.
+
+Group names become creator_original name, so it is obvious at a glance
+who owns each group. Groups that already carry a creator name, and the
+"members excluded" variants, are left alone. The rename runs as a single
+undo step and every change is listed in the output window."""
 
 
 

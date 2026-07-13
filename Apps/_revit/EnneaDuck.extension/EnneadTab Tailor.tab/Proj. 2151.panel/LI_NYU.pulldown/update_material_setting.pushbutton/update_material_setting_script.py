@@ -1,7 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Apply the standard LI NYU site material presets to this model. Updates the Curb, Road and Grass materials with the agreed shading colors and solid surface pattern settings in one click."
+__doc__ = """Apply the standard LI NYU site material settings to this model in one click.
+
+The Curb, Road and Grass materials are updated with the agreed shading
+colors and solid surface pattern settings, so site drawings read the same
+way across the team. A message confirms when the update is done."""
 __title__ = "Update Material Setting"
 
 import proDUCKtion # pyright: ignore 

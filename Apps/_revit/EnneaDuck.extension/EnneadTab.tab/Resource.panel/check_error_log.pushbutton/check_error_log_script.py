@@ -1,7 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Opens the EnneadTab error log Google Form in your default browser. This allows you to view and submit error reports, track known issues, and stay updated on bug fixes and improvements. Essential for troubleshooting and providing feedback to the EnneadTab development team."
+__doc__ = """Open the EnneadTab error log in your browser to see reported bugs and their status.
+
+Every error EnneadTab catches is filed here. Use it to check whether the problem
+you just hit is already known, to see what has been fixed, or to add detail to a
+report you sent in."""
 __title__ = "Check\nError Log"
 __context__ = "zero-doc"
 __tip__ = True

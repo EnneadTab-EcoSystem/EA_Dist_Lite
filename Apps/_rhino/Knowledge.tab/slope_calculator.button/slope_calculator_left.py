@@ -1,6 +1,9 @@
 
 __title__ = "SlopeCalculator"
-__doc__ = "Open an online slope calculator in your web browser for converting between slope angle, percentage, and ratio. Handy for ramps, roads, and roof pitch checks."
+__doc__ = """Open an online slope calculator in your browser.
+
+Converts between slope angle, percentage and ratio, which is the conversion you want when
+checking a ramp against accessibility limits or working out a road or roof pitch."""
 import webbrowser
 
 from EnneadTab import LOG, ERROR_HANDLE

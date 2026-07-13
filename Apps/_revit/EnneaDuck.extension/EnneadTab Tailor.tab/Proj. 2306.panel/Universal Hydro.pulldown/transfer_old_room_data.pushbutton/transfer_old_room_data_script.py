@@ -2,7 +2,11 @@
 # -*- coding: utf-8 -*-
 
 
-__doc__ = "Transfer room occupancy load data from old parameter to new parameter. See detail in script"
+__doc__ = """Prime the room occupancy override parameter on every room in the model.
+
+Rooms whose manual occupancy value is still unset are marked as having no
+manual override, so the life safety count falls back to the area-per-person
+rule instead of reading a stale zero. The whole pass is one undo step."""
 __title__ = "Transfer Old Room Data"
 
 # from pyrevit import forms #

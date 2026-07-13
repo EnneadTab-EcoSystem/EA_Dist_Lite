@@ -1,5 +1,8 @@
 __title__ = "ToggleBlockColorDisplay"
-__doc__ = "Toggle on/off for highlighting the different block type. Very helpful when you have many block variation."
+__doc__ = """Give every block type its own display color so you can tell them apart at a glance.
+
+Useful when a model is full of near-identical block variations and you need to see which is
+which. Run it again to switch the coloring back off and restore the normal display."""
 __is_popular__ = True
 
 

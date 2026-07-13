@@ -1,6 +1,14 @@
 
 __title__ = "DestroyLayer"
-__doc__ = "Delete selected layers, even if there are objs in it. Helpful when layer tree is constrainted by block usage."
+__doc__ = """Delete layers outright, even when they still hold objects.
+
+Rhino normally refuses to remove a layer that is in use, especially when a block definition
+is holding it hostage. This clears the objects out and takes the layer with them, so a
+bloated layer tree can finally be pruned.
+
+Usage:
+1. Run the button and pick the layers to remove
+2. The layers and everything on them are gone once you confirm"""
 
 import rhinoscriptsyntax as rs
 import scriptcontext as sc

@@ -1,7 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Version information utility that displays the current build details for all EnneadTab components. This diagnostic tool provides complete version numbers, build dates, and update status for your installation - essential for troubleshooting, submitting bug reports, or verifying you have the latest features. Perfect for confirming compatibility when working with team members or when communicating with EnneadTab support."
+__doc__ = """Show which EnneadTab version you are on and when it last updated successfully.
+
+Worth checking when you file a bug, when you want to confirm a fix has reached
+your machine, or when you and a teammate need to be sure you are running the
+same build."""
 __title__ = "Tell Me\nVersion"
 __context__ = "zero-doc"
 __tip__ = True

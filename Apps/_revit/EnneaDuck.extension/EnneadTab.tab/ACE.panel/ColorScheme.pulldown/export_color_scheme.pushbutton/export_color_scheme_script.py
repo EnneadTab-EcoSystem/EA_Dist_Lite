@@ -3,7 +3,19 @@
 
 
 
-__doc__ = "Use me to export selected Color Scheme To Excel. You have the option to exclude unused color."
+__doc__ = """Export any color scheme to Excel so the colors can be edited outside Revit.
+
+Every entry in the scheme lands in a spreadsheet with its color, ready to hand to a
+consultant or mark up yourself. Bring the edits back with Excel2ColorScheme.
+
+Features:
+- Export several schemes at once, each on its own worksheet
+- Choose whether to include entries that no element currently uses
+- The model is not changed; this only writes a spreadsheet
+
+Usage:
+1. Run the button and tick the schemes to export
+2. Say whether unused colors should be included"""
 __title__ = "ColorScheme2Excel"
 __tip__ = True
 __is_popular__ = True

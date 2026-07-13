@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Personalization control center for your EnneadTab experience. This comprehensive settings manager allows you to customize tab visibility, color schemes, notification preferences, and duck behavior. Includes options to toggle between Lite and Pro versions, manage extension visibility, and fine-tune your workflow preferences to match your project needs."
+__doc__ = """Personalize how EnneadTab looks and behaves, from one settings window.
+
+Choose which tabs and extensions show up on the ribbon, switch between the Lite
+and Pro tool sets, set colors and notification preferences, and decide how chatty
+the duck gets. Your choices are remembered for next time.
+
+Features:
+- Show or hide individual EnneadTab tabs and extensions
+- Toggle between the Lite and Pro tool sets
+- Sound, notification, and duck behavior preferences"""
 __title__ = "EnneadTab\nSetting"
 __context__ = "zero-doc"
 __tip__ = __doc__

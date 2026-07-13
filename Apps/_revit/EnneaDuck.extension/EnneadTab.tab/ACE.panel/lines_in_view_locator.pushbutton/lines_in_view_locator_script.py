@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Line usage analysis tool that helps identify views with excessive detail and model lines. This diagnostic utility generates a ranked report of views containing the most line elements, helping pinpoint potential performance bottlenecks or documentation management issues. Perfect for troubleshooting slow performance or when establishing documentation standards for line usage."
+__doc__ = """Rank the views hoarding the most drafting and model lines, worst offenders first.
+
+A model that has grown slow is usually carrying a few views stuffed with hand-drawn
+lines. This counts them and ranks the views, so you know exactly where to go and what
+to clean up.
+
+Features:
+- Detail lines and model lines are reported separately
+- Each line's workset is listed so you can trace who owns the mess
+- Nothing in the model is changed; this is a read-only report"""
 __title__ = "Lines-In-View\nLocator"
 __tip__ = True
 import proDUCKtion # pyright: ignore 

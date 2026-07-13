@@ -1,7 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Inspect the room data sheet annotation family by listing every text element in the open family document, including its parameters and the family parameters referenced by each Label. Run inside a family document to verify label wiring before loading it into the project."
+__doc__ = """Report every text and label in the open room data sheet family.
+
+Run this inside the family document to see each text element, its
+parameters, and which family parameter every Label is wired to. Use it to
+verify the label wiring before loading the family into the project.
+Nothing in the family is changed."""
 __title__ = "Room Data Sheet Helper"
 
 import proDUCKtion # pyright: ignore 

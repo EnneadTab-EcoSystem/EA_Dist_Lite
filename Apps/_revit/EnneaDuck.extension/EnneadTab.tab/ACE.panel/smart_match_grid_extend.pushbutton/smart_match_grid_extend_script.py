@@ -1,7 +1,20 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ =  """Get all floor plans and area plans for each view, find all grids. Then for each end of the grid decide if it should show bubble or not based on the status of same bubble from same level in REF dict."""
+__doc__ = """Match grid bubbles and extents across every plan to a reference view you nominate.
+
+Grid bubbles drift out of step view by view until no two plans agree. Pick the view
+that is right, and every other floor plan and area plan is brought into line: the same
+bubbles shown, the same ends hidden, the same extents.
+
+Features:
+- Covers every floor plan and area plan in the model
+- Each grid end is matched independently, so half-shown grids stay half-shown
+- The whole match is one undo step
+
+Usage:
+1. Run the button and nominate the reference view whose grids are correct
+2. Let it work through the remaining plans"""
     
 __title__ = "Smart Match\nGrid Extend"
 __tip__ = True

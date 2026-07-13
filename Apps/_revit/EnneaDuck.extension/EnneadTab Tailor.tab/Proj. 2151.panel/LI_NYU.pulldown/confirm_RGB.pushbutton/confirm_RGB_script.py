@@ -3,7 +3,12 @@
 
 
 
-__doc__ = "Even when you type in the RGB value in excel, that might get changed by someone in the future and cannot be trusted. I suggest to NOT include RGB value in the excel so there is only one source of truth, but if the team REALLY nned to have RGB value in excel written out, run this to confirm the color of cell is matching the number in excel"
+__doc__ = """Check that the RGB numbers typed in the color Excel match the actual cell colors.
+
+Any cell whose written RGB value disagrees with its own fill color is
+reported so the spreadsheet can be corrected. The safer habit is to leave
+RGB numbers out of the spreadsheet entirely and let the cell color be the
+single source of truth, but this check exists for teams that need both."""
 __title__ = "DEPRECIATED: Confirm RGB"
 
 

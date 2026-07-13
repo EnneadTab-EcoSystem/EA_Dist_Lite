@@ -1,10 +1,14 @@
 __title__ = "Set Revision On Sheets"
-__doc__ = """Add selected revisions to many sheets at once.
+__doc__ = """Add one or more revisions to many sheets at once.
 
-Pick one or more revisions, then pick the target sheets (placeholder
-sheets included). The revisions are added to each sheet's additional
-revision list in a single transaction, and every updated sheet is
-listed in the output window."""
+Pick the revisions, then pick the sheets to stamp them on. Every sheet is updated
+in a single undo step, and each one is listed in the output window so you can
+confirm the issue went where you meant it to.
+
+Usage:
+1. Pick the revisions to add
+2. Pick the target sheets
+3. Review the updated sheets in the output window"""
 
 from pyrevit import revit, DB
 from pyrevit import forms

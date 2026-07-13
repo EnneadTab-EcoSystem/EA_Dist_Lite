@@ -3,7 +3,16 @@
 
 
 
-__doc__ = "Intelligent Miro integration for continuous design review workflows. This powerful utility exports sheets directly to Miro with automatic version tracking - new sheets get blue crosses, updated sheets get orange stars. Allows for persistent markup across document revisions, eliminating the need to recreate comments on each iteration. Perfect for maintaining feedback history when traditional PDF markup would be lost with new backgrounds."
+__doc__ = """Push selected sheets to a Miro board and keep markup alive across sheet updates.
+
+Because each sheet image is replaced in place, comments and redlines stay stuck
+to the drawing instead of being thrown away with the old PDF every time the
+background changes. Review history survives the whole set of revisions.
+
+Features:
+- Sheets new to the board are flagged with a blue cross
+- Sheets whose background changed are flagged with an orange star
+- The last board URL you used is remembered for next time"""
 __title__ = "Review\nOn Miro"
 __tip__ = True
 import shutil

@@ -1,7 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Analyze all arc walls in the project, group their centers by XY coordinates, and generate select links for inspection."
+__doc__ = """Find curved walls whose arc center has drifted off the intended setting-out point.
+
+Groups every curved wall in the model by where its arc center falls, so walls that
+share a center land together and strays stand out. Centers that sit near the
+intended point but not on it are called out as suspicious.
+
+Features:
+- Each group lists its wall types and a clickable link to select the walls
+- Nothing in the model is changed; this is a read-only check"""
 __title__ = "Check Arc Center"
 
 import proDUCKtion # pyright: ignore 

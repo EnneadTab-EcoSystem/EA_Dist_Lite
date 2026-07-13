@@ -1,7 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Us the Keynote Exporter app to interact with the KeynoteExcel with legacy format."
+__doc__ = """Launch the Keynote Exporter app for editing the keynote spreadsheet outside Revit.
+
+Opens the standalone Keynote Exporter, which reads and writes the older Excel keynote
+format still used on some projects. Revit stays open and your model is untouched."""
 __title__ = "Open Keynote Exporter"
 
 import proDUCKtion # pyright: ignore 

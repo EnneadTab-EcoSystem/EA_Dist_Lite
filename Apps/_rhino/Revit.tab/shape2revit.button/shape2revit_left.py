@@ -1,5 +1,15 @@
 __title__ = "Shape2Revit"
-__doc__ = """Convert EACH and EVERY selected geometry to INDIVIDUAL Revit families via temporary blocks.\nNot to be confused with the block2family button, which exports better defined blocks to Revit families and is much more memory efficient.\nOnly use this button sparingly so you do not introduce too many families to Revit.\n\nFeatures:\n- Converts surfaces, polysurfaces and meshes to blocks\n- Creates temporary blocks with unique names\n- Exports blocks to Revit families\n- Cleans up temporary blocks after export\n- Maintains original geometry properties"""
+__doc__ = """Send loose Rhino geometry to Revit, turning each object into its own family.
+
+For one-off shapes that were never organised into blocks. Every selected surface, solid or
+mesh becomes a separate Revit family, so use it sparingly or the Revit file ends up carrying
+hundreds of them. When your geometry is already blocked, reach for Block2Family instead: it
+reuses one family per definition and keeps the Revit model far lighter.
+
+Features:
+- Works with surfaces, polysurfaces and meshes
+- Original shape and placement are preserved
+- Your Rhino model is left exactly as you had it"""
 
 import rhinoscriptsyntax as rs
 import scriptcontext as sc

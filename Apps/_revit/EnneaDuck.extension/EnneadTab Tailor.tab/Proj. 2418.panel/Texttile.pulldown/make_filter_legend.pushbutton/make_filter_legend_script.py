@@ -1,7 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Create view filters based on Generic Model family names, apply colors from CSS definitions, and generate a legend."
+__doc__ = """Color-code every generic model family in the view and drop a matching legend on the sheet.
+
+One filter is created per generic model family found in the active view, each given
+its own color, so panel types read apart at a glance. A legend keying color to family
+name is then placed on the sheet that hosts the view.
+
+Usage:
+1. Open a view that is already placed on a sheet
+2. Run the button and let the filters and legend build"""
 __title__ = "Make Filter Legend"
 
 import proDUCKtion # pyright: ignore 

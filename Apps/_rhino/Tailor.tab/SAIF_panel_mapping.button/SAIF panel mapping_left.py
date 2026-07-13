@@ -1,6 +1,15 @@
 
 __title__ = "SaifPanelMapping"
-__doc__ = "Maps SAIF panels using new naming convention CW01_SOLID X_YYYY_ZZZZ and CW06_SOLID X_YYYY_ZZZZ, extracting pier width (X) as-is"
+__doc__ = """Read the SAIF curtain wall panel names and work out which Revit family each one needs.
+
+Panel blocks named to the SAIF convention are decoded into their tower or podium family,
+their pier width and any special condition such as a fire rescue window or a corner. The
+result is handed to the Revit side so the panels come across already sorted.
+
+Features:
+- Handles both the tower and the podium panel families
+- Pulls the pier width straight out of the panel name
+- Flags special panels such as fire rescue windows, piers and corners"""
 
 
 from EnneadTab import ERROR_HANDLE, LOG, DATA_FILE

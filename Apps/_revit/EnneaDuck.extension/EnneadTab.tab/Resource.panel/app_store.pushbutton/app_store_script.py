@@ -1,7 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = """Launches the EnneadTab App Store, providing access to a curated collection of productivity tools, utilities, and extensions for Revit. Users can easily browse, install, and update plugins to enhance their workflow."""
+__doc__ = """Open the EnneadTab App Store to browse and install extra tools.
+
+Shows the curated catalog of EnneadTab utilities and add-ons, with installing and
+updating handled for you. Use it to pick up a tool you do not have yet, or to
+refresh one that has a newer version waiting."""
 __title__ = "App Store"
 __context__ = "zero-doc"
 

@@ -3,7 +3,17 @@
 # r: requests
 # -*- coding: utf-8 -*-
 
-__doc__ = "BIM Client tool for managing BIM data and workflows. This tool provides a centralized interface for BIM operations and data management."
+__doc__ = """Print a health report for the EnneadTab environment inside this Revit session.
+
+Use it when something is misbehaving and you want to know whether the problem is your model
+or your setup. Nothing in the model is read or changed; the report simply appears in the
+output window and can be pasted straight into a support message.
+
+Features:
+- Names the active document and how many elements it holds
+- Confirms the EnneadTab library and the Revit connection are alive
+- Checks that the AI service responds
+- Flags any missing component instead of failing quietly"""
 __title__ = "BIM\nClient"
 __tip__ = True
 

@@ -1,6 +1,14 @@
 
 __title__ = "MapBlockTransform"
-__doc__ = "Send the transformation of the blocks to Revit to be used by space adaptive family. This is the only known way of doing true free 3D orientation in Revit."
+__doc__ = """Send the position and orientation of your Rhino blocks over to Revit.
+
+Revit families cannot normally be tilted freely in three dimensions. Handing the block
+transforms to an adaptive family on the Revit side is the one route that gets true free 3D
+orientation, so a panel or louvre can sit at any angle it does in Rhino.
+
+Usage:
+1. Select the blocks whose placement you want to carry over
+2. Run the button, then pick the transforms up from the Revit side"""
 
 import rhinoscriptsyntax as rs
 import Rhino # pyright: ignore

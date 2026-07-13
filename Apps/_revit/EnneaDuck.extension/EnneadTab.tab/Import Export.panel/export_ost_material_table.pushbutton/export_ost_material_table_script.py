@@ -3,11 +3,14 @@
 
 
 
-__doc__ = """Export the OST and material table so it can be used in Rhino import when using 'map Revit SubC'.
+__doc__ = """Export the object style and material table so Rhino can match layers to materials.
 
-With this tool, the layer in Rhino can be assigned with similar Revit material based on layer names.
-If you have not done already, you can update dwg export layer mapping with EnneadTab first so each SubCategory in object style table become something rhino layer can match.
-"""
+Feeds the Map Revit SubC tool in EnneadTab for Rhino: once this table exists,
+each Rhino layer can be given the Revit material that belongs to the matching
+subcategory, and the two models finally agree on what is made of what.
+
+If you have not done it yet, update the DWG export layer mapping with EnneadTab
+first, so subcategory names come out in a shape Rhino layer names can match."""
 __title__ = "Export SubCategory\nMaterial Table"
 __tip__ = True
 # from pyrevit import forms #

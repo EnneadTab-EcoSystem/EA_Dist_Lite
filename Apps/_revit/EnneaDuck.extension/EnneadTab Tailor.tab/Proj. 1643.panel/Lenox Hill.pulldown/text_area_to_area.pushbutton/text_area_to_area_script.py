@@ -3,7 +3,11 @@
 
 
 
-__doc__ = "Get the text type parameter value to area value by removing the 'SF' in the value and convert to float type"
+__doc__ = """Convert the old text-based area value on every area into a real number.
+
+The old proposed-data text has its SF suffix stripped and is written into
+the numeric proposed-data parameter, so the value can be scheduled and
+totalled instead of sitting in the model as plain text."""
 __title__ = "Text Area --> Area"
 
 # from pyrevit import forms #

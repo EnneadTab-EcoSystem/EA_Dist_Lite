@@ -1,12 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = """Process door fire rating parameters by transferring 'Bad' values to other fire rating parameters.
-This script will:
-1. Find all doors with 'Bad' fire rating values
-2. Transfer these values to other fire rating parameters on the same door
-3. Mark the original parameters as 'Transfered out'
-"""
+__doc__ = """Repair doors that carry more than one Fire Rating parameter with a bad value.
+
+Some doors ended up with duplicate Fire Rating parameters, and one copy holds an
+unusable value. This copies the good reading across to the other Fire Rating
+parameter on the same door, then stamps the emptied one so you can see it was
+already handled. The whole cleanup is one undo step.
+
+Features:
+- Only doors with a bad Fire Rating reading are touched
+- Doors with a single healthy Fire Rating parameter are left alone"""
 __title__ = "Test Door Data"
 
 import proDUCKtion # pyright: ignore 

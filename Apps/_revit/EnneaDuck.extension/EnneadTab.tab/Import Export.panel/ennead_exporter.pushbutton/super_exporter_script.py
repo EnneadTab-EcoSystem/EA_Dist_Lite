@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Export PDF, DWG, and JPG files organized by prefix and file type. Includes email notifications, time estimation, color/BW control, revision filtering, and sync options."
+__doc__ = """Export sheets to PDF, DWG, and JPG in one pass with consistent names and folders.
+
+Set the issue up once and the exporter handles the rest: file names built from
+the prefix you choose, a folder per format, color or black and white, and only
+the sheets carrying the revision you are issuing.
+
+Features:
+- Preview every output file name before a single file is written
+- Time estimate so you know whether to go get a coffee
+- Optional sync before exporting, and an email notification when it finishes"""
 __title__ = "Ennead\nExporter"
 __tip__ = True
 __is_popular__ = True

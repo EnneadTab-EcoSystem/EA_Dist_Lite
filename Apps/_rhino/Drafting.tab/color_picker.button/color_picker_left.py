@@ -1,5 +1,8 @@
 __title__ = "ColorPicker"
-__doc__ = "Opens Coolors.co color palette generator in default web browser for color scheme inspiration"
+__doc__ = """Open an online color palette generator in your browser for scheme inspiration.
+
+Starts you off on a preset EnneadTab palette that you can shuffle and lock until the mix
+feels right, then take the codes back into Rhino, Revit or a presentation."""
 
 import webbrowser
 from EnneadTab import ERROR_HANDLE, LOG

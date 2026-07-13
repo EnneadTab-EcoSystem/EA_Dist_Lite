@@ -4,7 +4,15 @@
 # !!!!!!!!!for future: process the other category that is not system family
 # get a long list of other categories that support loadable family,  they can have similar export  api workflow
 
-__doc__ = "Pick category and type for the dwg export. It will isolate elements by types in the view and give individual .dwg file.\n\nThe child elements such as shared family will be isolated as well.\n\nUse EnneadTab for Rhino <Import Revit Export Collection> to get things under type parent layers.\n\nCurrently handle Wall/Floor/Roof/Column/Stair\n\nThis tool primarily deal with the system family category that normally will be difficult to separate in dwg export."
+__doc__ = """Export a separate DWG file for each wall, floor, roof, column, or stair type.
+
+Pick a category and the types you care about, and every type is isolated in the
+view and written to its own file. Child elements such as shared families ride
+along with their parent type.
+
+Aimed at the system-family categories that are normally impossible to pull apart
+in a single DWG export. On the Rhino side, use Import Revit Export Collection to
+land each file under its own type parent layer."""
 __title__ = "Isolated Export\nBy System Family Type"
 __tip__ = True
 __youtube__ = "https://youtu.be/o_cnp-BvnHw"

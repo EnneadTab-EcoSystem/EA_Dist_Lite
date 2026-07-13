@@ -3,7 +3,16 @@
 
 
 
-__doc__ = "Visual design option manager that transforms how you work with alternatives. Automatically color-codes elements belonging to different design options across selected views, making it instantly clear which elements belong to which option. Perfect for presentations, design reviews, and maintaining clarity when working with complex option sets."
+__doc__ = """Color-code every element by the design option it belongs to, across the views you pick.
+
+At a glance you can see which option each element lives in, so nothing gets reviewed or
+presented under the wrong assumption. Ideal for design reviews and pin-ups where several
+alternatives are in play at once.
+
+Features:
+- Each design option gets its own color
+- Applies to as many views as you select in one go
+- Colors are a view override, so the model itself is untouched"""
 __title__ = "Color-Code\nDesign Option"
 __tip__ = True
 __is_popular__ = True

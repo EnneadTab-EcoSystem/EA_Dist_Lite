@@ -3,7 +3,10 @@
 
 
 
-__doc__ = "Virtual achievement system that tracks your productivity and EnneadTab usage. This simple window displays your current MiniBank balance and leaderboard ranking, celebrating your contributions to the firm's digital ecosystem. Earn coins through regular tool usage, submitting bug reports, and helping colleagues. Perfect for encouraging healthy competition while building a culture of technology adoption."
+__doc__ = """Check your EA coin balance and where you sit on the office leaderboard.
+
+Coins add up as you use EnneadTab tools, report bugs, and help colleagues. The
+window shows your balance and your standing; nothing in the model changes."""
 __title__ = "MiniBank"
 __context__ = "zero-doc"
 __tip__ = True

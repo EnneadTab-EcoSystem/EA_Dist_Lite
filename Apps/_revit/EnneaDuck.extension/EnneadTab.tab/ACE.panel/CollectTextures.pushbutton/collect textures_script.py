@@ -8,7 +8,16 @@ import proDUCKtion # pyright: ignore
 proDUCKtion.validify()
 from EnneadTab import ERROR_HANDLE, LOG
 __title__ = 'Collect\nTextures'
-__doc__ = 'Choose a new destination for texture images. Then Collect Textures copies all material texture images to this new location, and updates texture image path.\n'
+__doc__ = """Gather every material texture image into one folder and repoint the materials at it.
+
+Renders break when texture images live on someone's desktop. This copies the image
+behind each material into a shared folder and updates the material to point at the
+new copy, so the model renders the same on any machine.
+
+Features:
+- Runs across every material in the model
+- A progress bar shows the material being processed, and can be cancelled
+- The whole repoint is one undo step"""
 
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()

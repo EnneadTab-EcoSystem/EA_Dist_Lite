@@ -1,4 +1,8 @@
-__doc__ = "End-of-day project synchronization tool that tidies up your work environment with one click. This utility automatically synchronizes all open project documents with their central files, then cleanly closes everything. Perfect for when you're heading home and want to make sure all your work is safely submitted to the central model."
+__doc__ = """Sync every open model with central, then close them, leaving Revit running.
+
+Use it when you are switching projects or stepping away: all your work reaches the
+central files and the documents are closed behind you, but Revit stays open so you
+can start something else."""
 __title__ = "Sync All Open Proj and Close"
 __post_link__ = "https://ei.ennead.com/_layouts/15/Updates/ViewPost.aspx?ItemID=28744"
 __tip__ = True

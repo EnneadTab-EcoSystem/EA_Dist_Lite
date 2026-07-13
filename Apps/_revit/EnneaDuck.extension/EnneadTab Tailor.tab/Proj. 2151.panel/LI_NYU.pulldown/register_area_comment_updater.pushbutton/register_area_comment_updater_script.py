@@ -1,7 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Registration tool for automatic Area comment updates from Excel data. Monitors area elements for changes and syncs with external data."
+__doc__ = """Turn the live Area comment updater on or off for this model.
+
+Once switched on, the Comments of an area are refreshed from the shared
+program spreadsheet every time its department or program type changes, so
+the target data stays current without re-running anything. Run the button
+again to switch it back off. Re-register after editing the spreadsheet so
+the new targets are picked up."""
 __title__ = "(Un)Register Area Comment Live Updater"
 
 import proDUCKtion # pyright: ignore 

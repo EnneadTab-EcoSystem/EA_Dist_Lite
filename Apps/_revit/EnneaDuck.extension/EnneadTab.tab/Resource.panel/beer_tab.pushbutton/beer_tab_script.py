@@ -3,7 +3,10 @@
 
 
 
-__doc__ = "Designer's break companion that helps you maintain proper work-life balance. This essential utility provides quick access to local refreshment options when you need a mental reset. Perfect for those moments when architectural inspiration requires a change of scenery and a cold beverage."
+__doc__ = """Open a guide to the nearest places to get a beer.
+
+A one-click break button for the end of a long modeling session. Opens a
+neighborhood beer guide in your browser. Nothing in the model is touched."""
 __title__ = "Beer\nTab"
 __context__ = "zero-doc"
 

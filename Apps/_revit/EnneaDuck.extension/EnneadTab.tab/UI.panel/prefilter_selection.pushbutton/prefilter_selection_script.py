@@ -3,12 +3,15 @@
 
 
 
-__doc__ = """Just like the prefilter selection in Rhino, this allow you to narrow down selection beofre heavy window selection and post filter.
-Very helpful when the drawing is very crowded.
+__doc__ = """Limit what a window selection can pick up, so a crowded view stops fighting you.
 
-You can enable multiple category at same time.
+Choose the categories you care about first, then drag a window and only those categories
+are caught. Saves the usual dance of selecting everything and then filtering it back down.
 
-Let Sen.Z know if you would like to add more to the category list."""
+Features:
+- Turn on as many categories at once as you need
+- Works with normal window and crossing selection
+- Setting stays active until you clear it"""
 
 
 

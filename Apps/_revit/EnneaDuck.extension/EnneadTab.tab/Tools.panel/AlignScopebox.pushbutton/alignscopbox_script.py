@@ -7,7 +7,15 @@ proDUCKtion.validify()
 from EnneadTab.REVIT import REVIT_APPLICATION
 from EnneadTab import ERROR_HANDLE, LOG
 
-__doc__ = "Intelligent scopebox alignment tool that precisely orients view boundaries to match model geometry. Using reference model lines as guides, this utility automatically calculates and applies the optimal rotation angle to selected scopeboxes. The smart algorithm typically finds the correct orientation within three iterations, even with complex angles or unusual initial positions."
+__doc__ = """Rotate selected scope boxes until they line up with a model line you pick.
+
+Draw a model line along the direction the building actually runs, and each scope
+box is turned until its edges are parallel to it. Odd starting angles are handled,
+and it usually settles within a few passes.
+
+Usage:
+1. Draw or pick a model line to align to
+2. Pick the scope boxes to orient"""
 __tip__ = True
 __title__ = "Orient\nScopebox"
 __youtube__ = "https://youtu.be/NBQQd-GXGRQ"

@@ -10,12 +10,21 @@ proDUCKtion.validify()
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_UNIT, REVIT_FORMS, REVIT_SYNC
 from EnneadTab import ENVIRONMENT, OUTPUT, ERROR_HANDLE, NOTIFICATION, LOG
 
-__doc__ = """Find family file path. And remap the path to a folder you picked. In this folder, families will be organised based on their category.
-This will also load the repathed families back to central model.
+__doc__ = """Save the project's families out to a folder of your choice, sorted by category.
 
-You have the option to sync and close after the long-boring reloading.
-You also have the option to dig inside the nesting family and save them.
-"""
+Pulls the families you pick out of the model, files them into category subfolders in
+the folder you name, and loads the tidied copies back into the model. The result is
+one clean, findable family library instead of paths scattered across desktops.
+
+Features:
+- Families are grouped into subfolders by their Revit category
+- Optionally reach into nested families and save those out too
+- Optionally sync and close the model when the reload is done, so you can walk away
+
+Usage:
+1. Run the button and tick the families to save out
+2. Pick the destination folder
+3. Choose whether to include nested families and whether to sync and close afterwards"""
 __title__ = "Family\nRePath"
 __tip__ = True
 __is_popular__ = True

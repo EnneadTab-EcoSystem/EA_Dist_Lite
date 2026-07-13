@@ -3,7 +3,17 @@
 
 
 
-__doc__ = "AI-powered quality control assistant that transforms complex model data into actionable insights. This tool generates comprehensive QAQC reports for your current document and features a natural language interface powered by EnneaDuck AI, allowing you to interrogate the results through simple conversation. Perfect for project milestones, coordination reviews, or when preparing deliverables that require rigorous quality verification."
+__doc__ = """Produce a health report on the model and ask questions about it in plain English.
+
+Runs the firm's quality checks over the open model and gathers the results into one
+report. Instead of scrolling it, you can just ask: what are the critical issues, is
+this model ready to issue, which worksets are a mess. Good before a milestone or a
+coordination review.
+
+Features:
+- Ask follow-up questions in plain English and get answers from the report
+- The window stays open beside the model so you can fix issues as you read
+- Nothing in the model is changed; this is a read-only review"""
 __title__ = "QAQC\nReporter"
 __is_popular__ = True
 

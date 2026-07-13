@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Maps curtain wall panels to their grid positions (U and V indices) and saves the mapping data for use in other tools. This tool analyzes all curtain wall panels in the document and creates a location map that can be used for panel selection and analysis."
+__doc__ = """Work out the row and column position of every curtain wall panel and save the map.
+
+Each panel gets matched to its place in the curtain grid, so panels can later be
+picked or reported by row and column instead of by clicking. The finished map is
+saved with the project and reused by the other SAIF panel tools.
+
+Features:
+- Covers every curtain wall panel in the model
+- Panels that sit slightly off grid are still matched by widening the search
+- The model itself is not modified; only the saved map is written"""
 __title__ = "Panel Location Map"
 
 import proDUCKtion # pyright: ignore 

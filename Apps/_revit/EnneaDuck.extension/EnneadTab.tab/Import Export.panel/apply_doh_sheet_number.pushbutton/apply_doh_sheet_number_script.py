@@ -3,9 +3,10 @@
 
 
 
-__doc__ = ("Toggle live sheet numbers between the firm Internal scheme and the "
-           "client DOH scheme. Both schemes are stored permanently; nothing is "
-           "lost. Apply copies a stored scheme into the live SheetNumber slot.")
+__doc__ = """Toggle live sheet numbers between the firm Internal scheme and the client DOH scheme.
+
+Both schemes are stored permanently, so nothing is lost when you switch.
+Applying a scheme copies the stored numbers into the live sheet number slot."""
 __title__ = "Apply DOH\nSheetNum"
 
 import os

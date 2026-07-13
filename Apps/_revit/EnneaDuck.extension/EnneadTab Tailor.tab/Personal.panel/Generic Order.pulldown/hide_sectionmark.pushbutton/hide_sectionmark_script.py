@@ -3,7 +3,17 @@
 
 
 
-__doc__ = "Hide the wall section marks in elevations if its defined orientation does not match the orienation of the elevation. \n\nThis will resolve the issue of seeing wall section mark from the other side of the building, but you cannot change view depth per design reason."
+__doc__ = """Hide wall section marks that face the wrong way in each selected elevation.
+
+A section mark whose Orientation does not match the Orientation of the
+elevation it appears in is hidden in that view, so you no longer see
+section marks coming from the far side of the building. This solves the
+problem without touching view depth. Views and sections with no
+Orientation value assigned stay visible.
+
+Usage:
+1. Run the button and pick the elevation views to process
+2. Review the hidden section marks listed in the output window"""
 __title__ = "Hide Section in Elevation by Orientation"
 
 from pyrevit import forms #

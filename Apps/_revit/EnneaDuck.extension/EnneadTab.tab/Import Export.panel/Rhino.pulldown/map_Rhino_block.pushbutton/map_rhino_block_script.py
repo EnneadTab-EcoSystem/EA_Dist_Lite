@@ -3,10 +3,16 @@
 
 
 
-__doc__ = "Transform the Rhino block orientation to Adaptive Revit Family. \
-It will be searching for same name as block name.\n The biggest benift is \
-You will no longer be restricted by level based vertical up family. It can be \
-freeform as in Rhino."
+__doc__ = """Place Revit families at the position and orientation of matching Rhino blocks.
+
+Each Rhino block is matched to a Revit family type of the same name. The placed
+instance is no longer stuck being a level-based, vertical-up family: it can sit
+in any freeform orientation, exactly as it did in Rhino.
+
+Usage:
+1. Export the blocks from Rhino with EnneadTab for Rhino
+2. Run this button and confirm the unit the Rhino file was drawn in
+3. Blocks with no family type of the same name are listed in the output"""
 __title__ = "Map Rhino Block\nto Revit Family"
 __youtube__ = "https://youtu.be/FMLv-_szLpM"
 __tip__ = True

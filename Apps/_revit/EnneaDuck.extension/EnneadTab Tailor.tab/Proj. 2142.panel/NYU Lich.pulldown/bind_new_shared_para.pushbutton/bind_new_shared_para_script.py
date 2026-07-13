@@ -1,7 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Bind new shared parameters to Room category from Excel file. Requires a worksheet named 'Shared Paras To Add' with parameter names and types. User selects which columns contain parameter names and parameter types during execution. Those parameters will be added to the project document and bind to Room category. Let me know if you want to bind to other categories."
+__doc__ = """Add the shared parameters listed in an Excel file to the Room category in one pass.
+
+Pick a spreadsheet that has a worksheet named "Shared Paras To Add", then
+choose which column holds the parameter names and which holds the
+parameter types. Every listed parameter is added to the project and bound
+to Rooms. Ask if you need them bound to other categories as well."""
 __title__ = "Bind New Shared Para"
 
 import proDUCKtion # pyright: ignore 

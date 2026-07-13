@@ -1,13 +1,15 @@
 __title__ = "SelfRepair"
 __FONDATION__ = True
-__doc__ = """Automatically repair and update EnneadTab installation.
+__doc__ = """Repair a stale EnneadTab installation and pull the latest version.
 
-Key Features:
-- Legacy RUI detection and repair
-- Automatic version updates
-- System path verification
-- Component synchronization
-- Installation validation"""
+Run it when buttons are missing, point at the wrong tool, or still carry an old name.
+The toolbars are checked for out-of-date entries and, if any are found, the newest
+EnneadTab is fetched and installed for you.
+
+Features:
+- Spots toolbars left over from an older EnneadTab release
+- Fetches and installs the current version automatically
+- Nothing happens if your installation is already current"""
 
 import os
 import sys

@@ -1,14 +1,19 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""
-Color Scheme To Filled Region Types
------------------------------------
-This tool lets you select a color scheme from your project and automatically creates or updates filled region types for each entry in the scheme.
-Each filled region type will be named "_ColorScheme_XXX", where XXX is the entry name, and will use the entry's color.
-Perfect for keeping your documentation and diagrams visually consistent with your color standards!
-"""
+__doc__ = """Turn a color scheme into filled region types so diagrams match your plan colors.
 
+Pick a color scheme and every entry in it becomes a filled region type carrying that
+entry's exact color, ready to draw with. Existing types are refreshed rather than
+duplicated, so re-running after a color change keeps your diagrams in step with the
+plans.
+
+Features:
+- Each type is named after its scheme entry so it is easy to find in the type list
+- The whole conversion is one undo step
+
+Usage:
+1. Run the button and pick the color scheme to convert"""
 __title__ = "ColorScheme To\nFilledRegion Types"
 
 import proDUCKtion  # pyright: ignore

@@ -1,7 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Transfer the data between missing parameter and titleblock revision schedule. Also can transfer issue data from last round to current round."
+__doc__ = """Set sheet revisions from the black-square issue parameters on each title block.
+
+The issue values carried on the sheets are read and the matching revision
+is added to each sheet, so the title block revision schedule lines up with
+how the set was actually issued. Issue data from the previous round can be
+carried into the current one. Sheets owned by another user are skipped."""
 __title__ = "Set Revision By BlackSquare"
 
 

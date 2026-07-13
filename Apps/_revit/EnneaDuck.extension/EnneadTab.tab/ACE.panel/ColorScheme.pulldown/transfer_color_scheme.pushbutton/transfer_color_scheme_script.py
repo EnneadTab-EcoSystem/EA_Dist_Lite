@@ -1,7 +1,19 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Copy entries, colors, and patterns from one Revit color fill scheme to another with optional overwrite prompts."
+__doc__ = """Copy every entry, color, and fill pattern from one color scheme onto another.
+
+Saves rebuilding a scheme by hand when a second one needs to look the same. Entries
+missing from the destination are added; where an entry already exists you are asked
+before its color is overwritten.
+
+Features:
+- The two schemes must cover the same category, and you are told if they do not
+- A summary lists what was added and what was overwritten
+- The transfer is one undo step
+
+Usage:
+1. Run the button and pick the scheme to copy from, then the one to copy onto"""
 __title__ = "Transfer\nColor Scheme"
 
 import proDUCKtion # pyright: ignore 

@@ -3,7 +3,10 @@
 
 
 
-__doc__ = "Integrated AI assistant that brings ChatGPT directly into your Revit environment. This powerful tool provides instant answers to Revit-related questions, code compliance inquiries, design challenges, or general information needs without leaving your modeling interface. Perfect for quickly solving problems or exploring design alternatives without disrupting your workflow."
+__doc__ = """Open a ChatGPT window inside Revit, without switching to a browser.
+
+Ask about a Revit workflow, a code question, or a design problem and keep the
+answer next to the model you are working in. Nothing in the model is touched."""
 __title__ = "ChatGPT"
 __context__ = 'zero-doc'
 __youtube__ = "https://youtu.be/NoJmQ7GFzMs"

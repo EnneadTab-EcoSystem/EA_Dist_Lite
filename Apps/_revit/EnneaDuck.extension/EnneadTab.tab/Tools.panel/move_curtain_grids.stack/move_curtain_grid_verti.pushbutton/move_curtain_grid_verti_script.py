@@ -3,7 +3,16 @@
 
 
 
-__doc__ = "Align vertical curtain grids to intersecting detail lines and datum grids. Use in plan view."
+__doc__ = """Snap vertical curtain grids onto the detail lines or column grids that cross them.
+
+Draw your intended mullion positions as detail lines, or just use the column grids already
+in the plan, and the curtain grids move to match. Beats nudging each grid line by hand when
+a facade rhythm changes.
+
+Usage:
+1. Open a plan view showing the curtain wall
+2. Run the button and pick the detail lines or grids to align to
+3. Pick the curtain grids that should move"""
 __title__ = "Align V. Curtain Grid To Detail Lines/Grids(Plan)"
 __youtube__ = "https://youtu.be/iiAy-Gxl5ZU"
 __tip__ = True

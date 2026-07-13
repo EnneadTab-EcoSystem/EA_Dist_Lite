@@ -1,7 +1,13 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = """Set grid visibility and grid bubble location per level from Excel view list. Reads Level Name, View Name, and Source of truth for this level from J drive Excel (Sheet1). Source-of-truth (SOT) views define the reference: in each target view, grid visibility strictly follows the SOT (grids hidden in target but shown in SOT are unhidden; grids shown in target but hidden in SOT are hidden). Bubble position and leader are then copied from the SOT view to all other views on that level."""
+__doc__ = """Match grid visibility and bubble placement across views using an Excel view list.
+
+The spreadsheet names one source-of-truth view per level. In every other
+view on that level, grid visibility is forced to follow the source view:
+grids shown there are shown, grids hidden there are hidden. Bubble
+positions and leaders are then copied across, so grids read the same way
+on every drawing of that level."""
 __title__ = "Set Grid Bubble From Excel"
 
 import proDUCKtion  # pyright: ignore

@@ -1,7 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Check area names in the DGSF Scheme for the LI NYU project and stamp every editable area whose Name is empty or unmarked with a _DO NOT FILL prefix. This flags the Name parameter as off-limits for manual data entry."
+__doc__ = """Stamp every unnamed DGSF area with a _DO NOT FILL marker in its Name field.
+
+Areas in the DGSF Scheme that you are allowed to edit and that have no
+name yet get the marker written into Name. This signals to the team that
+the Name field is off-limits for manual data entry on this project. The
+whole pass is one undo step."""
 __title__ = "DGSF Area Data Name Check"
 
 import proDUCKtion # pyright: ignore 

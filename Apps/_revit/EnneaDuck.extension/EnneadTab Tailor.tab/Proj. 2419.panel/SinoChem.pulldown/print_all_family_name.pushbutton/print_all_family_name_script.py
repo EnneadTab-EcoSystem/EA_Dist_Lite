@@ -1,7 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Prints the title of every family document currently open in the Revit session. Useful for checking which families are open before running the chained family tools."
+__doc__ = """List every family currently open for editing in this Revit session.
+
+A quick roll call of the open family editors, printed to the output window. Use it
+to confirm the whole panel chain is open before running Chained Family Loading.
+Nothing in the model is changed."""
 __title__ = "Print All Family Name"
 
 import proDUCKtion # pyright: ignore 

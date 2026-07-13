@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Edit curves and surfaces in Rhino and transfer to Revit as detail lines and filled regions. Supports nurbs curves/surfaces, AreaBoundaryLine, and RoomSeperationLine."
+__doc__ = """Draft curves and surfaces in Rhino and bring them into the current Revit view.
+
+Curves arrive as detail lines and surfaces arrive as filled regions, so awkward
+2D geometry can be shaped where it is easy to shape and finished where it needs
+to live. Rhino units are converted for you.
+
+Features:
+- Curves can also land as area boundary lines or room separation lines
+- Works in plan views and in elevation views
+- Round trip as many times as you need without retracing anything"""
 __title__ = "Rhino Drafter"
 __youtube__ = r"https://youtu.be/dYeVpdXsMYM"
 __tip__ = True

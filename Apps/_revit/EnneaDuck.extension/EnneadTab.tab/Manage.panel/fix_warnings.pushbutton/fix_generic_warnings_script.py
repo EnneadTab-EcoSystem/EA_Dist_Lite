@@ -3,7 +3,17 @@
 
 
 
-__doc__ = "In the standalone window, you can zoom in with section box to a region that have a warning.\n\nAs you are fixing it, you will see the warning count going down. When you sync baack after all the fix, the EA coins will be rewarded.."
+__doc__ = """Work through model warnings one by one in a window that zooms straight to each one.
+
+Pick a warning and the model isolates and zooms to the elements causing it in a
+3D view with a section box, so you can fix it where it lives instead of hunting
+for it. The warning count drops as you go, and syncing after the cleanup earns
+you EA coins.
+
+Usage:
+1. Run the button to open the warning window
+2. Pick a warning to zoom to it, fix it, then move to the next
+3. Sync when the list looks the way you want it"""
 __title__ = "Isolate\nWarnings"
 __is_popular__ = True
 __tip__ = True

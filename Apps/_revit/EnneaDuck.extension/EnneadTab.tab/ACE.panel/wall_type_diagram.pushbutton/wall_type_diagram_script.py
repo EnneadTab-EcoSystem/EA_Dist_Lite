@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Generate walltype legand view as well as view filter. The color is picked based on related filled region type, if not avaibale then pick new color for you."
+__doc__ = """Create a wall type legend and matching view filters, one color per wall type.
+
+Each wall type takes its color from the filled region type already associated
+with it; when there is none, a fresh color is picked for you. The filters can be
+pushed onto a view template so every plan reads the same way.
+
+Features:
+- Legend view with a color box and label for each selected wall type
+- One view filter per wall type, with a consistent color override
+- Optional apply to a view template you choose"""
 __title__ = "Wall Type\nDiagram"
 __is_popular__ = True
 

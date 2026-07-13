@@ -3,7 +3,16 @@
 
 
 
-__doc__ = "A simple window that enables the transfer of view templates, object styles (SubCategory), and materials. The primary distinction between this tool and the default 'Transfer Project Standard' is its selective transfer capabilities."
+__doc__ = """Copy selected view templates, object styles, and materials between open models.
+
+Unlike Transfer Project Standards, you choose exactly which items travel instead
+of swallowing a whole category. When a name already exists in the destination you
+can keep the destination version rather than overwrite it.
+
+Usage:
+1. Open both the source model and the destination model
+2. Run the button, pick the source model, then tick the items to send
+3. Review what transferred in the output window"""
 __title__ = "Content\nTransfer"
 __tip__ = True
 __is_popular__ = True

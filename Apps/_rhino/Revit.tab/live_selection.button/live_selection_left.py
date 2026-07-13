@@ -1,6 +1,9 @@
 
 __title__ = "LiveSelection"
-__doc__ = """Enables real-time selection synchronization between Rhino and Revit. Allows users to select objects in Rhino and have the selection reflected in Revit, streamlining cross-platform workflows and coordination."""
+__doc__ = """Mirror your Rhino selection over to Revit so both models highlight the same thing.
+
+Saves hunting for the Revit counterpart of an object by hand when you are coordinating
+between the two, which is where most cross-platform mistakes creep in."""
 
 
 from EnneadTab import ERROR_HANDLE, LOG

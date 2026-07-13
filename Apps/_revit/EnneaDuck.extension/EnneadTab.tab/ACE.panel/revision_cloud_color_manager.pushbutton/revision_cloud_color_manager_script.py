@@ -1,7 +1,19 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Manage revision cloud colors based on revision ID. Enable/disable color display and set custom colors for each revision across all documents."
+__doc__ = """Give each revision its own cloud color so revisions read apart at a glance.
+
+Every revision cloud in the model looks the same until you color them. This assigns a
+distinct color per revision, so a sheet carrying three revisions tells its own story.
+
+Features:
+- A ready-made color palette, or pick your own color per revision
+- Turn the coloring on for review and off again before issue
+- Your color choices are remembered and reused on the next model
+
+Usage:
+1. Run the button and set a color against each revision
+2. Turn coloring on to review, and off when you are done"""
 __title__ = "Revision Cloud\nColor Manager"
 __tip__ = True
 __is_popular__ = True

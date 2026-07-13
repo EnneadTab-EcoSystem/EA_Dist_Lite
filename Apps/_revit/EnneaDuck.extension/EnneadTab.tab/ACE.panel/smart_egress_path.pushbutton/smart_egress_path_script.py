@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Intelligent egress path creation tool that automates code-compliant exit routing. This utility helps you create and maintain accurate egress paths with smart dynamic updating capabilities, ensuring proper path widths and distances to exits are maintained as the design evolves. Perfect for life safety documentation and code compliance verification."
+__doc__ = """Draw egress paths whose travel distance and tags update themselves as the plan changes.
+
+Each path is placed as a tagged marker with its travel distance read straight off the
+geometry, so when a wall moves the distance on the drawing moves with it. No more
+re-measuring routes by hand every time the plan shifts.
+
+Features:
+- The path marker and tag families are loaded for you if they are missing
+- An egress path schedule is created so every route can be checked in one table
+- Distances stay correct as the design evolves, ready for the code review"""
 __title__ = "Smart\nEgress Path"
 __tip__ = True
 __is_popular__ = True

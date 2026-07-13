@@ -1,6 +1,15 @@
 
 __title__ = "SimplifyBlocks"
-__doc__ = "Reduce mesh density inside block definitions to lighten heavy models. Select block instances and set a target face percentage with the slider; each unique block definition is simplified once and the change applies to every instance."
+__doc__ = """Lighten a heavy model by reducing the mesh density inside block definitions.
+
+Pick the blocks and set how much of the original mesh to keep with a slider. Each unique
+block definition is simplified once, and every instance of it in the model gets lighter at
+the same time.
+
+Features:
+- Slider control over how much detail is kept
+- Reduction happens once per definition, not once per instance
+- Placement, scale and rotation of every instance are preserved"""
 
 
 from EnneadTab import ERROR_HANDLE, LOG

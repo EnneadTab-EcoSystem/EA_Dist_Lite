@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Troubleshooting utility for element join and cut relationships. Analyzes selected elements and removes all cutting and joining relationships, providing a detailed report of each operation. Perfect for resolving geometry conflicts or starting fresh with clean element connections."
+__doc__ = """Strip every join and cut relationship from the elements you have selected.
+
+When geometry is fighting itself and you cannot tell which element is cutting or joining
+which, this gives you a clean slate to rebuild from. A report lists each relationship that
+was found and removed.
+
+Features:
+- Handles both cutting and joining relationships
+- Reports what was undone, element by element
+- One undo step, so you can put it all back if needed"""
 __title__ = "Reset Join/Cut"
 
 import proDUCKtion # pyright: ignore 

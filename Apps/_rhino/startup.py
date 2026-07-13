@@ -1,5 +1,13 @@
 __title__ = "EnneadTab_Startup"
-__doc__ = "The friendly welcome wagon for EnneadTab in Rhino! This startup script springs into action with each new Rhino session, quietly setting up your environment with all the EnneadTab goodness. It registers aliases, checks for updates, sets up event hooks, and ensures all your favorite tools are ready to use - so you can focus on creating amazing designs."
+__doc__ = """Get EnneadTab ready the moment a new Rhino session opens.
+
+Runs by itself in the background, so every tool, command alias and shortcut is in place
+before you start modeling and you never have to load anything by hand.
+
+Features:
+- Registers the EnneadTab command aliases you can type on the command line
+- Checks whether a newer EnneadTab is available
+- Wires up the background helpers the tools rely on"""
 import os
 import sys
 

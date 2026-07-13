@@ -3,7 +3,12 @@
 
 
 
-__doc__ = "Convert line in Rhino into Revit Structure frame. Whether it becomes an archi-column, structure column, or frame needs to be defined in the previous step in Rhino."
+__doc__ = """Turn lines exported from Rhino into Revit columns and structural framing.
+
+Pick the family, the type and the unit the Rhino file was drawn in, and
+each incoming line is rebuilt as a Revit element. Whether a line becomes
+an architectural column, a structural column or a frame is decided on the
+Rhino side before the export."""
 __title__ = "Line2Structure"
 
 from pyrevit import forms #

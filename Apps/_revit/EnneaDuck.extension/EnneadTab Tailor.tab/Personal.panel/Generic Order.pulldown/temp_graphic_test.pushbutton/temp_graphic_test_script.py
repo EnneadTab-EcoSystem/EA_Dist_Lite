@@ -1,7 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Developer test utility that creates a bitmap image from sample text and displays it as a temporary in-canvas graphic using the REVIT_VIEW helpers. Not intended for production use."
+__doc__ = """Draw a sample text image in the Revit canvas to confirm in-canvas graphics work.
+
+A small picture made from sample text is shown floating in the model
+view. Nothing is added to the model and nothing is saved; the graphic
+disappears once it is dismissed."""
 __title__ = "Temp Graphic Test"
 
 import proDUCKtion # pyright: ignore 

@@ -1,9 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = """This use the grphaical extend setup on all main LifeSafety view as guide to set all plan view grid visual. 
+__doc__ = """Match grid bubbles and extents in every plan view to the Life Safety views.
 
-It is the best invention since ketchup."""
+The main Life Safety plan for each level is the reference: its grid bubble
+positions, leaders and extents are pushed out to the other plan views on
+the same level, so grids read consistently across the whole set instead of
+being nudged view by view."""
 __title__ = "Smart Match Grid Graphic"
 
 # from pyrevit import forms #

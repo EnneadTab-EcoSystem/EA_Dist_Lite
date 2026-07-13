@@ -3,7 +3,14 @@
 
 
 
-__doc__ = "Based on the brep data exported from EnneadTab for Rhino, create adaptive mass shape as native Revit object."
+__doc__ = """Rebuild breps exported from Rhino as native Revit mass geometry.
+
+The shapes come back as real Revit forms you can host, schedule, and cut in
+section, instead of a dumb import you cannot work with.
+
+Usage:
+1. In Rhino, export the breps with EnneadTab for Rhino
+2. Run this button and confirm the unit the Rhino file was drawn in"""
 __title__ = "Brep2Mass"
 __tip__ = True
 from pyrevit import forms #

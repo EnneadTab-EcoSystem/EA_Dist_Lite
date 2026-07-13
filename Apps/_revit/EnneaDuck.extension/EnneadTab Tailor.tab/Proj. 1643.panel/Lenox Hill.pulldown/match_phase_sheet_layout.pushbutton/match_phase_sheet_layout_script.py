@@ -3,7 +3,12 @@
 
 
 
-__doc__ = "Use me to batch align viewports over many sheet. It search the matching rule by detail number, then apply same title offset and title line length. This is built or LHH phasing diagrams and works way better than Ideate for this senario."
+__doc__ = """Align viewports across many sheets to match one reference sheet layout.
+
+Viewports are paired between sheets by detail number, then the view title
+offset and title line length from the reference sheet are applied to every
+matching viewport. Built for the Lenox Hill phasing diagram sheets, where
+it is far quicker than aligning each sheet by hand."""
 __title__ = "Match Phase Sheet Layout"
 
 # from pyrevit import forms #

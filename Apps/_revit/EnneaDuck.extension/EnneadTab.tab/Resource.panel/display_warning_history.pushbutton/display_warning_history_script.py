@@ -1,15 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""Warning tracking system that reveals error trends across your project history.
+__doc__ = """Show how the warning count in a model has moved over time.
 
-This powerful diagnostic tool displays comprehensive warning logs that have been automatically 
-recorded by EnneadTab, allowing you to analyze warning patterns over time. 
+EnneadTab quietly records the warning list for your models, so this button can
+replay that history as a graph: whether warnings are creeping up, when a cleanup
+actually landed, and which ones came back.
 
 Usage:
-    Select one or more documents to analyze their warning history.
-"""
-
+1. Choose the graph alone, or the graph plus the full warning detail
+2. Pick the models to report on
+3. Review the history in the output window"""
 __title__ = "Display Revit\nWarning History"
 __tip__ = True
 

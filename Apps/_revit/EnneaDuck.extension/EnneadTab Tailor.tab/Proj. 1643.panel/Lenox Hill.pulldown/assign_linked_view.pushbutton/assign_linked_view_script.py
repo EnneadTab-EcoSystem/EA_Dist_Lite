@@ -3,7 +3,12 @@
 
 
 
-__doc__ = "For each PlanSet 7 view in the Lenox Hill model, set the EC link to display By Linked View using a predefined map of host view to linked view names. Saves the repetitive work of assigning linked views one by one in Visibility/Graphics."
+__doc__ = """Set every PlanSet 7 view to show the EC link through its matching linked view.
+
+Each PlanSet 7 view is paired with its counterpart in the EC link using a
+fixed level-by-level map, so you no longer have to open Visibility and
+Graphics and assign the linked view one plan at a time. Views that cannot
+be found are reported in the output window."""
 __title__ = "Assign Linked Views to PlanSet 7"
 
 # from pyrevit import forms #

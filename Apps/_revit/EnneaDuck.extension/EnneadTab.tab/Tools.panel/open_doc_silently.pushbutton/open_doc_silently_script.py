@@ -3,7 +3,16 @@
 
 
 
-__doc__ = "Batch opener for Revit files with enhanced reliability. Opens multiple documents while automatically handling warnings that would normally interrupt the process. Includes support for audit mode and detached/no-workset opening options. A comprehensive summary report is provided upon completion."
+__doc__ = """Open many Revit files in one go without stopping for warning dialogs.
+
+Warnings that would normally halt the queue are answered for you, so a batch of models can
+open unattended while you do something else. A summary at the end says which files opened
+and which did not.
+
+Features:
+- Optional audit on open
+- Optional detached opening with no worksets loaded
+- Summary report of every file in the batch"""
 __title__ = "Open Doc(s)\nSiliently"
 __context__ = "zero-doc"
 __tip__ = True

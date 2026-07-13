@@ -1,7 +1,19 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Update a Revit color scheme from an Excel file. Pick the workflow that matches your Excel: round-trip (from ColorScheme2Excel) or office template (Department+Program columns)."
+__doc__ = """Push colors edited in Excel back into a Revit color scheme.
+
+Edit your colors where it is comfortable, then bring them back in one step. Two
+workflows are supported and the button asks which one your spreadsheet came from.
+
+Features:
+- Round-trip: for a spreadsheet you exported with ColorScheme2Excel, one scheme per file
+- Office template: for the standard Ennead sheet with Department and Program columns
+  side by side, which updates both schemes in one pass
+
+Usage:
+1. Run the button and say how the spreadsheet was created
+2. Pick the Excel file and the scheme to update"""
 __title__ = "Excel2ColorScheme"
 
 import os

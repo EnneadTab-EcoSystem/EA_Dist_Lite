@@ -4,7 +4,17 @@
 #pylint: disable=raise-missing-from
 
 
-__doc__ = "Create, edit, and organize keynotes with categorization, search, batch operations, and translation."
+__doc__ = """Manage the whole project keynote list from one searchable window.
+
+Add, edit, and reorganize keynotes without hunting through the keynote text file.
+Search the whole list, move keynotes between categories, and edit many at once
+instead of one at a time.
+
+Features:
+- Search across every keynote in the project
+- Reorganize keynotes into categories by dragging
+- Edit or retire a batch of keynotes in one go
+- Translate keynote text for international project teams"""
 __title__ = "Keynote\nAssistant"
 __is_popular__ = True
 import os

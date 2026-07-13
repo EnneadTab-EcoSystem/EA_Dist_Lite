@@ -3,7 +3,15 @@
 
 
 
-__doc__ = "A simple window that give you information of the creator, editor and owner of selected elements and active view."
+__doc__ = """Find out who made, who last edited and who owns whatever you have selected.
+
+Answers the question you ask whenever something looks wrong: who did this, and can I touch
+it. Also reports the same for the view you are currently in.
+
+Features:
+- Creator, last editor and current owner for each selected element
+- Same information for the active view
+- Read-only: nothing in the model is changed"""
 __title__ = "What\nHappened?"
 __tip__ = True
 __is_popular__ = True

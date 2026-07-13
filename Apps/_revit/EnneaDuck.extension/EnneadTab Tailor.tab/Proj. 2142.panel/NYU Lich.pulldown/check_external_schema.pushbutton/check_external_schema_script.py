@@ -1,7 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "List all Extensible Storage schemas in the current model — both yours (EnneadTab) and from other consultants. Also scans the Revit journal file for hints (schema, add-in, errors)."
+__doc__ = """List the hidden data stored in this model, both ours and other consultants'.
+
+Reports every hidden data container found in the file, who it belongs to,
+and how many elements carry it, so you can tell which add-ins have written
+data into the model. The current Revit session log is also scanned for
+related hints. Nothing in the model is changed."""
 __title__ = "Check External Schema"
 
 import io

@@ -1,6 +1,15 @@
 # -*- coding=utf-8 -*-
 #pylint: disable=undefined-variable,import-error,invalid-name
-__doc__ = "Intelligent command search engine for Revit. This powerful search utility helps you locate tools across both EnneadTab and native Revit interfaces with ranked results based on name and documentation matches. Features include visual previews of tool locations, direct activation capability, and detailed documentation display with links to help resources. Perfect for quickly accessing functions without navigating through ribbon panels or when you can't remember where tools are located."
+__doc__ = """Find any Revit or EnneadTab command by typing what you want to do.
+
+Search by name or by what a tool does, and the best matches come back ranked. Faster than
+hunting through ribbon panels for a button whose exact name you cannot recall.
+
+Features:
+- Covers both EnneadTab tools and native Revit commands
+- Shows where on the ribbon each match lives
+- Run the tool straight from the results
+- Reads out the tool's description and links to further help"""
 __title__ = "Search\nCommand"
 __tip__ = True
 __is_popular__ = True

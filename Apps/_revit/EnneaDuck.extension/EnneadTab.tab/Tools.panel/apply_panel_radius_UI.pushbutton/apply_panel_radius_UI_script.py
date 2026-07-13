@@ -1,7 +1,17 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Advanced curtain panel radius management tool that automatically applies host wall curvature to panel elements. Intelligently identifies curved curtain walls and transfers radius values to panel parameters, ensuring consistent curvature throughout the facade system. Customizable parameter mapping allows for flexible implementation across different panel families."
+__doc__ = """Push the host curtain wall's radius into the panels sitting on it.
+
+Curved curtain walls are found for you and their radius is written into a
+parameter on every panel, so panel families bend to match the wall instead of
+being dialed in by hand one at a time. The facade stays consistent as the
+curvature changes.
+
+Usage:
+1. Run the button to open the window
+2. Pick the panel type and the parameter that should receive the radius
+3. Apply, then check the count of updated panels"""
 __title__ = "Apply Panel\nRadius"
 __tip__ = True
 __is_popular__ = True

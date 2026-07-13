@@ -3,7 +3,11 @@
 
 
 
-__doc__ = "Trigger a C4R cloud publish (without links) for the Lenox Hill central model via the BIM 360 Data Management API."
+__doc__ = """Publish the Lenox Hill cloud model so the team sees the latest version.
+
+Sends a cloud publish request for the central model, without publishing
+its links, so you do not have to open the model just to publish it. A
+message tells you whether the request was accepted."""
 __title__ = "publish_360"
 
 from pyrevit import script #

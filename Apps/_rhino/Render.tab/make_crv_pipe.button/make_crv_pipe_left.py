@@ -1,6 +1,13 @@
 
 __title__ = "MakeCrvPipe"
-__doc__ = "Make/Update a small pipe along crvs in layers that has '[EDGE]' in it. So coplanar face in enscape can show edge."
+__doc__ = """Draw thin pipes along the curves on your [EDGE] layers so Enscape renders the edge.
+
+Enscape will not show a line where two coplanar faces meet, which flattens joints and reveals
+seams that should read as crisp. A slim pipe on the curve gives it something solid to shade.
+
+Usage:
+1. Put the curves you want to read as edges on a layer with [EDGE] in its name
+2. Run the button; existing pipes are rebuilt rather than duplicated"""
 
 from EnneadTab import ERROR_HANDLE
 import rhinoscriptsyntax as rs

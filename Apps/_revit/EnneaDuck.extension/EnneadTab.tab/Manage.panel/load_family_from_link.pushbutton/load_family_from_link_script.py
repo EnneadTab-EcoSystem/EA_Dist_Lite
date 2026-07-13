@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Load family from linked revit file without open those links. Non-editable families (in-place and system) will be skipped."
+__doc__ = """Load families out of a linked Revit model without ever opening the link.
+
+Pick the link, pick the families, and they land in the current model. In-place
+and system families cannot travel this way, so they are skipped and listed with
+the reason rather than failing quietly.
+
+Usage:
+1. Pick the linked model to pull from
+2. Pick one or more families to load
+3. Review the skipped list in the output window"""
 __title__ = "Load Family\nFrom Link"
 __tip__ = True
 __is_popular__ = True

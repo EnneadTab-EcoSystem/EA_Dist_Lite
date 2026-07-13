@@ -1,14 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""
-AutoExporter Revit Script
+__doc__ = """Export a scheduled set of sheets to PDF, DWG, and JPG without anyone at the keyboard.
 
-Runs inside Revit (IronPython 2.7). Opens cloud models, exports PDF/DWG/JPG, sends notifications, closes Revit.
-Launched by orchestrator via pyRevit CLI. Config loaded from current_job_payload.json.
-"""
+The workhorse behind the firm's overnight exports. It opens the cloud model on its
+own, produces the sheet set in each requested format, drops the files in the agreed
+project folder, tells the team the run is done, and closes Revit behind itself.
 
-__doc__ = "Open cloud model, export PDF/DWG/JPG, send notifications, close Revit"
+Features:
+- PDF, DWG, and JPG produced in one pass over the sheet set
+- Runs unattended on a schedule, so the model is fresh each morning
+- A notification goes out when the export finishes or fails"""
 __title__ = "Amazing Auto Export"
 __context__ = "zero-doc"
 

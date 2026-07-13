@@ -1,10 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-"""
-Extract model_guid and project_guid from currently open Revit cloud model for AutoExporter config.
-"""
+__doc__ = """Read out the cloud identifiers of the open model so it can be added to Auto Export.
 
-__doc__ = "Extract model_guid and project_guid from currently open Revit cloud model for AutoExporter config."
+Setting a model up for overnight export needs two identifiers that Revit does not show
+anywhere in its interface. Run this from the open cloud model and both are printed,
+ready to copy into the Auto Export setup.
+
+Features:
+- The cloud region is reported alongside the identifiers
+- You are told plainly if the open model is not a cloud model
+- Nothing in the model is changed"""
 __title__ = "Get Model\nGUIDs"
 __author__ = "EnneadTab"
 

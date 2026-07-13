@@ -1,4 +1,8 @@
-__doc__ = "Project synchronization tool that keeps all your work up-to-date with a single click. This utility automatically synchronizes every open Revit project with its central file while keeping them open for continued work. Perfect for regular syncing throughout the day to prevent data loss and ensure changes are visible to your team."
+__doc__ = """Sync every open model with central in one click and keep working.
+
+All open documents are synchronized and left open, so your changes reach the team
+without interrupting what you are doing. Worth running regularly through the day
+instead of hoarding a whole afternoon of work."""
 __title__ = "Sync All\nOpen Proj"
 __post_link__ = "https://ei.ennead.com/_layouts/15/Updates/ViewPost.aspx?ItemID=28744"
 __tip__ = True

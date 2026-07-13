@@ -3,7 +3,13 @@
 
 
 
-__doc__ = "Gather the room life safety data from rooms of each level can sum and feed into the Stair Capacity Calculator for capacity required."
+__doc__ = """Sum the occupant load of each level and feed it to the stair capacity calculator.
+
+Occupancy for a room comes from its manual override when one is set,
+otherwise from its area divided by the area-per-person of its life safety
+room style. Rooms with no room style assigned are reported with clickable
+links so the gaps can be filled before the required stair capacity is
+trusted."""
 __title__ = "(Depreciated)Update Stair Capacity Calculator"
 
 import math

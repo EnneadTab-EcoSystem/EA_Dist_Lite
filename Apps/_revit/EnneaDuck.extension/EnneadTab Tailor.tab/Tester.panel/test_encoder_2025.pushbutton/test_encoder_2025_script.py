@@ -1,7 +1,12 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Developer test utility that exercises pyRevit keynote and interop module imports for Revit 2025 compatibility checks. The main body only runs an empty placeholder transaction. Not intended for production use."
+__doc__ = """Confirm the keynote tools still load correctly on this build of Revit.
+
+A quick smoke test for the Tester panel. It loads the keynote and interop machinery
+that the keynote buttons rely on and opens and closes an empty transaction. If the
+button finishes without an error, keynote support is healthy on this Revit version.
+Nothing in your model is changed."""
 __title__ = "Test Encoder 2025"
 
 import proDUCKtion # pyright: ignore 

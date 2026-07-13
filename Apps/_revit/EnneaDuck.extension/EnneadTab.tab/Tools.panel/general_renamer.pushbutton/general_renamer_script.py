@@ -3,14 +3,16 @@
 
 
 
-__doc__ = """A powerful simple window that provides efficient access to a comprehensive suite of renaming functions.
-    - Add or remove prefixes for selected views with a single click
-    - Convert Views and Sheets to uppercase for consistent documentation
-    - Format view names based on detail number and sheet number with customizable patterns
-    - Rename families directly without navigating through the project browser
-    - Toggle between different naming conventions with ease
-    
-This tool streamlines the tedious process of maintaining naming consistency throughout your project."""
+__doc__ = """Rename views, sheets and families in bulk from one window.
+
+Keeps naming consistent across the project without clicking through the project browser
+one item at a time.
+
+Features:
+- Add or strip a prefix on the views you select
+- Push view and sheet names to uppercase
+- Rebuild view names from their detail number and sheet number
+- Rename families directly from the same window"""
 __title__ = "Super\nRenamer"
 __tip__ = True
 
