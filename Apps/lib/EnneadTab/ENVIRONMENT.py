@@ -621,99 +621,28 @@ def get_app_name():
         app_name = "rhino"
     return app_name
 
-def alert_l_drive_not_available(play_sound = False):
-    """Check L drive availability and notify user if unavailable.
+def alert_l_drive_not_available(play_sound=False):
+    """Return whether the legacy L-drive host folder is reachable.
+
+    L drive is retired -- no user-facing reminder. Kept as a silent
+    True/False gate for REVIT_PROJ_DATA and similar call sites.
 
     Args:
-        play_sound (bool): If True, plays an error sound when L drive is unavailable.
+        play_sound (bool): Ignored; retained for call-site compatibility.
 
     Returns:
-        bool: True if L drive is available, False otherwise.
+        bool: True if L_DRIVE_HOST_FOLDER exists, False otherwise.
     """
-    # record the success/failed rate of this check, date as key, value is a dict with success and failed count
-    # if in the last 60 days it has neever been sucefful then i can tell this computer will never connect to L drive so lets just make a mark file so there is not need to check anymore
-    # this recording should be done ins a sepeate process to allow non-blocking
-    # the mark file should be in the DUMP_FOLDER
-    # the mark file should be named as l_drive_check.DuckLock
-
-
-
-    check_conclusion_file = os.path.join(DUMP_FOLDER, "l_drive_check_conclusion.SmartDuck")
-    if os.path.exists(check_conclusion_file):
-        return False
-    
-
-    check_results_file = os.path.join(DUMP_FOLDER, "l_drive_check.DuckLock")
-    if os.path.exists(check_results_file):
-        try:
-            with open(check_results_file, "r") as f:
-                content = f.read().strip()
-                if content:
-                    check_results = json.loads(content)
-                else:
-                    check_results = {}
-        except (json.JSONDecodeError, ValueError):
-            check_results = {}
-    else:
-        check_results = {}
-    
-    
-    def record_check_result(success):
-        import time
-        timestamp = datetime.now().strftime("%Y-%m-%d")
-        if timestamp not in check_results:
-            check_results[timestamp] = {"success": 0, "failed": 0}
-        
-        # Fix: Use string keys instead of boolean values
-        if success:
-            check_results[timestamp]["success"] += 1
-        else:
-            check_results[timestamp]["failed"] += 1
-            
-        with open(check_results_file, "w") as f:
-            json.dump(check_results, f, indent=4)
-        
-        # Check if file is older than 60 days and has never been successful
-        current_time = time.time()
-        sixty_days_ago = current_time - (60 * 24 * 60 * 60)
-        
-        # Only check for conclusion if we have data spanning 60 days
-        if os.path.getmtime(check_results_file) < sixty_days_ago:
-            # Check if there have been NO successful connections in any recorded day
-            if all(check_results[date]["success"] == 0 for date in check_results):
-                with open(check_conclusion_file, "w") as f:
-                    f.write("This computer will never connect to L drive, maybe a laptop or from outside office organization.")
-                return
-
-    if os.path.exists(L_DRIVE_HOST_FOLDER):
-        record_check_result(True)
-        return True
-    note = "Friendly reminder! \n\nL drive is not available, please check your network connection or activate L drive manually.\nEnneadTab will still work, just without some public asset."
-    print(note)
-    if play_sound:
-        try:
-            import SOUND
-            SOUND.play_error_sound()
-        except:
-            pass        
-
-    record_check_result(False)
-    return False
-    
-        
+    return os.path.exists(L_DRIVE_HOST_FOLDER)
 
 
 # Run maintenance operations
 if should_cleanup_dump_folder():
     cleanup_dump_folder()
 
-# 2026-04-27: removed module-level L-drive availability nag.
-# IS_OFFLINE_MODE (above) handles the missing-share fallback gracefully,
-# so the "Friendly reminder!" auto-print on every Revit/Rhino startup is
-# pure noise. Functions kept -- REVIT_PROJ_DATA still calls
-# alert_l_drive_not_available() as a True/False gate at three call sites
-# (simple_get_revit_project_data / open_project_data_file /
-# ProjectDataEditor.edit_project_data). Cutting just the auto-fire.
+# 2026-07-13: L drive retired. alert_l_drive_not_available is a silent
+# existence check only -- no print/sound. REVIT_PROJ_DATA still uses it
+# as a True/False gate at three call sites.
 ###############
 if __name__ == "__main__":
     unit_test()
