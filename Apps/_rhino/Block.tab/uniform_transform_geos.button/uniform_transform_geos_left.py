@@ -1,6 +1,14 @@
 
 __title__ = "UniformTransformGeos"
-__doc__ = "Apply the same rotation and/or uniform scale to blocks or geometries. Helpful when reorienting or resizing many instances, such as changing direction or size of cars on a street."
+__doc__ = """Rotate or uniformly scale many objects at once, each about its own center.
+
+Every selected block or object turns and resizes in place rather than orbiting a shared
+origin, so a street full of cars can all be spun or shrunk together without drifting out of
+position.
+
+Usage:
+1. Select the blocks or geometry to change
+2. Enter the rotation angle, the scale factor, or both"""
 
 
 

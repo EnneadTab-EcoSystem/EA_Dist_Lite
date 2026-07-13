@@ -3,7 +3,16 @@
 
 
 
-__doc__ = "Align horizontal curtain grids to intersecting detail lines or level datums. Use in elevation views."
+__doc__ = """Snap horizontal curtain grids onto the detail lines or levels that cross them.
+
+Draw your intended grid heights as detail lines, or just use the levels already in the
+elevation, and the curtain grids move to match. Beats nudging each grid line by hand when a
+facade rhythm changes.
+
+Usage:
+1. Open an elevation view of the curtain wall
+2. Run the button and pick the detail lines or levels to align to
+3. Pick the curtain grids that should move"""
 __title__ = "Align H. Curtain Grid To Detail Lines/Levels(Elevation)"
 __youtube__ = "https://youtu.be/iiAy-Gxl5ZU"
 __tip__ = True

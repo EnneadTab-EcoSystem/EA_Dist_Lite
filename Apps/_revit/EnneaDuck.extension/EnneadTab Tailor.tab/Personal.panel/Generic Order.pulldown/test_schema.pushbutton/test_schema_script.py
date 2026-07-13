@@ -3,7 +3,12 @@
 
 
 
-__doc__ = "Developer test utility for the REVIT_SCHEMA extensible storage helpers. Gets or creates a sample schema and writes a test value onto every grid in the document. Not intended for production use."
+__doc__ = """Write a sample piece of hidden data onto every grid to verify hidden data storage.
+
+A sample data container is created if the model does not have one yet,
+then a test value is stored on each grid. Nothing visible changes in the
+drawing; use this to confirm that hidden data can be written to and read
+back from this model."""
 __title__ = "test_schema"
 
 # from pyrevit import forms #

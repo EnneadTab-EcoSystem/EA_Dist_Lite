@@ -3,7 +3,16 @@
 
 
 
-__doc__ = "Multi-language translation assistant for your Revit project. Translate sheet names and view names between 15 languages (Chinese, Japanese, Korean, Spanish, French, Italian, German, Portuguese, Arabic, Hebrew, Persian, Turkish, Hindi, Marathi). Uses authority-backed AEC terminology (CSTT, BIS, DIN, NF DTU, UNI, CTE, SBC, Aramco SAES, TSE, Maharashtra Shabdakosh, Israel Architects Assoc., Iran NBR) with structured AI output and approval workflow before applying changes."
+__doc__ = """Translate sheet and view names into another language, with a review step first.
+
+Covers 15 languages including Chinese, Japanese, Korean, Spanish, French, German, Arabic and
+Hindi, and leans on each country's official AEC vocabulary so the wording reads the way a
+local consultant would write it, not the way a generic translator would.
+
+Usage:
+1. Pick the sheets or views to translate and the target language
+2. Review the proposed names side by side with the originals
+3. Approve, and only the names you accepted are written back"""
 __title__ = "AI\nTranslate"
 __post_link__ = "https://ei.ennead.com/_layouts/15/Updates/ViewPost.aspx?ItemID=29679"
 __youtube__ = "https://youtu.be/7dlOneO2Mts"

@@ -1,6 +1,10 @@
 
 __title__ = "GetGoogleEarthModel"
-__doc__ = "Open a video tutorial on capturing Google Earth 3D context models through Blender. A companion Blender script (blosm.py) in this button folder cleans up the imported materials before bringing the model into Rhino."
+__doc__ = """Open the video tutorial on pulling a Google Earth 3D context model into Rhino.
+
+Walks you through capturing the surrounding city in Blender and bringing it across, which
+is the quickest way to get a real site context around your massing. A companion Blender
+script sits in this button's folder and tidies up the imported materials first."""
 
 
 from EnneadTab import ERROR_HANDLE, LOG

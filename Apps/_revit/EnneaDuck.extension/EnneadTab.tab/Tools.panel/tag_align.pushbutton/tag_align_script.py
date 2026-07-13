@@ -3,7 +3,16 @@
 
 
 
-__doc__ = "Precision tag alignment assistant that brings order to your documentation. This floating interface allows you to quickly align multiple tags horizontally or vertically based on a reference tag. Perfect for creating clean, professional drawings with consistently aligned annotations that improve readability and presentation quality."
+__doc__ = """Line up scattered tags horizontally or vertically against one reference tag.
+
+A small floating window stays open while you work, so you can keep selecting groups of tags
+and straightening them without reopening anything. Turns a messy sheet of hand-dragged tags
+into clean, readable annotation.
+
+Usage:
+1. Select the tags you want to line up
+2. Click align horizontally or vertically in the floating window
+3. Repeat on the next group; the window stays open"""
 __title__ = "Tag\nAligner"
 __tip__ = True
 

@@ -2,16 +2,11 @@ __title__ = "ViewToggle"
 
 KEY = "F4"
 
-__doc__ = """Quick view navigation tool for Rhino.
+__doc__ = """Flip the active viewport between Top and Perspective with one click.
 
-Features:
-- Toggles between Top and Perspective views
-- Left click to switch between views
-- Keyboard shortcut: {}
-- Optimizes modeling workflow with rapid view changes
-
-Usage:
-Click button to toggle between views.""".format(KEY)
+Saves reaching for the viewport tabs every time you want to check a plan relationship and
+then get back to the model. Running it also binds the F4 key to the same toggle, so from
+then on you can switch with the keyboard alone."""
 
 
 from EnneadTab import ERROR_HANDLE, LOG

@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Disallows wall end joins by wall type. This tool allows you to select specific wall types and disable their end joins, preventing automatic joining behavior at wall endpoints."
+__doc__ = """Disallow end joins on every wall of the wall types you choose.
+
+Walls of the selected types stop auto-joining at their endpoints, which keeps stacked or
+layered wall assemblies from cleaning up into each other and ruining the intended graphic.
+Runs as a single undo step.
+
+Features:
+- Pick one or many wall types and treat every wall of that type at once
+- Both ends of each wall are handled
+- Summary of how many walls were changed"""
 __title__ = "Disallow Wall\nEnd Joins"
 
 import proDUCKtion # pyright: ignore 

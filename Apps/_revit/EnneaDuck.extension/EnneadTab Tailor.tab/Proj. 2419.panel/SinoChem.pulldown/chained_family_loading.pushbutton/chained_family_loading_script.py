@@ -1,7 +1,17 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Loads open family documents into each other in a predefined dependency order for the selected SinoChem design scenario (reveal, tower, or podium). Optionally closes each source family after it has been loaded into its target."
+__doc__ = """Reload a whole stack of nested panel families in the right order in one go.
+
+Facade panel families depend on each other, so loading them by hand in the wrong
+order silently loses edits. Pick a design scenario and this walks the known
+dependency chain, loading each family into the one above it from the bottom up.
+Source families that are finished with are closed as it goes.
+
+Usage:
+1. Open every family in the chain first (see Chained Family Opening)
+2. Run the button and pick the scenario
+3. Watch the load order print out as each family is pushed up the chain"""
 __title__ = "Chained Family Loading"
 
 import proDUCKtion # pyright: ignore 

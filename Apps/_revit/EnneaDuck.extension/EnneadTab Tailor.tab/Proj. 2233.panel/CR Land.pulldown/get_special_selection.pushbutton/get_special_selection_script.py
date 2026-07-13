@@ -3,7 +3,11 @@
 
 
 
-__doc__ = "Based on the special brep defined in Rhino file, highlight specific panel instances in the current document."
+__doc__ = """Select the curtain panels that match the shapes marked up in the Rhino file.
+
+Pick the panel family to work with, and the panels nearest the locations
+flagged in the companion Rhino file are highlighted as the current
+selection, ready to be edited, tagged or reported on."""
 __title__ = "Get Special Selection"
 from collections import defaultdict
 from pyrevit import forms #

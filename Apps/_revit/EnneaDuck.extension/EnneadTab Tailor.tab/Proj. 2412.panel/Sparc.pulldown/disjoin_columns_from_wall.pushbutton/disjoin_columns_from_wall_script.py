@@ -144,12 +144,12 @@ def disjoin_columns_from_walls(doc):
     used_selection = bool(selected_columns)
 
     if used_selection:
-        print "Processing {0} column(s) from current selection.".format(len(selected_columns))
+        print("Processing {0} column(s) from current selection.".format(len(selected_columns)))
         columns = selected_columns
     else:
         columns = _collect_all_columns(doc)
-        print "No columns found in the current selection."
-        print "Processing all editable columns instead: {0} found.".format(len(columns))
+        print("No columns found in the current selection.")
+        print("Processing all editable columns instead: {0} found.".format(len(columns)))
 
     # Filter columns to those we can modify
     columns = list(REVIT_SELECTION.filter_elements_changable(columns))
@@ -173,12 +173,12 @@ def disjoin_columns_from_walls(doc):
 
             if getattr(column, "IsReadOnly", False):
                 skipped_locked += 1
-                print "    Skipping column {0}; element is read-only.".format(column.Id)
+                print("    Skipping column {0}; element is read-only.".format(column.Id))
                 continue
             try:
                 if hasattr(doc, "IsElementModifiable") and not doc.IsElementModifiable(column.Id):
                     skipped_locked += 1
-                    print "    Skipping column {0}; element is not modifiable.".format(column.Id)
+                    print("    Skipping column {0}; element is not modifiable.".format(column.Id))
                     continue
             except Exception:
                 pass
@@ -187,7 +187,7 @@ def disjoin_columns_from_walls(doc):
             wall_candidates = _get_wall_candidates(doc, column)
             if not wall_candidates:
                 columns_without_walls += 1
-                print "    Column {0} has no wall joins or cuts to remove.".format(column.Id)
+                print("    Column {0} has no wall joins or cuts to remove.".format(column.Id))
                 continue
 
             disjoined_this_column = 0
@@ -198,30 +198,30 @@ def disjoin_columns_from_walls(doc):
                         DB.JoinGeometryUtils.UnjoinGeometry(doc, column, joined_element)
                         disjoined_pairs += 1
                         disjoined_this_column += 1
-                        print "        Disjoined column {0} from wall {1}.".format(column.Id, joined_element.Id)
+                        print("        Disjoined column {0} from wall {1}.".format(column.Id, joined_element.Id))
                 except Exception as exc:
                     failure_pairs += 1
-                    print "        Failed to disjoin column {0} and wall {1}: {2}".format(column.Id, joined_element.Id, exc)
+                    print("        Failed to disjoin column {0} and wall {1}: {2}".format(column.Id, joined_element.Id, exc))
                 try:
                     if hasattr(DB.SolidSolidCutUtils, "AreElementsCut") and DB.SolidSolidCutUtils.AreElementsCut(doc, column, joined_element):
                         DB.SolidSolidCutUtils.RemoveCutBetweenSolids(doc, column, joined_element)
                         solid_cut_pairs += 1
                         solid_cuts_this_column += 1
-                        print "        Removed solid-solid cut between column {0} and wall {1}.".format(column.Id, joined_element.Id)
+                        print("        Removed solid-solid cut between column {0} and wall {1}.".format(column.Id, joined_element.Id))
                     elif hasattr(DB.SolidSolidCutUtils, "AreElementsCut") and DB.SolidSolidCutUtils.AreElementsCut(doc, joined_element, column):
                         DB.SolidSolidCutUtils.RemoveCutBetweenSolids(doc, joined_element, column)
                         solid_cut_pairs += 1
                         solid_cuts_this_column += 1
-                        print "        Removed solid-solid cut between wall {0} and column {1}.".format(joined_element.Id, column.Id)
+                        print("        Removed solid-solid cut between wall {0} and column {1}.".format(joined_element.Id, column.Id))
                 except Exception as exc:
                     solid_cut_failures += 1
-                    print "        Failed to remove solid-solid cut between column {0} and wall {1}: {2}".format(column.Id, joined_element.Id, exc)
+                    print("        Failed to remove solid-solid cut between column {0} and wall {1}: {2}".format(column.Id, joined_element.Id, exc))
             if disjoined_this_column == 0:
                 if solid_cuts_this_column == 0:
                     columns_without_walls += 1
-                    print "    Column {0} had no wall joins or cuts to remove.".format(column.Id)
+                    print("    Column {0} had no wall joins or cuts to remove.".format(column.Id))
                 else:
-                    print "    Column {0} had solid cuts removed but no join state to clear.".format(column.Id)
+                    print("    Column {0} had solid cuts removed but no join state to clear.".format(column.Id))
     except Exception:
         transaction.RollBack()
         raise

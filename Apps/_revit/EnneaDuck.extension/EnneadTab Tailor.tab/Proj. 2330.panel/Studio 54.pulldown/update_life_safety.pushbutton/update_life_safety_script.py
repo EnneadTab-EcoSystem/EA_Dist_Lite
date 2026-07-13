@@ -1,7 +1,20 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "This tool updates life safety parameters in a Revit project, ensuring compliance with occupancy and egress requirements."
+__doc__ = """Recalculate occupant load and egress capacity across every room and door.
+
+Reads the occupancy area-per-person on each room, works out the required occupant
+load, and pushes the matching egress capacity onto the doors and stairs that serve
+them. If anything goes wrong mid-run the model is rolled back untouched.
+
+Features:
+- Occupant load targets written back to every room
+- Required clear width and capacity written to egress doors and stairs
+- Stale life safety tags removed from doors no longer on an egress path
+
+Usage:
+1. Run the button and let the calculation finish
+2. Choose whether to display the egress targets, then pick the views to show them in"""
 __title__ = "Update Life Safety"
 
 import proDUCKtion # pyright: ignore 

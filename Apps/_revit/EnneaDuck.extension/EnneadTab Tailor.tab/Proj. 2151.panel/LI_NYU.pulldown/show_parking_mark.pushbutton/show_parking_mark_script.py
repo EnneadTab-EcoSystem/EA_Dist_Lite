@@ -1,7 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Show a level-by-level visualization of all parking spaces in the model, plotting each space at its plan location with its ParkingMarker value as the label. One chart opens per ParkingLevel so parking numbering can be reviewed quickly."
+__doc__ = """Chart every parking space at its plan location, labeled with its parking mark.
+
+One chart opens per parking level, plotting each space where it sits in
+plan with its mark as the label, so parking numbering can be reviewed at a
+glance instead of hunting through the model. Nothing is changed."""
 __title__ = "Show Parking Mark"
 
 import proDUCKtion # pyright: ignore 

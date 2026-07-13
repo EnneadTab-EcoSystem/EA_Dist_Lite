@@ -1,6 +1,14 @@
 
 __title__ = "OffsetFloorBorder"
-__doc__ = "Shrink/Expand the border of floor for input srf or polysrfs. The thickness is retained if using polysrf."
+__doc__ = """Shrink or expand the outline of a floor plate by the distance you type.
+
+Feed it flat surfaces or solid slabs and the edge moves in or out, which is how you rough
+out a setback, a balcony line or a shaved core without redrawing the boundary. Solid slabs
+keep their thickness.
+
+Usage:
+1. Select the floor surfaces or solids
+2. Enter the offset distance; a negative value pulls the edge inward"""
 __is_popular__ = True
 
 import random

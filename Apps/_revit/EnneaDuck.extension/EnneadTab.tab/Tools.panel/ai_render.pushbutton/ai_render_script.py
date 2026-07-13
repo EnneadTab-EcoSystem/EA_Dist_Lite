@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "View rendering through Ennead's in-house style library. Queue multiple renders, see your full cloud gallery across devices, refine prompts with the ennead-ai.com helpers, load style references from the Ennead library."
+__doc__ = """Render the current view through Ennead's in-house AI style library.
+
+Queue several renders at once and carry on modeling while they run. Your gallery
+follows you between machines, so a render you start at one desk can be picked up
+at another.
+
+Features:
+- Style references pulled straight from the Ennead library
+- Prompt helpers from ennead-ai.com to sharpen a description
+- Queue multiple views and collect the results in one gallery"""
 __title__ = "AI\nRender"
 
 # 2026-06-03 — ROOT CAUSE of the recurring 0xE0434352 Revit crash (CER

@@ -1,4 +1,8 @@
-__doc__ = "Use the shaed excel file to read the correct naming for department and program type. Provide solution to batch fix."
+__doc__ = """Compare department and program type names in the model against the shared Excel.
+
+The shared program spreadsheet holds the approved department and program
+type names. Areas whose naming does not match are listed, and a batch fix
+is offered so the whole model can be brought back in line in one go."""
 __title__ = "DEPRECIATED: Query Main Excel"
 
 import proDUCKtion # pyright: ignore 

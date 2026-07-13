@@ -1,6 +1,13 @@
 
 __title__ = "DraftInsulationBatting"
-__doc__ = "Given base crvs and thickness, it makes a 2D insulation batting graphic that can be any shape. "
+__doc__ = """Draw the zig-zag insulation batting graphic along any curve you give it.
+
+Unlike a straight hatch, the batting follows a curved or irregular path, so a detail can
+show insulation wrapping a corner or a rounded edge and still read correctly.
+
+Usage:
+1. Select the base curves the batting should follow
+2. Enter the batting thickness"""
 import Rhino # pyright: ignore
 import rhinoscriptsyntax as rs
 import scriptcontext as sc

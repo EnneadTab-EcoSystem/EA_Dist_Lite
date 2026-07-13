@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Create an exploded axon by displacing elements of a selected category per level grouping in a 3D view."
+__doc__ = """Build an exploded axon by lifting each level apart in a 3D view.
+
+Elements are grouped by the level they sit on and pulled upward by a spacing you choose,
+so the building reads as separated floor plates. The displacement lives in the view only,
+so the model geometry never moves and you can reset or redo it at any time.
+
+Usage:
+1. Run the button from a 3D view
+2. Pick the categories you want to explode
+3. Enter the spacing in feet between levels"""
 __title__ = "Explode Axon"
 
 import proDUCKtion # pyright: ignore 

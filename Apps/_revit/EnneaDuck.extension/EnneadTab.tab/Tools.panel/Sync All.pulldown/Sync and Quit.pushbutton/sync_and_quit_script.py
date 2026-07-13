@@ -1,4 +1,7 @@
-__doc__ = "Sync all open projects with central, then quit Revit. One-click end-of-day: sync every open document, close them, and exit Revit. Use when you are done for the day and want to leave nothing open."
+__doc__ = """Sync every open model with central, close them all, and shut Revit down.
+
+The one-click end of the day: nothing left open, nothing left unsynced. Revit
+closes itself once the last model has finished syncing, so you can walk away."""
 __title__ = "Sync and Quit"
 __post_link__ = "https://ei.ennead.com/_layouts/15/Updates/ViewPost.aspx?ItemID=28744"
 __tip__ = True

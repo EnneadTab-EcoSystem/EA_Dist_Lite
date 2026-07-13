@@ -1,7 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = """Temporary script for prototyping and testing new Revit automation features. Use this as a scratchpad for quick experiments, workflow validation, or debugging without affecting production tools."""
+__doc__ = """Run the in-house scratch button used to try out new Revit automation ideas.
+
+Reserved for quick experiments and workflow checks so that production
+tools never have to be used as a testing ground."""
 __title__ = "Temp"
 
 import proDUCKtion # pyright: ignore 

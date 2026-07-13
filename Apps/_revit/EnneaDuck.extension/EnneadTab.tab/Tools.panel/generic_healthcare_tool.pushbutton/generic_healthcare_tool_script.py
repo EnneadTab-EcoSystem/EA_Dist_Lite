@@ -3,7 +3,16 @@
 
 
 
-__doc__ = "Your ultimate healthcare project companion! Provides a comprehensive suite of tools for managing healthcare projects in Revit - from design guidelines and project setup to DGSF chart management and color palette customization. Access all healthcare-related functionality from this centralized command center."
+__doc__ = """Open the healthcare toolkit and pick the healthcare task you want to run.
+
+One menu gathers everything a healthcare project needs, so you do not have to hunt for
+separate buttons.
+
+Features:
+- Read the Ennead healthcare design outline
+- Set up a new healthcare project and edit or open its project data
+- Update the detailed DGSF chart
+- Refresh the department color palette from an Excel file"""
 __title__ = "HealthCare\nHelper"
 __tip__ = True
 __is_popular__ = True

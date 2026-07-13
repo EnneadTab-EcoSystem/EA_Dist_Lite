@@ -3,7 +3,12 @@
 
 
 
-__doc__ = "Make sure all egress stair has consistent width on run, and push that to calculator stair width"
+__doc__ = """Give every egress stair a consistent run width and push it to the stair calculator.
+
+Stairs whose runs disagree in width are reported with clickable links, as
+are stairs with no egress id. The confirmed width is written into the
+matching stair life safety calculator so the capacity math is based on the
+real stair width."""
 __title__ = "(Depreciated)Format Egress Stairs"
 
 # from pyrevit import forms #

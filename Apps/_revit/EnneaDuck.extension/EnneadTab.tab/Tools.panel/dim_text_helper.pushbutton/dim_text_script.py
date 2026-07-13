@@ -3,7 +3,17 @@
 
 
 
-__doc__ = "Floating dimension annotation assistant that enhances documentation productivity. Quickly add industry-standard dimension text (FOG, EOS, FTF, etc.) to selected dimensions with precise control over text positioning. Create custom annotations on-the-fly and save frequently used dimension texts for future use. Streamlines the tedious task of dimension annotation across your project."
+__doc__ = """Add standard dimension text such as FOG, EOS or FTF to the dimensions you select.
+
+A small floating window stays open while you work, so you can keep selecting dimensions
+and stamping text on them without reopening anything. Choose where the text sits relative
+to the dimension value, and add your own phrases to the list for next time.
+
+Features:
+- Common annotations ready to click, plus your own custom entries
+- Control whether the text goes above, below, before or after the value
+- Your custom entries are remembered between sessions
+- Window stays open so you can work through many dimensions in a row"""
 __title__ = "Dim Text\nHelper"
 __post_link__ = "https://ei.ennead.com/_layouts/15/Updates/ViewPost.aspx?ItemID=29672"
 __youtube__ = "https://youtu.be/WYs-_k5IV48"

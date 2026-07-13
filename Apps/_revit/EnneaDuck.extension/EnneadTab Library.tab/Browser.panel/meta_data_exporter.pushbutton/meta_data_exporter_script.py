@@ -1,20 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-"""
-MetaData Exporter for Revit Family Files
-
-This script processes Revit family files to generate metadata files for later usage.
-It exports family information, views, and type data to JSON files.
-
-Example:
-    >>> with ErrorSwallower() as swallower:
-    >>>     for fam in families:
-    >>>         doc.EditFamily(fam)
-    >>>         if swallower.get_swallowed():
-    >>>             logger.warn("Warnings swallowed")
-"""
 __context__ = "zero-doc"
-__doc__ = "Process all the family file to generate a metadata file for usage later."
+__doc__ = """Read every family in the library and record its details for later search.
+
+Builds the data the Ennead Library browser uses, so families can be found by
+their type and view information instead of by filename alone. Run it after
+adding or changing families in the library.
+
+Features:
+- Covers every family in the library in one pass
+- Existing records are refreshed, not duplicated"""
 __title__ = "MetaData\nExporter"
 
 import os

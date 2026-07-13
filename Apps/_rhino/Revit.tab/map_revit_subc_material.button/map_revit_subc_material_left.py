@@ -1,6 +1,14 @@
 
 __title__ = "MapRevitSubCategoryMaterial"
-__doc__ = "Work with ExportSubCategoryMaterialTable on revit side. After you export the OST mapping there, this button help you create and map layer material based on layer name, if found in the OST mapping"
+__doc__ = """Give your Rhino layers the materials that the matching Revit subcategories use.
+
+Export the subcategory material table from Revit first, then run this. Any layer whose name
+appears in that table gets the corresponding material created and assigned, so a model
+brought over from Revit shades the way it does there instead of arriving flat and grey.
+
+Usage:
+1. On the Revit side, run Export SubCategory Material Table
+2. Run this button; layers that match a name in the table are mapped"""
 import rhinoscriptsyntax as rs
 import scriptcontext as sc
 

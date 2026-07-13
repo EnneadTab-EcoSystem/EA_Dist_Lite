@@ -1,10 +1,14 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = ("MetroTech (2512) sheet housekeeping. For every sheet you can edit: "
-           "strip a trailing '.00' from the sheet number, and set DOB_Rev to "
-           "'00'. Sheets owned by another user are skipped and reported -- "
-           "nothing is changed on them.")
+__doc__ = """Clean up MetroTech (2512) sheets: strip a trailing '.00' and set DOB_Rev to '00'.
+
+Runs on every sheet you are able to edit.
+
+Features:
+- Removes a trailing '.00' from the sheet number
+- Sets the DOB_Rev parameter to '00'
+- Sheets owned by another user are skipped and reported, never changed"""
 __title__ = "DOB Sheet\nCleanup"
 
 import proDUCKtion  # pyright: ignore

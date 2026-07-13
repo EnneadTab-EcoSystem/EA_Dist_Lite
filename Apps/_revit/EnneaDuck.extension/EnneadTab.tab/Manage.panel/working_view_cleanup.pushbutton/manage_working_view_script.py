@@ -3,7 +3,17 @@
 
 
 
-__doc__ = "Powerful working view management system that helps maintain a clean project environment. This interactive interface allows you to quickly identify, review, and organize unsheeted views with intelligent filtering by creator, view type, and more. Features include thumbnail previews for rapid visual assessment, batch view name prefixing to identify creators, and direct view deletion capabilities - all without leaving the interface. Perfect for project cleanup before submissions or when transitioning between project phases."
+__doc__ = """Review and clean up the views that are not on any sheet, all from one window.
+
+Every unsheeted view is listed with a thumbnail, so you can judge at a glance
+whether it is someone's working view or dead weight. Delete the dead ones, or
+prefix names with their creator so ownership is obvious. Good housekeeping before
+a submission or a phase change.
+
+Features:
+- Thumbnail preview of each working view
+- Filter the list by creator, view type, and name
+- Batch rename with a creator prefix, or delete in bulk"""
 __title__ = "Manage\nWorking Views"
 __tip__ = True
 __is_popular__ = True

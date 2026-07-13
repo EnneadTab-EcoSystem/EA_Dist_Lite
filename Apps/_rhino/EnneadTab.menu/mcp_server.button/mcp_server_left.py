@@ -3,7 +3,11 @@
 
 
 __title__ = "MCPServer"
-__doc__ = "Start the EnneadTab MCP Server for Rhino. When running, Claude Code can query and control this Rhino session via MCP protocol."
+__doc__ = """Start the EnneadTab AI bridge for this Rhino session.
+
+While it is running, an AI assistant can look at the open model and carry out changes for
+you in this session. Only the Rhino session you started it from is exposed, and the bridge
+stops when you close Rhino."""
 
 
 import os

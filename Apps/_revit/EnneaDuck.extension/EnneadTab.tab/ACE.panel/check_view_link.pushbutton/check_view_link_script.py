@@ -1,7 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "View dependency analyzer that identifies all linked-view relationships throughout your project. This diagnostic tool generates a comprehensive report showing which views reference others, helping identify potential circular dependencies or visualization issues. Perfect for troubleshooting views that unexpectedly display or hide content, or when preparing to delete views that might be referenced elsewhere."
+__doc__ = """Report which views depend on which, so you know what breaks before you delete one.
+
+Views quietly reference each other through dependents and callouts. This lists every
+one of those relationships, so you can see why a view is showing something you did not
+expect, and what would go with it if you deleted it.
+
+Features:
+- Circular references between views are called out
+- Nothing in the model is changed; this is a read-only check"""
 __title__ = "Check Linked-View\nRelationship"
 
 import proDUCKtion # pyright: ignore 

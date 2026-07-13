@@ -1,10 +1,13 @@
-__doc__ = """You should avoid using user keynotes, but if someone already did in the project, you can find them here.
+__doc__ = """Find keynote tags that use the wrong tag family or point at a user keynote.
 
-Also, element keynote and material keynote should be used by it repsected types. 
-If there is mismatch, this tool will attempt to find them. The rule as as such, if there is 'material' mentioned in the type name or family name, and the tag is pointing to a element key data, it will warn you. 
-The same go for the element keynote types.
+A tag whose family or type name says material but that reads element keynote data
+is flagged, and the reverse case is flagged too. User keynotes, which the office
+standard steers away from, are called out separately.
 
-User keynote, since no one should really use it, will be highlighted as blue."""
+Features:
+- Mismatched tags are color overridden in the view they sit in
+- User keynote tags are highlighted in blue
+- Run KeynoteTAG Reset Color afterwards to clear all the highlights"""
 __title__ = "Identify Wrong Type\nOf KeynoteTAG"
 __tip__ = True
 __is_popular__ = True

@@ -1,7 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Visualize door calculation points by drawing detail lines from To/From points to door insertion points. Blue lines for ToRoom, red lines for FromRoom. Works on selected views."
+__doc__ = """Draw detail lines from each door to its room calculation points in the views you pick.
+
+Makes it obvious which rooms a door is reporting to and from, so doors that feed
+the wrong room in a schedule stand out instead of hiding in the numbers.
+
+Features:
+- Blue lines run to the To Room, red lines run to the From Room
+- Doors that carry no calculation points are counted and skipped
+- Summary of processed doors printed when it finishes"""
 __title__ = "Door Calc\nPt Visualizer"
 
 import proDUCKtion # pyright: ignore 

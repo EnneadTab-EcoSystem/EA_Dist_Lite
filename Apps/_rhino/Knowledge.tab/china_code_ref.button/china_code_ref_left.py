@@ -1,6 +1,13 @@
 
 __title__ = "ChinaCodeRef"
-__doc__ = "Browse and open China building code reference PDFs from your local BuildingCode folder. Pick a document from the list to open it, or jump to the folder to add more PDFs. Creates the folder on first run."
+__doc__ = """Open a China building code reference PDF without leaving Rhino.
+
+Pick a document from the list and it opens straight away, or jump to the folder to drop in
+codes that are not there yet. The folder is created for you the first time you run it.
+
+Usage:
+1. Run the button and pick a code document from the list
+2. Choose to open the folder instead if you want to add more PDFs"""
 import os
 import subprocess
 from EnneadTab import EXE, FOLDER, ENVIRONMENT, NOTIFICATION

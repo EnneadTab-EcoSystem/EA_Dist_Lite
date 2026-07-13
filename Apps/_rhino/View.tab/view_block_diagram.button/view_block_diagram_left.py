@@ -2,23 +2,17 @@
 # -*- coding: utf-8 -*-
 
 __title__ = "ViewBlockDiagram"
-__doc__ = """Generate view block diagrams by casting rays from a viewer point to identify unobstructed view areas.
+__doc__ = """Draw the view fan from a chosen viewpoint, showing what is visible and what is blocked.
 
-This tool creates 3D surfaces representing the visible areas from a specified viewer point, 
-taking into account obstacles that block the view rays. Perfect for:
-- Site analysis and view studies
-- Building massing and urban planning
-- Landscape design and sightline analysis
-- Solar access and shadow studies
+Sight lines are traced outward from the viewer and stopped wherever a building or other
+obstacle gets in the way. The clear sweeps come back as surfaces you can present, so a
+window, a terrace or a public space can be argued for on the strength of what it actually
+sees.
 
-The process involves:
-1. Configuring ray casting parameters (resolution and ray length)
-2. Selecting obstacle objects that block the view
-3. Picking a viewer point location
-4. Automatic generation of view block surfaces
-
-The tool automatically groups consecutive unobstructed rays and creates 
-bounded surfaces using arcs and radius lines for accurate representation."""
+Usage:
+1. Set the sweep resolution and how far the view should reach
+2. Select the objects that block the view
+3. Pick the viewer point; the visible fans are drawn for you"""
 
 
 from EnneadTab import ERROR_HANDLE, LOG, DATA_FILE

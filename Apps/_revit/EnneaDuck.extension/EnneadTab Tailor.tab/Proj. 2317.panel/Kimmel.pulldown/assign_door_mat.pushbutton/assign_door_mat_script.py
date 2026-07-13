@@ -1,7 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Assign materials to door panels and frames in the current phase using instance parameters Door_$Panel_Material and Door_$Frame_Material"
+__doc__ = """Assign panel and frame materials to every door in the latest phase at once.
+
+You pick one material for door panels and one for door frames, and every door
+in the newest phase gets both assigned in a single undoable step. Doors that
+belong to a secondary design option are left alone.
+
+Features:
+- Only doors in the latest project phase are touched
+- Doors whose material parameters are locked are skipped
+- A message reports how many doors were updated
+
+Usage:
+1. Run the button and pick the panel material
+2. Pick the frame material
+3. Read the confirmation message"""
 __title__ = "Assign Door Mat"
 
 import proDUCKtion # pyright: ignore 

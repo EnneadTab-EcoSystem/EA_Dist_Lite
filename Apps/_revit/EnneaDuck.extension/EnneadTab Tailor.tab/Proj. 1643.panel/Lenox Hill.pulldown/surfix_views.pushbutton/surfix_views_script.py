@@ -3,7 +3,11 @@
 
 
 
-__doc__ = "For selected views, update the Title on Sheet by replacing phase codes PH1 through PH5 with their Lenox Hill milestone names such as Existing and Milestone 1-3. Pick views from the current selection or a list."
+__doc__ = """Rewrite phase codes in the Title on Sheet of selected views into milestone names.
+
+PH1 through PH5 become Existing, Milestone 1, Milestone 2, Milestone 2.5
+and Milestone 3, so sheet titles read the way the team names the
+milestones. Views can come from the current selection or from a picker."""
 __title__ = "Rename Views"
 
 from pyrevit import forms #

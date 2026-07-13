@@ -1,6 +1,9 @@
 
 __title__ = "Text2ScriptSetting"
-__doc__ = """Opens the settings panel for the Text2Script tool, allowing users to configure AI model preferences, API keys, and script generation options for converting natural language to Python scripts in Rhino."""
+__doc__ = """Report the current settings of the Text2Script generator on the Rhino command line.
+
+Right-click companion to Text2Script, the tool that turns a plain-English request into a
+runnable Rhino script. Nothing in your model is read or changed."""
 
 
 from EnneadTab import ERROR_HANDLE, LOG

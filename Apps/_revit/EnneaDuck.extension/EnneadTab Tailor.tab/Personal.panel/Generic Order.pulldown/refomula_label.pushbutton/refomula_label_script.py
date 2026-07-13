@@ -1,7 +1,10 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = """Automates the creation and placement of reformula labels in Revit. Streamlines the process of labeling elements according to project standards, improving documentation consistency and efficiency."""
+__doc__ = """Reformat the labels on the current selection to follow project standards.
+
+Select the elements first, then run the button to bring their labelling
+in line with the documentation standard for the project."""
 __title__ = "Refomula Label"
 
 import proDUCKtion # pyright: ignore 

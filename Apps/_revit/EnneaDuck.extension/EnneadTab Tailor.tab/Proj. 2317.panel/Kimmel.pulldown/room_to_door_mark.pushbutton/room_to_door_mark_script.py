@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "[DEPRECATED] Update door Marks in 'Renovation 1' phase to match Room Numbers. Appends suffixes for duplicates. Excludes 'NEST' types. Sets Mark to error message if Room data missing."
+__doc__ = """Renumber door Marks in the Renovation 1 phase to match the room each door serves.
+
+Every door takes the number of the room it opens into. When several doors serve
+the same room, a letter suffix keeps each Mark unique. The whole renumber is one
+undo step.
+
+Features:
+- Doors owned by another user or locked in a design option are reported and skipped
+- Nested door types are left out of the renumbering
+- Doors with no room on either side are flagged in the report so you can fix the data"""
 __title__ = "[DEPRECATED] Room To Door Mark"
 
 import proDUCKtion # pyright: ignore 

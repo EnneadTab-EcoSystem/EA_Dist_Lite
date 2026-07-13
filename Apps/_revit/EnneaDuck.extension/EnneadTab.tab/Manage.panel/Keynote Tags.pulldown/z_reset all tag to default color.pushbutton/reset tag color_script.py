@@ -1,4 +1,12 @@
-__doc__ = "Reset all keynote tag local override color to default. It might got its color from the other checking type button."
+__doc__ = """Clear the color overrides on every keynote tag so they draw in their default color.
+
+Use this after the keynote checking tools, which color-code tags to flag problems.
+Tags or views owned by someone else in a workshared model are left alone and
+reported, so nothing is quietly half-reset.
+
+Features:
+- Sweeps every keynote tag in the model in a single undo step
+- Count of reset and skipped tags shown when it finishes"""
 __title__ = "KeynoteTAG Reset Color"
 __tip__ = True
 

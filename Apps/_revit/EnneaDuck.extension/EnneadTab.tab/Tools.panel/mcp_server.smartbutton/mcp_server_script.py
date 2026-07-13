@@ -2,7 +2,16 @@
 # -*- coding: utf-8 -*-
 
 
-__doc__ = "Toggle the EnneadTab MCP Server on or off. When running, Claude Code can query and control this Revit session via MCP protocol. Requires pyRevit Routes to be enabled."
+__doc__ = """Turn the EnneadTab AI bridge for this Revit session on or off.
+
+While it is on, an AI assistant can look at the open model and carry out changes for you in
+this session. The button shows the current state, so one click starts the bridge and the
+next click shuts it down again.
+
+Features:
+- Only the Revit session you started it from is exposed
+- The bridge stops as soon as you toggle it off or close Revit
+- pyRevit Routes must be enabled first, and you are told if it is not"""
 __title__ = "MCP\nServer"
 
 

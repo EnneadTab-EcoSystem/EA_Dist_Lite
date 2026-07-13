@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Join vertical and horizontal elements. Select categories to join (Floors/Ceilings to Columns/Structural Columns)."
+__doc__ = """Join horizontal elements to vertical ones in bulk, such as floors into columns.
+
+Instead of picking pairs by hand, choose the two categories and every overlapping pair in
+the model is joined in one pass. Cleans up the slab-to-column edges that otherwise show
+through in sections and elevations.
+
+Usage:
+1. Pick the horizontal category, for example Floors or Ceilings
+2. Pick the vertical category, for example Columns or Structural Columns
+3. Review the count of joins made in the output window"""
 __title__ = "Join Selected\nElements"
 
 import proDUCKtion # pyright: ignore 

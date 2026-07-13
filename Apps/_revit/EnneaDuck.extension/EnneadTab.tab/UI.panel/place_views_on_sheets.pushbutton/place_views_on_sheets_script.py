@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Monitor for new views in the project and allow quick renaming through a non-blocking interface."
+__doc__ = """Catch every newly created view and get it named, templated and onto a sheet.
+
+A floating window lists the views that appeared since you started, so nothing gets left
+unnamed or unplaced. Keep it open while you work and finish each view as it shows up.
+
+Features:
+- Rename a view, or accept the suggested name based on its sheet
+- Drop the view onto a sheet from the same window
+- Assign a scope box and a view template while you are there
+- Window stays open so Revit is still usable behind it"""
 __title__ = "Place Views\nOn Sheets"
 # Modeless dialog: keep engine alive so deferred callbacks don't hit UnboundNameException after the command returns (0xE0434352).
 __persistentengine__ = True

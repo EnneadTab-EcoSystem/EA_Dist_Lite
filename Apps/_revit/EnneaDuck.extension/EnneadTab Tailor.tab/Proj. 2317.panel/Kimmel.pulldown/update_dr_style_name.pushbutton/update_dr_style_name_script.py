@@ -1,7 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Copy 'Door Style' parameter value to '_internal_note' parameter for all doors in the project."
+__doc__ = """Copy the Door Style value into the internal note field on every door.
+
+Keeps the internal note in step with the door style so schedules and filters that
+read the note stay accurate after a style change. Runs across the whole project in
+one undo step; doors with no style set are left untouched."""
 __title__ = "Update Dr Style Name"
 
 import proDUCKtion # pyright: ignore 

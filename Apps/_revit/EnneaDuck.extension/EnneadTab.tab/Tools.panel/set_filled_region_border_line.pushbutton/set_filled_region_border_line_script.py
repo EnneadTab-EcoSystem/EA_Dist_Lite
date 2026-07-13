@@ -3,7 +3,15 @@
 
 
 
-__doc__ = "Specialized filled region styling tool that allows precise control over border line appearance. Quickly apply consistent line styles to multiple filled regions simultaneously, enhancing drawing clarity and graphical standards. Works with individual selections even when regions are nested within groups by using tab-selection technique."
+__doc__ = """Set the border line style on all the filled regions you have selected.
+
+Brings a whole drawing's hatches onto the same graphic standard in one move instead of
+editing each region's boundary. Works on regions nested inside groups too, as long as you
+tab-select them.
+
+Usage:
+1. Select the filled regions, using Tab to reach any inside a group
+2. Run the button and pick the line style you want on their borders"""
 __title__ = "Set FilledRegion\nBorder Style"
 
 

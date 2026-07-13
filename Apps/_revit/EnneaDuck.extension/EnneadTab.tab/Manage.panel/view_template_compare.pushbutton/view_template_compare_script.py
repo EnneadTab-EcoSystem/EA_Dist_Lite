@@ -2,16 +2,17 @@
 # -*- coding: utf-8 -*-
 # IronPython 2.7 Compatible
 
-__doc__ = """Compare multiple view templates and generate an interactive HTML report showing differences.
-This tool allows users to select multiple view templates and compares their settings including:
-- Category overrides (visibility, halftone, line weight, color, etc.)
-- Category visibility settings
-- Workset visibility
-- View parameters (controlled and uncontrolled)
-- Filter usage and graphic overrides
+__doc__ = """Compare view templates side by side and get an interactive report of the differences.
 
-The output is an interactive HTML table where columns represent each template and rows show differences.
-Uncontrolled parameters are highlighted as dangerous since they can cause inconsistencies."""
+Pick the templates and a table opens with one column per template and one row per
+setting that differs. Settings a template does not control are called out, since
+those are the ones that quietly let views drift apart.
+
+Features:
+- Category visibility and overrides: halftone, line weight, color, and the rest
+- Workset visibility
+- Filters in use and the overrides they apply
+- View parameters, both the controlled ones and the ones left loose"""
 __title__ = "View Template\nCompare"
 __tip__ = True
 

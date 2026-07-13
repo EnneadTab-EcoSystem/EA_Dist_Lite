@@ -3,7 +3,16 @@
 
 
 
-__doc__ = "Manage DWG files. Find, select, zoom DWGs with creator, view association, hidden status, workset, path, and size info. For linked DWGs, open file/folder or repath links."
+__doc__ = """Find, review, and clean up every DWG in the model from one window.
+
+Each imported or linked DWG is listed with who brought it in, which view it lives
+in, whether it is hidden, its workset, its path, and its file size, so a
+deliberate link is easy to tell apart from stray import junk.
+
+Features:
+- Select and zoom to any DWG in the model
+- For linked DWGs, open the source file or its folder, or repath the link
+- File sizes and paths shown, so heavy or missing links stand out"""
 
 __is_popular__ = True
 __title__ = "DWG\nManager"

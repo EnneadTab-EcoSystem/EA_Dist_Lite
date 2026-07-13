@@ -1,18 +1,20 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = """Scans through project families and their nested components to remove '*ConflictingName' string.
-            
-PROCESS:
-- Iterates through all families in current project
-- Opens each family document
-- Checks nested families for '*ConflictingName' string
-- Renames affected nested families by removing the conflicting string
-- Loads modified families back to project
-- Logs all changes made during the process
+__doc__ = """Strip the conflicting-name tag Revit leaves on nested families after a bad load.
 
-You can also requist to locate and rename based on other rules.
-"""
+When two families collide on load, Revit quietly renames the nested one and leaves an
+ugly marker in its name. This finds every nested family carrying that marker, cleans
+the name back up, and reloads the corrected family into the project.
+
+Features:
+- Every family in the project is checked, including the ones nested inside them
+- Families you cannot edit are skipped
+- A log lists every rename that was made
+
+Usage:
+1. Run the button and let it work through the families
+2. Review the list of renames in the output window"""
 __title__ = "Rename\nNesting Family"
 __is_popular__ = True
 

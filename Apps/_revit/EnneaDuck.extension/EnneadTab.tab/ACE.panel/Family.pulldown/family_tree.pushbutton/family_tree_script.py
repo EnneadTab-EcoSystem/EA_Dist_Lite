@@ -1,17 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""
-Family Tree Script
+__doc__ = """See what is nested inside your families as an interactive tree in your browser.
 
-Generate HTML visualization of family nesting structure with D3.js.
+Draws the whole parent and child chain of a family so you can finally see what is
+buried inside it, and click any node to read its parameters. Handy before cleaning
+or repathing a family you did not build.
 
-Revit API References:
-- FamilyParameter: https://www.revitapidocs.com/2015/6175e974-870e-7fbc-3df7-46105f937a6e.htm
-- FamilyManager: https://www.revitapidocs.com/2015/1cc4fe6c-0e9f-7439-0021-32d2e06f4c33.htm
-"""
-
-__doc__ = "Generate HTML visualization of family nesting structure with D3.js. Shows parent-child relationships and parameter details. Works in Project and Family documents."
+Features:
+- Works from a project or from inside an open family
+- Click through the tree to expand and collapse each level
+- Nothing in the model is changed; the tree is only a view of it"""
 __title__ = "Family\nTree"
 __tip__ = True
 

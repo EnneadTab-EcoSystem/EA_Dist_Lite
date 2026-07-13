@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Interactive ownership dashboard for workshared models. One scan shows who created, who currently owns and who last changed every element, plus which view each annotation lives in. Search bar, category filter, owned-only toggle and a views tab; select, zoom and open view straight from the table."
+__doc__ = """See who created, owns and last changed every element in a workshared model.
+
+One scan builds a searchable table so you know exactly whom to ask before you touch
+something, and which view an annotation actually lives in.
+
+Features:
+- Search bar, category filter and an owned-by-me-only toggle
+- Separate tab listing views and their owners
+- Select, zoom to, or open the host view straight from the table
+- Read-only: nothing in the model is changed"""
 __title__ = "Ownership\nInspect"
 __tip__ = True
 

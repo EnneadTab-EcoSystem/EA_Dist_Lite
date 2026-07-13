@@ -3,7 +3,20 @@
 
 
 
-__doc__ = "For views on selected sheets, inspect if there are local graphic override or local hidden objects that is not controlled by template."
+__doc__ = """Find the views where someone has overridden graphics by hand instead of by template.
+
+Local overrides and hand-hidden elements are invisible until a drawing prints wrong.
+This walks the views on the sheets you pick and reports every override and hidden
+element that the view template does not control, so you can put the view back under
+template control.
+
+Features:
+- Read the findings in Revit, or export them for review in Excel
+- Nothing in the model is changed; this is a read-only audit
+
+Usage:
+1. Run the button and pick the sheets whose views you want checked
+2. Choose whether to review in Revit or export the list"""
 __title__ = "Inspect Local\nGraphic Override"
 __tip__ = True
 __is_popular__ = True

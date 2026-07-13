@@ -1,7 +1,17 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = """Master visibility controller for Revit elements. Efficiently manage pin/unpin status, visibility settings, and annotation bubble heads across multiple categories and views. Perfect for cleaning up views, preparing documentation, and enforcing standards across your project."""
+__doc__ = """Pin, hide and tidy whole categories of content across many views from one window.
+
+Everything you normally toggle view by view is gathered in a single floating panel, so a
+sheet set can be cleaned up or locked down in a couple of clicks instead of a long crawl
+through the project browser.
+
+Features:
+- Pin or unpin dimensions, keynote tags, viewports and title blocks
+- Hide or show categories on the sheets you pick, permanently or as a temporary view state
+- Turn grid and level bubble heads on or off
+- Hide viewport borders for a clean pin-up"""
 __title__ = "Toggle\nContents"
 __tip__ = True
 __is_popular__ = True

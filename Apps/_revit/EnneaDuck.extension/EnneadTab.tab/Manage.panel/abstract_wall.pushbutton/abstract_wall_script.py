@@ -1,20 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-"""
-this is getting a little out of hand
+__doc__ = """Manage curtain wall locations by turning the walls in a plan into an abstract diagram.
 
-should consider refactor the script. There is big potentials"""
+The diagram gives you a clean line drawing to study and adjust curtain wall
+positions on. When the lines say what you want, run the tool again to push the
+locations back onto the real curtain walls.
 
-
-__doc__ = """Manager your curtain wall locations by converting walls in current plan to abstract line.
-You can then modify/confirm the location of CW wall in that diagram and update the actual CW wall with this tool.
-
-Left Click: Process current view
-Right Click: Process selected views
-
-
-You also have the option to include EOS lines in the diagrams, as long as the floor type name contain "struc".
-You can use working-view-manager to export those Abstract wall diagram views to jpgs and can review those quicker."""
+Features:
+- Left click processes the current view; right click processes views you select
+- Edge of slab lines can be included when the floor type name contains "struc"
+- Export the diagram views to images with Manage Working Views for quick review"""
 __title__ = "CurtainWall\nLocation Manager"
 __tip__ = True
 from pyrevit import forms #

@@ -1,5 +1,14 @@
 # -*- coding: utf-8 -*-
-__doc__ = "Remove unplaced rooms and areas from the project. Uses REVIT_SPATIAL_ELEMENT module to detect 'Not Placed' elements (Location is None). Also identifies unbounded or redundant elements (Area = 0) for review. Processes rooms by selected phase and areas across all phases."
+__doc__ = """Delete unplaced rooms and areas, and flag the ones that need a second look.
+
+Anything not placed anywhere is deleted outright. Elements that are placed but
+unbounded or redundant are reported instead of deleted, because those are a
+design decision, not junk. Rooms are handled in the phase you pick; areas are
+handled across every phase.
+
+Usage:
+1. Pick the phase whose rooms you want cleaned
+2. Review the deleted counts and the flagged list in the output window"""
 __title__ = "Remove Not Placed\nArea and Rooms"
 __tip__ = True
 __is_popular__ = True

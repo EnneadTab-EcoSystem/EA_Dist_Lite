@@ -1,13 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""
-Shake All Tags
+__doc__ = """Force every tag on the sheets you pick to redraw itself with current text.
 
-Force tags on selected sheets to refresh by moving them slightly to trigger regeneration.
-"""
+Fixes blank or stale tag text without leaving any permanent change behind: each
+tag is nudged, the view refreshes, and the tag is put straight back where it was.
+The whole run is one undo step.
 
-__doc__ = "Force tag refresh by moving tags slightly to trigger regeneration"
+Features:
+- Pinned tags are temporarily unpinned, then re-pinned
+- Tags owned by another user in a workshared model are skipped
+- Summary of shaken, refreshed, failed, and skipped tags when it finishes"""
 __title__ = "Shake\nAll Tags"
 __tip__ = True
 

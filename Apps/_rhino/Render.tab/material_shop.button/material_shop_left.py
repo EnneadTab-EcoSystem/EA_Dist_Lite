@@ -1,5 +1,8 @@
 __title__ = "MaterialShop"
-__doc__ = "Your gateway to a treasure trove of high-quality materials! Opens AmbientCG, a fantastic resource offering hundreds of free PBR materials perfect for architectural visualization. Quickly find textures, HDRIs, and 3D models to elevate your renderings without spending a penny."
+__doc__ = """Open AmbientCG in your browser, a free library of rendering materials.
+
+Hundreds of ready-to-use textures, HDRI skies and props, all free to download and drop into
+a Rhino or Enscape scene. Good first stop when a render needs a convincing surface."""
 
 
 from EnneadTab import ERROR_HANDLE, LOG

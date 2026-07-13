@@ -1,6 +1,9 @@
 
 __title__ = "Anything"
-__doc__ = """A sandbox utility for quick testing and prototyping in Rhino. Use this button to run experimental code snippets, debug features, or validate new ideas without creating a dedicated tool."""
+__doc__ = """Run the EnneadTab Lab scratch script, a sandbox for trying out ideas in Rhino.
+
+Kept as a testing ground for behavior that is still being explored, so it does not read or
+change anything in your model. Whatever it does is reported on the Rhino command line."""
 
 
 from EnneadTab import ERROR_HANDLE, LOG, VERSION_CONTROL

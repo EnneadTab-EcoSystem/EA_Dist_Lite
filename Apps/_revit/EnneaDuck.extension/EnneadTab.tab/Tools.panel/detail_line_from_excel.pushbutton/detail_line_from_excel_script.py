@@ -3,7 +3,16 @@
 
 
 
-__doc__ = "Precision detail line generator that imports survey point data directly from Excel spreadsheets. Automatically converts coordinate data into properly positioned Revit detail lines, creating grouped elements for easy manipulation. Ideal for property line creation, site boundaries, and other survey-based linework that requires exact positioning."
+__doc__ = """Draw detail lines from survey coordinates listed in an Excel file.
+
+Point data from the spreadsheet is placed at exact coordinates and chained into detail
+lines, then bundled into a group so the whole run can be moved as one piece. Built for
+property lines, site boundaries and any linework that has to land on surveyed points.
+
+Usage:
+1. Prepare an Excel file with the survey coordinates
+2. Run the button and point it at that file
+3. The lines are drawn in the current view as a single group"""
 __title__ = "Detail Line By Excel"
 __tip__ = True
 

@@ -3,7 +3,16 @@
 
 
 
-__doc__ = "Detail group detective that helps you track down where groups are used throughout your project. This bidirectional search tool allows you to find all instances of a specific detail group across views, or identify all detail groups used within selected views. Perfect for understanding dependencies before making changes to detail groups or when cleaning up unused content."
+__doc__ = """Track down where detail groups are used, searching by view or by group.
+
+The search runs in both directions: list every view a given detail group appears
+in, or list every detail group living inside the views or sheets you pick. Worth
+running before you edit a shared group, or when hunting content nobody uses.
+
+Usage:
+1. Choose a search direction when the dialog opens
+2. Pick the views, the sheets, or the detail group to search on
+3. Review the results in the output window"""
 __title__ = "Track\nDetail Group"
 __tip__ = True
 

@@ -1,7 +1,18 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Compare Revit area data against the NYU HQ program requirement Excel, update color schemes and area parameters from the match results, and open a consolidated HTML fulfillment report. Optionally writes actual design areas back to the Excel DESIGN column and exports department-level matrix spreadsheets to the project file exchange folder."
+__doc__ = """Check the designed areas against the program requirement and open a fulfillment report.
+
+Every area in the model is matched to its line in the program spreadsheet, so you
+can see at a glance which departments are over, under, or on target. Color schemes
+and the area parameters are refreshed from the match, and a report opens in your
+browser.
+
+Features:
+- Areas that have no match in the program are called out
+- Color schemes are rebuilt so over and under areas read by color in plan
+- Actual design areas can be written back into the program spreadsheet
+- Department level summary spreadsheets can be exported to the file exchange folder"""
 __title__ = "Monitor Area"
 
 

@@ -1,7 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Import material definitions from Rhino into Revit. Creates new materials or updates existing ones based on Rhino material properties."
+__doc__ = """Bring Rhino material definitions into Revit as new or refreshed Revit materials.
+
+Materials that already exist in the project keep their identity and simply pick
+up the incoming color; the ones that are missing are created for you, so a Rhino
+model and a Revit model can be kept looking like the same building.
+
+Usage:
+1. Export the materials from Rhino with EnneadTab for Rhino
+2. Run this button and review what was created versus updated"""
 __title__ = "Import Rhino Material"
 
 import proDUCKtion # pyright: ignore 

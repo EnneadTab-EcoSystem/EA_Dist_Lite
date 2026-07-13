@@ -2661,7 +2661,12 @@ class AiRenderForm(Eto.Forms.Form):
                 placeholder = Eto.Forms.Scrollable()
                 placeholder.BackgroundColor = _hex_to_color("#FF2A2A2A")
                 try:
-                    placeholder.Border = Eto.Forms.BorderType.None
+                    # getattr, not Eto.Forms.BorderType.None: `None` is a keyword, so the
+                    # dotted form is a hard SyntaxError under CPython 3. IronPython 2.7
+                    # tolerates it at runtime, but both knowledge harvesters ast.parse this
+                    # file under CPython 3 -- one unparseable line silently dropped the whole
+                    # button from the Rhino tooltip ("N/A") and from the Wiki catalog.
+                    placeholder.Border = getattr(Eto.Forms.BorderType, "None")
                     placeholder.ExpandContentWidth = True
                     placeholder.ExpandContentHeight = True
                 except Exception:

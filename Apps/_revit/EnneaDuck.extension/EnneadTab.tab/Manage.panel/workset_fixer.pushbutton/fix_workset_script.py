@@ -3,7 +3,15 @@
 
 
 
-__doc__ = "Reassign elements to worksets by category, host element, or type. Handles elements in design options (not in groups)."
+__doc__ = """Move elements onto the workset they belong on, in bulk.
+
+Say how each category should be assigned and the tool sweeps the model and
+reassigns everything sitting on the wrong workset. Elements inside design options
+are handled; elements inside groups are not, and are reported instead.
+
+Features:
+- Assign by category, by the host element's workset, or by element type
+- Report of everything that could not be moved, and why"""
 __title__ = "WorkSet\nManager"
 __is_popular__ = True
 __tip__ = True

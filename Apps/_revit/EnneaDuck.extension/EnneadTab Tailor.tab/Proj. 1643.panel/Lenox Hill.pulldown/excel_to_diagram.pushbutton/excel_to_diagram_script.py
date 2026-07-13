@@ -3,7 +3,17 @@
 
 
 
-__doc__ = "Read the Lenox Hill program Excel file and update the AreaShader and TitleMaker families in the program shading view to build a colored bubble diagram, sizing each bubble by program area and filling in count, unit area, NSF/DGSF and notes. Also reports name mismatches between the Excel list and the family types in the project."
+__doc__ = """Build the Lenox Hill program bubble diagram from the program Excel file.
+
+The program spreadsheet is read and the shading and title families in the
+program shading view are updated: every bubble is sized to its program
+area and filled in with count, unit area, NSF, DGSF and notes.
+
+Features:
+- One bubble per program line, resized to match the Excel area
+- Titles filled in automatically, no retyping
+- Names that appear in the Excel but not in the model, or the other way
+  around, are reported so the two lists can be reconciled"""
 __title__ = "Excel2Diagram"
 
 # from pyrevit import forms #

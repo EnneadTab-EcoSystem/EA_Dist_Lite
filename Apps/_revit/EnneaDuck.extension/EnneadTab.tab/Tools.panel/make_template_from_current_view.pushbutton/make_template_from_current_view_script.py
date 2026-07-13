@@ -1,7 +1,17 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "The big different from the Revit version is that you can use this to fix the wrong view type template that was resulted from duplicating wrong view teyp and cause revit default type group to display wrongly."
+__doc__ = """Save the current view's settings as a view template and apply it everywhere it belongs.
+
+Unlike the built-in Revit command, this also repairs a template that was created under the
+wrong view type, which is what makes templates show up in the wrong group in the browser.
+Every view that used the old template is moved onto the new one and the old template is
+removed, so you are not left with duplicates.
+
+Usage:
+1. Set up the view exactly how you want the template to look
+2. Run the button and name the template
+3. Reuse the existing name to replace the template the view is already on"""
 __title__ = "Make Template\nFrom Current View"
 
 import proDUCKtion # pyright: ignore 

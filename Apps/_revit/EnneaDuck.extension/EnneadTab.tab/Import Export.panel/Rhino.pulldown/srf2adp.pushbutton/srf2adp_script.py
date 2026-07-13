@@ -3,7 +3,15 @@
 
 
 
-__doc__ = "Convert surface in Rhino into Revit Adaptive. The sequence of the adaptive corner needs to be defined in previous step at Rhino."
+__doc__ = """Turn surfaces drawn in Rhino into placed Revit adaptive components.
+
+Pick the adaptive family and type to use, and each incoming surface is built from
+its corner points. Set the corner order in Rhino first so the adaptive points
+land where you expect them to.
+
+Usage:
+1. In Rhino, set the adaptive corner sequence and export the surfaces
+2. Run this button, pick the family and type, and confirm the file unit"""
 __title__ = "Srf2Adp"
 __tip__ = True
 from pyrevit import forms #

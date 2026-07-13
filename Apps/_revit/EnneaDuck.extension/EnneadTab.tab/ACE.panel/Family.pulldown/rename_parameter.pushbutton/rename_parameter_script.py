@@ -1,9 +1,21 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""Rename family parameters while preserving project values."""
+__doc__ = """Rename family parameters without losing the values already set in the project.
 
-__doc__ = "Safely rename family parameters without losing values in the active project."
+Renaming a parameter by hand normally wipes whatever every instance had in it. This
+carries the values across, so schedules, tags, and filters keep reading the same
+numbers under the new name.
+
+Features:
+- Rename several parameters in one pass from a single dialog
+- The dialog stays open so you can keep working in the model beside it
+- Values are read back and re-applied after the rename
+
+Usage:
+1. Run the button and pick the family to work on
+2. Type the new name beside each parameter you want changed
+3. Apply, and check the values survived in a schedule"""
 __title__ = "Rename\nParameters"
 __persistentengine__ = True
 

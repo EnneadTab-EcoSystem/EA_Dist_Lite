@@ -1,7 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Generate sheet and view relationship data for visualization. Data is saved to DUMP folder for later use with visualization tools."
+__doc__ = """Map how your sheets and views reference each other, and open the map to explore.
+
+Follows every callout, section, and elevation marker to build a picture of which view
+points at which. Use it to find orphan views, trace where a detail is called up from,
+or see the shape of the drawing set before an issue.
+
+Features:
+- Covers every sheet and every view placed on them
+- Nothing in the model is changed; the map is only a view of it"""
 __title__ = "View Reference\nTree"
 
 import proDUCKtion # pyright: ignore 

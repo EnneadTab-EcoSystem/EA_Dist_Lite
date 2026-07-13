@@ -3,7 +3,13 @@
 
 
 
-__doc__ = "Find doors from this project that are not tagged yet. You can pick sheets to process. Only plan views will be considered.\n\nRequested by J.H.Park"
+__doc__ = """List every door that is still missing a tag on the sheets you pick.
+
+Only plan views placed on the selected sheets are checked. Untagged doors
+are reported with clickable links so they can be found and tagged in the
+model. Nothing in the model is changed.
+
+Requested by J.H.Park"""
 __title__ = "Find All Door Not Tagged"
 
 from pyrevit import forms #

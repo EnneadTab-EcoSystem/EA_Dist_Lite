@@ -1,7 +1,16 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = "Convert area/room boundaries to loadable Revit mass families using curve loops. Loads into project using internal coordinates."
+__doc__ = """Turn area boundaries into solid mass families and place them back in the project.
+
+Pick an area scheme and every area becomes its own loadable mass, extruded up to the
+next level above and dropped exactly where the original area sits. Handy for zoning
+diagrams, gross-area studies and quick massing pulled straight from your area plans.
+
+Features:
+- Choose which area scheme to convert
+- Each mass lands in place, so no repositioning is needed
+- Masses are ordinary families you can schedule, filter and color"""
 __title__ = "Area2Mass"
 
 import proDUCKtion # pyright: ignore 
