@@ -222,7 +222,25 @@ test_*.py
 # AutoDist state files (machine-local, publish status reported to EnneadTab-Sync API)
 DarkSide/publish/publish_history.json
 DarkSide/publish/scheduler_state.json
+# ...and the local backup OF that file. It was the only one of the publisher's
+# five state files still tracked -- an oversight, not a decision: the live file
+# was ignored while its own .bak was committed. It carries no publish
+# success/failure, only scheduler bookkeeping (last tick, pending commits, last
+# published sha), so it was never the cross-machine status channel it looked
+# like. What dev machines actually want is already served twice over:
+# EA_Dist/Apps/lib/EnneadTab/DIST_VERSION.json (version + source_commit, on every
+# machine) and the InfraWatch /infra/api/ingest/publish-status DB (success,
+# error_reason, traceback, machine).
+DarkSide/publish/scheduler_state.json.bak
 DarkSide/token.json
+# ...and the ROOT one, which was tracked for 10 months. Same oversight shape as
+# scheduler_state.json.bak above: the sibling path was ignored, this one was not.
+# It held a 93-char github_pat_* string, was read by nothing, and got committed on
+# 2025-09-15 by the AutoDist daemon's `git add -A` -- not by anyone deciding to.
+# Untracked 2026-07-13. Any credential that ever sat here must be treated as
+# disclosed and rotated at the provider; removing a secret from the tree is not
+# rotating it.
+token.json
 
 # Auto-generated analysis files
 longest_paths.json
