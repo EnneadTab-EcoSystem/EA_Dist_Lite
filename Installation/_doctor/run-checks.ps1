@@ -280,6 +280,46 @@ if ($SelfTest) {
         if ($registered) {
             Add-Result -Title "EnneadTab Revit extension is registered" -Status OK `
                 -Detail "pyRevit_config.ini lists EnneadTab extension search path: $registeredPath"
+
+            # The check above only proves the FOLDER exists. It does not prove pyRevit
+            # can PARSE the value -- and that is a different question, because pyRevit
+            # reads userextensions with json.loads.
+            #
+            # An installer before 2026-07-13 wrote the path with raw single backslashes
+            # (["C:\Users\..."]). \U is not a valid JSON escape, so json.loads fails and
+            # pyRevit falls back to Python 2's `string-escape` BYTES codec. On an ASCII
+            # path that accidentally doubles the backslashes and works. On a path with
+            # non-ASCII characters -- a Chinese or accented Windows username -- the
+            # implicit ASCII encode raises UnicodeEncodeError, pyRevit swallows it and
+            # hands back a raw STRING instead of a list. No search path is registered,
+            # KingDuck.lib never reaches sys.path, and every button dies at
+            # `import proDUCKtion` -- while this check still said OK, because the folder
+            # on disk is perfectly fine. Detect the raw form directly.
+            $rawEntry = ''
+            if ([regex]::Matches($listRaw, '"([^"]+)"').Count -gt 0) {
+                $rawEntry = [regex]::Matches($listRaw, '"([^"]+)"')[0].Groups[1].Value
+            }
+            # Escaped form has \\; the broken form has lone backslashes.
+            $hasLoneBackslash = $rawEntry -match '(?<!\\)\\(?!\\)'
+            $hasNonAscii      = $rawEntry -match '[^\x00-\x7F]'
+
+            if ($hasLoneBackslash -and $hasNonAscii) {
+                Add-Result -Title "pyRevit can parse the extension path" -Status FAIL `
+                    -Detail ("userextensions is stored with unescaped backslashes AND your profile path " +
+                             "contains non-ASCII characters. pyRevit cannot parse this: it returns a raw " +
+                             "string instead of a path list, so no extension is registered and every button " +
+                             "fails at 'import proDUCKtion'. This is the known installer bug fixed 2026-07-13.") `
+                    -NextStep "Re-run Installation\EnneadTab_For_Revit_Installer.exe from an EA_Dist updated after 2026-07-13."
+            } elseif ($hasLoneBackslash) {
+                Add-Result -Title "pyRevit can parse the extension path" -Status WARN `
+                    -Detail ("userextensions is stored with unescaped backslashes. It happens to work today " +
+                             "only because pyRevit's legacy string-escape fallback rescues ASCII paths. It " +
+                             "would break if this profile path ever contained a non-ASCII character.") `
+                    -NextStep "Re-run Installation\EnneadTab_For_Revit_Installer.exe to rewrite the entry in the correct escaped form."
+            } else {
+                Add-Result -Title "pyRevit can parse the extension path" -Status OK `
+                    -Detail "userextensions is JSON-escaped correctly; pyRevit parses it on the first attempt."
+            }
         } else {
             $eaDistExt = Join-Path $AppsFolder '_revit\EnneaDuck.extension'
             $detail = "No EnneadTab extension search path found in pyRevit_config.ini."
