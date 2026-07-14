@@ -5,6 +5,8 @@ import json
 from pyrevit import routes
 from Autodesk.Revit import DB
 
+from EnneadTab.REVIT import REVIT_APPLICATION
+
 
 def _find_family_symbol(doc, family_name, type_name):
     """Find a FamilySymbol by family name and type name."""
@@ -121,7 +123,7 @@ def register_place_family_routes(api):
             )
 
         return routes.make_response(data={
-            "instance_id": instance.Id.IntegerValue,
+            "instance_id": REVIT_APPLICATION.get_element_id_value(instance.Id),
             "family_name": family_name,
             "type_name": type_name,
             "location": {"x": x, "y": y, "z": z},

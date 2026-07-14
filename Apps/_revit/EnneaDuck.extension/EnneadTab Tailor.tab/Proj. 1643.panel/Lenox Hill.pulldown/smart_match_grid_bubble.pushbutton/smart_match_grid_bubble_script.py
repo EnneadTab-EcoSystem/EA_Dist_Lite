@@ -60,7 +60,7 @@ def set_base_leaders():
             for grid_end in [DB.DatumEnds.End0, DB.DatumEnds.End1]:
 
                 try:
-                    key = "{}_{}".format(grid.Id.IntegerValue, grid_end)
+                    key = "{}_{}".format(REVIT_APPLICATION.get_element_id_value(grid.Id), grid_end)
                     if key in leader_record:
                         # reuse existing leader setting.
                         current_leader = grid.GetLeader (grid_end, view)

@@ -3,6 +3,8 @@
 from pyrevit import routes
 from Autodesk.Revit import DB
 
+from EnneadTab.REVIT import REVIT_APPLICATION
+
 
 def register_family_routes(api):
     @api.route("/families/", methods=["GET"])
@@ -39,7 +41,7 @@ def register_family_routes(api):
                     type_names.append(symbol.Name)
 
             families.append({
-                "id": family.Id.IntegerValue,
+                "id": REVIT_APPLICATION.get_element_id_value(family.Id),
                 "name": family.Name,
                 "category": family.FamilyCategory.Name if family.FamilyCategory else None,
                 "is_in_place": family.IsInPlace,

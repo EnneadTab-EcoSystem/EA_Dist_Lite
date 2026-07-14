@@ -74,12 +74,16 @@ except Exception:
         USER_NAME = os.environ.get("USERNAME", "unknown")
     USER = USER_FALLBACK()
 
-# Try to import ENVIRONMENT with error handling
+# Try to import ENVIRONMENT with error handling.
+# The module handle (not just the constants) is needed so that
+# get_shared_dump_folder_file can raise the shared-root alarm.
 try:
+    import ENVIRONMENT
     from ENVIRONMENT import DUMP_FOLDER, SHARED_DUMP_FOLDER, PLUGIN_EXTENSION
 except Exception:
     print ("ENVIRONMENT import failed in FOLDER.py, {}".format(traceback.format_exc()))
     # Fallback values if ENVIRONMENT import fails
+    ENVIRONMENT = None
     DUMP_FOLDER = os.path.join(os.environ.get("USERPROFILE", ""), "Documents", "EnneadTab Ecosystem", "Dump")
     SHARED_DUMP_FOLDER = DUMP_FOLDER
     PLUGIN_EXTENSION = ".sexyDuck"
@@ -324,12 +328,26 @@ def get_local_dump_folder_folder(folder_name):
 def get_shared_dump_folder_file(file_name):
     """Get full path for file in shared dump folder.
 
+    This is the single chokepoint through which every caller that believes it
+    is reading or writing SHARED data goes. When the shared network root has
+    vanished, ENVIRONMENT has already redirected SHARED_DUMP_FOLDER to the
+    LOCAL dump folder -- so this function would hand back a private path and
+    the caller would happily "share" data with nobody. That silent degradation
+    is the exact failure this alarm exists to prevent, and here is the exact
+    moment it happens. The announcement is rate-limited (once per process, once
+    per 24h per machine), reaches ErrorDump, tells the user, and never raises.
+
     Args:
         file_name (str): Name of file including extension
 
     Returns:
         str: Full path in shared dump folder
     """
+    if ENVIRONMENT is not None:
+        try:
+            ENVIRONMENT.announce_shared_root_status()
+        except Exception:
+            pass
     return _get_internal_file_from_folder(SHARED_DUMP_FOLDER, file_name)
 
 

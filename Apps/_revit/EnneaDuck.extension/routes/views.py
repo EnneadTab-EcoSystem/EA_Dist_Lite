@@ -3,6 +3,8 @@
 from pyrevit import routes
 from Autodesk.Revit import DB
 
+from EnneadTab.REVIT import REVIT_APPLICATION
+
 
 def register_view_routes(api):
     @api.route("/views/", methods=["GET"])
@@ -31,7 +33,7 @@ def register_view_routes(api):
                 grouped[view_type] = []
 
             grouped[view_type].append({
-                "id": view.Id.IntegerValue,
+                "id": REVIT_APPLICATION.get_element_id_value(view.Id),
                 "name": view.Name,
                 "view_type": view_type,
                 "scale": view.Scale if hasattr(view, "Scale") else None,

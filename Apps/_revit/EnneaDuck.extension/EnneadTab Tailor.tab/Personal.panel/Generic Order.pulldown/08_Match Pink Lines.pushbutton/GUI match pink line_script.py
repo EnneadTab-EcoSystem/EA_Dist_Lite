@@ -15,6 +15,10 @@ xamlfile = script.get_bundle_file('UI.xaml')
 import wpf
 from System import Windows
 
+import proDUCKtion # pyright: ignore
+proDUCKtion.validify()
+from EnneadTab.REVIT import REVIT_APPLICATION
+
 class UI_Window(WPFWindow):
     def __init__(self):
         WPFWindow.__init__(self, xamlfile)
@@ -54,7 +58,7 @@ class UI_Window(WPFWindow):
         for item in selection:
             print(item)
         elid = selection.element_ids
-        data = elid[0].IntegerValue
+        data = REVIT_APPLICATION.get_element_id_value(elid[0])
 
         print("Function run ok after clicking button\n\tget: {}".format(variable))
         forms.alert("ref element selected: {}".format(data))

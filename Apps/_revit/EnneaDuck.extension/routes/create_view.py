@@ -5,6 +5,8 @@ import json
 from pyrevit import routes
 from Autodesk.Revit import DB
 
+from EnneadTab.REVIT import REVIT_APPLICATION
+
 
 VIEW_TYPE_MAP = {
     "FloorPlan": DB.ViewFamily.FloorPlan,
@@ -150,7 +152,7 @@ def register_create_view_routes(api):
             )
 
         return routes.make_response(data={
-            "view_id": new_view.Id.IntegerValue,
+            "view_id": REVIT_APPLICATION.get_element_id_value(new_view.Id),
             "view_name": new_view.Name,
             "view_type": view_type,
             "success": True,

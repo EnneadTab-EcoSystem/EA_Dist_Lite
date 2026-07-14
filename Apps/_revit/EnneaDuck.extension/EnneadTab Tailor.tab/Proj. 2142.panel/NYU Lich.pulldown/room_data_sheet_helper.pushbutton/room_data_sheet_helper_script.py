@@ -56,7 +56,7 @@ def room_data_sheet_helper(doc):
                         ids = param.AsElementId()
                         if isinstance(ids, DB.ElementId):
                             ids = [ids]
-                        print("    Label parameter references ElementIds: {}".format([id.IntegerValue for id in ids]))
+                        print("    Label parameter references ElementIds: {}".format([REVIT_APPLICATION.get_element_id_value(id) for id in ids]))
                         for id in ids:
                             ref_elem = doc.GetElement(id)
                             if ref_elem:

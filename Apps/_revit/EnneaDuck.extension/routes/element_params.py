@@ -3,6 +3,8 @@
 from pyrevit import routes
 from Autodesk.Revit import DB
 
+from EnneadTab.REVIT import REVIT_APPLICATION
+
 
 def _get_param_value(param):
     """Extract the value from a Revit parameter."""
@@ -17,7 +19,7 @@ def _get_param_value(param):
     elif storage == DB.StorageType.Double:
         return param.AsDouble()
     elif storage == DB.StorageType.ElementId:
-        return param.AsElementId().IntegerValue
+        return REVIT_APPLICATION.get_element_id_value(param.AsElementId())
     return None
 
 

@@ -330,7 +330,7 @@ class RenameParameterController(object):
         unique_families = []
         for fam in families:
             try:
-                fam_id = fam.Id.IntegerValue
+                fam_id = REVIT_APPLICATION.get_element_id_value(fam.Id)
             except Exception:
                 fam_id = id(fam)
             if fam_id in seen_ids:

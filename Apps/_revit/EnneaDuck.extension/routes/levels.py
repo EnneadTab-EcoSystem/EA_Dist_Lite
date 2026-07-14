@@ -3,6 +3,8 @@
 from pyrevit import routes
 from Autodesk.Revit import DB
 
+from EnneadTab.REVIT import REVIT_APPLICATION
+
 
 def register_level_routes(api):
     @api.route("/levels/", methods=["GET"])
@@ -22,7 +24,7 @@ def register_level_routes(api):
         levels = []
         for level in collector:
             levels.append({
-                "id": level.Id.IntegerValue,
+                "id": REVIT_APPLICATION.get_element_id_value(level.Id),
                 "name": level.Name,
                 "elevation": level.Elevation,
             })

@@ -6,6 +6,8 @@ import tempfile
 from pyrevit import routes, revit
 from Autodesk.Revit import DB
 
+from EnneadTab.REVIT import REVIT_APPLICATION
+
 try:
     from System.IO import File
 except ImportError:
@@ -109,7 +111,7 @@ def register_view_image_routes(api):
 
         return routes.make_response(data={
             "view_name": target_view.Name,
-            "view_id": target_view.Id.IntegerValue,
+            "view_id": REVIT_APPLICATION.get_element_id_value(target_view.Id),
             "image_base64": encoded,
             "format": "png",
         })

@@ -224,7 +224,7 @@ def transfer_door_locations(doc):
     for door, (location_string, room_object) in door_location_map.items():
         # Use room ID as key; for special cases (no room, corridor), use location_string
         if room_object:
-            group_key = room_object.Id.IntegerValue
+            group_key = REVIT_APPLICATION.get_element_id_value(room_object.Id)
         else:
             # For special cases like "no room" or "CORRIDOR", use location_string
             group_key = location_string
@@ -240,7 +240,7 @@ def transfer_door_locations(doc):
         print("\nLocation: {} (Group Key: {})".format(location_string, group_key))
         
         # Sort doors by element ID
-        sorted_pairs = sorted(door_info_list, key=lambda x: x[0].Id.IntegerValue)
+        sorted_pairs = sorted(door_info_list, key=lambda x: REVIT_APPLICATION.get_element_id_value(x[0].Id))
         
         # Handle special cases
         if location_string == NO_ROOM_DEFAULT:
