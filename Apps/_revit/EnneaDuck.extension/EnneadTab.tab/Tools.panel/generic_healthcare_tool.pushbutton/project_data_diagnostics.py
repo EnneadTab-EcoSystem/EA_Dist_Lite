@@ -76,9 +76,16 @@ def _check_environment():
         print("✓ Core Folder: {}".format(ENVIRONMENT.CORE_FOLDER))
         print("✓ Document Folder: {}".format(ENVIRONMENT.DOCUMENT_FOLDER))
         print("✓ Dump Folder: {}".format(ENVIRONMENT.DUMP_FOLDER))
-        print("✓ Shared Dump Folder: {}".format(ENVIRONMENT.SHARED_DUMP_FOLDER))
-        print("✓ L Drive Host Folder: {}".format(ENVIRONMENT.L_DRIVE_HOST_FOLDER))
+        print("✓ Shared Dump Folder (in use): {}".format(ENVIRONMENT.SHARED_DUMP_FOLDER))
+        print("✓ Shared Dump Folder (expected): {}".format(ENVIRONMENT.SHARED_DUMP_FOLDER_EXPECTED))
+        print("✓ Shared Root: {}".format(ENVIRONMENT.SHARED_ROOT))
+        print("✓ Shared Root resolved from: {}".format(ENVIRONMENT.SHARED_ROOT_SOURCE))
         print("✓ DB Folder: {}".format(ENVIRONMENT.DB_FOLDER))
+        if ENVIRONMENT.IS_SHARED_DATA_LOST:
+            print("❌ SHARED DATA IS NOT BEING SHARED - the shared root is unreachable.")
+            print(ENVIRONMENT.get_shared_root_alarm_message())
+        elif ENVIRONMENT.IS_DELIBERATELY_OFFLINE:
+            print("✓ Deliberate offline mode - local-only operation is expected.")
     except Exception as e:
         print("❌ Environment check failed: {}".format(str(e)))
 
@@ -86,22 +93,24 @@ def _check_environment():
 def _check_network_drives():
     """Check network drive connectivity."""
     try:
-        # Check L drive
-        l_drive_path = "L:\\"
-        if os.path.exists(l_drive_path):
-            print("✓ L Drive is accessible: {}".format(l_drive_path))
+        # Check the resolved shared root (formerly hardcoded as "L:\"). #2360:
+        # the drive letter is no longer an assumption -- probe whatever the
+        # precedence chain actually resolved to.
+        shared_root = ENVIRONMENT.SHARED_ROOT
+        if os.path.exists(shared_root):
+            print("✓ Shared Root is accessible: {}".format(shared_root))
             try:
                 # Test write access
-                test_file = os.path.join(l_drive_path, "test_write_access.tmp")
+                test_file = os.path.join(shared_root, "test_write_access.tmp")
                 with open(test_file, 'w') as f:
                     f.write("test")
                 os.remove(test_file)
-                print("✓ L Drive has write access")
+                print("✓ Shared Root has write access")
             except Exception as e:
-                print("❌ L Drive write access failed: {}".format(str(e)))
+                print("❌ Shared Root write access failed: {}".format(str(e)))
         else:
-            print("❌ L Drive is not accessible: {}".format(l_drive_path))
-        
+            print("❌ Shared Root is not accessible: {}".format(shared_root))
+
         # Check shared dump folder
         if os.path.exists(ENVIRONMENT.SHARED_DUMP_FOLDER):
             print("✓ Shared Dump Folder exists: {}".format(ENVIRONMENT.SHARED_DUMP_FOLDER))

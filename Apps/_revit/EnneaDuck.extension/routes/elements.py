@@ -5,6 +5,8 @@ import json
 from pyrevit import routes
 from Autodesk.Revit import DB
 
+from EnneadTab.REVIT import REVIT_APPLICATION
+
 
 MAX_RESULTS = 500
 
@@ -70,7 +72,7 @@ def register_element_routes(api):
                 break
 
             elem_data = {
-                "id": elem.Id.IntegerValue,
+                "id": REVIT_APPLICATION.get_element_id_value(elem.Id),
                 "name": elem.Name if elem.Name else None,
                 "category": elem.Category.Name if elem.Category else None,
             }

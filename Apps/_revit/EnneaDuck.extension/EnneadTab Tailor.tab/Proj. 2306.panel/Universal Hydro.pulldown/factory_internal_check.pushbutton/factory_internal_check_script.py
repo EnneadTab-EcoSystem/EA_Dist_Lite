@@ -12,6 +12,7 @@ from pyrevit import script #
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
+from EnneadTab.REVIT import REVIT_APPLICATION
 import math
 from Autodesk.Revit import DB # pyright: ignore 
 # from Autodesk.Revit import UI # pyright: ignore
@@ -219,7 +220,7 @@ class InternalCheck:
 
             # update the title
             room_style_id = room.LookupParameter("Life Safety").AsElementId()
-            if room_style_id.IntegerValue == -1:
+            if REVIT_APPLICATION.get_element_id_value(room_style_id) == -1:
                 if self.show_log:
                     print("This room has no life safety style defined--->{}".format(
                     output.linkify(room.Id, title=room.LookupParameter("Name").AsString())))

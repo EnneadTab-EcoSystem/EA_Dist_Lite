@@ -73,7 +73,7 @@ def export_elements_to_rhino(doc, selected_instances):
     def label_func(element):
         element_name = "{} - {}".format(
             exporter._get_family_name(element), 
-            element.Id.IntegerValue
+            REVIT_APPLICATION.get_element_id_value(element.Id)
         )
         return "Exporting: {}".format(element_name)
     
@@ -304,7 +304,7 @@ class RevitToRhinoExporter(object):
 
     def _process_element(self, element):
         """Process a single family instance for export, using appropriate block caching strategy."""
-        element_id = element.Id.IntegerValue
+        element_id = REVIT_APPLICATION.get_element_id_value(element.Id)
         family_name = self._get_family_name(element)
         type_name = self._get_type_name(element)
 
@@ -835,7 +835,7 @@ class RevitToRhinoExporter(object):
         if instance_id:
             inst_obj = self.rhino_doc.Objects.FindId(instance_id)
             if inst_obj:
-                element_id = element.Id.IntegerValue
+                element_id = REVIT_APPLICATION.get_element_id_value(element.Id)
                 
                 # Add metadata as user strings
                 inst_obj.Attributes.SetUserString("RevitElementID", str(element_id))

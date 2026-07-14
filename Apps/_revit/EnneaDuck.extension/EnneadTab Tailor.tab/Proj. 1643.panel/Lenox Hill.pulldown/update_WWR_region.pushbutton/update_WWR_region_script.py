@@ -12,6 +12,7 @@ from pyrevit import script #
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
+from EnneadTab.REVIT import REVIT_APPLICATION
 from Autodesk.Revit import DB # pyright: ignore 
 # from Autodesk.Revit import UI # pyright: ignore
 doc = __revit__.ActiveUIDocument.Document # pyright: ignore
@@ -48,7 +49,7 @@ def update_WWR_region():
         area = region.LookupParameter("Area").AsDouble()
         region.LookupParameter("FilledRegionArea").Set(area)
         
-        if region.GroupId.IntegerValue != -1:
+        if REVIT_APPLICATION.get_element_id_value(region.GroupId) != -1:
             group = doc.GetElement(region.GroupId)
             region.LookupParameter("DesignOptionName").Set(group.Name)
             

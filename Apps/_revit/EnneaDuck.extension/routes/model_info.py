@@ -3,6 +3,8 @@
 from pyrevit import routes, revit
 from Autodesk.Revit import DB
 
+from EnneadTab.REVIT import REVIT_APPLICATION
+
 
 def register_model_info_routes(api):
     @api.route("/model-info/", methods=["GET"])
@@ -28,7 +30,7 @@ def register_model_info_routes(api):
         phase_list = []
         for phase in phases:
             phase_list.append({
-                "id": phase.Id.IntegerValue,
+                "id": REVIT_APPLICATION.get_element_id_value(phase.Id),
                 "name": phase.Name,
             })
         result["phase_count"] = len(phase_list)

@@ -75,13 +75,20 @@ def _secure_folder(folder):
             print("Cannot secure folder [{}] becasue {}".format(folder, e))
 
 def _secure_folder_safe(folder):
-    """Safely create folder with better error handling for network drives"""
+    """Safely create folder with better error handling for network drives.
+
+    A missing shared-network folder is NOT reported here on purpose: a stray
+    print at import time is noise, not a signal, and it fires on every single
+    button press. The real alarm for "the shared root vanished" is
+    announce_shared_root_status() below, which is rate-limited and reaches
+    ErrorDump.
+    """
     if not os.path.exists(folder):
         try:
             os.makedirs(folder)
         except Exception as e:
-            # Don't print error for network drives that might not be available
-            if not folder.startswith("L:\\"):
+            # Don't print error for network locations that might not be available
+            if not _is_under_shared_root(folder):
                 print("Cannot secure folder [{}] becasue {}".format(folder, e))
 
 def _execute_map_compatible(func, iterable, *args):
@@ -197,15 +204,123 @@ REVIT_TAILOR_TAB = os.path.join(REVIT_PRIMARY_EXTENSION, "{} Tailor.tab".format(
 
 
 
-#################### L drive folder ####################
+#################### shared network root (formerly the L: drive) ####################
+#
+# The office L: drive is being retired. Nothing below hardcodes "L:" any more.
+# The shared root is RESOLVED AT RUNTIME so that cutover is one config value,
+# not forty files.
+#
+# Precedence, first hit wins:
+#   1. EA_SHARED_ROOT environment variable.
+#      Per-machine / per-session override. Set it to the literal string
+#      "OFFLINE" to declare deliberate offline use (laptop off the network);
+#      that suppresses the "your data is not being shared" alarm.
+#   2. <ECO_SYS_FOLDER>/shared_root.json      -- per-user / per-machine override,
+#      e.g. IT drops one on a machine that mounts the share differently.
+#   3. <CORE_FOLDER>/shared_root.json         -- SHIPPED WITH EA_DIST.
+#      *** THIS IS THE CUTOVER LEVER. *** Edit this one file, publish, and the
+#      whole fleet moves. It lives under Apps/lib/EnneadTab/ (not the repo root)
+#      because the publisher only copies Apps/ and Installation/ into EA_Dist.
+#   4. LEGACY_SHARED_ROOT -- the historical L: path, last resort.
+#
+# shared_root.json shape (every key optional):
+#   {
+#     "shared_root": "\\\\fileserver\\DesignTechnology",
+#     "db_folder":   "\\\\fileserver\\DesignTechnology\\05_EnneadTab-DB",
+#     "offline": false
+#   }
+# "db_folder" only needs setting if the new target does NOT keep the
+# <shared_root>/05_EnneadTab-DB layout.
+
+LEGACY_SHARED_ROOT = os.path.join("L:\\", "4b_Design Technology")
+DB_FOLDER_NAME = "05_EnneadTab-DB"
+
+SHARED_ROOT_ENV_VAR = "EA_SHARED_ROOT"
+SHARED_ROOT_CONFIG_NAME = "shared_root.json"
+_OFFLINE_SENTINEL = "OFFLINE"
+
+USER_SHARED_ROOT_CONFIG = os.path.join(ECO_SYS_FOLDER, SHARED_ROOT_CONFIG_NAME)
+DIST_SHARED_ROOT_CONFIG = os.path.join(CORE_FOLDER, SHARED_ROOT_CONFIG_NAME)
 
 
-if datetime.now() >= datetime(2025, 7, 15) or current_user_name == "szhang":
-    L_DRIVE_HOST_FOLDER = os.path.join("L:\\", "4b_Design Technology")
-    DB_FOLDER = os.path.join(L_DRIVE_HOST_FOLDER, "05_EnneadTab-DB")
-else:
-    L_DRIVE_HOST_FOLDER = os.path.join("L:\\", "4b_Applied Computing")
-    DB_FOLDER = os.path.join(L_DRIVE_HOST_FOLDER, "EnneadTab-DB")
+def _load_shared_root_config(config_path):
+    """Read one shared_root.json.
+
+    Returns {} on any problem (missing, unreadable, truncated, not a dict).
+    Never raises: a corrupt config must degrade to the next precedence level,
+    not break every import of EnneadTab.
+
+    Args:
+        config_path (str): Path to a shared_root.json candidate.
+
+    Returns:
+        dict: Parsed config, or {} if unusable.
+    """
+    if not os.path.exists(config_path):
+        return {}
+    try:
+        with open(config_path, "r") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            return data
+    except Exception:
+        pass
+    return {}
+
+
+def _resolve_shared_root():
+    """Resolve the shared network root at runtime.
+
+    Returns:
+        tuple: (shared_root, db_folder, source, is_deliberately_offline)
+            shared_root (str): Root folder of the office shared data.
+            db_folder (str): EnneadTab-DB folder inside it.
+            source (str): Human-readable provenance, for diagnostics and for
+                the ErrorDump payload -- when the fleet goes dark we need to
+                know WHICH lever fed it the dead path.
+            is_deliberately_offline (bool): True only when a human explicitly
+                asked for offline operation.
+    """
+    env_value = os.environ.get(SHARED_ROOT_ENV_VAR)
+    if env_value:
+        env_value = env_value.strip()
+    if env_value:
+        if env_value.upper() == _OFFLINE_SENTINEL:
+            return (LEGACY_SHARED_ROOT,
+                    os.path.join(LEGACY_SHARED_ROOT, DB_FOLDER_NAME),
+                    "env:{}=OFFLINE".format(SHARED_ROOT_ENV_VAR),
+                    True)
+        return (env_value,
+                os.path.join(env_value, DB_FOLDER_NAME),
+                "env:{}".format(SHARED_ROOT_ENV_VAR),
+                False)
+
+    for config_path in [USER_SHARED_ROOT_CONFIG, DIST_SHARED_ROOT_CONFIG]:
+        config = _load_shared_root_config(config_path)
+        if not config:
+            continue
+        if config.get("offline") is True:
+            return (LEGACY_SHARED_ROOT,
+                    os.path.join(LEGACY_SHARED_ROOT, DB_FOLDER_NAME),
+                    "config:{} (offline=true)".format(config_path),
+                    True)
+        root = config.get("shared_root")
+        if root:
+            db_folder = config.get("db_folder") or os.path.join(root, DB_FOLDER_NAME)
+            return (root, db_folder, "config:{}".format(config_path), False)
+
+    return (LEGACY_SHARED_ROOT,
+            os.path.join(LEGACY_SHARED_ROOT, DB_FOLDER_NAME),
+            "legacy-default",
+            False)
+
+
+SHARED_ROOT, DB_FOLDER, SHARED_ROOT_SOURCE, IS_DELIBERATELY_OFFLINE = _resolve_shared_root()
+
+# Back-compat alias. ~20 call sites across Revit/Rhino/DarkSide still say
+# L_DRIVE_HOST_FOLDER; every one of them means "the shared network root".
+# Keep the name working, drop the L: assumption. New code should use SHARED_ROOT.
+L_DRIVE_HOST_FOLDER = SHARED_ROOT
 
 SHARED_DUMP_FOLDER = os.path.join(DB_FOLDER, "Shared Data Dump")
 
@@ -214,8 +329,21 @@ PUBLIC_TEMP_FOLDER = os.path.join(DB_FOLDER, "temp")
 
 STAND_ALONE_FOLDER = os.path.join(DB_FOLDER, "Stand Alone Tools")
 
-# Backup repository in case SH cannot use L drive
+# Backup repository in case SH cannot use the shared drive
 BACKUP_REPO_FOLDER = os.path.join(DB_FOLDER, "BackupRepo")
+
+# Where the shared dump is SUPPOSED to be. SHARED_DUMP_FOLDER gets rewritten to
+# the local dump below when the shared root is unreachable, so the expected path
+# has to be captured now -- it is what the user and ErrorDump need to see.
+SHARED_DUMP_FOLDER_EXPECTED = SHARED_DUMP_FOLDER
+
+
+def _is_under_shared_root(folder):
+    """True if a folder lives on the shared network root (used to mute noise)."""
+    try:
+        return folder.lower().startswith(SHARED_ROOT.lower())
+    except Exception:
+        return False
 
 
 ############# engine ####################
@@ -225,13 +353,140 @@ SITE_PACKAGES_FOLDER = os.path.join(ENGINE_FOLDER, "Lib")
 _execute_map_compatible(_secure_folder, [ECO_SYS_FOLDER, DUMP_FOLDER])
 
 # Use safer folder creation for network drives
-_execute_map_compatible(_secure_folder_safe, [L_DRIVE_HOST_FOLDER, DB_FOLDER, SHARED_DUMP_FOLDER,
+_execute_map_compatible(_secure_folder_safe, [SHARED_ROOT, DB_FOLDER, SHARED_DUMP_FOLDER,
                      PUBLIC_TEMP_FOLDER, STAND_ALONE_FOLDER, BACKUP_REPO_FOLDER,
                      ENGINE_FOLDER, SITE_PACKAGES_FOLDER])
 
-IS_OFFLINE_MODE = not os.path.exists(SHARED_DUMP_FOLDER)
+IS_SHARED_ROOT_REACHABLE = os.path.exists(SHARED_DUMP_FOLDER_EXPECTED)
+
+# UNCHANGED SEMANTICS. IS_OFFLINE_MODE has always meant "the shared dump is not
+# reachable, we are working against the local dump". Six call sites depend on
+# exactly that meaning (SECRET x3, DOCUMENTATION, doc-syncing, doc-synced) and
+# they all still behave correctly. Do not repurpose this flag.
+IS_OFFLINE_MODE = not IS_SHARED_ROOT_REACHABLE
+
+# THE NEW DISTINCTION, and the whole point of this module's rewrite.
+#
+# "Deliberately offline" (laptop on a plane, EA_SHARED_ROOT=OFFLINE) is a
+# legitimate degraded mode: the user knows, and degradation-to-local is the
+# desired behaviour. Stay quiet.
+#
+# A shared root we were TOLD to use that is simply GONE is a data-loss event.
+# Every write below silently lands in a private local sandbox; the user sees no
+# error, keeps working, and nothing they produce ever reaches anybody. That is
+# the failure mode the L-drive cutover will produce fleet-wide, and it MUST be
+# loud. See announce_shared_root_status().
+IS_SHARED_DATA_LOST = IS_OFFLINE_MODE and not IS_DELIBERATELY_OFFLINE
+
 if IS_OFFLINE_MODE:
     SHARED_DUMP_FOLDER = DUMP_FOLDER
+
+
+SHARED_ROOT_ALARM_TEMPLATE = (
+    "EnneadTab: THE SHARED NETWORK DRIVE IS NOT REACHABLE.\n"
+    "\n"
+    "Expected shared folder: {}\n"
+    "That path came from   : {}\n"
+    "\n"
+    "Your work is now being saved ONLY on this computer.\n"
+    "It is NOT being shared with the office, and other people's shared data is\n"
+    "NOT reaching you. Anything that looks like it saved 'to the server' did not.\n"
+    "\n"
+    "Contact Design Technology before you rely on any shared data."
+)
+
+_SHARED_ROOT_ALARM_FIRED = [False]
+
+
+def get_shared_root_alarm_message():
+    """User-facing text for the "shared drive vanished" state.
+
+    Returns:
+        str: Plain-language explanation that data is NOT being shared.
+    """
+    return SHARED_ROOT_ALARM_TEMPLATE.format(SHARED_DUMP_FOLDER_EXPECTED,
+                                             SHARED_ROOT_SOURCE)
+
+
+def _should_report_shared_root_alarm():
+    """Rate-limit the ErrorDump report to once per machine per 24 hours.
+
+    Without this, a fleet-wide outage turns into an ErrorDump flood (every user
+    x every button press) and the signal drowns in its own alarm.
+
+    Returns:
+        bool: True if this machine has not reported in the last 24 hours.
+    """
+    import time
+
+    marker = os.path.join(DUMP_FOLDER, "shared_root_alarm.DuckLock")
+    try:
+        if os.path.exists(marker):
+            if os.path.getmtime(marker) > (time.time() - 24 * 60 * 60):
+                return False
+    except Exception:
+        pass
+    try:
+        with open(marker, "w") as f:
+            f.write(SHARED_ROOT_SOURCE)
+    except Exception:
+        pass
+    return True
+
+
+def announce_shared_root_status():
+    """Make the vanished-shared-drive failure LOUD instead of silent.
+
+    Called from FOLDER.get_shared_dump_folder_file() -- i.e. at the exact moment
+    a caller believes it is sharing data and is not. Not called at import: a 5s
+    HTTP timeout on every Revit/Rhino startup is not acceptable.
+
+    Behaviour:
+      - No-op unless IS_SHARED_DATA_LOST (deliberate offline stays quiet).
+      - At most once per process, and at most once per 24h per machine.
+      - Reports to ErrorDump so Design Technology sees the fleet-wide blast
+        radius instead of learning about it weeks later.
+      - Shows the user a message that their data is NOT being shared.
+      - Never raises. ERROR_HANDLE and NOTIFICATION are imported lazily inside
+        this function because both import ENVIRONMENT at module load; a
+        top-level import here would be a cycle.
+
+    Returns:
+        bool: True if the alarm was raised on this call.
+    """
+    if not IS_SHARED_DATA_LOST:
+        return False
+    if _SHARED_ROOT_ALARM_FIRED[0]:
+        return False
+    _SHARED_ROOT_ALARM_FIRED[0] = True
+
+    message = get_shared_root_alarm_message()
+
+    try:
+        print(message)
+    except Exception:
+        pass
+
+    try:
+        import NOTIFICATION
+        NOTIFICATION.messenger(main_text=message)
+    except Exception:
+        pass
+
+    if not _should_report_shared_root_alarm():
+        return True
+
+    try:
+        import ERROR_HANDLE
+        ERROR_HANDLE.send_error_to_error_dump(
+            message,
+            "ENVIRONMENT.announce_shared_root_status",
+            current_user_name,
+            is_silent=False)
+    except Exception:
+        pass
+
+    return True
 
 
 # Error-log submit form retired 2026-06-10 (replaced by ErrorDump API);
@@ -621,28 +876,43 @@ def get_app_name():
         app_name = "rhino"
     return app_name
 
-def alert_l_drive_not_available(play_sound=False):
-    """Return whether the legacy L-drive host folder is reachable.
+def is_shared_root_available():
+    """Return whether the resolved shared network root is reachable right now.
 
-    L drive is retired -- no user-facing reminder. Kept as a silent
-    True/False gate for REVIT_PROJ_DATA and similar call sites.
+    Live check, not the import-time snapshot: a drive can come back (VPN
+    reconnect) inside a long Revit session.
+
+    Returns:
+        bool: True if SHARED_ROOT exists, False otherwise.
+    """
+    return os.path.exists(SHARED_ROOT)
+
+
+def alert_l_drive_not_available(play_sound=False):
+    """Deprecated alias of is_shared_root_available().
+
+    Kept because REVIT_PROJ_DATA still calls it as a True/False gate at three
+    sites. Silent by design -- the loud path is announce_shared_root_status().
 
     Args:
         play_sound (bool): Ignored; retained for call-site compatibility.
 
     Returns:
-        bool: True if L_DRIVE_HOST_FOLDER exists, False otherwise.
+        bool: True if the shared root exists, False otherwise.
     """
-    return os.path.exists(L_DRIVE_HOST_FOLDER)
+    return is_shared_root_available()
 
 
 # Run maintenance operations
 if should_cleanup_dump_folder():
     cleanup_dump_folder()
 
-# 2026-07-13: L drive retired. alert_l_drive_not_available is a silent
-# existence check only -- no print/sound. REVIT_PROJ_DATA still uses it
-# as a True/False gate at three call sites.
+# 2026-07-13 (#2360): the L: drive is being decommissioned. The path is no
+# longer hardcoded -- see _resolve_shared_root() above. At cutover, edit
+# Apps/lib/EnneadTab/shared_root.json and publish; do NOT edit call sites.
+# alert_l_drive_not_available() stays a silent existence check; the loud
+# "your data is not being shared" path is announce_shared_root_status(),
+# fired from FOLDER.get_shared_dump_folder_file().
 ###############
 if __name__ == "__main__":
     unit_test()

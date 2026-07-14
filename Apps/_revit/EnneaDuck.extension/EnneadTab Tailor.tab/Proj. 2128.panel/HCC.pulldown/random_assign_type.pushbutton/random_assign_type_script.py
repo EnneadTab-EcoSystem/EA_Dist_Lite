@@ -7,6 +7,7 @@ from pyrevit import forms
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
+from EnneadTab.REVIT import REVIT_APPLICATION
 
 __title__ = "Randomly Reduce Panel Selection to 5 pack, requested by Chiwhei"
 __doc__ = 'Randomly deselect from selection input.'
@@ -106,8 +107,8 @@ def diagonal_random(selection, type_map):
     for wall in walls:
         temp_dict = {}
         
-        temp_dict["u_order"] = [x.IntegerValue for x in wall.CurtainGrid.GetUGridLineIds()]
-        temp_dict["v_order"] = [x.IntegerValue for x in wall.CurtainGrid.GetVGridLineIds()]
+        temp_dict["u_order"] = [REVIT_APPLICATION.get_element_id_value(x) for x in wall.CurtainGrid.GetUGridLineIds()]
+        temp_dict["v_order"] = [REVIT_APPLICATION.get_element_id_value(x) for x in wall.CurtainGrid.GetVGridLineIds()]
         wall_dict[wall.Id] = temp_dict
             
     

@@ -58,7 +58,7 @@ def get_hosted_door_dict(doc, walls):
         dependent_elements_ids = wall.GetDependentElements(None)
         for element_id in dependent_elements_ids:
             element = doc.GetElement(element_id)
-            if element and element.Category and element.Category.Id.IntegerValue == int(DB.BuiltInCategory.OST_Doors):
+            if element and element.Category and REVIT_APPLICATION.get_element_id_value(element.Category.Id) == int(DB.BuiltInCategory.OST_Doors):
                 door_type = doc.GetElement(element.GetTypeId())
                 door_type_fire_rating = door_type.LookupParameter("Fire Rating")
                 if door_type_fire_rating and door_type_fire_rating.AsString():

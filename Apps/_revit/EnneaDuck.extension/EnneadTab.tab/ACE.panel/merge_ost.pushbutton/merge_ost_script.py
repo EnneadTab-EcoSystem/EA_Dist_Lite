@@ -112,7 +112,7 @@ def dry_delete_and_classify(doc, bad_sub_category):
                 if element is None:
                     continue
                 if isinstance(element, DB.Family):
-                    eid_val = element.Id.IntegerValue
+                    eid_val = REVIT_APPLICATION.get_element_id_value(element.Id)
                     if eid_val not in seen_family_ids:
                         seen_family_ids.add(eid_val)
                         if element.IsInPlace:

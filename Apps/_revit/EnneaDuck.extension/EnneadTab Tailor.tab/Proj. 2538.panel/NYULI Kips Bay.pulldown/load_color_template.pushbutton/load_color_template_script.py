@@ -38,7 +38,7 @@ import proDUCKtion  # pyright: ignore
 proDUCKtion.validify()
 
 from EnneadTab import ERROR_HANDLE, COLOR, NOTIFICATION, OUTPUT
-from EnneadTab.REVIT import REVIT_SELECTION, REVIT_FORMS
+from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_SELECTION, REVIT_FORMS
 
 from Autodesk.Revit import DB  # pyright: ignore
 
@@ -287,9 +287,10 @@ def _get_param_name(doc, param_id):
     if param_id is None or doc is None:
         return None
     try:
-        if hasattr(param_id, "IntegerValue") and param_id.IntegerValue < 0:
+        param_id_value = REVIT_APPLICATION.get_element_id_value(param_id)
+        if param_id_value < 0:
             try:
-                bip = DB.BuiltInParameter(param_id.IntegerValue)
+                bip = DB.BuiltInParameter(param_id_value)
                 return DB.LabelUtils.GetLabelFor(bip)
             except Exception:
                 pass
@@ -322,9 +323,10 @@ def _get_scheme_parameter(elem, param_id, doc=None):
     if param_id is None:
         return None
     try:
-        if hasattr(param_id, "IntegerValue") and param_id.IntegerValue < 0:
+        param_id_value = REVIT_APPLICATION.get_element_id_value(param_id)
+        if param_id_value < 0:
             try:
-                bip = DB.BuiltInParameter(param_id.IntegerValue)
+                bip = DB.BuiltInParameter(param_id_value)
                 p = elem.get_Parameter(bip)
                 if p is not None:
                     return p
@@ -590,7 +592,7 @@ def _print_scheme_diagnostic(doc, color_scheme):
     param_int = "?"
     try:
         if param_id is not None:
-            param_int = param_id.IntegerValue
+            param_int = REVIT_APPLICATION.get_element_id_value(param_id)
     except Exception:
         pass
 
@@ -607,7 +609,7 @@ def _print_scheme_diagnostic(doc, color_scheme):
 
     def _elem_id_safe(e):
         try:
-            return str(e.Id.IntegerValue)
+            return str(REVIT_APPLICATION.get_element_id_value(e.Id))
         except Exception:
             try:
                 return str(e.Id)

@@ -61,14 +61,19 @@ def updater_for_shanghai():
             ERROR_HANDLE.print_note("Creating ECO_SYS_FOLDER: {}".format(ENVIRONMENT.ECO_SYS_FOLDER))
             os.makedirs(ENVIRONMENT.ECO_SYS_FOLDER)
 
-        try:  
+        target_folder = os.path.join(ENVIRONMENT.ECO_SYS_FOLDER, "EA_Dist")
+        try:
             ERROR_HANDLE.print_note("Shanghai updater started")
             time_start = time.time()
-            target_folder = os.path.join(ENVIRONMENT.ECO_SYS_FOLDER, "EA_Dist")
             ERROR_HANDLE.print_note("Copying to target folder: {}".format(target_folder))
             source_folder = os.path.join(ENVIRONMENT.BACKUP_REPO_FOLDER)
             if os.path.exists(target_folder):
-                # Recursively copy and overwrite files from source to target
+                # Recursively copy and overwrite files from source to target.
+                # NOTE: this writes straight into the LIVE folder -- it is not
+                # atomic and a failure partway leaves a torn install. That is
+                # why the verification below exists and why the success record
+                # is written ONLY after it passes. See the module docstring of
+                # EnneadTab.INTEGRITY for why a stage-and-swap was not done here.
                 for root, dirs, files in os.walk(source_folder):
                     rel_path = os.path.relpath(root, source_folder)
                     dest_dir = os.path.join(target_folder, rel_path)
@@ -85,18 +90,103 @@ def updater_for_shanghai():
             formated_time_taken = time.strftime("%H:%M:%S", time.gmtime(time_taken))
             ERROR_HANDLE.print_note("Shanghai update completed in {}".format(formated_time_taken))
 
-            timestamp_file = os.path.join(ENVIRONMENT.ECO_SYS_FOLDER, "{}.duck".format(time.strftime("%Y-%m-%d_%H-%M-%S")))
-            ERROR_HANDLE.print_note("Creating timestamp file: {}".format(timestamp_file))
-            with open(timestamp_file, "w") as f:
-                f.write("Shanghai update completed in {}".format(formated_time_taken))
+        except Exception:
+            # A swallowed print_note used to be the ONLY trace of this. The copy
+            # writes into the live install, so this except branch means the user
+            # is now running a half-new/half-old tree -- the loudest possible
+            # moment in the whole system, and it told nobody.
+            trace = traceback.format_exc()
+            ERROR_HANDLE.print_note("Error during update: {}".format(trace))
+            _record_update_failure(
+                "shanghai copy from backup failed", detail=trace)
+            NOTIFICATION.messenger(
+                "EnneadTab update FAILED partway through.\n"
+                "Your install may now be INCONSISTENT (some files new, some old).\n"
+                "Please re-run the EnneadTab installer.")
+            return False
 
-        except Exception as e:
-           ERROR_HANDLE.print_note("Error during update: {}".format(traceback.format_exc()))
+        # The copy finished without raising. That is NOT the same as "the tree on
+        # disk is correct" -- a file skipped by a swallowed OS-level lock still
+        # reaches here. Only a manifest check earns the success record.
+        if not _verify_deployed_tree(target_folder, source="post_update_shanghai"):
+            return False
+
+        timestamp_file = os.path.join(ENVIRONMENT.ECO_SYS_FOLDER, "{}.duck".format(time.strftime("%Y-%m-%d_%H-%M-%S")))
+        ERROR_HANDLE.print_note("Creating timestamp file: {}".format(timestamp_file))
+        with open(timestamp_file, "w") as f:
+            f.write("Shanghai update completed in {}".format(formated_time_taken))
+        return True
 
     thread = threading.Thread(target=copy_from_backup_to_dist)
     thread.daemon = False
     thread.start()
     return True
+
+
+def _verify_deployed_tree(root, source):
+    """Check a freshly-written tree against its publish manifest.
+
+    Returns True when the tree is intact OR when verification is unavailable.
+
+    The import is lazy and guarded on purpose. INTEGRITY is a NEW lib module, and
+    the exact failure this whole change exists to catch is "new file next to old
+    lib" -- so on a torn machine this very import is the thing that goes missing.
+    An ImportError here must degrade to "cannot verify", never to a crash inside
+    the updater.
+    """
+    try:
+        import INTEGRITY
+    except Exception:
+        ERROR_HANDLE.print_note(
+            "VERSION_CONTROL: INTEGRITY module unavailable; update not verified.")
+        return True
+
+    return INTEGRITY.verify_and_report(root=root, source=source)
+
+
+def _record_update_failure(reason, detail=None):
+    """Make a failed update visible to BOTH the dev team and the starvation alarm.
+
+    Writes an _ERROR.duck marker into ECO_SYS_FOLDER (the same marker the installer
+    exe writes) so _has_error_duck / alert_user_to_update can see that this machine
+    tries to update and never succeeds, and fires an ErrorDump report on a daemon
+    thread with a once-per-day gate so a permanently broken machine cannot flood it.
+    """
+    message = "EnneadTab update FAILED: {}".format(reason)
+    if detail:
+        message += "\n{}".format(detail)
+
+    try:
+        marker = os.path.join(
+            ENVIRONMENT.ECO_SYS_FOLDER,
+            "{}_ERROR.duck".format(time.strftime("%Y-%m-%d_%H-%M-%S")))
+        with open(marker, "w") as f:
+            f.write(message)
+    except Exception:
+        ERROR_HANDLE.print_note(
+            "Failed to write update error marker: {}".format(traceback.format_exc()))
+
+    try:
+        data = DATA_FILE.get_data("last_update_failure_report") or {}
+        if (time.time() - data.get("time", 0)) < 86400.0:
+            return
+        DATA_FILE.set_data({"time": time.time()}, "last_update_failure_report")
+    except Exception:
+        pass
+
+    def _send():
+        try:
+            ERROR_HANDLE.send_error_to_error_dump(
+                error_message=message,
+                func_name="update_failure",
+                user_name=USER.USER_NAME,
+                is_silent=True)
+        except Exception:
+            pass
+
+    worker = threading.Thread(target=_send)
+    worker.daemon = True
+    worker.start()
 
 def timestamp_string_to_unix(timestamp_str):
     """
@@ -118,28 +208,58 @@ def timestamp_string_to_unix(timestamp_str):
 
 def update_dist_repo():
     """Updates the distribution repository if sufficient time has passed since last update"""
-    if not is_update_too_soon():
-        if is_github_connection_ok():
-            EXE.try_open_app("EnneadTab_OS_Installer", safe_open=True)
-        else:
-            updater_for_shanghai()
+    if is_update_too_soon():
+        return
 
-        DATA_FILE.set_data({"last_update_time":time.time()}, "last_update_time")
+    # Stamp the ATTEMPT, up front, before anything that can fail.
+    #
+    # This key used to be called "last_update_time" and was written AFTER a
+    # fire-and-forget EXE.try_open_app -- unconditionally, with no idea whether
+    # the installer had done anything at all. The machine recorded a successful
+    # update that may never have happened.
+    #
+    # It is now named for what it actually is: a rate-limiter that stops
+    # update_dist_repo (reached from startup/save/sync paths) from hammering the
+    # installer every few seconds. It is NOT a success record and nothing may
+    # read it as one. The ONLY success record is a .duck file in ECO_SYS_FOLDER,
+    # and those are now written exclusively by a VERIFIED update -- which is what
+    # get_last_update_time / alert_user_to_update have always read.
+    DATA_FILE.set_data({"last_update_attempt_time": time.time()}, "last_update_time")
 
-        alert_user_to_update()
-        
+    if is_github_connection_ok():
+        # try_open_app returns False when the installer exe cannot be located or
+        # launched at all. It still cannot tell us whether the installer, once
+        # launched, SUCCEEDED -- that answer arrives asynchronously as a .duck or
+        # _ERROR.duck marker, which alert_user_to_update below consumes. Checking
+        # the launch at least stops a machine with a missing installer from
+        # failing in total silence forever.
+        launched = EXE.try_open_app("EnneadTab_OS_Installer", safe_open=True)
+        if not launched:
+            _record_update_failure(
+                "installer exe EnneadTab_OS_Installer could not be launched")
+    else:
+        updater_for_shanghai()
+
+    alert_user_to_update()
+
 
 
 
 def is_update_too_soon():
     """
-    Checks if the last update was too recent (within 60 minutes)
-    
+    Checks if an update was ATTEMPTED too recently (within 60 minutes)
+
+    Reads the new "last_update_attempt_time" key and falls back to the legacy
+    "last_update_time" key so machines carrying the old data file keep their
+    throttle across this upgrade instead of re-running the installer immediately.
+
     Returns:
-        bool: True if last update was within 60 minutes
+        bool: True if an update was attempted within the last 60 minutes
     """
     data = DATA_FILE.get_data("last_update_time")
-    recent_update_time = data.get("last_update_time", None)
+    recent_update_time = data.get("last_update_attempt_time", None)
+    if not recent_update_time:
+        recent_update_time = data.get("last_update_time", None)
     if not recent_update_time:
         return False
     return (time.time() - recent_update_time) < 3600

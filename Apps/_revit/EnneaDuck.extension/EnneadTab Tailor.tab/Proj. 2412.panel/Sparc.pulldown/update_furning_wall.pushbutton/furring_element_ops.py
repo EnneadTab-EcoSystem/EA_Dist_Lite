@@ -1,7 +1,7 @@
 from Autodesk.Revit import DB  # pyright: ignore
 
 from EnneadTab import NOTIFICATION
-from EnneadTab.REVIT import REVIT_FILTER
+from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_FILTER
 from furring_constants import (
     BASE_OFFSET,
     FULL_SPANDREL_PARAMETER,
@@ -60,7 +60,7 @@ def _format_parameter_value(parameter):
         if storage_type == DB.StorageType.ElementId:
             element_id = parameter.AsElementId()
             if element_id is not None:
-                return "ElementId({0})".format(element_id.IntegerValue)
+                return "ElementId({0})".format(REVIT_APPLICATION.get_element_id_value(element_id))
     except Exception as error:
         return "Error retrieving value: {0}".format(error)
     return "None"
@@ -256,7 +256,7 @@ def update_panel_selection_filter(doc, filter_name, element_ids):
     for element_id in element_ids or []:
         if element_id is None:
             continue
-        integer_value = element_id.IntegerValue
+        integer_value = REVIT_APPLICATION.get_element_id_value(element_id)
         if integer_value is not None and integer_value in seen_ids:
             continue
         element = doc.GetElement(element_id)
@@ -504,11 +504,11 @@ def create_furring_walls(doc, panel_records, wall_type, host_level_map):
     if deleted_duplicates:
         deleted_values = set()
         for wall_id in deleted_duplicates:
-            deleted_values.add(wall_id.IntegerValue)
+            deleted_values.add(REVIT_APPLICATION.get_element_id_value(wall_id))
         if deleted_values:
             remaining_ids = []
             for wall_id in created_wall_ids:
-                integer_value = wall_id.IntegerValue
+                integer_value = REVIT_APPLICATION.get_element_id_value(wall_id)
                 if integer_value is not None and integer_value in deleted_values:
                     continue
                 remaining_ids.append(wall_id)

@@ -5,6 +5,8 @@ import json
 from pyrevit import routes
 from Autodesk.Revit import DB
 
+from EnneadTab.REVIT import REVIT_APPLICATION
+
 
 def register_create_sheet_routes(api):
     @api.route("/create-sheet/", methods=["POST"])
@@ -78,7 +80,7 @@ def register_create_sheet_routes(api):
             )
 
         return routes.make_response(data={
-            "sheet_id": new_sheet.Id.IntegerValue,
+            "sheet_id": REVIT_APPLICATION.get_element_id_value(new_sheet.Id),
             "sheet_number": sheet_number,
             "sheet_name": sheet_name,
             "success": True,

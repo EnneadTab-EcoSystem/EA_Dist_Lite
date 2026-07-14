@@ -2,18 +2,15 @@
 REM Remove any existing task with the same name (ignore errors)
 schtasks /delete /tn "NightRunner" /f >nul 2>&1
 
-REM Date-based logic for DB_FOLDER
-for /f "tokens=1-3 delims=/ " %%a in ('date /t') do (
-    set "CURRENT_DATE=%%c%%a%%b"
-)
-set "CURRENT_USER=%USERNAME%"
-
-if "%CURRENT_DATE%" geq "20250715" (
-    set "DB_FOLDER=L:\4b_Design Technology\05_EnneadTab-DB"
-) else if "%CURRENT_USER%"=="szhang" (
-    set "DB_FOLDER=L:\4b_Design Technology\05_EnneadTab-DB"
+REM Resolve DB_FOLDER (#2360). Batch cannot parse JSON, so it honours only the
+REM EA_SHARED_ROOT environment variable and otherwise falls back to the legacy
+REM L: path. At cutover, set EA_SHARED_ROOT machine-wide (GPO / setx) and
+REM re-run this registrar; the Python and PowerShell resolvers additionally
+REM read Apps/lib/EnneadTab/shared_root.json.
+if defined EA_SHARED_ROOT (
+    set "DB_FOLDER=%EA_SHARED_ROOT%\05_EnneadTab-DB"
 ) else (
-    set "DB_FOLDER=L:\4b_Applied Computing\EnneadTab-DB"
+    set "DB_FOLDER=L:\4b_Design Technology\05_EnneadTab-DB"
 )
 
 REM Register the new task to run every day at midnight

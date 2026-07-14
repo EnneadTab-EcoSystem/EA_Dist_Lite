@@ -12,6 +12,7 @@ import clr
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
+from EnneadTab.REVIT import REVIT_APPLICATION
 from Autodesk.Revit import DB # pyright: ignore 
 # from Autodesk.Revit import UI # pyright: ignore
 doc = __revit__.ActiveUIDocument.Document # pyright: ignore
@@ -34,8 +35,8 @@ def checker_board_selection():
     for wall in walls:
         grids = wall.CurtainGrid
         
-        u_grids = [x.IntegerValue for x in wall.CurtainGrid.GetUGridLineIds()]
-        v_grids = [x.IntegerValue for x in wall.CurtainGrid.GetVGridLineIds()]
+        u_grids = [REVIT_APPLICATION.get_element_id_value(x) for x in wall.CurtainGrid.GetUGridLineIds()]
+        v_grids = [REVIT_APPLICATION.get_element_id_value(x) for x in wall.CurtainGrid.GetVGridLineIds()]
         #print grids
         #print grids.GetVGridLineIds()
         """

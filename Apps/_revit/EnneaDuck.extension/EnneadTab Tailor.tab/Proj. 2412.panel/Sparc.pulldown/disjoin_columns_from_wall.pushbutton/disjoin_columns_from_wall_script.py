@@ -34,7 +34,7 @@ def _is_column(element):
     category_id = category.Id
     if category_id is None:
         return False
-    cat_value = category_id.IntegerValue
+    cat_value = REVIT_APPLICATION.get_element_id_value(category_id)
     return cat_value in (ARCH_COLUMN_CAT_ID, STRUCT_COLUMN_CAT_ID)
 
 
@@ -52,12 +52,14 @@ def _collect_all_columns(doc):
     struct_columns = DB.FilteredElementCollector(doc).OfCategory(DB.BuiltInCategory.OST_StructuralColumns).WhereElementIsNotElementType().ToElements()
     seen_ids = set()
     for column in arch_columns:
-        if column.Id.IntegerValue not in seen_ids:
-            seen_ids.add(column.Id.IntegerValue)
+        column_id_value = REVIT_APPLICATION.get_element_id_value(column.Id)
+        if column_id_value not in seen_ids:
+            seen_ids.add(column_id_value)
             columns.append(column)
     for column in struct_columns:
-        if column.Id.IntegerValue not in seen_ids:
-            seen_ids.add(column.Id.IntegerValue)
+        column_id_value = REVIT_APPLICATION.get_element_id_value(column.Id)
+        if column_id_value not in seen_ids:
+            seen_ids.add(column_id_value)
             columns.append(column)
     return columns
 
@@ -71,7 +73,7 @@ def _is_wall(element):
     category_id = category.Id
     if category_id is None:
         return False
-    return category_id.IntegerValue == WALL_CAT_ID
+    return REVIT_APPLICATION.get_element_id_value(category_id) == WALL_CAT_ID
 
 
 def _get_wall_candidates(doc, column):
@@ -112,13 +114,13 @@ def _get_wall_candidates(doc, column):
         if item is None:
             continue
         if isinstance(item, DB.ElementId):
-            key = item.IntegerValue
+            key = REVIT_APPLICATION.get_element_id_value(item)
             if key in seen:
                 continue
             seen.add(key)
             unique_ids.append(item)
         elif hasattr(item, "Id"):
-            key = item.Id.IntegerValue
+            key = REVIT_APPLICATION.get_element_id_value(item.Id)
             if key in seen:
                 continue
             seen.add(key)

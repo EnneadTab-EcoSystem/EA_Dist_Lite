@@ -114,7 +114,7 @@ def _extract_single_family(doc, family, skip_nested=False):
         "placementType": placement_type,
         "isCurtainPanel": is_curtain_panel,
         "nestedFamilies": nested_families,
-        "id": family.Id.IntegerValue
+        "id": REVIT_APPLICATION.get_element_id_value(family.Id)
     }
 
 
