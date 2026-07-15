@@ -47,7 +47,7 @@ output = script.get_output()
 # ---------------------------------------------------------------------------
 # small helpers
 # ---------------------------------------------------------------------------
-# single source of truth — ElementId-to-int lives in the shared lib
+# single source of truth - ElementId-to-int lives in the shared lib
 get_id_value = REVIT_APPLICATION.get_element_id_value
 
 
@@ -76,7 +76,7 @@ def parse_float(text):
         value = float(text)
     except (ValueError, TypeError):
         return None
-    # reject inf / nan — they sail through float() and then poison the offset
+    # reject inf / nan - they sail through float() and then poison the offset
     if math.isnan(value) or math.isinf(value):
         return None
     return value
@@ -149,7 +149,7 @@ def collect_existing_marks(active_doc):
                .WhereElementIsNotElementType()\
                .ToElements()
     for f in floors:
-        # BuiltInParameter, not LookupParameter("Comments") — the display name is
+        # BuiltInParameter, not LookupParameter("Comments") - the display name is
         # localized on non-English Revit, which would silently break dedup.
         cm = f.get_Parameter(DB.BuiltInParameter.ALL_MODEL_INSTANCE_COMMENTS)
         if cm:
@@ -468,7 +468,7 @@ class FinishFloorByRoomForm(WPFWindow):
         results = []   # (status, label, detail)
         created = 0
         aborted = False
-        swallower = WarningSwallower()   # stateless — one instance for the batch
+        swallower = WarningSwallower()   # stateless - one instance for the batch
 
         tg = DB.TransactionGroup(active_doc, "Create Finish Floors by Rooms")
         tg.Start()
@@ -476,7 +476,7 @@ class FinishFloorByRoomForm(WPFWindow):
             for rid in self.picked_room_ids:
                 room = active_doc.GetElement(rid)
                 if room is None or not room.IsValidObject:
-                    # deleted between pick and create — report it, don't drop silently
+                    # deleted between pick and create - report it, don't drop silently
                     results.append(("SKIP", "Room {}".format(get_id_value(rid)),
                                     "room no longer exists"))
                     continue
@@ -545,7 +545,7 @@ class FinishFloorByRoomForm(WPFWindow):
                     else:
                         results.append(("OK", label, detail))
                 except Exception as ex:
-                    # RollBack itself can throw on a damaged state — never let it
+                    # RollBack itself can throw on a damaged state - never let it
                     # swallow the result record for this room.
                     try:
                         if t.HasStarted() and not t.HasEnded():
@@ -583,7 +583,7 @@ class FinishFloorByRoomForm(WPFWindow):
         output.close_others()
         output.print_md("# Finish Floor by Room")
         if aborted:
-            output.print_md("## BATCH ABORTED — the group was rolled back, nothing was created.")
+            output.print_md("## BATCH ABORTED - the group was rolled back, nothing was created.")
         output.print_md("Floor type: **{}**  |  Created: **{}** of {} room(s)".format(
             type_name, created, len(results)))
         table = [[status, label, str(detail)] for (status, label, detail) in results]
@@ -592,7 +592,7 @@ class FinishFloorByRoomForm(WPFWindow):
                 table_data=table,
                 columns=["Status", "Room", "Floor Id / Reason"])
         if aborted:
-            NOTIFICATION.messenger("Batch aborted — nothing created. See report.")
+            NOTIFICATION.messenger("Batch aborted - nothing created. See report.")
         else:
             NOTIFICATION.messenger("Created {} finish floor(s).".format(created))
 

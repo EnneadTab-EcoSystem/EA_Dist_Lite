@@ -9,6 +9,10 @@ from pyrevit.coreutils import envvars
 
 DOC = EXEC_PARAMS.event_args.Document
 
+# pyRevit hook engines do not inherit the .lib search path that button scripts get,
+# so put KingDuck.lib on sys.path before importing proDUCKtion (the EnneadTab bootstrap).
+import os, sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "KingDuck.lib")))
 import proDUCKtion  # pyright: ignore 
 proDUCKtion.validify()
 
