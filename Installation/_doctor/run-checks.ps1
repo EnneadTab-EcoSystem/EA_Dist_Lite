@@ -201,7 +201,7 @@ if ($SelfTest) {
         if ($age.TotalDays -gt 7) {
             Add-Result -Title "EnneadTab is up to date (auto-updater ran recently)" -Status WARN `
                 -Detail "Newest update marker is $ageStr ($($newest.Name)). EnneadTab updates roughly every few hours, so this is unusually stale." `
-                -NextStep "Check Task Scheduler for EnneadTab_OS_Installer_Task. Right-click > Run. If it errors, email designtech@ennead.com."
+                -NextStep "Check Task Scheduler for EnneadTab_OS_Installer_Task. Right-click > Run. If it errors, email szhang@ennead.com."
         } else {
             Add-Result -Title "EnneadTab is up to date (auto-updater ran recently)" -Status OK `
                 -Detail "Newest update marker is $ageStr ($($newest.Name))."
@@ -365,7 +365,7 @@ if ($SelfTest) {
     if (-not $csv) {
         Add-Result -Title "Background tasks are scheduled" -Status SKIP `
             -Detail "Could not query Task Scheduler (schtasks returned nothing). This sometimes means policy restricts schtasks for this user." `
-            -NextStep "Email designtech@ennead.com and mention 'schtasks blocked'."
+            -NextStep "Email szhang@ennead.com and mention 'schtasks blocked'."
     } else {
         $tasks = $csv | ConvertFrom-Csv
         $missingCore   = New-Object System.Collections.Generic.List[string]
@@ -411,7 +411,7 @@ if ($SelfTest) {
             if ($missingRecent.Count -gt 0) { $detail += "`nMissing (recently added): $($missingRecent -join ', ')" }
             Add-Result -Title "Background tasks are scheduled" -Status WARN `
                 -Detail $detail `
-                -NextStep "Open Task Scheduler. Right-click each stale task and choose Run. If they fail, email designtech@ennead.com with this report."
+                -NextStep "Open Task Scheduler. Right-click each stale task and choose Run. If they fail, email szhang@ennead.com with this report."
         } else {
             # Only recent tasks missing - almost certainly because auto-updater hasn't synced.
             Add-Result -Title "Background tasks are scheduled" -Status WARN `
@@ -461,12 +461,12 @@ if ($SelfTest) {
 if ($SelfTest) {
     Add-Result -Title "Local cache folder is writable" -Status FAIL `
         -Detail "SELF-TEST: simulating non-writable Dump folder" `
-        -NextStep "Email designtech@ennead.com. Mention disk permissions on $DumpFolder."
+        -NextStep "Email szhang@ennead.com. Mention disk permissions on $DumpFolder."
 } else {
     if (-not (Test-Path -LiteralPath $DumpFolder)) {
         Add-Result -Title "Local cache folder is writable" -Status WARN `
             -Detail "Dump folder $DumpFolder does not exist yet (it will be created next time EnneadTab runs)." `
-            -NextStep "No action needed. If this persists after using EnneadTab, email designtech@ennead.com."
+            -NextStep "No action needed. If this persists after using EnneadTab, email szhang@ennead.com."
     } else {
         $probe = Join-Path $DumpFolder ('.doctor-write-probe-' + [guid]::NewGuid().ToString('N') + '.tmp')
         try {
@@ -477,7 +477,7 @@ if ($SelfTest) {
         } catch {
             Add-Result -Title "Local cache folder is writable" -Status FAIL `
                 -Detail "Cannot write to $DumpFolder. Reason: $($_.Exception.Message)" `
-                -NextStep "Email designtech@ennead.com. Mention disk permissions on $DumpFolder."
+                -NextStep "Email szhang@ennead.com. Mention disk permissions on $DumpFolder."
         }
     }
 }
@@ -528,7 +528,7 @@ if ($SelfTest) {
             } | Sort-Object -Descending | Select-Object -First 1
         $status = if ($maxFinding -ge 1000) { 'FAIL' } else { 'WARN' }
         $detail = "Oversized log files (>=100 MB):`n  - " + ($logCheckFindings -join "`n  - ")
-        $next   = "Close Revit and delete the oversized files listed above. They usually mean a runaway error loop. If it returns, email designtech@ennead.com with this report."
+        $next   = "Close Revit and delete the oversized files listed above. They usually mean a runaway error loop. If it returns, email szhang@ennead.com with this report."
         Add-Result -Title "Error log size looks sane" -Status $status -Detail $detail -NextStep $next
     }
 }
@@ -782,7 +782,7 @@ if (-not $SelfTest -and $installerMissing) {
 Write-Line ''
 Write-Line "If you are emailing for help, attach this whole report file:" DarkGray
 Write-Line "    $ReportFile" DarkGray
-Write-Line "Send to: designtech@ennead.com" DarkGray
+Write-Line "Send to: szhang@ennead.com" DarkGray
 Write-Line ''
 
 # --- Persist report ------------------------------------------------------

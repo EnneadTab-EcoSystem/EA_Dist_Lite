@@ -49,7 +49,7 @@ if not exist "%PS_HELPER%" (
     echo.
     echo This .bat file was probably copied without the _doctor folder
     echo next to it. Please re-run the EnneadTab installer to refresh
-    echo your Installation folder, or email designtech@ennead.com and
+    echo your Installation folder, or email szhang@ennead.com and
     echo include this message.
     echo.
     pause
@@ -72,7 +72,7 @@ echo -------------------------------------------------------------------
 echo  Report saved to:
 echo     %REPORT_FILE%
 echo.
-echo  If you need help, email designtech@ennead.com and attach that
+echo  If you need help, email szhang@ennead.com and attach that
 echo  file. You may close this window after reading the summary above.
 echo -------------------------------------------------------------------
 echo.
