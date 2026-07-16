@@ -135,14 +135,20 @@ APPS = [
         "active": True
     },
     {
+        # RETIRED 2026-07-15: WhatTheLunch moved to the web at enneadtab.com/lunch.
+        # The exe + source were removed from this repo. This entry is kept with
+        # active=False ON PURPOSE: RegisterAutoStartup's inactive branch removes the
+        # startup shortcut AND the WhatTheLunch_Daily scheduled task on its next pass,
+        # so the fleet self-cleans the leftover daily task (which would otherwise point
+        # at a now-deleted exe). Delete this entry only after the fleet has cycled.
         "app_name": "WhatTheLunch",
         "file_name": "WhatTheLunch.exe",
         "shortcut_name": "WhatTheLunch",
         "task_name": "WhatTheLunch_Daily",
-        "description": "WhatTheLunch Daily Task at 11:45",
+        "description": "WhatTheLunch (retired - now at enneadtab.com/lunch)",
         "task_type": TaskType.DAILY,
         "daily_time": "11:45",
-        "active": True
+        "active": False
     },
     {
         "app_name": "AvdResourceMonitor",

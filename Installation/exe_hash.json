@@ -16,11 +16,11 @@
     "DuckPop.exe": "21edd08658f17b24a31d9b82ef5fffd9f1f58a89d2515ff5e99b70789bbe36f7",
     "Emailer.exe": "134f9039e2999da576133b3df2821570cef3ac159bdafbcd3ba1da3a0b1fecd6",
     "EnneadTab_For_Revit(Legacy)_Installer.exe": "c9d28c69e0da5f4d2cf562482adece12eda872b1e5527ab188e539e184570886",
-    "EnneadTab_For_Revit_Installer.exe": "4decd68b762fe843184a9a942b5b52c8cff327afe6217572249fd103e2921e9f",
-    "EnneadTab_For_Revit_UnInstaller.exe": "c8ffa486f741f2b431d99d0e2db9dbd90d121cf773cda33491116b0624eed4e7",
+    "EnneadTab_For_Revit_Installer.exe": "b3a68ae0ae281cdbef10103819e840a5d6e825fd7dcba33ea700355d8fa2d3e5",
+    "EnneadTab_For_Revit_UnInstaller.exe": "584aec52b83f08b71358ba79570b801cc5d5a3bedff295bbde82839bce0f6250",
     "EnneadTab_OS_Installer-backup.exe": "84f7d187fdde13001cd99420dc4886673f05105d0028c07e7de23ef5e19279ab",
     "EnneadTab_OS_Installer.exe": "84f7d187fdde13001cd99420dc4886673f05105d0028c07e7de23ef5e19279ab",
-    "EnneadTab_OS_UnInstaller.exe": "fd2b3a48f6cabb928d580535bfd7af4f161dc2dbe330683ca1d8d0ad3d0bbf50",
+    "EnneadTab_OS_UnInstaller.exe": "54e43c6b7ef88d7f326de7c42cb493caf34cedf7d59f66bbc755ed5c8d7ceaab",
     "EnneaDuck.exe": "5f9cba91f26f2a21bd4e48613b17108d79af40030465e9afc0525a973765e998",
     "EnscapeRenamer.exe": "8776057d258bfbf8bd8495bb9055073c083c882df9ff687d22c9d39868ff53e6",
     "ExcelHandler.exe": "1332bdbab157a5d386f95aa4350805b5f25ec76e43e2671b26da56465a7272c2",
@@ -38,7 +38,7 @@
     "OKButtonClicker.exe": "ad476a9a62b00f65d5b53314090ba178d9bb72036ac76467ced67cef30ee8582",
     "Pet.exe": "58a1527770c4dc8c014b376dfd20335b3519806fd571512d6f396bb50b369f80",
     "ProgressBar.exe": "1cae95e2787eebc52f50b39d45d8cd8aa6a66bbd55c7ea5f05b1079d0c115b4e",
-    "RegisterAutoStartup.exe": "75b1b9c35134013dc76fb120daa898ac43372838b7aaed9528e3f21ddd33ad8a",
+    "RegisterAutoStartup.exe": "40864edc9f1e0fe5159937a6d58555726768132c99afda62c7dd0507e362fcdd",
     "RelationshipTree.exe": "88ecb826ed4b1b3fcdebe84bdb7e8d04d14ec171b02cf93ba074d6f12200a2a2",
     "ResourceHistory.exe": "3f86766c35b0e2c04b22b5649fd8966f1a083acfc7a3124a6162b0c511dc9554",
     "RevitExportRenamer.exe": "6e41d0d401972509aed7002f9dee401b3ecad6707e6cf8bf1426180c3af96c66",
@@ -49,6 +49,5 @@
     "SparcAccFetcher.exe": "1f327b15d03a726d3d172af6d83afb8bf60fd109ed21fbab3dc1b823471b184b",
     "Speaker.exe": "36899c4b2785213a31f701097bf6b108ae64fdf48ea4034b082574d85755df5e",
     "SplashScreen.exe": "97676c43000480e055ab690e5506a708dce55374e103cdc7ae530afffaedc92f",
-    "VizSheetTree.exe": "9d4a81873e1dc8fabc9f2bc45ca483667b7a9d67c4417d039f2a7585a7804619",
-    "WhatTheLunch.exe": "f0e4c44abf148dd28d52267647c80cb2bd2c5c4a9749f08607d00a0518cea058"
+    "VizSheetTree.exe": "9d4a81873e1dc8fabc9f2bc45ca483667b7a9d67c4417d039f2a7585a7804619"
 }

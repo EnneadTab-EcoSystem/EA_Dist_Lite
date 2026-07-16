@@ -56,11 +56,33 @@ USER_DOCUMENT_FOLDER = os.path.join(USER_PROFILE_FOLDER, "Documents")
 USER_DOWNLOAD_FOLDER = os.path.join(USER_PROFILE_FOLDER, "downloads")
 
 USER_DESKTOP_FOLDER = os.path.join(USER_PROFILE_FOLDER, "Desktop")
-ONE_DRIVE_DESKTOP_FOLDER = os.path.join(USER_PROFILE_FOLDER, 
-                                        "OneDrive - Ennead Architects", "Desktop")
 
-if not os.path.exists(ONE_DRIVE_DESKTOP_FOLDER):
-    ONE_DRIVE_DESKTOP_FOLDER = USER_DESKTOP_FOLDER
+
+def _find_onedrive_folders():
+    """Every '<profile>/OneDrive*' sibling, tenant-agnostic (Ennead, CannonDesign,
+    or any future tenant). OneDrive Known-Folder-Move creates one of these and can
+    redirect Desktop/Documents into it. We intentionally do NOT resolve the shell
+    known folder anywhere in EnneadTab: the ecosystem always uses the literal
+    USER_PROFILE_FOLDER paths so it stays OUT of OneDrive (see ECO_SYS_FOLDER)."""
+    result = []
+    try:
+        for _name in os.listdir(USER_PROFILE_FOLDER):
+            if _name.lower().startswith("onedrive"):
+                _full = os.path.join(USER_PROFILE_FOLDER, _name)
+                if os.path.isdir(_full):
+                    result.append(_full)
+    except Exception:
+        pass
+    return result
+
+
+# Prefer a real OneDrive Desktop if one exists (any tenant); else the literal Desktop.
+ONE_DRIVE_DESKTOP_FOLDER = USER_DESKTOP_FOLDER
+for _od_folder in _find_onedrive_folders():
+    _od_desktop = os.path.join(_od_folder, "Desktop")
+    if os.path.exists(_od_desktop):
+        ONE_DRIVE_DESKTOP_FOLDER = _od_desktop
+        break
 USER_APPDATA_FOLDER = os.path.join(USER_PROFILE_FOLDER, "AppData")
 ECO_SYS_FOLDER = os.path.join(USER_DOCUMENT_FOLDER, 
                             "{} Ecosystem".format(PLUGIN_NAME))
@@ -572,9 +594,25 @@ def _delete_folder_or_file_after_date(path, date_YYMMDD_tuple, max_delete_per_da
 
 
 
-# this is to remove any transitional folder from IT transition, not intented to be ussed anywhere else
-__legacy_one_drive_folders = [os.path.join(USER_PROFILE_FOLDER, "OneDrive - Ennead Architects", "Documents", "{} Ecosystem".format(PLUGIN_NAME)),
-                            os.path.join(USER_PROFILE_FOLDER, "OneDrive - Ennead Architects", "Documents", "{}-Ecosystem".format(PLUGIN_NAME))]
+# Remove stale OneDrive "<PLUGIN> Ecosystem" copies left behind by OneDrive
+# Known-Folder-Move (any tenant: Ennead, CannonDesign, ...). The LIVE install
+# always lives at the literal USER_DOCUMENT_FOLDER path (ECO_SYS_FOLDER); these
+# OneDrive copies are never read by EnneadTab and only confuse users who open
+# "Documents" in Explorer and find a stale, dehydrated copy.
+def _find_stale_onedrive_ecosystem_folders():
+    stale = []
+    live = os.path.normcase(os.path.abspath(ECO_SYS_FOLDER))
+    for _od_folder in _find_onedrive_folders():
+        # SAFETY: if the live install itself sits inside a OneDrive tree (a fully
+        # KFM-redirected machine), never touch anything under that tree -- we could
+        # otherwise delete the live install.
+        if live.startswith(os.path.normcase(os.path.abspath(_od_folder))):
+            continue
+        for _variant in ("{} Ecosystem".format(PLUGIN_NAME), "{}-Ecosystem".format(PLUGIN_NAME)):
+            _candidate = os.path.join(_od_folder, "Documents", _variant)
+            if os.path.exists(_candidate) and os.path.normcase(os.path.abspath(_candidate)) != live:
+                stale.append(_candidate)
+    return stale
 
 # no longer plan to have both folder, so delete the modern one and keep using the old one. i have resolved this by rerouting rvb file for rhino.
 depreciated_ECO_SYS_FOLDER_MODERN = os.path.join(USER_DOCUMENT_FOLDER, 
@@ -586,8 +624,11 @@ depreciated_enneadPLUS_menu = os.path.join(RHINO_FOLDER, "Ennead+.menu")
 
 depreciated_log = os.path.join(os.path.expanduser("~"), "Desktop", "I just blue myself.log")
 
-# Fix: Use compatible approach for both IronPython 2.7 and Python 3
-# _execute_map_compatible(_delete_folder_or_file_after_date, __legacy_one_drive_folders, (2025, 2, 1))
+# Tenant-agnostic OneDrive "Ecosystem" cleanup. Delete-after-date so it is
+# reversible until the cutoff and rolls out gradually. The finder already refuses
+# to return the live install (see safety guard above).
+for _stale_od in _find_stale_onedrive_ecosystem_folders():
+    _delete_folder_or_file_after_date(_stale_od, (2026, 9, 1))
 
 _delete_folder_or_file_after_date(depreciated_enneadPLUS_menu, (2025, 4, 1))
 _delete_folder_or_file_after_date(depreciated_dist_lite_folder, (2025, 5, 1))
