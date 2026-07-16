@@ -9,7 +9,7 @@ import os, sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "KingDuck.lib")))
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
-from EnneadTab import VERSION_CONTROL, ERROR_HANDLE, LOG, DATA_FILE, TIME, USER, DUCK, CONFIG, FOLDER, TIMESHEET, ENVIRONMENT
+from EnneadTab import VERSION_CONTROL, ERROR_HANDLE, LOG, DATA_FILE, TIME, USER, DUCK, CONFIG, FOLDER, TIMESHEET, ENVIRONMENT, ARCADE
 from EnneadTab.REVIT import REVIT_FORMS, REVIT_SELECTION, REVIT_EVENT, REVIT_SYNC
 
 __title__ = "Doc Syncing Hook"
@@ -384,6 +384,12 @@ def doc_syncing(doc):
     fill_drafter_info(doc)
 
     TIMESHEET.update_timesheet(doc.Title)
+
+    # Sync is about to freeze the UI thread. Arm the arcade wait-watcher LAST, so its 60s
+    # clock measures the sync itself, not the queue/dialog steps above. If the sync ends in
+    # time, doc-synced deletes the flag and nothing happens. See EnneadTab/ARCADE.py for the
+    # full flag-file contract (installed-app-only, per-user opt-out, age-checked).
+    ARCADE.start_wait_watch("sync", doc.Title)
 
 
     
