@@ -430,6 +430,15 @@ def main():
     # To-do: figure out a safr way to handle the sync/open hook related depresser.
     # envvars.set_pyrevit_env_var("IS_AFTER_SYNC_WARNING_DISABLED", False)
 
+    # The open resolved -- stand down the arcade wait-watcher armed in doc-opening. First
+    # thing in the hook (before any dialog/sound below can stretch the measured wait), and
+    # guarded so this late-add can never break document opening. Contract: EnneadTab/ARCADE.py.
+    try:
+        from EnneadTab import ARCADE
+        ARCADE.end_wait_watch()
+    except Exception:
+        pass
+
     hide_user_tab()
 
 

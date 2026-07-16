@@ -622,6 +622,14 @@ def doc_synced(doc):
         return
 
     play_success_sound()
+    # The wait is over -- pull the arcade flag before anything slower runs, so a pending
+    # watcher (armed in doc-syncing) sees the resolution and stands down. Import is local
+    # + guarded: this late-add must never break the sync-complete path.
+    try:
+        from EnneadTab import ARCADE
+        ARCADE.end_wait_watch()
+    except Exception:
+        pass
     REVIT_SYNC.update_last_sync_data_file(doc)
 
     update_sync_queue(doc)
