@@ -175,9 +175,11 @@ if ($SelfTest) {
 }
 
 # --- Check 2: How recently the install was refreshed ---------------------
-# The OS installer drops a "<timestamp>.duck" marker into the Ecosystem
-# folder each time it copies a fresh EA_Dist. If the newest marker is more
-# than 7 days old, the auto-updater hasn't run successfully recently.
+# The OS installer drops a transient "<timestamp>.duck" marker on each fresh
+# EA_Dist copy, but garbage-collects markers older than 8h -- so 0 markers does
+# NOT mean "never synced". We date the last refresh from the newest marker when
+# present, else from the newest library-file mtime (a durable proxy the installer
+# rewrites on every extract). More than 7 days = unusually stale.
 
 if ($SelfTest) {
     Add-Result -Title "EnneadTab is up to date (auto-updater ran recently)" -Status WARN `
@@ -190,21 +192,33 @@ if ($SelfTest) {
 } else {
     $duckMarkers = @(Get-ChildItem -LiteralPath $EcoSysFolder -Filter '*.duck' -File -ErrorAction SilentlyContinue |
                     Sort-Object LastWriteTime -Descending)
-    if ($duckMarkers.Count -eq 0) {
+    $freshTime = $null
+    $freshSource = ''
+    if ($duckMarkers.Count -gt 0) {
+        $freshTime = $duckMarkers[0].LastWriteTime
+        $freshSource = "update marker $($duckMarkers[0].Name)"
+    } elseif (Test-Path -LiteralPath $CoreFolder) {
+        $newestLib = Get-ChildItem -LiteralPath $CoreFolder -File -ErrorAction SilentlyContinue |
+                     Sort-Object LastWriteTime -Descending | Select-Object -First 1
+        if ($newestLib) {
+            $freshTime = $newestLib.LastWriteTime
+            $freshSource = "newest library file (update markers are transient, cleaned after 8h)"
+        }
+    }
+    if ($null -eq $freshTime) {
         Add-Result -Title "EnneadTab is up to date (auto-updater ran recently)" -Status WARN `
-            -Detail "No update markers (*.duck) found in $EcoSysFolder. The auto-updater has never recorded a successful sync on this machine." `
+            -Detail "Could not date the last sync: no update markers and no library files under $EcoSysFolder." `
             -NextStep "Open Task Scheduler, find EnneadTab_OS_Installer_Task, and right-click > Run."
     } else {
-        $newest = $duckMarkers[0]
-        $age = (Get-Date) - $newest.LastWriteTime
+        $age = (Get-Date) - $freshTime
         $ageStr = if ($age.TotalDays -ge 1) { "{0:N1} days ago" -f $age.TotalDays } else { "{0:N1} hours ago" -f $age.TotalHours }
         if ($age.TotalDays -gt 7) {
             Add-Result -Title "EnneadTab is up to date (auto-updater ran recently)" -Status WARN `
-                -Detail "Newest update marker is $ageStr ($($newest.Name)). EnneadTab updates roughly every few hours, so this is unusually stale." `
+                -Detail "Last refresh was $ageStr (by $freshSource). EnneadTab updates roughly every few hours, so this is unusually stale." `
                 -NextStep "Check Task Scheduler for EnneadTab_OS_Installer_Task. Right-click > Run. If it errors, email szhang@ennead.com."
         } else {
             Add-Result -Title "EnneadTab is up to date (auto-updater ran recently)" -Status OK `
-                -Detail "Newest update marker is $ageStr ($($newest.Name))."
+                -Detail "Last refresh was $ageStr (by $freshSource)."
         }
     }
 }
@@ -343,8 +357,7 @@ if ($SelfTest) {
 # have them yet (the auto-updater check will already flag that).
 $expectedTasksCore = @(
     'EnneadTab_OS_Installer_Task',
-    'EnneadTab_Rhino8RuiUpdater_Task',
-    'WhatTheLunch_Daily'
+    'EnneadTab_Rhino8RuiUpdater_Task'
 )
 $expectedTasksRecent = @(
     'EnneadTab_InfraWatch_Events_Task',
@@ -578,7 +591,6 @@ if ($SelfTest) {
         'EnneadTab_OS_Installer.exe',
         'Rhino8RuiUpdater.exe',
         'ClearRevitRhinoCache.exe',
-        'WhatTheLunch.exe',
         'Messenger.exe'
     )
     # Recently-added EXEs (post-2026-04-15). Missing -> WARN, because users
@@ -694,6 +706,39 @@ if ($SelfTest) {
         Add-Result -Title "EnneadTab OS installer is available" -Status FAIL `
             -Detail "Critical: the OS installer EXE is not on this PC ($OsInstallerExe). Without it the install cannot self-repair locally -- elevating to auto-repair (download) below." `
             -NextStep $InstallerHint
+    }
+}
+
+# --- Check 13: stale OneDrive copy of the ecosystem (tenant-agnostic) -----
+# OneDrive Known-Folder-Move can leave a stale, dehydrated copy of the
+# ecosystem under <profile>\OneDrive*\Documents. EnneadTab never reads it (it
+# always uses the literal Documents path), but users open "Documents" in
+# Explorer, see it, and think it is the live install -- the "file exists but the
+# tool can't see it" confusion. EnneadTab auto-removes these after 2026-09-01;
+# surface it here so it is visible before then.
+
+if ($SelfTest) {
+    Add-Result -Title "No stale OneDrive copy of EnneadTab" -Status WARN `
+        -Detail "SELF-TEST: simulating a leftover OneDrive Ecosystem copy." `
+        -NextStep "Harmless -- delete the OneDrive copy, or let EnneadTab auto-remove it."
+} else {
+    $liveEcoLower = $EcoSysFolder.ToLower()
+    $relics = @()
+    Get-ChildItem -LiteralPath $UserProfile -Directory -Filter 'OneDrive*' -ErrorAction SilentlyContinue | ForEach-Object {
+        foreach ($variant in @('EnneadTab Ecosystem', 'EnneadTab-Ecosystem')) {
+            $candidate = Join-Path $_.FullName (Join-Path 'Documents' $variant)
+            if ((Test-Path -LiteralPath $candidate) -and ($candidate.ToLower() -ne $liveEcoLower)) {
+                $relics += $candidate
+            }
+        }
+    }
+    if ($relics.Count -eq 0) {
+        Add-Result -Title "No stale OneDrive copy of EnneadTab" -Status OK `
+            -Detail "No leftover EnneadTab Ecosystem folder under any OneDrive folder."
+    } else {
+        Add-Result -Title "No stale OneDrive copy of EnneadTab" -Status WARN `
+            -Detail ("Found a stale OneDrive copy: {0}. EnneadTab does not use it (the live install is {1}); it is a OneDrive backup leftover that only causes confusion in Explorer." -f ($relics -join '; '), $EcoSysFolder) `
+            -NextStep "Harmless. EnneadTab auto-removes these after 2026-09-01, or delete the folder(s) above yourself."
     }
 }
 
