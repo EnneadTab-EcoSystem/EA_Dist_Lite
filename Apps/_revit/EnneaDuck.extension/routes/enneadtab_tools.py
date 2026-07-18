@@ -4,6 +4,7 @@
 Discovers and invokes functions from EnneadTab modules that expose
 a __mcp_tools__ attribute listing callable function names.
 """
+import inspect
 import json
 import os
 import sys
@@ -11,6 +12,40 @@ import traceback
 
 from pyrevit import routes
 from Autodesk.Revit import DB
+
+
+def _allowed_function_names(mcp_tools):
+    """Extract callable function names from a module's __mcp_tools__.
+
+    __mcp_tools__ entries are dicts ({"function": name, ...}); older/simpler
+    modules may list bare strings. Both forms are accepted.
+    """
+    names = []
+    if not mcp_tools or not isinstance(mcp_tools, (list, tuple)):
+        return names
+    for entry in mcp_tools:
+        if isinstance(entry, dict):
+            name = entry.get("function")
+            if name:
+                names.append(name)
+        elif isinstance(entry, str):
+            names.append(entry)
+    return names
+
+
+def _function_takes_doc(func):
+    """Return True only if `func` declares a `doc` parameter.
+
+    EnneadTab utility functions (COLOR, FOLDER, ...) are pure and must be
+    called WITHOUT the Revit doc, or they raise TypeError. Revit-facing
+    functions declare `doc` explicitly.
+    """
+    try:
+        argspec = inspect.getargspec(func)
+    except TypeError:
+        # Built-in / C-implemented callables expose no signature.
+        return False
+    return "doc" in argspec.args
 
 
 def _ensure_lib_on_path():
@@ -112,9 +147,11 @@ def register_enneadtab_tools_routes(api):
                 status_code=404,
             )
 
-        # Verify function is in __mcp_tools__ whitelist
+        # Verify function is in __mcp_tools__ whitelist. Entries are dicts
+        # ({"function": name, ...}), so compare against the extracted names.
         mcp_tools = getattr(mod, "__mcp_tools__", None)
-        if not mcp_tools or function_name not in mcp_tools:
+        allowed_functions = _allowed_function_names(mcp_tools)
+        if function_name not in allowed_functions:
             return routes.make_response(
                 data={
                     "error": "Function '{}' is not in __mcp_tools__ for module '{}'".format(
@@ -135,17 +172,31 @@ def register_enneadtab_tools_routes(api):
                 status_code=404,
             )
 
+        # Only inject the Revit `doc` for functions that actually declare it.
+        # Pure EnneadTab utilities (COLOR, FOLDER, ...) take no doc and would
+        # raise TypeError if one were passed.
+        takes_doc = _function_takes_doc(func)
+
         transaction_name = "MCP: {}.{}".format(module_name, function_name)
         t = DB.Transaction(doc, transaction_name)
         try:
             t.Start()
 
             if isinstance(args, dict):
-                result = func(doc=doc, **args)
+                if takes_doc:
+                    result = func(doc=doc, **args)
+                else:
+                    result = func(**args)
             elif isinstance(args, (list, tuple)):
-                result = func(doc, *args)
+                if takes_doc:
+                    result = func(doc, *args)
+                else:
+                    result = func(*args)
             else:
-                result = func(doc)
+                if takes_doc:
+                    result = func(doc)
+                else:
+                    result = func()
 
             t.Commit()
         except Exception as e:
