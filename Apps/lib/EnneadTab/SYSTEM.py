@@ -105,7 +105,13 @@ APPS = [
         "description": "EnneadTab InfraWatch hourly events + drive connectivity to enneadtab.com/infra",
         "task_type": TaskType.REPEAT,
         "interval_minutes": 60,
-        "canary_hosts": ["MININT-5V26DTJ", "EANY-PW-0HJ97N"],
+        # 2026-07-18: opened from 2-host canary to full fleet. The >=10
+        # drive_reporters gate in DEBUG/infra-validation-2026-06-26.md could
+        # never be met while only 2 hosts were allowed to report -- the gate
+        # was self-blocking. Ingest is unauthed by design (see InfraWatch
+        # CLAUDE.md "Auth") and rate-limited 1000/min per IP; the office
+        # NATs to one IP, so even a full-fleet sync burst stays well under.
+        "canary_hosts": ["*"],
         "active": True
     },
     {
@@ -118,7 +124,10 @@ APPS = [
         "description": "EnneadTab InfraWatch heavy collectors to enneadtab.com/infra",
         "task_type": TaskType.REPEAT,
         "interval_minutes": 360,
-        "canary_hosts": ["MININT-5V26DTJ", "EANY-PW-0HJ97N"],
+        # 2026-07-18: opened to full fleet alongside InfraWatch_Events. This is
+        # the task that carries machine_spec, so this line is what ends the
+        # N=1 machine roster on the dashboard.
+        "canary_hosts": ["*"],
         "active": True
     },
     {
@@ -131,7 +140,13 @@ APPS = [
         "description": "EnneadTab weekly Revit journal upload to enneadtab.com/infra",
         "task_type": TaskType.WEEKLY,
         "stagger_weekly": True,
-        "canary_hosts": ["MININT-5V26DTJ", "EANY-PW-0HJ97N"],
+        # 2026-07-18: opened to full fleet. Safe because journal upload is
+        # DOUBLE-gated -- collect_revit_journal.get_pilot_config() fetches
+        # rollout_percent from the server and defaults to 0 on any failure
+        # (collect_revit_journal.py:108-145). Opening the canary only makes a
+        # machine ELIGIBLE; actual upload volume stays server-controlled and
+        # can be dialed without republishing EA_Dist.
+        "canary_hosts": ["*"],
         "active": True
     },
     {
