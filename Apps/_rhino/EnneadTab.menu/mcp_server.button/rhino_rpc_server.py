@@ -114,6 +114,51 @@ def _handle_request(context):
                 k, v = part.split("=", 1)
                 query[k] = v
 
+    # 2026-07-19 SECURITY: refuse anything a browser sent.
+    #
+    # /enneadtab/execute-code/ runs exec() with full builtins. Binding to localhost
+    # does NOT make that safe: a page the user merely visits can POST here from their
+    # own machine. A text/plain POST is a CORS "simple request", so it is NOT
+    # preflighted, and _route() json.loads() the body regardless of Content-Type --
+    # the attacker never needs to read the response for exec() to have already run.
+    #
+    # Every browser attaches Origin to a cross-origin POST (and Referer on ordinary
+    # navigation-initiated requests), while our real clients do not: the Rhino
+    # Assistant calls this from the Electron MAIN process via Node fetch
+    # (electron/ipc/bridge.ts -> src/shared/rhino-client.ts), and the MCP adapter
+    # (Apps/_engine/mcp_server/rhino_adapter.py) is plain Python. So the presence of
+    # any of these headers is a reliable "a browser sent this" signal.
+    #
+    # NOTE: this closes the drive-by-web-page vector only. A hostile LOCAL process can
+    # still reach this port; that needs a per-session token, which requires a
+    # coordinated change across EnneadTab-OS + EnneadTab-RhinoAssistant. Tracked
+    # separately -- do not read this guard as full authentication.
+    browser_header = None
+    for header_name in ("Origin", "Referer", "Sec-Fetch-Site", "Sec-Fetch-Mode"):
+        try:
+            if request.Headers[header_name]:
+                browser_header = header_name
+                break
+        except Exception:
+            pass
+
+    if browser_header:
+        refusal = {
+            "error": "Refused: browser-originated requests are not accepted "
+                     "(saw {}). This endpoint is for local tooling only."
+                     .format(browser_header)
+        }
+        refusal_bytes = System.Text.Encoding.UTF8.GetBytes(
+            json.dumps(refusal, default=str))
+        # No CORS headers on this path on purpose: the page must not be able to
+        # read even the refusal.
+        response.StatusCode = 403
+        response.ContentType = "application/json; charset=utf-8"
+        response.ContentLength64 = refusal_bytes.Length
+        response.OutputStream.Write(refusal_bytes, 0, refusal_bytes.Length)
+        response.OutputStream.Close()
+        return
+
     result = {"error": "Internal error"}
     status = 500
 
@@ -138,10 +183,12 @@ def _handle_request(context):
         result = {"error": str(e)}
         status = 500
 
-    # Add CORS headers for local dev
-    response.AddHeader("Access-Control-Allow-Origin", "*")
-    response.AddHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-    response.AddHeader("Access-Control-Allow-Headers", "Content-Type")
+    # 2026-07-19 SECURITY: the wildcard "Access-Control-Allow-Origin: *" that used to
+    # sit here was actively handing a hostile page read access to every response --
+    # model contents, layer lists, exec() output. Nothing legitimate needs it: both
+    # real clients are non-browser (Electron main process / Python), and any request
+    # that IS from a browser is now refused above before reaching this point. Removed
+    # rather than narrowed, because there is no origin we want to allow.
 
     if method == "OPTIONS":
         response.StatusCode = 204
