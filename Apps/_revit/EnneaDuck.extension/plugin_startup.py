@@ -628,11 +628,66 @@ def _register_mcp_routes():
             print("MCP Routes registration failed: {}".format(e))
 
 
+def _enable_routes_server():
+    """Turn ON the pyRevit Routes HTTP server so the EnneadTab Revit Assistant
+    desktop app can reach this Revit on localhost -- WITHOUT the architect ever
+    opening pyRevit Settings.
+
+    pyRevit ships Routes OFF by default; the desktop app then probes
+    localhost:48884.. for /enneadtab/status/, finds nothing, and reports
+    "cannot detect Revit". We flip the user_config flag ourselves (idempotent:
+    only writes + saves the first time it is found off) so pyRevit starts the
+    server on every session load via its own proven init path
+    (loader/sessionmgr.py: `if user_config.routes_server: routes.activate_server()`).
+
+    We deliberately do NOT call routes.activate_server() by hand here: at this
+    point in extension startup pyRevit has already run its own routes block for
+    this session, so a manual activate would race that ordering. Setting the
+    config + letting the NEXT load start it is the verified-safe path; the
+    one-time notice below tells the user to reload once. The /enneadtab/* routes
+    themselves are registered by _register_mcp_routes()."""
+    try:
+        from pyrevit.userconfig import user_config
+    except:
+        return
+    changed = False
+    try:
+        if not user_config.routes_server:
+            user_config.routes_server = True
+            changed = True
+        if not user_config.routes_host:
+            user_config.routes_host = "localhost"
+            changed = True
+        if not user_config.routes_port:
+            user_config.routes_port = 48884
+            changed = True
+        if changed:
+            user_config.save_changes()
+    except:
+        return
+
+    if changed:
+        # Config only takes effect on the next pyRevit load (that is when pyRevit
+        # starts the server). Say so once, rather than silently leaving the user
+        # wondering why the Assistant still cannot connect this session.
+        try:
+            NOTIFICATION.messenger(
+                main_text="EnneadTab turned on the Revit Assistant connection.\n"
+                          "Reload pyRevit (or restart Revit) once to activate it."
+            )
+        except:
+            pass
+
+
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error(is_silent=True)
 def EnneadTab_startup():
     # Register MCP Routes API (must happen during startup, before Routes server starts)
     _register_mcp_routes()
+
+    # Make sure the pyRevit Routes server is enabled so the Revit Assistant can
+    # connect, without asking the user to touch pyRevit Settings.
+    _enable_routes_server()
 
     # InfraWatch fleet bootstrap. Idempotent, canary-gated, fully wrapped so
     # any failure is silent and cannot block Revit startup. See INFRAWATCH.py.
@@ -677,11 +732,16 @@ def EnneadTab_startup():
 
     DOCUMENTATION.tip_of_day()
 
-  
-        
-    
-    
-    
+    # Weekly usage digest. Reads a handoff file the scheduled CPython producer
+    # wrote; computes nothing here, so this cannot slow down startup. Mirrored
+    # verbatim in Apps/_rhino/startup.py -- both hosts call the same function,
+    # which is what keeps Revit and Rhino from drifting.
+    try:
+        from EnneadTab import RECAP
+        RECAP.show_pending_digest()
+    except:
+        pass
+
     # use this part to force clear a user from database, in case the file is corrupted
     # LEGACY_LOG.force_clear_user(target_user_names = ["fliu"])
     

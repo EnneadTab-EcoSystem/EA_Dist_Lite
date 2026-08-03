@@ -10,6 +10,7 @@ Provides utilities for:
 
 import os
 import sys
+import shutil
 root_folder = os.path.abspath((os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.append(root_folder)
 
@@ -251,12 +252,14 @@ def confirm_shared_para_exist_on_category(doc, para_name, category, para_type = 
     return True
 
 def __override_L_drive_shared_para_file_to_OS_shared_para_file():
+    if not ENVIRONMENT.require_shared_root("Shared Parameters"):
+        return
     L_drive_shared_para_file = os.path.join(ENVIRONMENT.L_DRIVE_HOST_FOLDER, "01_Revit", "03_Library", "EA_SharedParam.txt")
     OS_shared_para_file = "Apps\\lib\\EnneadTab\\documents\\revit\\DefaultSharedParameter.txt"
-    
+    if not os.path.exists(L_drive_shared_para_file):
+        return
 
     # copy L to override OS
-    import shutil
     shutil.copy(L_drive_shared_para_file, OS_shared_para_file)
 
 

@@ -128,7 +128,7 @@ def setup_project_data(doc):
         set_revit_project_data(doc, proj_data)
     except Exception as e:
         print("  ERROR: Failed to save project data: {}".format(str(e)))
-        print("  - This may indicate L drive connectivity issues")
+        print("  - This may indicate shared network folder connectivity issues")
         raise
 
     # Mark document to project data file
@@ -227,7 +227,7 @@ def reattach_project_data(doc):
     display_options = [f.replace(PROJECT_DATA_PREFIX, "").replace(ENVIRONMENT.PLUGIN_EXTENSION, "") for f in data_files]
     
     if not display_options:
-        NOTIFICATION.messenger("No project data files found in L drive.")
+        NOTIFICATION.messenger("No project data files found in the shared network folder.")
         return
     
     # Let user pick from the list
@@ -279,9 +279,19 @@ def _retrieve_project_data_simple(doc):
         dict: Project data dictionary from storage, None if retrieval fails
     """
     try:
-        # Check L drive availability
+        # Check shared network folder availability
         if not ENVIRONMENT.alert_l_drive_not_available():
-            print("ERROR: L drive is not available - cannot retrieve project data")
+            # 2026-07-29 (per request): dev-only console note (print_note self-
+            # gates on USER.IS_DEVELOPER) PLUS a silent ErrorDump fired ASYNC
+            # (runs on the UI thread and fires on every project-data read while
+            # the drive is down) and throttled 24h/machine so it never freezes
+            # the UI or floods.
+            from EnneadTab import ERROR_HANDLE
+            ERROR_HANDLE.print_note("ERROR: Shared network folder is not available - cannot retrieve project data")
+            ERROR_HANDLE.report_infra_warning_to_error_dump_async(
+                "Shared network folder unavailable - cannot retrieve project data",
+                "REVIT_PROJ_DATA._retrieve_project_data_simple",
+                throttle_key="revit_proj_data_l_drive")
             return None
         
         # Check if project data parameter exists
@@ -352,7 +362,7 @@ def get_revit_project_data_with_debugging(doc):
         shared_dump_folder = os.path.dirname(shared_dump_path)
         if not os.path.exists(shared_dump_folder):
             print("ERROR: Shared dump folder does not exist: {}".format(shared_dump_folder))
-            print("This may indicate L drive connectivity issues")
+            print("This may indicate shared network folder connectivity issues")
             print("Attempting auto-setup...")
             return auto_setup_project_data(doc)
         
@@ -469,7 +479,7 @@ def setup_healthcare_project(doc):
         
         # Verify project data was retrieved successfully
         if not proj_data:
-            error_msg = "Failed to retrieve project data even after auto-setup attempt. Please check L drive connectivity and try again."
+            error_msg = "Failed to retrieve project data even after auto-setup attempt. Please check shared network folder connectivity and try again."
             print("ERROR: " + error_msg)
             NOTIFICATION.messenger(error_msg)
             return

@@ -110,7 +110,7 @@ def _trace(msg):
         pass
 
 
-STUDIO_URL = "https://ennead-ai.com"
+STUDIO_URL = "https://enneadtab.com/rendering"
 
 
 # 2026-06-04: visible build stamp so we can tell at a glance whether the

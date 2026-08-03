@@ -249,8 +249,8 @@ def _print_summary():
     print("\nRECOMMENDATIONS:")
     print("-" * 30)
     
-    print("1. If L Drive is not accessible:")
-    print("   - Contact IT to ensure L drive is properly mapped")
+    print("1. If shared network folder is not accessible:")
+    print("   - Contact IT to ensure the office shared drive is properly mapped")
     print("   - Check network connectivity")
     print("   - Verify VPN connection if working remotely")
     

@@ -4,7 +4,7 @@ __doc__ = "Load related Enscape image to Photoshop"
 
 import rhinoscriptsyntax as rs
 
-from EnneadTab import ENVIRONMENT, EXE, DATA_FILE, FOLDER
+from EnneadTab import ENVIRONMENT, EXE, DATA_FILE, FOLDER, NOTIFICATION
 from EnneadTab import LOG, ERROR_HANDLE
 
 
@@ -36,8 +36,10 @@ def load_enscape_to_psd():
     dump_file = "{}\EA_PSD_STACK.txt".format(FOLDER.DUMP_FOLDER)
     DATA_FILE.set_list(OUT, dump_file)
 
-    exe_path = r"L:\4b_Applied Computing\03_Rhino\12_EnneadTab for Rhino\Source Codes\lib\Load_Enscape_Image_As_PSD_exe\Load_Enscape_Image_As_PSD_exe.exe"
-    EXE.try_open_app(exe_path)
+    if not EXE.try_open_app("Load_Enscape_Image_As_PSD_exe"):
+        NOTIFICATION.messenger(
+            main_text="Cannot find Load_Enscape_Image_As_PSD_exe. Check ExeProducts or the shared network folder."
+        )
     """sample
     I:\2135\1_Study\EA 2022-09-12 mushroom stem cladding study\raw render\cam 04_opt UHPC.png
     I:\2135\1_Study\EA 2022-09-12 mushroom stem cladding study\raw render\cam 04_opt metal.png

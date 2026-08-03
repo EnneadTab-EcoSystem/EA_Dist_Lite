@@ -6,7 +6,7 @@ import os, sys
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "KingDuck.lib")))
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
-from EnneadTab import ERROR_HANDLE, FOLDER, ARCADE
+from EnneadTab import ERROR_HANDLE, FOLDER, ARCADE, ENVIRONMENT
 from EnneadTab.REVIT import REVIT_FORMS, REVIT_EVENT
 
 
@@ -21,8 +21,14 @@ def check_is_template_folder():
     #print extension
     if extension not in [".rft", ".rfa"]:
         return
-    if r"L:\4b_Applied Computing\01_Revit\02_Template" in path or r"L:\4b_Applied Computing\01_Revit\03_Library" in path:
-        REVIT_FORMS.notification(self_destruct = 5,main_text = "This family is currently saved in L drive\nRepath to your project folder to avoid affecting the original.", sub_text = path)
+    template_root = os.path.join(ENVIRONMENT.L_DRIVE_HOST_FOLDER, "01_Revit", "02_Template")
+    library_root = os.path.join(ENVIRONMENT.L_DRIVE_HOST_FOLDER, "01_Revit", "03_Library")
+    if path.startswith(template_root) or path.startswith(library_root):
+        REVIT_FORMS.notification(
+            self_destruct=5,
+            main_text="This family is currently saved in the shared network library/template folder\nRepath to your project folder to avoid affecting the original.",
+            sub_text=path
+        )
 
 @ERROR_HANDLE.try_catch_error(is_silent=True)
 def main():

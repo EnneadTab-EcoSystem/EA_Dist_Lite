@@ -360,20 +360,51 @@ def _gather_data(raw_data, key_column, is_zero_indexed):
 
     return out
             
-def get_color_template_data(template = None, worksheet = "HEALTHCARE"):
+def get_color_template_data(template = None, worksheet = "HEALTHCARE",
+                            source = "excel", project_number = None,
+                            sector = "HEALTHCARE", token = None):
     """Get color template data from department standards.
 
     Args:
-        template (str, optional): The template path. Defaults to None.
+        template (str, optional): The template path (Excel source). Defaults to None.
         worksheet (str, optional): Worksheet name to read inside the
             template. Defaults to "HEALTHCARE" for backward compatibility
             with the original 2151 button. Pass other sheet names (e.g.
             "CANCER CENTER") to read alternate sheets that share the same
             6-column Ennead healthcare dual-pair layout.
+        source (str, optional): "excel" (default, unchanged behavior) or
+            "online" to pull the resolved project book from enneadtab.com so a
+            user without the Excel can still import. Shared across Revit + Rhino.
+        project_number (str, optional): project number for the online source.
+        sector (str, optional): sector for the online source. Defaults "HEALTHCARE".
+        token (str, optional): desktop auth token for the online source. The
+            caller acquires it host-appropriately (Revit: AUTH.get_token();
+            Rhino: AUTH.get_token_blocking()).
 
     Returns:
-        dict: The resulting color data.
+        dict: {"department_color_map": {...}, "program_color_map": {...}}.
+            ALWAYS a dict (never None) so the downstream apply path keeps its
+            shape contract even on a missing/expired token.
     """
+    _EMPTY = {"department_color_map": {}, "program_color_map": {}}
+
+    # Online source: fetch the resolved book instead of reading Excel. The response is already the
+    # {department_color_map, program_color_map} shape, so the downstream apply path is unchanged.
+    if source == "online":
+        # rev2 finding D2: never return None; _common.get_json RAISES AIRequestError on 401/network.
+        if not token:
+            return _EMPTY
+        from EnneadTab.AI import _common
+        url = "https://enneadtab.com/color-book/pull/{}?sector={}".format(project_number, sector)
+        try:
+            data = _common.get_json(url, token = token)
+        except _common.AIRequestError:
+            return _EMPTY
+        if not isinstance(data, dict):
+            return _EMPTY
+        return {"department_color_map": data.get("department_color_map", {}),
+                "program_color_map": data.get("program_color_map", {})}
+
     if template:
         safe_template = FOLDER.copy_file_to_local_dump_folder(template)
     else:

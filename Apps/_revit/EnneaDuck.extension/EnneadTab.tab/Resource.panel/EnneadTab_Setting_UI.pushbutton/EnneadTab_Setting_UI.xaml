@@ -260,6 +260,8 @@
                                     <TextBlock Text="The default amount of notification popup." Margin="20,0,0,20" />
                                     <RadioButton  Content="Full." x:Name="radio_bt_popup_full" FontWeight="Bold"/>
                                     <TextBlock Text="The everything, including the fun stuff." Margin="20,0,0,20"/>
+                                    <CheckBox Content="Weekly usage digest popup." IsChecked="True" x:Name="checkbox_recap_digest_weekly"/>
+                                    <TextBlock Text="A once-a-week look at your own usage. Choosing Minimal above turns this off too." Margin="20,0,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
 
                             </GroupBox>
@@ -338,7 +340,9 @@
                                     <CheckBox Content="Email outstanding warning during opening." IsChecked="True"  x:Name="checkbox_email_opening_warning_diff"/>
                                     <TextBlock Text="Alerting number threshold = 2000 coins." Margin="20,0,0,20"/>
                                     <CheckBox Content="Email outstanding warning between syncing." IsChecked="True" x:Name="checkbox_email_local_warning_diff"/>
-                                    <TextBlock Text="Alerting number threshold = 2500 coins." Margin="20,0,0,0"/>
+                                    <TextBlock Text="Alerting number threshold = 2500 coins." Margin="20,0,0,20"/>
+                                    <CheckBox Content="Monthly EnneadTab usage recap." IsChecked="True" x:Name="checkbox_recap_email_monthly"/>
+                                    <TextBlock Text="Once a month: what you used, and a few tools you have not tried yet." Margin="20,0,0,0" TextWrapping="Wrap"/>
                                 </StackPanel>
 
                             </GroupBox>

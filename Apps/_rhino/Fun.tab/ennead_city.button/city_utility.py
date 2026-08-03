@@ -8,10 +8,20 @@ current_dir = os.path.dirname(os.path.realpath(__file__))
 lib_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(current_dir))), "lib")
 sys.path.append(lib_path)
 
-from EnneadTab import ENVIRONMENT, DATA_FILE, FOLDER, USER
+from EnneadTab import ENVIRONMENT, DATA_FILE, FOLDER, USER, NOTIFICATION
 
 
-MAIN_FOLDER = os.path.join(ENVIRONMENT.DB_FOLDER, "EnneadCity")
+# Prefer the shared DB folder; when the shared root is offline, sandbox under
+# local Dump so the fun tool still works without crashing on a dead L:.
+if ENVIRONMENT.is_shared_root_available():
+    MAIN_FOLDER = os.path.join(ENVIRONMENT.DB_FOLDER, "EnneadCity")
+else:
+    ENVIRONMENT.announce_shared_root_status()
+    MAIN_FOLDER = os.path.join(ENVIRONMENT.DUMP_FOLDER, "EnneadCity")
+    NOTIFICATION.messenger(
+        main_text="Shared network folder is offline. EnneadCity will use a local sandbox (not shared)."
+    )
+
 USER_DATA_FILE = os.path.join(MAIN_FOLDER, "city_setting")
 PLOT_FILES_FOLDER = os.path.join(MAIN_FOLDER, "plots")
 CITY_SOURCE_FILE = os.path.join(MAIN_FOLDER, "City_Source.3dm")

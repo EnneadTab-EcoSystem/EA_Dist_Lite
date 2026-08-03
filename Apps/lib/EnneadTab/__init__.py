@@ -102,7 +102,7 @@ def import_module(module_name):
             extension, which will be stripped before import.
     
     Note:
-        If an import fails, the error will be printed to stdout only if #!python3 is not present in the script.
+        If an import fails, the error is printed to stdout only if #!python3 is absent AND the user is a developer (USER.IS_DEVELOPER); dev-only gate added 2026-07-29 per request.
         Two attempts are made to format the error message:
         1. Using the full traceback
         2. Using just the exception string if traceback formatting fails
@@ -128,12 +128,39 @@ def import_module(module_name):
         __import__("{}.{}".format(__package_name__, base_name), fromlist=['*'])
     except Exception as e:
         if not should_silent:
+            # 2026-07-29 (per request): this raw import-traceback dump is now
+            # developer-only. Fail-safe: if USER cannot be resolved this early in
+            # package init, default to non-developer (suppress) so average users
+            # never see a Python traceback.
+            _init_is_dev = False
             try:
-                print("Cannot import {} because\n\n{}".format(
-                    module_name, traceback.format_exc()))
-            except:
-                print("Cannot import {} because\n\n{}".format(
-                    module_name, str(e)))
+                import USER
+                _init_is_dev = USER.IS_DEVELOPER
+            except Exception:
+                _init_is_dev = False
+            if _init_is_dev:
+                try:
+                    print("Cannot import {} because\n\n{}".format(
+                        module_name, traceback.format_exc()))
+                except:
+                    print("Cannot import {} because\n\n{}".format(
+                        module_name, str(e)))
+            # Fleet signal for the developer, fired ASYNC (background thread) so
+            # the ErrorDump POST never adds to package-init/startup latency.
+            # SINGLE (not per-module) throttle key: one broken shared dependency
+            # cascades to dozens of modules here, so a class-level key caps this
+            # at one report/machine/24h instead of a startup flood. Note: this
+            # sits under `if not should_silent`, so #!python3-marked modules
+            # (expected to fail under IronPython 2.7) intentionally produce no
+            # signal. 2026-07-29 (per request).
+            try:
+                import ERROR_HANDLE
+                ERROR_HANDLE.report_infra_warning_to_error_dump_async(
+                    "Package import failed for {}: {}".format(module_name, str(e)),
+                    "EnneadTab.__init__.import_module",
+                    throttle_key="init_import_fail")
+            except Exception:
+                pass
 
 def initialize_package():
     """Initialize the package by importing all modules.

@@ -19,7 +19,7 @@ enneadtab_lib_path = os.path.join(script_dir, "..")
 if enneadtab_lib_path not in sys.path:
     sys.path.append(enneadtab_lib_path)
 
-from ENVIRONMENT import DB_FOLDER
+from ENVIRONMENT import SHARED_DUMP_FOLDER
 
 def get_summary_data(data):
     """Aggregate counts and machine names for GPU model, RAM size, CPU model, OS version, and storage size across all machines."""
@@ -248,18 +248,23 @@ HTML_TEMPLATE = """
 
 def main():
     """Reads machine_data.json and generates a summary HTML report in the same folder."""
-    # Use environment variable instead of hardcoded path
-    folder = os.path.join(DB_FOLDER, "Shared Data Dump", "_internal reports")
+    # Use redirected SHARED_DUMP_FOLDER so offline mode lands in local Dump
+    folder = os.path.join(SHARED_DUMP_FOLDER, "_internal reports")
     json_path = os.path.join(folder, 'machine_data.json')
     html_path = os.path.join(folder, 'machine_report.html')
     if not os.path.exists(json_path):
         return
-    with open(json_path, 'r', encoding='utf-8') as f:
-        data = json.load(f)
-    summary = get_summary_data(data)
-    html = HTML_TEMPLATE.replace('__SUMMARY__', json.dumps(summary)).replace('__DATA__', json.dumps(data))
-    with open(html_path, 'w', encoding='utf-8') as f:
-        f.write(html)
+    try:
+        with open(json_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        summary = get_summary_data(data)
+        html = HTML_TEMPLATE.replace('__SUMMARY__', json.dumps(summary)).replace('__DATA__', json.dumps(data))
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        with open(html_path, 'w', encoding='utf-8') as f:
+            f.write(html)
+    except Exception as e:
+        print("display_pc_spec failed: {}".format(e))
 
 if __name__ == '__main__':
     main()

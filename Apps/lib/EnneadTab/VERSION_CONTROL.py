@@ -53,7 +53,17 @@ def updater_for_shanghai():
         ERROR_HANDLE.print_note("Checking backup folder: {}".format(ENVIRONMENT.BACKUP_REPO_FOLDER))
         if not os.path.exists(os.path.join(ENVIRONMENT.BACKUP_REPO_FOLDER)):
             ERROR_HANDLE.print_note("Backup folder not found at: {}".format(ENVIRONMENT.BACKUP_REPO_FOLDER))
-            NOTIFICATION.messenger("You will need to connect to L drive to update EnneadTab")
+            # 2026-07-29 (per request): popup is developer-only, but the developer
+            # still needs a fleet signal -> silent ErrorDump. Runs on a background
+            # thread (no UI freeze), but it is reached from startup/save/sync gated
+            # only by a ~60-min cap, so throttle 24h/machine to avoid flooding
+            # during a sustained outage.
+            ERROR_HANDLE.report_infra_warning_to_error_dump(
+                "Update backup folder unreachable: {}".format(ENVIRONMENT.BACKUP_REPO_FOLDER),
+                "VERSION_CONTROL.updater_for_shanghai",
+                throttle_key="version_control_backup_unreachable")
+            if USER.IS_DEVELOPER:
+                NOTIFICATION.messenger("You will need to connect to the shared network folder to update EnneadTab")
             return False
         
         ERROR_HANDLE.print_note("Checking ECO_SYS_FOLDER: {}".format(ENVIRONMENT.ECO_SYS_FOLDER))

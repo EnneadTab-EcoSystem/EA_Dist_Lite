@@ -143,7 +143,16 @@ try:
     import requests # pyright: ignore
     REQUESTS_AVAILABLE = True
 except ImportError:
-    NOTIFICATION.messenger("requests module not found, please install it.")
+    # 2026-07-29 (per request): this env-provisioning popup fires at import time.
+    # It is now developer-only. Fail-safe: if USER can't be resolved this early,
+    # default to non-developer (suppress) so average users never see it.
+    try:
+        import USER
+        _acc_is_dev = USER.IS_DEVELOPER
+    except Exception:
+        _acc_is_dev = False
+    if _acc_is_dev:
+        NOTIFICATION.messenger("requests module not found, please install it.")
     REQUESTS_AVAILABLE = False
 
 # Setup logging
@@ -623,6 +632,19 @@ def get_reusable_access_token():
     """
     if not REQUESTS_AVAILABLE:
         logging.error("requests module not available, cannot get access token")
+        # 2026-07-29 (per request): runtime fleet signal for the developer when
+        # an ACC feature is actually blocked by the missing module. Reported
+        # here (NOT at import) and fired ASYNC so the UI thread never blocks on
+        # the network POST. Throttled; import wrapped so a standalone/direct run
+        # (parent dir not on sys.path) degrades cleanly instead of raising.
+        try:
+            from EnneadTab import ERROR_HANDLE
+            ERROR_HANDLE.report_infra_warning_to_error_dump_async(
+                "requests module unavailable in engine; ACC access-token blocked",
+                "REVIT_ACC.get_access_token",
+                throttle_key="revit_acc_requests_missing")
+        except Exception:
+            pass
         return None
         
     global _CACHED_TOKEN
@@ -744,6 +766,15 @@ def get_acc_projects_data(use_record = True):
     # Check if requests is available
     if not REQUESTS_AVAILABLE:
         logging.error("requests module not available, cannot fetch ACC projects data")
+        # 2026-07-29 (per request): runtime fleet signal (async, throttled), not import.
+        try:
+            from EnneadTab import ERROR_HANDLE
+            ERROR_HANDLE.report_infra_warning_to_error_dump_async(
+                "requests module unavailable in engine; ACC projects fetch blocked",
+                "REVIT_ACC.get_acc_projects_data",
+                throttle_key="revit_acc_requests_missing")
+        except Exception:
+            pass
         return None
         
     # Fetch fresh data from API
@@ -1253,6 +1284,15 @@ def get_ACC_summary_data(show_progress = False):
     # Check if requests is available
     if not REQUESTS_AVAILABLE:
         logging.error("requests module not available, cannot fetch ACC summary data")
+        # 2026-07-29 (per request): runtime fleet signal (async, throttled), not import.
+        try:
+            from EnneadTab import ERROR_HANDLE
+            ERROR_HANDLE.report_infra_warning_to_error_dump_async(
+                "requests module unavailable in engine; ACC summary fetch blocked",
+                "REVIT_ACC.get_acc_summary_data",
+                throttle_key="revit_acc_requests_missing")
+        except Exception:
+            pass
         return None
         
     all_projects_data = get_acc_projects_data()

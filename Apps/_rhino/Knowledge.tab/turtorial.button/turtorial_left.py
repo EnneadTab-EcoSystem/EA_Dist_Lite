@@ -36,6 +36,9 @@ def open_gh_by_selection(folder, selected_opt):
  
 
 def open_local_tutorial():
+    if not ENVIRONMENT.require_shared_root("Tutorials"):
+        return
+
     folder = '{}\\03_Rhino\\12_EnneadTab for Rhino\\Documents\\Tutorials'.format(ENVIRONMENT.L_DRIVE_HOST_FOLDER)
     files = os.listdir(folder)
     special_folder = "#PDF in this directory are reference only"
@@ -79,7 +82,7 @@ def open_playlist():
 @ERROR_HANDLE.try_catch_error()
 def tutorial():
 
-    opts = ["L drive contents(PDFs, Docs, GH Scripts, Videos)", "EnneadTab YouTube Playlist"]
+    opts = ["Shared network folder contents (PDFs, Docs, GH Scripts, Videos)", "EnneadTab YouTube Playlist"]
     res = rs.PopupMenu(items = opts, modes = [0, 0])
 
 

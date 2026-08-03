@@ -23,11 +23,22 @@ Note:
     configuration settings.
 """
 
+import os
+import random
+import time
+
 import SOUND
 import DATA_FILE
 import EXE
 import IMAGE
 import CONFIG
+import FOLDER
+
+# Persistent NotificationHost inbox (unique files; host drains them).
+_MESSENGER_INBOX = "messenger_inbox"
+_NOTIF_PREFIX = "notif_"
+_MUTE_UNTIL_FILE = "notification_host_mute_until.txt"
+
 
 def is_hate_messenger():
     """Check if standard notifications are disabled.
@@ -37,7 +48,27 @@ def is_hate_messenger():
     Returns:
         bool: True if user has opted for minimal notifications
     """
-    return  CONFIG.get_setting("radio_bt_popup_minimal", False) 
+    return  CONFIG.get_setting("radio_bt_popup_minimal", False)
+
+
+def is_temporarily_muted():
+    """True if user muted toasts for 1 hour from a toast mute icon."""
+    path = FOLDER.get_local_dump_folder_file(_MUTE_UNTIL_FILE)
+    if not os.path.exists(path):
+        return False
+    try:
+        with open(path, "r") as f:
+            raw = f.read().strip()
+        until = float(raw)
+        if until > time.time():
+            return True
+        try:
+            os.remove(path)
+        except Exception:
+            pass
+        return False
+    except Exception:
+        return False
 
 def is_hate_duck_pop():
     """Check if duck notifications are disabled.
@@ -74,13 +105,58 @@ def get_random_font():
     Returns:
         str: Name of randomly selected font
     """
-    import random
     return random.choice(FUNFONTS)
+
+
+def _ensure_inbox_dir():
+    inbox_dir = FOLDER.get_local_dump_folder_folder(_MESSENGER_INBOX)
+    if not os.path.exists(inbox_dir):
+        try:
+            os.makedirs(inbox_dir)
+        except Exception:
+            pass
+    return inbox_dir
+
+
+def _write_inbox_item(data):
+    """Atomically write one unique notification JSON into the host inbox.
+
+    Always enqueues even if the host is down. Returns True on write success.
+    """
+    _ensure_inbox_dir()
+    name = "{}{}_{}".format(
+        _NOTIF_PREFIX,
+        int(time.time() * 1000),
+        random.randint(1000, 9999),
+    )
+    rel = os.path.join(_MESSENGER_INBOX, name)
+    try:
+        DATA_FILE.set_data(data, rel)
+        path = FOLDER.get_local_dump_folder_file(rel)
+        return os.path.exists(path)
+    except Exception as e:
+        print("Failed to write notification inbox item: {}".format(e))
+        return False
+
+
+def _legacy_messenger_fallback(data):
+    """One-shot Messenger.exe path when NotificationHost cannot be started."""
+    DATA_FILE.set_data(data, "messenger_data")
+    result = EXE.try_open_app("Messenger")
+    if not result:
+        if EXE._is_rate_limited("Messenger"):
+            print("Messenger is temporarily rate limited. Message: {}".format(
+                data.get("main_text")))
+        else:
+            print("Messenger failed to start. Message: {}".format(
+                data.get("main_text")))
+
 
 def messenger(main_text,
              width=None,
              height=None,
              image=None,
+             audio=None,
              animation_in_duration=None,
              animation_stay_duration=None,
              animation_fade_duration=None,
@@ -88,25 +164,35 @@ def messenger(main_text,
              background_color=None,
              font_size=None,
              font_color=None,
-             font_family=None):
-    """Display a customizable popup notification.
-    
-    Creates an animated notification window with rich customization options
-    for appearance and timing. Notifications automatically fade after display.
+             font_family=None,
+             level=None,
+             actions=None,
+             youtube=None):
+    """Display a customizable popup notification via NotificationHost.
+
+    Writes a unique inbox JSON then wakes the persistent host if needed.
+    Falls back to legacy one-shot Messenger.exe if the host cannot start.
 
     Args:
         main_text (str): Message to display (supports line breaks)
-        width (int, optional): Maximum width in pixels. Defaults to 1200.
-        height (int, optional): Maximum height in pixels. Defaults to 150.
-        image (str, optional): Path to image to display
-        animation_in_duration (int, optional): Fade-in duration in milliseconds
-        animation_stay_duration (int, optional): Display duration in milliseconds
-        animation_fade_duration (int, optional): Fade-out duration in milliseconds
-        x_offset (int, optional): Horizontal position offset
-        background_color (str, optional): Background color in hex or RGB format
+        width (int, optional): Legacy size hint (ignored by host layout)
+        height (int, optional): Legacy size hint (ignored by host layout)
+        image (str, optional): Path to png/jpg/jpeg/gif/bmp/webp shown above text.
+            A YouTube watch/share URL here is also accepted (thumbnail + Open).
+        audio (str, optional): Path or EnneadTab audio name (.wav) played as cue
+        animation_in_duration: Legacy timing (optional)
+        animation_stay_duration: Stay duration - seconds if < 100, else ms
+        animation_fade_duration: Legacy timing (optional)
+        x_offset (int, optional): Legacy offset (optional)
+        background_color (str, optional): Legacy color (optional)
         font_size (int, optional): Text size in points
-        font_color (str, optional): Text color in hex or RGB format
-        font_family (str, optional): Font name from FUNFONTS or system fonts
+        font_color (str, optional): Legacy text color (optional)
+        font_family (str, optional): Font name
+        level (str, optional): info | success | warning | error
+        actions (list, optional): Up to 2 action dicts with keys
+            id, label, type (dismiss|open_path|open_url|copy), payload
+        youtube (str, optional): YouTube URL or 11-char video id. Host fetches
+            a thumbnail into the toast and adds an Open action (no iframe).
 
     Note:
         If notifications are disabled via user preferences, this function
@@ -114,6 +200,9 @@ def messenger(main_text,
     """
 
     if is_hate_messenger():
+        return
+
+    if is_temporarily_muted():
         return
     
     if not isinstance(main_text, str):
@@ -133,6 +222,14 @@ def messenger(main_text,
         data["height"] = height 
     if image is not None:
         data["image"] = image
+    if youtube is not None:
+        data["youtube"] = youtube
+    if audio is not None:
+        resolved = SOUND.get_audio_path_by_name(audio)
+        if resolved:
+            data["audio"] = resolved
+        elif os.path.isfile(str(audio)):
+            data["audio"] = str(audio)
     if x_offset is not None:
         data["x_offset"] = x_offset
     if font_color:
@@ -143,18 +240,21 @@ def messenger(main_text,
         data["font_size"] = font_size
     if background_color:
         data["background_color"] = background_color
+    if level:
+        data["level"] = level
+    if actions:
+        data["actions"] = actions
 
+    wrote = _write_inbox_item(data)
+    if not wrote:
+        _legacy_messenger_fallback(data)
+        return
 
-
-    DATA_FILE.set_data(data, "messenger_data")
-
-    result = EXE.try_open_app("Messenger")
-    if not result:
-        # Check if this might be due to rate limiting
-        if EXE._is_rate_limited("Messenger"):
-            print("Messenger is temporarily rate limited. Message: {}".format(main_text))
-        else:
-            print("Messenger failed to start. Message: {}".format(main_text))
+    woke = EXE.ensure_notification_host()
+    if not woke:
+        print("NotificationHost unavailable; falling back to Messenger. Message: {}".format(
+            main_text))
+        _legacy_messenger_fallback(data)
 
 
 def duck_pop(main_text=None):
@@ -198,7 +298,14 @@ def unit_test():
     Tests both standard and duck notifications with default settings.
     """
     duck_pop("Hello, Ennead!")
-    messenger("Hello Ennead!")
+    messenger("Hello Ennead!", level="info")
+    messenger(
+        "Unit test with actions",
+        level="success",
+        actions=[
+            {"id": "copy", "label": "Copy", "type": "copy", "payload": "Hello Ennead!"},
+        ],
+    )
 
 def window_msg(title, message, image=None, duration=10):
     """Display a Windows 10 style toast notification in the corner.

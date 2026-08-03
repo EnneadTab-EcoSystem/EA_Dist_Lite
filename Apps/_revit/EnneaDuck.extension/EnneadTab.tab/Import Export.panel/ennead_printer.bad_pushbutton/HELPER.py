@@ -25,7 +25,12 @@ def create_color_setting_to_sheet(doc):
     shared_para_file = doc.Application.OpenSharedParameterFile()
     if not shared_para_file:
         NOTIFICATION.messenger('[{}]\nneed to have a valid shared parameter file'.format(doc.Title))
+        if not ENVIRONMENT.require_shared_root("Shared Parameters"):
+            return
         filepath = "{}\\01_Revit\\03_Library\\{}_SharedParam.txt".format(ENVIRONMENT.L_DRIVE_HOST_FOLDER, ENVIRONMENT.PLUGIN_ABBR)
+        if not os.path.exists(filepath):
+            NOTIFICATION.messenger('Cannot locate shared parameter file on the shared network folder.')
+            return
         doc.Application.SharedParametersFilename = filepath
 
     definition = find_definition_by_name(doc, "Print_In_Color")
@@ -86,9 +91,12 @@ def create_issue_para_to_sheet(doc, issue_name):
     shared_para_file = doc.Application.OpenSharedParameterFile()
     if not shared_para_file:
         NOTIFICATION.messenger('[{}]\nneed to have a valid shared parameter file'.format(doc.Title))
+        if not ENVIRONMENT.require_shared_root("Shared Parameters"):
+            return
         filepath = "{}\\01_Revit\\03_Library\\{}_SharedParam.txt".format(ENVIRONMENT.L_DRIVE_HOST_FOLDER, ENVIRONMENT.PLUGIN_ABBR)
         if not os.path.exists(filepath):
             NOTIFICATION.messenger('Cannot locate a good shared parameter file.')
+            return
         doc.Application.SharedParametersFilename = filepath
 
     definition = find_definition_by_name(doc, issue_name)

@@ -6,7 +6,7 @@ import sys
 import Rhino # pyright: ignore
 import rhinoscriptsyntax as rs
 
-from EnneadTab import FOLDER
+from EnneadTab import FOLDER, ENVIRONMENT
 from EnneadTab import LOG, ERROR_HANDLE
 import asset_UI as ui
 
@@ -16,6 +16,8 @@ def insert_ref_block(block_name, is_ref_block_method):
         return
 
     external_block_filepath = get_external_filepath(block_name)
+    if not external_block_filepath:
+        return
 
     dummyInitialObjects = [Rhino.Geometry.Point(Rhino.Geometry.Plane.WorldXY.Origin)]
     dummyInitialAttributes = [Rhino.DocObjects.ObjectAttributes()]
@@ -58,6 +60,8 @@ def insert_ref_block(block_name, is_ref_block_method):
 
 
 def get_external_filepath(block_name):
+    if not ENVIRONMENT.require_shared_root("Place Asset"):
+        return None
 
     folder = os.path.join(ENVIRONMENT.L_DRIVE_HOST_FOLDER, "00_Asset Library")
     if folder in block_name:
@@ -74,6 +78,9 @@ def get_external_filepath(block_name):
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def place_asset():
+    if not ENVIRONMENT.require_shared_root("Place Asset"):
+        return
+
     folder = os.path.join(ENVIRONMENT.L_DRIVE_HOST_FOLDER, "00_Asset Library")
     files = os.listdir(folder)
 
