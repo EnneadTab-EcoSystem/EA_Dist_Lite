@@ -188,38 +188,104 @@ def _copy_entries(source_scheme, destination_scheme, source_entries, destination
     for entry in destination_entries:
         destination_map[_entry_key(entry)] = entry
 
-    storage_type = _resolve_storage_type(destination_entries, source_entries)
+    storage_type = _resolve_storage_type(destination_scheme, destination_entries)
     if storage_type is None:
-        _notify("Unable to determine entry storage type for destination scheme.")
+        if not destination_entries:
+            # The destination scheme is empty AND this Revit version did not give us a
+            # usable ColorFillScheme.StorageType, so nothing here can tell us what value
+            # type it expects. Rather than guess (guessing from the source is the bug
+            # this whole change fixes), hand the user the one action that resolves it.
+            _notify("{} has no entries yet, so Revit cannot tell what kind of value it expects.\n\n"
+                    "Please add one entry to it in Revit first -- any value is fine -- then run this "
+                    "tool again. The rest of the entries will come across automatically.".format(
+                        _scheme_subject(destination_scheme)))
+        else:
+            _notify("Unable to determine entry storage type for destination scheme.")
         return stats
 
+    mismatch_reported = False
     for source_entry in source_entries:
         key = _entry_key(source_entry)
         if key and key[0] != _storage_type_to_key(storage_type):
-            _notify("Source entry storage type does not match destination scheme.\nPlease ensure both schemes use the same parameter type.")
+            if not mismatch_reported:
+                _notify("Source entry storage type does not match destination scheme.\nPlease ensure both schemes use the same parameter type.")
+                mismatch_reported = True
             continue
         existing_entry = destination_map.get(key)
         if existing_entry:
             if override_matches:
                 _apply_entry_data(existing_entry, source_entry)
-                destination_scheme.UpdateEntry(existing_entry)
+                if not _commit_entry(destination_scheme, existing_entry, update=True):
+                    continue
                 destination_map[key] = existing_entry
                 stats["updated"] += 1
             continue
         new_entry = DB.ColorFillSchemeEntry(storage_type)
         _apply_entry_data(new_entry, source_entry)
-        destination_scheme.AddEntry(new_entry)
+        if not _commit_entry(destination_scheme, new_entry, update=False):
+            continue
         destination_map[key] = new_entry
         stats["added"] += 1
     return stats
 
 
-def _resolve_storage_type(destination_entries, source_entries):
+def _resolve_storage_type(destination_scheme, destination_entries):
+    """Storage type the DESTINATION scheme requires for its entries.
+
+    2026-07-30: this used to read destination_entries[0] and, when the destination
+    scheme had NO entries, fall back to source_entries[0]. That made the caller's
+    "does the source match the destination?" guard compare the source against
+    ITSELF, so it could never fire, and AddEntry then threw
+    "The scheme and the entry have different parameter storage type."
+    (senzhang-todo #3260). The scheme is the authority, never the source.
+
+    ColorFillScheme.StorageType exists in Revit 2022+ and is valid even when the
+    scheme has no entries yet; the entries[0] read is kept only as a fallback for
+    older API surfaces. There is deliberately NO source-based fallback -- if the
+    destination's type cannot be determined we return None and the caller aborts,
+    rather than guessing a value that defeats the guard.
+    """
+    # StorageType.None cannot be written literally -- "None" is a Python keyword --
+    # so it is fetched by name; the 3-arg getattr keeps this total if the member
+    # is ever absent, in which case any non-null StorageType is accepted.
+    storage_type_none = getattr(DB.StorageType, "None", None)
+    scheme_storage_type = getattr(destination_scheme, "StorageType", None)
+    if scheme_storage_type is not None and scheme_storage_type != storage_type_none:
+        return scheme_storage_type
     if destination_entries:
         return destination_entries[0].StorageType
-    if source_entries:
-        return source_entries[0].StorageType
     return None
+
+
+def _scheme_subject(scheme):
+    """Sentence subject for a color scheme, quoted when we have a real name."""
+    name = getattr(scheme, "Name", None)
+    if name:
+        return "\"{}\"".format(name)
+    return "The destination color scheme"
+
+
+def _commit_entry(destination_scheme, entry, update):
+    """Add/update one entry, converting a Revit rejection into a readable message.
+
+    Backstop for the cases the storage-type guard cannot see: AddEntry also rejects
+    duplicate values, out-of-range values, and invalid fill-pattern ids. Without this
+    a single bad entry aborted the whole transfer with a raw exception dialog.
+    """
+    if not update and hasattr(destination_scheme, "IsEntryConsistentWithScheme"):
+        if not destination_scheme.IsEntryConsistentWithScheme(entry):
+            _notify("An entry is not compatible with the destination scheme and was skipped.")
+            return False
+    try:
+        if update:
+            destination_scheme.UpdateEntry(entry)
+        else:
+            destination_scheme.AddEntry(entry)
+        return True
+    except Exception as e:
+        ERROR_HANDLE.print_note("transfer_color_scheme: entry rejected by Revit: {}".format(e))
+        _notify("Revit rejected one color scheme entry, so it was skipped:\n{}".format(e))
+        return False
 
 
 def _apply_entry_data(target_entry, source_entry):

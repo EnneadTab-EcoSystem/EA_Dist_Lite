@@ -100,7 +100,7 @@ def _trace(msg):
 # placeholder instead of stale local data.
 
 # Web deep-link to Studio — opened via the header link.
-STUDIO_URL = "https://ennead-ai.com"
+STUDIO_URL = "https://enneadtab.com/rendering"
 
 
 # 2026-06-04: visible build stamp (mirrors the Rhino sibling) so a stale

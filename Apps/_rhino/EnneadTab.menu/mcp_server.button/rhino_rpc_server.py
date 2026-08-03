@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Rhino HTTP RPC Server — exposes Rhino API over localhost:48885.
+"""Rhino HTTP RPC Server — exposes Rhino API over localhost:48900.
 
 This module runs INSIDE Rhino via IronPython 2.7.  It provides start_server()
 and stop_server() to manage a System.Net.HttpListener on a background thread.
@@ -31,8 +31,18 @@ import traceback
 _listener = None
 _thread = None
 _running = False
+_active_port = None
 
-PORT = 48885
+# 48900..48915 is Rhino's OWN port window, disjoint from pyRevit Routes' 48884..48899.
+# pyRevit Routes starts at 48884 and increments per Revit instance, so the old fixed Rhino port
+# (48885) collided with a 2nd Revit instance. Two reasons this is a RANGE, not one fixed port:
+#   1. Separation from Revit: 48900+ never overlaps the Revit window (for <=16 of each).
+#   2. Many Rhino: the server binds the FIRST FREE port in the window, so a 2nd/3rd Rhino each
+#      claim their own port instead of failing to bind a single fixed one (mirrors pyRevit).
+# The desktop RhinoAssistant client probes the same window and confirms `app == "rhino"`.
+# (senzhang-todo #3156)
+PORT_START = 48900
+PORT_SPAN = 16
 
 
 # ---------------------------------------------------------------------------
@@ -40,25 +50,46 @@ PORT = 48885
 # ---------------------------------------------------------------------------
 
 def start_server():
-    """Start the HTTP listener on a background thread."""
-    global _listener, _thread, _running
+    """Start the HTTP listener on a background thread.
+
+    Binds the FIRST FREE port in the Rhino window (PORT_START..PORT_START+PORT_SPAN-1).
+    A port taken by another Rhino (or anything else) is skipped, so a 2nd/3rd Rhino
+    each claim their own port instead of failing on a single fixed one."""
+    global _listener, _thread, _running, _active_port
     if _running:
-        return "Server already running on port {}".format(PORT)
+        return "Server already running on port {}".format(_active_port)
 
-    _listener = HttpListener()
-    _listener.Prefixes.Add("http://localhost:{}/".format(PORT))
-    _listener.Start()
-    _running = True
+    last_error = None
+    for port in range(PORT_START, PORT_START + PORT_SPAN):
+        listener = HttpListener()
+        listener.Prefixes.Add("http://localhost:{}/".format(port))
+        try:
+            listener.Start()
+        except Exception as e:
+            # Port already in use (another Rhino, or a stale reservation) -- try the next.
+            last_error = e
+            try:
+                listener.Close()
+            except Exception:
+                pass
+            continue
 
-    _thread = Thread(ThreadStart(_listen_loop))
-    _thread.IsBackground = True
-    _thread.Start()
-    return "Server started on http://localhost:{}/".format(PORT)
+        _listener = listener
+        _active_port = port
+        _running = True
+
+        _thread = Thread(ThreadStart(_listen_loop))
+        _thread.IsBackground = True
+        _thread.Start()
+        return "Server started on http://localhost:{}/".format(port)
+
+    return "Could not start server: ports {}..{} all in use ({})".format(
+        PORT_START, PORT_START + PORT_SPAN - 1, last_error)
 
 
 def stop_server():
     """Stop the HTTP listener and background thread."""
-    global _running, _listener, _thread
+    global _running, _listener, _thread, _active_port
     _running = False
     if _listener:
         try:
@@ -68,6 +99,7 @@ def stop_server():
             pass
         _listener = None
     _thread = None
+    _active_port = None
     return "Server stopped."
 
 
@@ -299,7 +331,7 @@ def _handle_status():
         "version": Rhino.RhinoApp.Version.ToString(),
         "document": doc.Name if doc else None,
         "path": doc.Path if doc else "",
-        "server_port": PORT,
+        "server_port": _active_port,
     }
 
 

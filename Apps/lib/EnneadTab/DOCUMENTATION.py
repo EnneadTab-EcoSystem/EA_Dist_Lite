@@ -387,8 +387,12 @@ def set_revit_knowledge():
 
             
             if not icon_path:
-                print (script_path)
-                raise
+                # A single icon-less button must NOT abort the whole knowledge
+                # regen: a bare `raise` here (no active exception) throws
+                # RuntimeError and, because publish swallows it, silently freezes
+                # the wiki fleet-wide. Skip the malformed button and keep going.
+                print("    WARNING: no icon, skipping button: {}".format(script_path))
+                continue
 
     
 

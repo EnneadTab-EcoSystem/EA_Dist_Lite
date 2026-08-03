@@ -58,6 +58,16 @@ def main():
 
     DOCUMENTATION.tip_of_day()
 
+    # Weekly usage digest. Reads a handoff file the scheduled CPython producer
+    # wrote; computes nothing here, so this cannot slow down startup. Mirrored
+    # verbatim in Apps/_revit/EnneaDuck.extension/plugin_startup.py -- both
+    # hosts call the same function, which is what keeps them from drifting.
+    try:
+        from EnneadTab import RECAP
+        RECAP.show_pending_digest()
+    except:
+        pass
+
     HOLIDAY.festival_greeting()
 
 

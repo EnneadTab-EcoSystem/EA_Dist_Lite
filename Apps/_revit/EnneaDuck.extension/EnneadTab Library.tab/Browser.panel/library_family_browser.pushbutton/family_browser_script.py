@@ -137,7 +137,7 @@ class family_browser_ModelessForm(WPFWindow):
 
         self.title_text.Text = "EnneadTab Family Browser"
 
-        self.sub_text.Text = "Find the family located at L drive library with a search bar. The result are ranked by direct name and then partial match, and then anything mentioned in the folder structure."
+        self.sub_text.Text = "Find the family located at the shared network library with a search bar. The result are ranked by direct name and then partial match, and then anything mentioned in the folder structure."
 
 
         self.Title = self.title_text.Text
@@ -150,7 +150,11 @@ class family_browser_ModelessForm(WPFWindow):
 
         self.meta_data_folder = os.path.join(ENVIRONMENT.L_DRIVE_HOST_FOLDER, "01_Revit", "06_DB", "Family Browser")
 
-
+        if not ENVIRONMENT.require_shared_root("Family Browser"):
+            self.data_pool = []
+            self.data_grid.ItemsSource = self.data_pool[:]
+            self.Show()
+            return
 
         self.data_pool = [DataGrid_Preview_Obj(x) for x in self.get_meta_datas()]
 
@@ -158,10 +162,12 @@ class family_browser_ModelessForm(WPFWindow):
 
 
 
-
         self.Show()
 
     def get_meta_datas(self):
+        if not os.path.exists(self.meta_data_folder):
+            NOTIFICATION.messenger(main_text="Family Browser database folder not found.")
+            return []
         meta_data_files = [os.path.join(self.meta_data_folder, x) for x in os.listdir(self.meta_data_folder) if x.endswith(ENVIRONMENT.PLUGIN_EXTENSION)]
         meta_data_files.sort()
         NOTIFICATION.messenger(main_text = "Indexing {} files from the DataBase...\nthis might takes a few seconds...".format(len(meta_data_files)))

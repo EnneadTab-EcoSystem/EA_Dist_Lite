@@ -18,7 +18,7 @@ from EnneadTab import ERROR_HANDLE, LOG
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def render_polisher():
-    webbrowser.open("https://ennead-ai.com")
+    webbrowser.open("https://enneadtab.com/rendering")
 
 if __name__ == "__main__":
     render_polisher()

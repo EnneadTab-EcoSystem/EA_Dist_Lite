@@ -120,8 +120,23 @@ def register_if_needed():
                 # collector .bat did not make it into this machine's EA_Dist.
                 _log("SKIP {} bat-missing {}".format(name, bat or "<empty>"))
                 continue
-            TASK_REGISTER.register_app_task(bat, app, hostname, skip_if_exists=True)
-            _log("OK {} registered".format(name))
+            created = TASK_REGISTER.register_app_task(
+                bat, app, hostname, skip_if_exists=True)
+            # register_app_task returns False BOTH when schtasks /create failed
+            # AND when the task already existed (skip_if_exists). The prior code
+            # logged "OK registered" unconditionally, so a machine that
+            # relaunched Revit/Rhino but whose registration FAILED read as OK --
+            # the exact false-positive the 2026-07-18 enroll log was added to
+            # eliminate. Resolve the outcome from the observable end state so a
+            # silent create failure surfaces as FAIL instead of a false OK; this
+            # is what makes fleet convergence (or its absence) readable.
+            task_name = app.get("task_name", "")
+            if created:
+                _log("OK {} registered".format(name))
+            elif task_name and TASK_REGISTER.task_exists(task_name):
+                _log("OK {} already-present".format(name))
+            else:
+                _log("FAIL {} create-failed".format(name))
     except Exception as e:
         # Still swallowed -- enrollment must never break Revit/Rhino startup --
         # but no longer silent.

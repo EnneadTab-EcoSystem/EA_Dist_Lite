@@ -354,10 +354,55 @@ STAND_ALONE_FOLDER = os.path.join(DB_FOLDER, "Stand Alone Tools")
 # Backup repository in case SH cannot use the shared drive
 BACKUP_REPO_FOLDER = os.path.join(DB_FOLDER, "BackupRepo")
 
-# Where the shared dump is SUPPOSED to be. SHARED_DUMP_FOLDER gets rewritten to
-# the local dump below when the shared root is unreachable, so the expected path
-# has to be captured now -- it is what the user and ErrorDump need to see.
+# Where the shared dump / public temp are SUPPOSED to be. Both get rewritten to
+# the local dump below when the shared root is unreachable, so the expected paths
+# have to be captured now -- they are what the user and ErrorDump need to see.
 SHARED_DUMP_FOLDER_EXPECTED = SHARED_DUMP_FOLDER
+PUBLIC_TEMP_FOLDER_EXPECTED = PUBLIC_TEMP_FOLDER
+
+
+# ---------------------------------------------------------------------------
+# DEPOT constants -- ADDITIVE (2026-07-29, PR #77 / office network-drive
+# retirement, Commit 1). The office drives (L:/J:/I:/W:) are retired; shared
+# data moves to the enneadtab.com depot over HTTPS. This block is pure strings
+# and os.path.join ONLY -- no network, no file I/O, and no import of the depot
+# client. ENVIRONMENT is imported by everything, so any HTTP or disk touch here
+# would become a fleet-wide Revit-startup stall. The depot client lives in the
+# EnneadTab/DEPOT/ subpackage; the endpoint/URL contract lives in DEPOT/ROUTES.
+# Nothing imports these names yet -- Commit 1 is additive and the repo must
+# still import cleanly. The old shared-root block above is untouched; it is
+# deleted only in Commit 5 once every consumer has moved. See
+# docs/plans/2026-07-29-network-drive-retirement-epic.md.
+# ---------------------------------------------------------------------------
+
+# Local cache root for depot assets and shared state, under the existing
+# ecosystem folder (a stale cached copy beats a dead button when offline).
+DEPOT_CACHE_FOLDER = os.path.join(ECO_SYS_FOLDER, "DepotCache")
+# Queued writes that could not reach the server (offline) wait here for flush.
+DEPOT_OUTBOX_FOLDER = os.path.join(DEPOT_CACHE_FOLDER, "outbox")
+# Cache index (etag/sha256/last-checked per key); self-healing if corrupt.
+DEPOT_CACHE_INDEX_FILE = os.path.join(DEPOT_CACHE_FOLDER, "cache_index.sexyDuck")
+
+# Namespaces (plan 5.1). Names only -- routing and URLs live in DEPOT/ROUTES.
+DEPOT_NS_ASSET = "asset"   # read-only, cacheable (a stale copy beats a dead button)
+DEPOT_NS_STATE = "state"   # read-write, rev-checked (loss is always loud)
+DEPOT_NS_BLOB = "blob"     # large binary via signed URLs
+
+# Manifest refresh cadence. Steady state must issue zero requests, so the
+# client trusts a cached manifest for this long before re-checking (plan R5).
+DEPOT_MANIFEST_TTL_SEC = 4 * 60 * 60  # 4 hours
+
+# Per-machine escape hatch (plan R10): point the client at a different depot
+# (or a local stub) without a code change. Read by DEPOT/ROUTES, not here.
+EA_DEPOT_URL_ENV_VAR = "EA_DEPOT_URL"
+
+# Per-user SharePoint sync root for the retired project drives (J:/I:/W:,
+# plan 5.5 / D4). The project files moved to a SharePoint library each user
+# syncs to a different local path, so the root is user-configured. Config path
+# only here; the resolver and first-use folder-picker prompt land in a later
+# commit. NOT a depot concern -- plain local filesystem, no HTTP.
+SHAREPOINT_ROOT_CONFIG_NAME = "sharepoint_root.json"
+USER_SHAREPOINT_ROOT_CONFIG = os.path.join(ECO_SYS_FOLDER, SHAREPOINT_ROOT_CONFIG_NAME)
 
 
 def _is_under_shared_root(folder):
@@ -396,12 +441,15 @@ IS_OFFLINE_MODE = not IS_SHARED_ROOT_REACHABLE
 # A shared root we were TOLD to use that is simply GONE is a data-loss event.
 # Every write below silently lands in a private local sandbox; the user sees no
 # error, keeps working, and nothing they produce ever reaches anybody. That is
-# the failure mode the L-drive cutover will produce fleet-wide, and it MUST be
-# loud. See announce_shared_root_status().
+# the failure mode the L-drive cutover will produce fleet-wide. It stays loud to
+# ErrorDump; the on-screen alarm (console + popup) is developer-only as of
+# 2026-07-29 (per request). See announce_shared_root_status().
 IS_SHARED_DATA_LOST = IS_OFFLINE_MODE and not IS_DELIBERATELY_OFFLINE
 
 if IS_OFFLINE_MODE:
     SHARED_DUMP_FOLDER = DUMP_FOLDER
+    PUBLIC_TEMP_FOLDER = os.path.join(DUMP_FOLDER, "temp")
+    _secure_folder(PUBLIC_TEMP_FOLDER)
 
 
 SHARED_ROOT_ALARM_TEMPLATE = (
@@ -457,7 +505,7 @@ def _should_report_shared_root_alarm():
 
 
 def announce_shared_root_status():
-    """Make the vanished-shared-drive failure LOUD instead of silent.
+    """Report the vanished-shared-drive failure -- loud to ErrorDump, dev-only on-screen.
 
     Called from FOLDER.get_shared_dump_folder_file() -- i.e. at the exact moment
     a caller believes it is sharing data and is not. Not called at import: a 5s
@@ -468,7 +516,10 @@ def announce_shared_root_status():
       - At most once per process, and at most once per 24h per machine.
       - Reports to ErrorDump so Design Technology sees the fleet-wide blast
         radius instead of learning about it weeks later.
-      - Shows the user a message that their data is NOT being shared.
+      - Shows DEVELOPERS an on-screen message that data is NOT being shared
+        (console + popup, gated on USER.IS_DEVELOPER as of 2026-07-29 per
+        request). Average users see nothing on-screen; ErrorDump above still
+        fires for everyone.
       - Never raises. ERROR_HANDLE and NOTIFICATION are imported lazily inside
         this function because both import ENVIRONMENT at module load; a
         top-level import here would be a cycle.
@@ -484,16 +535,30 @@ def announce_shared_root_status():
 
     message = get_shared_root_alarm_message()
 
+    # 2026-07-29 (per request): this alarm is now developer-only on BOTH
+    # user-facing channels -- the console echo AND the messenger popup. Average
+    # (non-developer) users no longer see it at all. The ErrorDump report below
+    # is NOT user-facing (it is the silent signal to Design Technology) and
+    # still fires unconditionally, so the fleet-wide blast radius is still
+    # captured. All imports are lazy for the same cycle reason noted above.
     try:
-        print(message)
+        import USER
+        _is_developer = USER.IS_DEVELOPER
     except Exception:
-        pass
+        _is_developer = False
 
-    try:
-        import NOTIFICATION
-        NOTIFICATION.messenger(main_text=message)
-    except Exception:
-        pass
+    if _is_developer:
+        try:
+            import ERROR_HANDLE
+            ERROR_HANDLE.print_note(message)
+        except Exception:
+            pass
+
+        try:
+            import NOTIFICATION
+            NOTIFICATION.messenger(main_text=message)
+        except Exception:
+            pass
 
     if not _should_report_shared_root_alarm():
         return True
@@ -504,7 +569,7 @@ def announce_shared_root_status():
             message,
             "ENVIRONMENT.announce_shared_root_status",
             current_user_name,
-            is_silent=False)
+            is_silent=True)  # 2026-07-29: on-screen alarm is now dev-only, so this is a silent report
     except Exception:
         pass
 
@@ -927,6 +992,38 @@ def is_shared_root_available():
         bool: True if SHARED_ROOT exists, False otherwise.
     """
     return os.path.exists(SHARED_ROOT)
+
+
+def require_shared_root(feature_label=None):
+    """Gate features that need the office shared network folder.
+
+    Returns True when the shared root is reachable. When it is not, fires
+    announce_shared_root_status() and shows a user messenger (if a feature
+    label is provided), then returns False. Callers that need library content
+    (assets, family browser, tutorials) should abort on False -- do not invent
+    a fake local library.
+
+    Args:
+        feature_label (str or None): Short name for the messenger, e.g.
+            "Place Asset". When None, only the ErrorDump announce fires.
+
+    Returns:
+        bool: True if shared root is available, False otherwise.
+    """
+    if is_shared_root_available():
+        return True
+    announce_shared_root_status()
+    if feature_label:
+        try:
+            import NOTIFICATION
+            NOTIFICATION.messenger(
+                main_text="Shared network folder is offline. Cannot run: {}".format(
+                    feature_label
+                )
+            )
+        except Exception:
+            pass
+    return False
 
 
 def alert_l_drive_not_available(play_sound=False):

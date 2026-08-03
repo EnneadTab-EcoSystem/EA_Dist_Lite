@@ -19,7 +19,7 @@ import re
 
 # Public service URLs.
 ENNEADTAB_URL = "https://enneadtab.com"   # Chat, translate, auth.
-RENDER_URL = "https://ennead-ai.com"       # Image/video render, gallery, prompts, demo-images, quota.
+RENDER_URL = "https://enneadtab.com/rendering"  # Image/video render, gallery, prompts, demo-images, quota. Re-homed from ennead-ai.com 2026-07-27 (behind enneadtab.com gate).
 
 
 # --- Runtime detection ---

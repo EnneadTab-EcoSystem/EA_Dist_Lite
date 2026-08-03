@@ -10,10 +10,12 @@ Features:
 - Round-trip: for a spreadsheet you exported with ColorScheme2Excel, one scheme per file
 - Office template: for the standard Ennead sheet with Department and Program columns
   side by side, which updates both schemes in one pass
+- Online: no Excel needed - pull the project's color book straight from enneadtab.com
+  (Department + Program), applied in one pass. Sign in once when prompted.
 
 Usage:
-1. Run the button and say how the spreadsheet was created
-2. Pick the Excel file and the scheme to update"""
+1. Run the button and pick the source (Excel round-trip, Excel office template, or Online)
+2. For Excel: pick the file and scheme. For Online: enter the project number and sector."""
 __title__ = "Excel2ColorScheme"
 
 import os
@@ -33,26 +35,30 @@ if _FORMS_DIR not in sys.path:
 
 _MODE_SINGLE = "Round-trip (Single Scheme)"
 _MODE_DUAL = "Office Template (Dual Scheme)"
+_MODE_ONLINE = "Online (Project Book)"
 
 
 def _prompt_mode():
-    """Ask the user which Excel workflow they're running. Returns _MODE_SINGLE / _MODE_DUAL / None."""
+    """Ask which workflow to run. Returns _MODE_SINGLE / _MODE_DUAL / _MODE_ONLINE / None."""
     sub = (
-        "Pick the workflow that matches your Excel.\n\n"
+        "Pick your source.\n\n"
         "* Round-trip: you exported from a Revit color scheme via "
         "ColorScheme2Excel, edited colors in Excel, want to push back. "
         "One scheme per Excel.\n\n"
         "* Office Template: you used Ennead's standard color template "
         "with Department + Program columns side-by-side. Two schemes "
-        "get updated in one pass."
+        "get updated in one pass.\n\n"
+        "* Online: no Excel needed. Pull the project's color book straight "
+        "from enneadtab.com (Department + Program), applied in one pass. "
+        "Sign in once when prompted."
     )
     res = REVIT_FORMS.dialogue(
         title=__title__,
-        main_text="How was this Excel file created?",
+        main_text="Where do the colors come from?",
         sub_text=sub,
-        options=[_MODE_SINGLE, _MODE_DUAL],
+        options=[_MODE_SINGLE, _MODE_DUAL, _MODE_ONLINE],
     )
-    if res not in (_MODE_SINGLE, _MODE_DUAL):
+    if res not in (_MODE_SINGLE, _MODE_DUAL, _MODE_ONLINE):
         return None
     return res
 
@@ -69,6 +75,9 @@ def excel2_color_scheme():
     if mode == _MODE_SINGLE:
         import single_channel_form_logic
         single_channel_form_logic.show(doc)
+    elif mode == _MODE_ONLINE:
+        import online_channel_form_logic
+        online_channel_form_logic.show(doc)
     else:
         import dual_channel_form_logic
         dual_channel_form_logic.show(doc)

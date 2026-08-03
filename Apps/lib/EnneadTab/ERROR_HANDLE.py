@@ -638,6 +638,125 @@ def send_error_to_error_dump(error_message, func_name, user_name, is_silent=Fals
         prev_attempts.append({"type": "urllib3", "error": repr(e)[:200]})
 
 
+def _should_report_to_error_dump_throttled(throttle_key, ttl_seconds=86400):
+    """Rate-limit a silent ErrorDump report to once per machine per ttl.
+
+    Mirrors ENVIRONMENT._should_report_shared_root_alarm so that a fleet-wide
+    infra outage (every user x every click) does not flood ErrorDump. Uses a
+    marker file in the local DUMP_FOLDER keyed by throttle_key.
+
+    Fails OPEN (returns True) if the marker cannot be resolved -- a duplicate
+    report is preferable to a lost developer signal.
+
+    Args:
+        throttle_key (str): Stable identifier for the warning being throttled.
+        ttl_seconds (int): Minimum seconds between reports. Defaults to 24h.
+
+    Returns:
+        bool: True if this machine has not reported throttle_key within ttl.
+    """
+    import os
+    import time
+    if ENVIRONMENT is None:
+        return True
+    try:
+        dump_folder = ENVIRONMENT.DUMP_FOLDER
+    except Exception:
+        return True
+    # Sanitize to a filesystem-safe key so an odd throttle_key (e.g. a pip
+    # target carrying '>=' or '/') can't break the marker file and silently
+    # disable throttling (which fails open -> flood).
+    safe_key = "".join(ch if (ch.isalnum() or ch == "_") else "_" for ch in str(throttle_key))
+    marker = os.path.join(dump_folder, "errdump_throttle_{}.DuckLock".format(safe_key))
+    try:
+        if os.path.exists(marker):
+            if os.path.getmtime(marker) > (time.time() - ttl_seconds):
+                return False
+    except Exception:
+        pass
+    try:
+        with open(marker, "w") as f:
+            f.write(str(throttle_key))
+    except Exception:
+        pass
+    return True
+
+
+def report_infra_warning_to_error_dump(message, func_name, throttle_key=None, ttl_seconds=86400):
+    """Silent, optionally rate-limited ErrorDump report for an infra/dev warning.
+
+    Use for operational warnings (shared drive unreachable, module missing,
+    etc.) that are hidden from the average user but MUST stay visible to
+    developers across the fleet. The user sees nothing (is_silent=True); the
+    developer sees it in ErrorDump. Never raises.
+
+    Pass throttle_key for high-frequency call sites so a fleet-wide outage does
+    not flood ErrorDump; omit it for naturally-rare sites.
+
+    Args:
+        message (str): Warning text for the ErrorDump entry.
+        func_name (str): "MODULE.function" that detected the condition.
+        throttle_key (str): Optional per-machine 24h throttle key.
+        ttl_seconds (int): Throttle window used when throttle_key is given.
+    """
+    try:
+        if throttle_key and not _should_report_to_error_dump_throttled(throttle_key, ttl_seconds):
+            return
+        user_name = "unknown"
+        try:
+            if USER is not None:
+                user_name = getattr(USER, "USER_NAME", "unknown")
+        except Exception:
+            pass
+        send_error_to_error_dump(message, func_name, user_name, is_silent=True)
+    except Exception:
+        pass
+
+
+def report_infra_warning_to_error_dump_async(message, func_name, throttle_key=None, ttl_seconds=86400):
+    """Non-blocking variant of report_infra_warning_to_error_dump.
+
+    Fires the report on a background daemon thread so it is safe to call from an
+    import-time / package-init path WITHOUT adding the <=5s ErrorDump POST to
+    Revit/Rhino startup latency. (ENVIRONMENT.announce_shared_root_status is
+    deliberately never called at import for exactly this reason.) Never raises.
+
+    Args:
+        message (str): Warning text for the ErrorDump entry.
+        func_name (str): "MODULE.function" that detected the condition.
+        throttle_key (str): Optional per-machine 24h throttle key.
+        ttl_seconds (int): Throttle window used when throttle_key is given.
+    """
+    # Throttle SYNCHRONOUSLY (fast local file op) before spawning, so a cascade
+    # of correlated failures (e.g. every module failing on one broken dependency
+    # at package init) spawns at most one thread / one POST per key per ttl,
+    # instead of racing dozens of threads that each pass their own in-thread check.
+    try:
+        if throttle_key and not _should_report_to_error_dump_throttled(throttle_key, ttl_seconds):
+            return
+    except Exception:
+        pass
+
+    def _worker():
+        try:
+            user_name = "unknown"
+            try:
+                if USER is not None:
+                    user_name = getattr(USER, "USER_NAME", "unknown")
+            except Exception:
+                pass
+            send_error_to_error_dump(message, func_name, user_name, is_silent=True)
+        except Exception:
+            pass
+    try:
+        import threading
+        t = threading.Thread(target=_worker)
+        t.daemon = True
+        t.start()
+    except Exception:
+        pass
+
+
 def print_note(*args):
     """Print debug information visible only to developers.
 

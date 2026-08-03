@@ -230,26 +230,50 @@ def _read_json_as_dict_in_dump_folder(
     return _read_json_as_dict(filepath, use_encode, create_if_not_exist)
 
 
+def _shared_state_key(file_name):
+    """Map a legacy shared-dump file name to a DEPOT.STATE key.
+
+    The office shared dump folder is retired (network-drive retirement epic,
+    2026-07-29). Shared data now lives in DEPOT shared state. A file name like
+    "REVIT_PROJ_DATA_2334.sexyDuck" becomes the state key "REVIT_PROJ_DATA_2334"
+    -- stable across read and write so round-trips match.
+    """
+    name = os.path.basename(file_name)
+    for ext in (".sexyduck", ".json"):
+        if name.lower().endswith(ext):
+            name = name[:-len(ext)]
+            break
+    return name
+
+
 def _read_json_as_dict_in_shared_dump_folder(
     file_name, use_encode=True, create_if_not_exist=False
 ):
-    """Read JSON file from shared dump folder.
-    
-    Provides safe access to files in the shared dump folder with proper encoding
-    and file creation support.
+    """Read a shared JSON doc through DEPOT shared state.
+
+    2026-07-29 (network-drive retirement, Commit 3): the office shared dump
+    folder is gone. This resolves through DEPOT.STATE.read_state instead. The
+    signature is unchanged so the ~34 is_local=False call sites are untouched;
+    use_encode is now a no-op (DEPOT handles JSON/encoding). When the depot is
+    unreachable (e.g. before the server ships) read_state returns the default
+    and alarms once -- a loud, actionable failure instead of the old silent
+    write to a private local sandbox nobody else ever saw.
 
     Args:
-        file_name (str): Name of file in shared dump folder
-        use_encode (bool, optional): Enable UTF-8 encoding for international characters.
-            Defaults to True.
-        create_if_not_exist (bool, optional): Create empty file if not found.
-            Defaults to False.
+        file_name (str): Legacy shared-dump file name; mapped to a state key.
+        use_encode (bool, optional): Ignored (kept for signature compatibility).
+        create_if_not_exist (bool, optional): If True and the doc is absent,
+            return an empty dict instead of None.
 
     Returns:
-        dict: File contents as dictionary
+        dict: The stored data, {} when create_if_not_exist and absent, else None.
     """
-    filepath = FOLDER.get_shared_dump_folder_file(file_name)
-    return _read_json_file_safely(filepath, use_encode, create_if_not_exist)
+    from EnneadTab.DEPOT import STATE
+    key = _shared_state_key(file_name)
+    data = STATE.read_state(key, default=None)
+    if data is None and create_if_not_exist:
+        return {}
+    return data
 
 
 def _save_dict_to_json(data_dict, filepath, use_encode=True):
@@ -377,21 +401,26 @@ def _save_dict_to_json_in_dump_folder(data_dict, file_name, use_encode=True):
 
 
 def _save_dict_to_json_in_shared_dump_folder(data_dict, file_name, use_encode=True):
-    """Save dictionary to JSON file in shared dump folder.
-    
-    Direct storage of dictionary data to the shared dump folder with encoding support.
+    """Save a shared JSON doc through DEPOT shared state.
+
+    2026-07-29 (network-drive retirement, Commit 3): writes go to
+    DEPOT.STATE.write_state, not the retired shared dump folder. Signature
+    unchanged (use_encode now a no-op). Returns True on a server-confirmed write;
+    when offline it queues to the depot outbox, alarms, and returns False -- the
+    caller learns the shared write did not land instead of it silently vanishing
+    into a private local folder.
 
     Args:
-        data_dict (dict): Dictionary to save
-        file_name (str): Target filename
-        use_encode (bool, optional): Enable UTF-8 encoding for international characters.
-            Defaults to True.
+        data_dict (dict): Dictionary to save.
+        file_name (str): Legacy shared-dump file name; mapped to a state key.
+        use_encode (bool, optional): Ignored (kept for signature compatibility).
 
     Returns:
-        bool: True if save successful, False otherwise
+        bool: True if the write reached the depot, False if queued/failed.
     """
-    filepath = FOLDER.get_shared_dump_folder_file(file_name)
-    return _save_dict_to_json(data_dict, filepath, use_encode=use_encode)
+    from EnneadTab.DEPOT import STATE
+    key = _shared_state_key(file_name)
+    return STATE.write_state(key, data_dict)
 
 
 def get_list(filepath):

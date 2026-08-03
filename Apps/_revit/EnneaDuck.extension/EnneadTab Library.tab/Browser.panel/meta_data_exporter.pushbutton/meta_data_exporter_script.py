@@ -261,6 +261,9 @@ class FamilyMetaDataExporter:
 @ERROR_HANDLE.try_catch_error()
 def family_browser():
     """Main function to run the family metadata exporter."""
+    if not ENVIRONMENT.require_shared_root("MetaData Exporter"):
+        return
+
     EXE.try_open_app("AutoCancelClicker.exe")
     
     with ErrorSwallower() as swallower:

@@ -162,8 +162,11 @@ def install_module(module_name):
     env["PYTHONHOME"] = ENVIRONMENT.ENGINE_FOLDER
     
     # Install the module
+    # 2026-07-29 (per request): module-install feedback is developer-only.
+    # print_note() self-gates on USER.IS_DEVELOPER.
+    import ERROR_HANDLE
     try:
-        print("Installing module: {}".format(module_name))
+        ERROR_HANDLE.print_note("Installing module: {}".format(module_name))
         process = subprocess.Popen(
             [engine_path, "-m", "pip", "install", module_name],
             stdout=subprocess.PIPE,
@@ -177,19 +180,31 @@ def install_module(module_name):
         success = process.returncode == 0
         
         if success:
-            print("Successfully installed module: {}".format(module_name))
+            ERROR_HANDLE.print_note("Successfully installed module: {}".format(module_name))
         else:
             # Check for common embedded Python issues
             error_msg = stderr.lower()
             if "_socket" in error_msg or "no module named '_socket'" in error_msg:
-                print("Failed to install module {}: Embedded Python missing networking components".format(module_name))
-                print("Note: This is expected in IronPython 2.7 or minimal Python distributions")
+                ERROR_HANDLE.print_note("Failed to install module {}: Embedded Python missing networking components".format(module_name))
+                ERROR_HANDLE.print_note("Note: This is expected in IronPython 2.7 or minimal Python distributions")
             else:
-                print("Failed to install module {}: {}".format(module_name, stderr))
-            
+                ERROR_HANDLE.print_note("Failed to install module {}: {}".format(module_name, stderr))
+            # 2026-07-29 (per request): install failure is a developer signal ->
+            # silent ErrorDump, fired ASYNC (this can run on the UI thread and
+            # the POST can take ~20s during an outage) and throttled per-module
+            # so a retry loop can't flood.
+            ERROR_HANDLE.report_infra_warning_to_error_dump_async(
+                "Failed to install module {}: {}".format(module_name, stderr),
+                "ENGINE.install_module",
+                throttle_key="engine_install_fail_{}".format(module_name))
+
         return success
     except Exception as e:
-        print("Error installing module {}: {}".format(module_name, str(e)))
+        ERROR_HANDLE.print_note("Error installing module {}: {}".format(module_name, str(e)))
+        ERROR_HANDLE.report_infra_warning_to_error_dump_async(
+            "Error installing module {}: {}".format(module_name, str(e)),
+            "ENGINE.install_module",
+            throttle_key="engine_install_error_{}".format(module_name))
         return False
 
 def ensure_pip_installed():
@@ -603,10 +618,12 @@ Try the following:
                     # If not built-in and not already tried, attempt to install 
                     if module_name not in installed_modules:
                         # Try to install the missing module
-                        print("Attempting to install missing module: {}".format(module_name))
+                        # 2026-07-29 (per request): dev-only install feedback.
+                        import ERROR_HANDLE
+                        ERROR_HANDLE.print_note("Attempting to install missing module: {}".format(module_name))
                         
                         if install_module(module_name):
-                            print("Successfully installed module: {}".format(module_name))
+                            ERROR_HANDLE.print_note("Successfully installed module: {}".format(module_name))
                             installed_modules.add(module_name)
                             attempts += 1
                             continue

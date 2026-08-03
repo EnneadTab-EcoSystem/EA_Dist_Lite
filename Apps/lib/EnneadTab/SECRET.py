@@ -17,7 +17,18 @@ def get_acc_key_data():
     if ENVIRONMENT.IS_OFFLINE_MODE:
         data = DATA_FILE.get_data(api_key_file)
         if not data:
-            NOTIFICATION.messenger("API key file not found, do you have L drive connection?")
+            # 2026-07-29 (per request): popup is developer-only now, but the
+            # developer must still get a fleet signal -> silent ErrorDump, fired
+            # ASYNC (this runs on the Revit/Rhino UI thread; the POST can take up
+            # to ~20s during an outage) and throttled 24h/machine.
+            import ERROR_HANDLE
+            ERROR_HANDLE.report_infra_warning_to_error_dump_async(
+                "ACC API key file '{}' not found while offline (L-drive unreachable?)".format(api_key_file),
+                "SECRET.get_acc_key_data",
+                throttle_key="secret_acc_key_missing")
+            import USER
+            if USER.IS_DEVELOPER:
+                NOTIFICATION.messenger("API key file not found, do you have shared network folder connection?")
     else:
         data = DATA_FILE.get_data(L_drive_file_path)
 

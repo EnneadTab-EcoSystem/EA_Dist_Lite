@@ -159,6 +159,8 @@ def try_open_legacy_app(exe_name):
         bool: True if legacy app was found and opened, False otherwise.
     """
     head = os.path.join(ENVIRONMENT.L_DRIVE_HOST_FOLDER, "01_Revit", "04_Tools", "08_EA Extensions", "Project Settings", "Exe")
+    if not os.path.exists(head):
+        return False
     if os.path.exists(os.path.join(head, exe_name + ".exe")):
         os.startfile(os.path.join(head, exe_name + ".exe"))
         return True
@@ -318,8 +320,80 @@ def clean_temporary_executables():
             except Exception as e:
                 ERROR_HANDLE.print_note("Error removing {}: {}".format(file_path, e))
 
+
+def _notification_host_lock_held():
+    """True if NotificationHost already holds its single-instance mutex."""
+    try:
+        import ctypes
+        from ctypes import wintypes
+        SYNCHRONIZE = 0x00100000
+        MUTEX_NAME = "Local\\EnneadTab_NotificationHost"
+        kernel32 = ctypes.windll.kernel32
+        OpenMutex = kernel32.OpenMutexW
+        OpenMutex.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.LPCWSTR]
+        OpenMutex.restype = wintypes.HANDLE
+        handle = OpenMutex(SYNCHRONIZE, False, MUTEX_NAME)
+        if handle:
+            kernel32.CloseHandle(handle)
+            return True
+        return False
+    except Exception:
+        return is_process_running("NotificationHost")
+
+
+def ensure_notification_host():
+    """Wake NotificationHost if it is not already running.
+
+    Unlike try_open_app, this is not rate-limited -- enqueue always writes the
+    inbox; this only starts the persistent host when the lock is free.
+
+    Returns:
+        bool: True if host appears running or was started, False if missing/failed.
+    """
+    if _notification_host_lock_held():
+        return True
+    if is_process_running("NotificationHost"):
+        return True
+
+    exe_path = locate_executable("NotificationHost")
+    if exe_path:
+        try:
+            os.startfile(exe_path)
+            return True
+        except OSError as e:
+            ERROR_HANDLE.print_note("Failed to start NotificationHost: {}".format(e))
+            return False
+
+    # Developer convenience: run source script without a rebuilt exe.
+    try:
+        if USER.IS_DEVELOPER:
+            script = os.path.join(
+                ENVIRONMENT.ROOT,
+                "DarkSide",
+                "exes",
+                "source code",
+                "NotificationHost",
+                "NotificationHost.py",
+            )
+            if os.path.exists(script):
+                success, _stdout, stderr = ENGINE.cast_python(script, wait=False)
+                if success:
+                    return True
+                ERROR_HANDLE.print_note(
+                    "Failed to start NotificationHost script: {}".format(stderr)
+                )
+    except Exception as e:
+        ERROR_HANDLE.print_note("NotificationHost developer wake failed: {}".format(e))
+
+    ERROR_HANDLE.print_note("NotificationHost.exe not found.")
+    return False
+
+
 if __name__ == "__main__":
-    script_path = os.path.join(ENVIRONMENT.APP_FOLDER, "Messenger.py")
+    script_path = os.path.join(ENVIRONMENT.ROOT, "DarkSide", "exes", "source code",
+                               "NotificationHost", "NotificationHost.py")
+    if not os.path.exists(script_path):
+        script_path = os.path.join(ENVIRONMENT.APP_FOLDER, "Messenger.py")
     success, stdout, stderr = ENGINE.cast_python(script_path, wait=True)
     if not success:
-        ERROR_HANDLE.print_note("Failed to run Messenger: {}".format(stderr))
+        ERROR_HANDLE.print_note("Failed to run NotificationHost: {}".format(stderr))

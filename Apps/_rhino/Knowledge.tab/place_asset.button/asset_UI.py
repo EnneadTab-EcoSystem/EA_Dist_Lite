@@ -340,7 +340,7 @@ class ImageSelectionDialog(Eto.Forms.Dialog[bool]):
 
         group_layout.AddRow(self.radio_button_list_ref_block_method )
 
-        lines = ["Notes:", "-Using ref link will keep file light and layer clear, but you don't have ability to modify geomtry, material or use MakeBlockUnique.", "-Using embed block will make it a local block and lose connection to L drive."]
+        lines = ["Notes:", "-Using ref link will keep file light and layer clear, but you don't have ability to modify geomtry, material or use MakeBlockUnique.", "-Using embed block will make it a local block and lose connection to the shared network folder."]
         for line in lines:
             self.ref_block_method_label = Eto.Forms.Label()
             self.ref_block_method_label.Text = textwrap.fill(line, 100)

@@ -253,7 +253,14 @@ def save_and_load_family(family_doc, file_path, temp_folder, log_messages):
     
     # Create temp folder if it doesn't exist
     if not os.path.exists(temp_folder):
-        os.makedirs(temp_folder)
+        try:
+            os.makedirs(temp_folder)
+        except Exception as e:
+            log_messages.append("Cannot create temp folder '{}': {}".format(temp_folder, e))
+            NOTIFICATION.messenger(
+                main_text="Cannot create temp folder for family save:\n{}".format(temp_folder)
+            )
+            return False
     
     # Save family to temp location
     family_path = os.path.join(temp_folder, "{}.rfa".format(file_name_naked))
@@ -452,8 +459,13 @@ def bigrhino2revit(doc):
     else:
         print("No material mapping data found")
     
-    # Temp folder for saving families
+    # Temp folder for saving families (PUBLIC_TEMP redirects to local Dump/temp when offline)
     temp_folder = ENVIRONMENT.PUBLIC_TEMP_FOLDER
+    if ENVIRONMENT.IS_SHARED_DATA_LOST:
+        ENVIRONMENT.announce_shared_root_status()
+        NOTIFICATION.messenger(
+            main_text="Shared network folder is offline. Family temp files will land in local Dump only."
+        )
     
     # Process files with progress bar
     tool_start_time = time.time()

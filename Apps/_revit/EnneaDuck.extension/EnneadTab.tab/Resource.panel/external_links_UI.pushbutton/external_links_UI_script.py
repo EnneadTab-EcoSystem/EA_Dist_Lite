@@ -142,6 +142,8 @@ class AssistantUI(forms.WPFWindow):
         script.open_url('https://ennead-architects-llp.github.io/EnneadTabWiki/index.html')
     @ERROR_HANDLE.try_catch_error()
     def how_to_cad_click(self, sender, args):
+        if not ENVIRONMENT.require_shared_root("Library Docs"):
+            return
         path = "{}\\01_Revit\\04_Tools\\08_EA Extensions\\Library Docs\\CAD LISP\\CAD Command list.txt".format(ENVIRONMENT.L_DRIVE_HOST_FOLDER)
 
         subprocess.Popen(r'explorer /select, {}'.format(path))
@@ -173,11 +175,15 @@ class AssistantUI(forms.WPFWindow):
 
     @ERROR_HANDLE.try_catch_error()
     def SD_reference_click(self, sender, args):
+        if not ENVIRONMENT.require_shared_root("Library Docs"):
+            return
         path = "{}\\01_Revit\\04_Tools\\08_EA Extensions\\Library Docs\\SD Documentation Samples\\#PDF in this directory are reference only".format(ENVIRONMENT.L_DRIVE_HOST_FOLDER)
 
         subprocess.Popen(r'explorer /select, {}'.format(path))
     @ERROR_HANDLE.try_catch_error()
     def DD_reference_click(self, sender, args):
+        if not ENVIRONMENT.require_shared_root("Library Docs"):
+            return
         path = "{}\\01_Revit\\04_Tools\\08_EA Extensions\\Library Docs\\DD Documentation Samples\\#PDF in this directory are reference only".format(ENVIRONMENT.L_DRIVE_HOST_FOLDER)
 
         subprocess.Popen(r'explorer /select, {}'.format(path))
@@ -185,6 +191,8 @@ class AssistantUI(forms.WPFWindow):
 
     @ERROR_HANDLE.try_catch_error()
     def SH_code_click(self, sender, args):
+        if not ENVIRONMENT.require_shared_root("Library Docs"):
+            return
         folder = "{}\\01_Revit\\04_Tools\\08_EA Extensions\\Library Docs\Codes".format(ENVIRONMENT.L_DRIVE_HOST_FOLDER)
         files = os.listdir(folder)
         special_folder = "#PDF in this directory are reference only"
@@ -218,6 +226,8 @@ class AssistantUI(forms.WPFWindow):
         
     @ERROR_HANDLE.try_catch_error()
     def training_click(self, sender, args):
+        if not ENVIRONMENT.require_shared_root("Library Docs"):
+            return
         folder_scott = os.path.join(ENVIRONMENT.L_DRIVE_HOST_FOLDER, "10_Learning Resources", "01_Revit", "Essentials")
         os.startfile(folder_scott)
 

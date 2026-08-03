@@ -1,0 +1,158 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="EnneadTab"
+        Foreground="#000"
+        Margin="0"
+        SizeToContent="WidthAndHeight"
+        ShowInTaskbar="True"
+        BorderThickness="0"
+        Background="{x:Null}"
+        WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="False"
+        FontFamily="RomanD"
+        AllowsTransparency="True"
+        WindowStyle="None"
+        MouseLeftButtonDown="mouse_down_main_panel"
+        Cursor="Arrow">
+    <Window.Resources>
+        <SolidColorBrush x:Key="TextColor" Color="#FFDAE8FD"/>
+        <SolidColorBrush x:Key="HighlightColor" Color="#f39c12"/>
+        <SolidColorBrush x:Key="MainPanelColor" Color="#FF464646"/>
+        <Style TargetType="{x:Type TextBlock}">
+            <Setter Property="Foreground" Value="{StaticResource TextColor}"/>
+        </Style>
+        <Style TargetType="{x:Type DataGridColumnHeader}">
+            <Setter Property="Background" Value="#FF2E2E2E"/>
+            <Setter Property="Foreground" Value="#FFFFE59C"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+            <Setter Property="Padding" Value="6,3,6,3"/>
+            <Setter Property="BorderBrush" Value="#FF555555"/>
+            <Setter Property="BorderThickness" Value="0,0,1,1"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+        </Style>
+        <Style TargetType="{x:Type Button}">
+            <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
+            <Setter Property="Background" Value="{StaticResource TextColor}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource MainPanelColor}"/>
+            <Setter Property="Padding" Value="10,0,10,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="10" Margin="5" Height="22"
+                                SnapsToDevicePixels="true">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              VerticalAlignment="Center"
+                                              HorizontalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{StaticResource HighlightColor}"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+    <Border BorderThickness="1" CornerRadius="15" Margin="20,20,20,20">
+        <Border.Background>
+            <SolidColorBrush Color="#FF464646" Opacity="1"/>
+        </Border.Background>
+        <Border.Effect>
+            <DropShadowEffect Color="#FFFFE59C" BlurRadius="15" Opacity="0.8"/>
+        </Border.Effect>
+        <Grid Margin="20,20,20,20" Width="960">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="50"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Image Grid.Column="0" Height="100" x:Name="logo_img"
+                   VerticalAlignment="Top" HorizontalAlignment="Left"/>
+            <StackPanel Margin="0,0,0,0" Grid.Column="1">
+                <TextBlock x:Name="title_text" Text="Batch Format Family Name"
+                           Foreground="#FFFFE59C" FontSize="20"
+                           TextWrapping="Wrap" FontWeight="Bold"/>
+                <TextBlock x:Name="sub_text"
+                           Text="Rename families to CATEGORY_Description_FIRM[_Info][_HOST]."
+                           Foreground="#FFCBCBCB" TextWrapping="Wrap"/>
+
+                <!-- Analysis + scope toolbar -->
+                <WrapPanel Margin="0,8,0,0">
+                    <Button Content="Analyze Hosting" Click="analyze_hosting_click"/>
+                    <Button Content="Analyze Category Map" Click="analyze_category_click"/>
+                    <Button Content="Show Naming Rules" Click="show_rules_click"/>
+                </WrapPanel>
+                <WrapPanel Margin="0,2,0,0" VerticalAlignment="Center">
+                    <Button Content="Load From Selection" Click="load_selection_click"/>
+                    <Button Content="Check All" Click="select_all_click"/>
+                    <Button Content="Uncheck All" Click="select_none_click"/>
+                    <CheckBox x:Name="show_all_toggle" Content="Show all families"
+                              Foreground="#FFCBCBCB" VerticalAlignment="Center"
+                              Margin="10,0,0,0"
+                              Checked="show_all_toggle_changed"
+                              Unchecked="show_all_toggle_changed"/>
+                </WrapPanel>
+
+                <TextBlock x:Name="count_text" Text="0 families loaded."
+                           Foreground="#FFCBCBCB" Margin="5,6,0,2"/>
+
+                <DataGrid x:Name="main_grid"
+                          Height="360" Margin="0,0,0,0"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          CanUserSortColumns="False"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="Horizontal"
+                          Background="#FF3A3A3A"
+                          RowBackground="#FF464646"
+                          AlternatingRowBackground="#FF404040"
+                          Foreground="#FFEFEFEF"
+                          BorderThickness="0"
+                          CellEditEnding="grid_cell_edit_ending">
+                    <DataGrid.Columns>
+                        <DataGridCheckBoxColumn Header="Fix"
+                            Binding="{Binding is_checked, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                            Width="36"/>
+                        <DataGridTextColumn Header="Current Name"
+                            Binding="{Binding current_name}" IsReadOnly="True" Width="200"/>
+                        <DataGridTextColumn Header="Cat"
+                            Binding="{Binding category}" IsReadOnly="True" Width="50"/>
+                        <DataGridTextColumn Header="Description"
+                            Binding="{Binding description, Mode=TwoWay}" Width="130"/>
+                        <DataGridComboBoxColumn Header="FIRM"
+                            x:Name="col_firm"
+                            SelectedItemBinding="{Binding firm, Mode=TwoWay}" Width="55"/>
+                        <DataGridTextColumn Header="AddInfo"
+                            Binding="{Binding additional, Mode=TwoWay}" Width="90"/>
+                        <DataGridComboBoxColumn Header="Host"
+                            x:Name="col_host"
+                            SelectedItemBinding="{Binding hosting, Mode=TwoWay}" Width="55"/>
+                        <DataGridTextColumn Header="New Name"
+                            Binding="{Binding new_name, Mode=TwoWay}" Width="200"/>
+                        <DataGridTextColumn Header="OK"
+                            Binding="{Binding valid}" IsReadOnly="True" Width="34"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <WrapPanel Margin="0,8,0,0" HorizontalAlignment="Right">
+                    <Button Content="Fix Category Prefix Only" Click="fix_prefix_only_click"/>
+                    <Button Content="Apply Checked"
+                            BorderThickness="2" Click="apply_checked_click"/>
+                </WrapPanel>
+
+                <TextBlock x:Name="debug_textbox" Text="Ready."
+                           Foreground="#FFCBCBCB" Margin="5,6,0,0" TextWrapping="Wrap"/>
+                <Button Content="Close" Click="close_Click"
+                        HorizontalAlignment="Center" Height="28" Margin="0,6,0,0"/>
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>

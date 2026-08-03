@@ -124,7 +124,7 @@ class Rhino2RevitExporterDialog(Eto.Forms.Dialog[bool]):
         Creates a checkbox for using public address
         """
         self.chk_use_public_address = Eto.Forms.CheckBox()
-        self.chk_use_public_address.Text = "Use Public Address for large file.(L drive connection is required)"
+        self.chk_use_public_address.Text = "Use shared network folder for large files (requires office shared drive)"
         self.chk_use_public_address.Checked = False
         return self.chk_use_public_address
 
@@ -424,24 +424,31 @@ class ToggleSaveDocumentHandler:
         print ("is_update_dist_repo_enabled set to True")
 
 def get_output_folder(use_public_address=False):
-
-   
     try:
-    
         doc_name = sc.doc.Name.split(".3dm")[0]
-
     except:
         doc_name = "Untitled"
-    
-    if use_public_address:
-        temp_folder = ENVIRONMENT.PUBLIC_TEMP_FOLDER
-        EA_export_folder = "{}\EnneadTab Export By Layer from [{}]".format(temp_folder, doc_name)
-    else:
-        EA_export_folder = "{}\EnneadTab Export By Layer from [{}]".format(ENVIRONMENT.ONE_DRIVE_DESKTOP_FOLDER, doc_name)
-    
-    if not os.path.exists(EA_export_folder):
-        os.makedirs(EA_export_folder)
 
+    base_folder = ENVIRONMENT.ONE_DRIVE_DESKTOP_FOLDER
+    if use_public_address:
+        if ENVIRONMENT.is_shared_root_available():
+            base_folder = ENVIRONMENT.PUBLIC_TEMP_FOLDER
+        else:
+            ENVIRONMENT.announce_shared_root_status()
+            NOTIFICATION.messenger(
+                main_text="Shared network folder is offline. Exporting to Desktop instead."
+            )
+
+    EA_export_folder = "{}\EnneadTab Export By Layer from [{}]".format(base_folder, doc_name)
+
+    if not os.path.exists(EA_export_folder):
+        try:
+            os.makedirs(EA_export_folder)
+        except Exception as e:
+            NOTIFICATION.messenger(
+                main_text="Cannot create export folder:\n{}\n{}".format(EA_export_folder, e)
+            )
+            return None
 
     return EA_export_folder
 
@@ -581,6 +588,8 @@ def export_for_rhino2revit():
         if result:
             datas, use_public_address = result
             EA_export_folder = get_output_folder(use_public_address)
+            if not EA_export_folder:
+                return
             with ToggleSaveDocumentHandler():
                 export(EA_export_folder, datas)
         return

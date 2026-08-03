@@ -11,8 +11,34 @@ stops when you close Rhino."""
 
 
 import os
+import sys
 import rhinoscriptsyntax as rs  # pyright: ignore
 import scriptcontext as sc  # pyright: ignore
+
+
+def is_developer():
+    """Return True only for EnneadTab developers; default False on any failure.
+
+    The ~/.claude.json / mcpServers config block is developer-facing setup
+    detail. A normal user should never see it, so any import or lookup problem
+    is treated as non-developer (False).
+    """
+    try:
+        current = os.path.dirname(os.path.abspath(__file__))
+        for _ in range(10):
+            candidate = os.path.join(current, "Apps", "lib")
+            if os.path.isdir(candidate):
+                if candidate not in sys.path:
+                    sys.path.insert(0, candidate)
+                break
+            parent = os.path.dirname(current)
+            if parent == current:
+                break
+            current = parent
+        from EnneadTab import USER
+        return bool(USER.IS_DEVELOPER)
+    except Exception:
+        return False
 
 
 def find_python3():
@@ -74,22 +100,31 @@ def toggle_server():
         rhino_rpc_server.start_server()
         sc.sticky["mcp_rpc_running"] = True
 
-        engine_dir = os.path.dirname(mcp_dir)
-        rs.MessageBox(
-            "Rhino RPC Server started on localhost:48885.\n\n"
-            "Add to ~/.claude.json:\n"
-            '{{\n'
-            '  "mcpServers": {{\n'
-            '    "enneadtab-rhino": {{\n'
-            '      "command": "python",\n'
-            '      "args": ["-m", "mcp_server", "--app", "rhino"],\n'
-            '      "cwd": "{}"\n'
-            '    }}\n'
-            '  }}\n'
-            '}}'.format(engine_dir.replace("\\", "/")),
-            0,
-            "MCP Server"
-        )
+        if is_developer():
+            engine_dir = os.path.dirname(mcp_dir)
+            rs.MessageBox(
+                "Rhino RPC Server started on localhost:" + str(rhino_rpc_server._active_port) + ".\n\n"
+                "Add to ~/.claude.json:\n"
+                '{{\n'
+                '  "mcpServers": {{\n'
+                '    "enneadtab-rhino": {{\n'
+                '      "command": "python",\n'
+                '      "args": ["-m", "mcp_server", "--app", "rhino"],\n'
+                '      "cwd": "{}"\n'
+                '    }}\n'
+                '  }}\n'
+                '}}'.format(engine_dir.replace("\\", "/")),
+                0,
+                "MCP Server"
+            )
+        else:
+            rs.MessageBox(
+                "EnneadTab AI bridge started for this Rhino session.\n\n"
+                "You can now ask the AI assistant to work with this model.\n"
+                "The bridge stops when you close Rhino.",
+                0,
+                "MCP Server"
+            )
 
 
 if __name__ == "__main__":
