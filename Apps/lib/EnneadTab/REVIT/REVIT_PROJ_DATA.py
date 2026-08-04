@@ -288,10 +288,15 @@ def _retrieve_project_data_simple(doc):
             # the UI or floods.
             from EnneadTab import ERROR_HANDLE
             ERROR_HANDLE.print_note("ERROR: Shared network folder is not available - cannot retrieve project data")
-            ERROR_HANDLE.report_infra_warning_to_error_dump_async(
-                "Shared network folder unavailable - cannot retrieve project data",
-                "REVIT_PROJ_DATA._retrieve_project_data_simple",
-                throttle_key="revit_proj_data_l_drive")
+            # Only report to ErrorDump when the shared drive was TOLD to be there
+            # and vanished (data-loss). A deliberately-offline machine
+            # (IS_DELIBERATELY_OFFLINE) is a legitimate degraded mode -- stay quiet
+            # to avoid ErrorDump noise. Mirrors ENVIRONMENT.announce_shared_root_status.
+            if ENVIRONMENT.IS_SHARED_DATA_LOST:
+                ERROR_HANDLE.report_infra_warning_to_error_dump_async(
+                    "Shared network folder unavailable - cannot retrieve project data",
+                    "REVIT_PROJ_DATA._retrieve_project_data_simple",
+                    throttle_key="revit_proj_data_l_drive")
             return None
         
         # Check if project data parameter exists
