@@ -41,6 +41,7 @@ def main():
     get_latest_left.get_latest(is_silient = True)
     RHINO_ALIAS.register_alias_set()
     add_hook()
+    auto_start_mcp_server()
 
     # InfraWatch fleet bootstrap. Mirrors plugin_startup.py call. Wrapped in
     # broad except -- Rhino startup must never fail because of telemetry setup.
@@ -87,6 +88,57 @@ def add_hook():
 
     
     Rhino.RhinoApp.Closing += event_func_update_r8_rui
+
+
+@ERROR_HANDLE.try_catch_error(is_silent=True, is_pass=True)
+def auto_start_mcp_server():
+    """Start the in-Rhino MCP/RPC bridge automatically on session open.
+
+    The bridge (rhino_rpc_server) is an in-process System.Net.HttpListener that
+    lets the desktop RhinoAssistant / an AI assistant read and edit THIS Rhino
+    session. Until now it was only reachable by clicking the MCP Server button;
+    this wires it into the startup path so it is up before the user asks for it.
+
+    Parity with Revit: the Revit side (plugin_startup._auto_start_mcp_server)
+    only RE-starts its bridge if it was running last session, because that bridge
+    is an external CPython process that dies with Revit and has to be respawned.
+    The Rhino bridge lives inside Rhino and also dies with it, so there is nothing
+    to "restore" -- we start it fresh every session. To switch to the conditional,
+    Revit-style behavior, gate the body of this function on a persisted flag
+    (e.g. CONFIG.get_setting) that the MCP Server button writes on start/stop.
+
+    Non-blocking: the bind runs on a background thread so a slow or blocked
+    HttpListener.Start() can never freeze Rhino startup. Idempotent: start_server()
+    returns early when already running and binds the FIRST FREE port in its window
+    (48900..48915), so re-entry and a 2nd/3rd Rhino are both harmless.
+    """
+    import scriptcontext as sc  # pyright: ignore
+    from System.Threading import Thread, ThreadStart  # pyright: ignore
+
+    # rhino_rpc_server lives next to its button; put that dir on sys.path so the
+    # module resolves to the SAME object the button imports (shared via
+    # sys.modules), which is what lets a later button click stop this server.
+    button_dir = ENVIRONMENT.RHINO_FOLDER + "\\{}.menu\\mcp_server.button".format(ENVIRONMENT.PLUGIN_NAME)
+    if button_dir not in sys.path:
+        sys.path.append(button_dir)
+
+    import rhino_rpc_server  # pyright: ignore
+
+    def _start():
+        rhino_rpc_server.start_server()
+
+    thread = Thread(ThreadStart(_start))
+    thread.IsBackground = True
+    thread.Start()
+
+    # Keep the MCP Server toggle button in sync. The button decides start-vs-stop
+    # from sc.sticky["mcp_rpc_running"]; set it here on the UI thread so the first
+    # click after autostart correctly STOPS the bridge instead of no-opping.
+    # Optimistic: start_server() runs async, but its own re-entry guard makes a
+    # rare bind failure harmless (a later click just calls stop_server(), a no-op).
+    sc.sticky["mcp_rpc_running"] = True
+
+
 ###################################################
 def action_update_timesheet(doc):
     if doc.Path:
