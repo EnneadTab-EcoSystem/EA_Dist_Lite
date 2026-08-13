@@ -4,4 +4,8 @@
 
 ## Service relationships
 
-Upstream/downstream service registry: see `ORGANIZATION-RELATIONSHIP.md` (root). Before changing this repo's external interfaces or capacity, read its Downstream table and propagate the change to every listed consumer. Maintained by `senzhang-plugin-hub:sen-ennead-relationship-map`.
+Cross-repo service edges live in the central relationships DB —
+`senzhang-plugin-hub:_shared/relationships/` (skill:
+`senzhang-plugin-hub:sen-tool-relationship-db`). Before changing this repo's external
+interfaces or capacity, run `npm run relationships -- who-breaks EA_Dist_Lite` in the hub and
+propagate to every listed consumer.
