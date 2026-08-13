@@ -220,6 +220,13 @@ def _handle_request(context):
 
         def do_on_ui():
             try:
+                # rhinoscriptsyntax (rs.*) operates on scriptcontext.doc, NOT Rhino.RhinoDoc.ActiveDoc.
+                # This server never runs through the Rhino script engine (handlers are queued straight
+                # onto the UI thread), so sc.doc is unset/stale here -- rs.LayerNames() etc. then return
+                # empty against a model full of layers ("0 layers" bug). Bind it to the live active doc
+                # on every request so every rs.*-based handler (layers, set-layer, object layer/params)
+                # targets the real document. Cheap and idempotent.
+                sc.doc = Rhino.RhinoDoc.ActiveDoc
                 r, s = _route(path, method, body, query)
                 result_holder[0] = r
                 result_holder[1] = s
