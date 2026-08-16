@@ -279,7 +279,8 @@ def report_torn_install(skewed, source, root=None, notify_user=True):
             NOTIFICATION.messenger(
                 "Your EnneadTab install is INCOMPLETE or OUT OF DATE.\n"
                 "Some files updated, some did not.\n"
-                "Please re-run the EnneadTab installer to repair it.")
+                "Please re-run the EnneadTab installer to repair it.",
+                sticky=True)
         except Exception:
             pass
 

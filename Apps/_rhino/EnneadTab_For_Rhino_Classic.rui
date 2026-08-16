@@ -350,11 +350,11 @@
       <text>
         <locale_1033>Layer</locale_1033>
       </text>
-      <tool_bar_item guid="91439cea-93ea-454f-8e8c-05f6b251cafb">
+      <tool_bar_item guid="0aac55fa-e1fd-4dba-9b01-e5733d7bc0e5">
         <text>
           <locale_1033>apply_color_book</locale_1033>
         </text>
-        <left_macro_id>f3c11336-5808-4b7d-aaf7-ce1411048b41</left_macro_id>
+        <left_macro_id>9a20727b-ee50-43e0-a323-b2bd28087ce8</left_macro_id>
       </tool_bar_item>
       <tool_bar_item guid="1caafeb1-822a-4a67-a22e-70d2cad52e3e">
         <text>
@@ -480,7 +480,7 @@
       <text>
         <locale_1033>Create</locale_1033>
       </text>
-      <tool_bar_item guid="be8c76a2-d41b-42ae-81af-88cbc45767f2">
+      <tool_bar_item guid="442ab6ca-6f3c-4dc2-8199-542a73406004">
         <text>
           <locale_1033>get_earth</locale_1033>
         </text>
@@ -1681,7 +1681,7 @@ Features:
       <script>EA_ActivateEnneadTab
 EA_SimplifyBlocks</script>
     </macro_item>
-    <macro_item guid="f3c11336-5808-4b7d-aaf7-ce1411048b41" bitmap_id="8c1e4c69-95eb-4a37-a7fd-c1a3ebad8773">
+    <macro_item guid="9a20727b-ee50-43e0-a323-b2bd28087ce8" bitmap_id="11be7b37-3601-4dd0-9ec3-a647dc41804d">
       <text>
         <locale_1033>ApplyColorBook</locale_1033>
       </text>
@@ -6217,7 +6217,7 @@ EA_UnitTest</script>
       <bitmap_item guid="27e5c435-1313-4a61-a0d1-57fcadfd9592" index="17"/>
       <bitmap_item guid="351b2477-2c4d-492d-9144-952af358bda8" index="18"/>
       <bitmap_item guid="0f563d93-f0db-4722-b35d-bb6210c83629" index="19"/>
-      <bitmap_item guid="8c1e4c69-95eb-4a37-a7fd-c1a3ebad8773" index="20"/>
+      <bitmap_item guid="11be7b37-3601-4dd0-9ec3-a647dc41804d" index="20"/>
       <bitmap_item guid="fe91d123-f7d5-4513-8e40-4111f6985952" index="21"/>
       <bitmap_item guid="867edb13-4c77-41b0-919c-5d12a728c56b" index="22"/>
       <bitmap_item guid="957b3efd-4a1b-43f4-ae50-25a93b54463f" index="23"/>
@@ -7996,7 +7996,7 @@ SUVORK5CYII=</bitmap>
       <bitmap_item guid="27e5c435-1313-4a61-a0d1-57fcadfd9592" index="17"/>
       <bitmap_item guid="351b2477-2c4d-492d-9144-952af358bda8" index="18"/>
       <bitmap_item guid="0f563d93-f0db-4722-b35d-bb6210c83629" index="19"/>
-      <bitmap_item guid="8c1e4c69-95eb-4a37-a7fd-c1a3ebad8773" index="20"/>
+      <bitmap_item guid="11be7b37-3601-4dd0-9ec3-a647dc41804d" index="20"/>
       <bitmap_item guid="fe91d123-f7d5-4513-8e40-4111f6985952" index="21"/>
       <bitmap_item guid="867edb13-4c77-41b0-919c-5d12a728c56b" index="22"/>
       <bitmap_item guid="957b3efd-4a1b-43f4-ae50-25a93b54463f" index="23"/>
@@ -11159,7 +11159,7 @@ AABJRU5ErkJggg==</bitmap>
       <bitmap_item guid="27e5c435-1313-4a61-a0d1-57fcadfd9592" index="17"/>
       <bitmap_item guid="351b2477-2c4d-492d-9144-952af358bda8" index="18"/>
       <bitmap_item guid="0f563d93-f0db-4722-b35d-bb6210c83629" index="19"/>
-      <bitmap_item guid="8c1e4c69-95eb-4a37-a7fd-c1a3ebad8773" index="20"/>
+      <bitmap_item guid="11be7b37-3601-4dd0-9ec3-a647dc41804d" index="20"/>
       <bitmap_item guid="fe91d123-f7d5-4513-8e40-4111f6985952" index="21"/>
       <bitmap_item guid="867edb13-4c77-41b0-919c-5d12a728c56b" index="22"/>
       <bitmap_item guid="957b3efd-4a1b-43f4-ae50-25a93b54463f" index="23"/>
