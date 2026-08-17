@@ -18,8 +18,8 @@ proDUCKtion.validify()
 
 from EnneadTab import (
     ERROR_HANDLE, FOLDER, SOUND, LOG, NOTIFICATION, SPEAK, 
-    MODULE_HELPER, ENVIRONMENT, EMAIL, USER, DATA_FILE, 
-    IMAGE, TIME
+    MODULE_HELPER, ENVIRONMENT, USER, DATA_FILE, 
+    TIME, SYNC_TURN_EMAIL
 )
 from EnneadTab.REVIT import (
     REVIT_SYNC, REVIT_FORMS, REVIT_EVENT, 
@@ -475,6 +475,46 @@ def update_sync_queue(doc):
     _complete_file_based_queue(doc)
 
 
+def _usernames_from_api_queue(queue):
+    names = []
+    for entry in queue or []:
+        name = (entry.get("username") or "").strip()
+        if name:
+            names.append(name)
+    return names
+
+
+def _username_from_file_item(item):
+    text = str(item or "")
+    if "]" in text:
+        text = text.split("]")[-1]
+    return text.strip()
+
+
+def _send_turn_email(doc, next_user, remaining_after):
+    """Notify the next waiter via the email gateway. No Outlook fallback."""
+    next_user = (next_user or "").strip()
+    if not next_user:
+        ERROR_HANDLE.print_note("Sync queue notification skipped: empty next_user.")
+        return
+
+    model_guid = None
+    try:
+        model_guid = REVIT_SYNC.get_model_guid(doc)
+    except Exception as err:
+        ERROR_HANDLE.print_note("Could not resolve model guid for sync-turn mail: {}".format(err))
+
+    result = SYNC_TURN_EMAIL.send(
+        model_title=doc.Title,
+        just_finished=USER.USER_NAME,
+        next_user=next_user,
+        remaining_after=remaining_after or [],
+        model_guid=model_guid,
+    )
+    ERROR_HANDLE.print_note("Sync-turn email status={} reason={}".format(
+        result.get("status"), result.get("reason")))
+
+
 def _notify_next_user_from_api(doc, api_result):
     """Notify the next user in queue based on API response.
 
@@ -483,9 +523,6 @@ def _notify_next_user_from_api(doc, api_result):
         api_result: Dict with "success", "queue" from API
     """
     if REVIT_EVENT.is_sync_queue_disabled():
-        return
-
-    if not EMAIL:
         return
 
     queue = api_result.get("queue", [])
@@ -510,16 +547,8 @@ def _notify_next_user_from_api(doc, api_result):
     except Exception:
         return
 
-    if EMAIL is None:
-        ERROR_HANDLE.print_note("EMAIL module not available, skipping sync queue notification.")
-        return
-
-    EMAIL.email(
-        receiver_email_list="{}@ennead.com".format(next_user),
-        subject="Your Turn To Sync!",
-        body="Hi there, it is your turn to sync <{}>!".format(doc.Title),
-        body_image_link_list=[IMAGE.get_image_path_by_name("meme_you_sync_first.jpg")]
-    )
+    after = _usernames_from_api_queue(remaining[1:])
+    _send_turn_email(doc, next_user, after)
 
     REVIT_FORMS.notification(
         main_text="[{}]\nshould sync next.".format(next_user),
@@ -569,20 +598,13 @@ def _complete_file_based_queue(doc):
     if len(OUT) == 0:
         return
     try:
-        next_user = OUT[0].split("]")[-1]
+        next_user = _username_from_file_item(OUT[0])
     except Exception:
         return
 
-    if EMAIL is None:
-        ERROR_HANDLE.print_note("EMAIL module not available, skipping sync queue notification.")
-        return
-
-    EMAIL.email(
-        receiver_email_list="{}@ennead.com".format(next_user),
-        subject="Your Turn To Sync!",
-        body="Hi there, it is your turn to sync <{}>!".format(doc.Title),
-        body_image_link_list=[IMAGE.get_image_path_by_name("meme_you_sync_first.jpg")]
-    )
+    after = [_username_from_file_item(item) for item in OUT[1:]]
+    after = [name for name in after if name]
+    _send_turn_email(doc, next_user, after)
 
     REVIT_FORMS.notification(
         main_text="[{}]\nshould sync next.".format(next_user),
