@@ -656,7 +656,7 @@
         "Apps/lib/EnneadTab/SPEAK.py": "f7abee1ba4d01f1d580356f1ddd4bf9cbdbc0748be552e9937adf87febc78da7",
         "Apps/lib/EnneadTab/SPECKLE.py": "7ccda595ad135dc517959b703bc1ee5a5c0e814fe2f45f95a408ee520dc031c1",
         "Apps/lib/EnneadTab/SYNC_SUMMARY.py": "8e096fcdb64c0501324e1df41bc4758d7fb76effe47ed0c08b4624c56e9cb6cf",
-        "Apps/lib/EnneadTab/SYNC_TURN_EMAIL.py": "d8bb5aa42b0de14f9cfd909d5e53016e19fd4524eef723f5268d6659e62084f3",
+        "Apps/lib/EnneadTab/SYNC_TURN_EMAIL.py": "2647f88b86a8425932eb02c197b54b1359d51044e18f4a11542037ff56e39b86",
         "Apps/lib/EnneadTab/SYSTEM.py": "ba190baac90d015abef1db9f82c2e4110bc50772250af6949297c53489b49d98",
         "Apps/lib/EnneadTab/TASK.py": "36b7d5d3e0b65a3693ce3915a26b28dd8edc8aa3c1ad6170bf36b35ac254ec83",
         "Apps/lib/EnneadTab/TASK_REGISTER.py": "9d6576d20ae85667b801dd0f4c399856f8794bbffc8073560080ecc44e4129cd",
@@ -697,11 +697,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-08-17T16:42:43",
-    "source_commit": "18856584342e22df1b6146505a1d11398ab12d89",
+    "published_at": "2026-08-17T18:03:56",
+    "source_commit": "80804179adda907c282c843a01129fc26391ca20",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.08.17.1642"
+    "version": "2026.08.17.1803"
 }
