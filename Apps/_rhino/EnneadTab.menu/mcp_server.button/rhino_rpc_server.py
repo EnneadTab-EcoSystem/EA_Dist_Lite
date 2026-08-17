@@ -392,8 +392,9 @@ def _route(path, method, body, query):
     if route == "views":
         return _handle_views(), 200
 
-    if route == "families":
-        # /families/<name>/instances/ — instances of one block definition.
+    if route == "blocks" or route == "block-definitions" or route == "families":
+        # Canonical: /blocks/. Aliases: /block-definitions/ (CPython adapter),
+        # /families/ (legacy RhinoAssistant). Rhino has blocks, not families.
         if len(segments) >= 4 and segments[3] == "instances":
             return _handle_block_instances(segments[2]), 200
         return _handle_block_defs(merged), 200
@@ -593,7 +594,7 @@ def _handle_views():
 
 
 def _handle_block_defs(data):
-    """GET /enneadtab/families/ — list block definitions (Rhino equivalent)."""
+    """GET /enneadtab/blocks/ — list block definitions."""
     names = rs.BlockNames(sort=True) or []
     blocks = []
     for name in names:
@@ -994,7 +995,7 @@ def _handle_groups():
 
 
 def _handle_block_instances(block_name):
-    """GET /enneadtab/families/<name>/instances/ — instances of one block, with insert points."""
+    """GET /enneadtab/blocks/<name>/instances/ — instances of one block, with insert points."""
     # AbsolutePath may leave the name segment percent-escaped (spaces -> %20);
     # unescape defensively (a no-op on an already-decoded name).
     name = System.Uri.UnescapeDataString(block_name)
