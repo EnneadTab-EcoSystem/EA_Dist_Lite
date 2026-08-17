@@ -92,7 +92,7 @@ def idempotency_key(model_guid, next_user, just_finished):
 def _send_via_emailer(to_addr, model_title):
     """Signed-out fallback: launch Emailer.exe so the nag still leaves.
 
-    The meme still will not inline (local img src) — this path exists only so a
+    The meme still will not inline (local img src) - this path exists only so a
     colleague without a desktop token still gets the one-liner. Do not use it
     after a gateway 5xx (mayHaveSent).
     """
