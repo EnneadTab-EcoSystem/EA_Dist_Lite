@@ -448,6 +448,12 @@ def update_sync_queue(doc):
     if REVIT_EVENT.is_sync_cancelled():
         return
 
+    try:
+        from EnneadTab import SYNC_TURN_WATCH
+        SYNC_TURN_WATCH.remove_watch(REVIT_SYNC.get_model_guid(doc))
+    except Exception as err:
+        ERROR_HANDLE.print_note("sync-turn watch remove failed: {}".format(err))
+
     # === PRIMARY: EnneadTab-DB API ===
     api_result = None
     if hasattr(REVIT_SYNC, "api_complete_sync"):

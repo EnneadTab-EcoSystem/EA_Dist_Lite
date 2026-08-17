@@ -25,6 +25,8 @@ class SyncTurnBlocks(unittest.TestCase):
         self.assertEqual(images[0]["src"], "cid:meme_you_sync_first")
         self.assertFalse(images[0]["src"].startswith("C:"))
         self.assertFalse(images[0]["src"].startswith("http"))
+        types = [b["type"] for b in blocks]
+        self.assertEqual(types[:3], ["heading", "image", "paragraph"])
 
     def test_attachment_is_url_with_matching_content_id(self):
         atts = SYNC_TURN_EMAIL.build_attachments()

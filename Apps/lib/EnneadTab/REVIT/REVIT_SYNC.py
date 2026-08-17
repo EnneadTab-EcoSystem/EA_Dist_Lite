@@ -378,6 +378,20 @@ def api_complete_sync(doc):
     return _api_post("/complete", data)
 
 
+def api_get_status(model_guid):
+    """Read-only queue snapshot. Does not join or heartbeat.
+
+    Args:
+        model_guid: Central model identifier
+
+    Returns:
+        dict or None: {"queue": [...], "dashboard_url": str}
+    """
+    if not model_guid:
+        return None
+    return _api_get("/status", {"model_guid": model_guid})
+
+
 def api_prioritize_sync(doc):
     """Move current user to front of queue (cut in line).
 

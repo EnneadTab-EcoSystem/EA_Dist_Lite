@@ -39,6 +39,11 @@ def build_blocks(model_title, just_finished, next_user, remaining_after, queue_u
     blocks = [
         {"type": "heading", "text": "Your turn to sync"},
         {
+            "type": "image",
+            "src": "cid:{}".format(MEME_CID),
+            "alt": "You sync first",
+        },
+        {
             "type": "paragraph",
             "text": "{} just finished. It is your turn to sync {}.".format(finished, title),
         },
@@ -57,11 +62,6 @@ def build_blocks(model_title, just_finished, next_user, remaining_after, queue_u
             "label": "Open the queue",
             "href": queue_url,
         })
-    blocks.append({
-        "type": "image",
-        "src": "cid:{}".format(MEME_CID),
-        "alt": "You sync first",
-    })
     return blocks
 
 

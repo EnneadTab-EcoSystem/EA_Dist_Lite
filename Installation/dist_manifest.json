@@ -496,11 +496,11 @@
         "Apps/_revit/EnneaDuck.extension/hooks/doc-opened.py": "3b4d20e56217ae7970d725857c1ad98fadd1a7e80c9bb7d864d7a7a4ef8d2ba5",
         "Apps/_revit/EnneaDuck.extension/hooks/doc-opening.py": "4c36e73e43b4114a97cd6ca9b20cd4e3d333dafb60adc3a8ae22e5fd7550f74f",
         "Apps/_revit/EnneaDuck.extension/hooks/doc-saved.py": "e0c4e68c7f1b4aa88bdedcb448e1d273d61728b61f2e70917ee24d29903a1568",
-        "Apps/_revit/EnneaDuck.extension/hooks/doc-synced.py": "ba9307b53757eafff0c305b284b15f6bf0856abf6af54f9a2ac739fe722e4e26",
-        "Apps/_revit/EnneaDuck.extension/hooks/doc-syncing.py": "0bc245f9f42db35ee57394cae6ac1ec09e86376f1da5f409a5e36171e471e401",
+        "Apps/_revit/EnneaDuck.extension/hooks/doc-synced.py": "cb601b936758d2cf6963e4e9ceabdeeff8544791f750317f0bff5e4babe8fb1d",
+        "Apps/_revit/EnneaDuck.extension/hooks/doc-syncing.py": "8dc100d7279802fd81ed8b58f09f8acf78c7e8ec3fb958c19feec77467473197",
         "Apps/_revit/EnneaDuck.extension/hooks/family-loaded.py": "cbb4d8ef361c6e8e3d7ef24ec8bf57cbcc441a17996a13d56be91127427be7fc",
         "Apps/_revit/EnneaDuck.extension/hooks/family-loading.py": "cd4195839b02b9e927ba0ec56adbeb58f65c8c78c67affa6dd728b05f4ff7112",
-        "Apps/_revit/EnneaDuck.extension/plugin_startup.py": "0659c4087b2e5684de5debf6c534737288fff5eac37d55e0bfcd57a584e543c3",
+        "Apps/_revit/EnneaDuck.extension/plugin_startup.py": "4c12e5e421ab78eec87c1e077cd17c8c00983fffbf4c5f79c255c5355237d9ae",
         "Apps/_revit/EnneaDuck.extension/routes/_request_utils.py": "88c699ab72c2440173fc707aac33431484d28d0d88cc098ddbd25146ee92ec68",
         "Apps/_revit/EnneaDuck.extension/routes/areas.py": "3e3603f0b2a5546c8a8a31229bf201a5f2a180fc57c2680abfc2c0822d334591",
         "Apps/_revit/EnneaDuck.extension/routes/create_sheet.py": "8d34d36e9e052e1a1fcbdb9d20936ba36bfa75ce1e2b1403e183df2397814455",
@@ -610,7 +610,7 @@
         "Apps/lib/EnneadTab/REVIT/REVIT_SELECTION.py": "dd7d58fc9c66d52cb74ecafc7e5a7efdc7a465b6c5ee7a8b5a1b6fb2e770e1de",
         "Apps/lib/EnneadTab/REVIT/REVIT_SHEET.py": "4b16f500ac21550186883eb405b39970f712db0937b45565a88f33eabd48812d",
         "Apps/lib/EnneadTab/REVIT/REVIT_SPATIAL_ELEMENT.py": "5bd415c58d0b89d11ddf787f95efb9cf62457478a51df06f739ea53c28e2283a",
-        "Apps/lib/EnneadTab/REVIT/REVIT_SYNC.py": "ca80a234c3df8c3e36bee6da1a1282947cf2b3d4c2064fd0070ab5e0d4db65ef",
+        "Apps/lib/EnneadTab/REVIT/REVIT_SYNC.py": "d198dac94be9f4567421f535ab104034b2ede8e7e7b4bcd2c5218f232d797f86",
         "Apps/lib/EnneadTab/REVIT/REVIT_TAG.py": "f76bfe6a0d653ea99cd8fcbf2a5a100bef68febe9e7b173d26bee2b8a276ae35",
         "Apps/lib/EnneadTab/REVIT/REVIT_UNIT.py": "b62f27cd237ac5fa7c84332783f9d2c0608c2a62750a4d0155145c147f14a4eb",
         "Apps/lib/EnneadTab/REVIT/REVIT_UPDATER.py": "4d83a210a90634d1bba24a28572dfa21c3bda357ca6ba6016dc3311410659abe",
@@ -656,7 +656,8 @@
         "Apps/lib/EnneadTab/SPEAK.py": "f7abee1ba4d01f1d580356f1ddd4bf9cbdbc0748be552e9937adf87febc78da7",
         "Apps/lib/EnneadTab/SPECKLE.py": "7ccda595ad135dc517959b703bc1ee5a5c0e814fe2f45f95a408ee520dc031c1",
         "Apps/lib/EnneadTab/SYNC_SUMMARY.py": "8e096fcdb64c0501324e1df41bc4758d7fb76effe47ed0c08b4624c56e9cb6cf",
-        "Apps/lib/EnneadTab/SYNC_TURN_EMAIL.py": "2647f88b86a8425932eb02c197b54b1359d51044e18f4a11542037ff56e39b86",
+        "Apps/lib/EnneadTab/SYNC_TURN_EMAIL.py": "73994b147a216a4de0cbc130fb503d45232e75157ffaece97334c5a07e98f7e1",
+        "Apps/lib/EnneadTab/SYNC_TURN_WATCH.py": "30c8cbc1883c525d24372c0e1fa90b44c220fa4697dfb57e5193d17ad2444e6f",
         "Apps/lib/EnneadTab/SYSTEM.py": "ba190baac90d015abef1db9f82c2e4110bc50772250af6949297c53489b49d98",
         "Apps/lib/EnneadTab/TASK.py": "36b7d5d3e0b65a3693ce3915a26b28dd8edc8aa3c1ad6170bf36b35ac254ec83",
         "Apps/lib/EnneadTab/TASK_REGISTER.py": "9d6576d20ae85667b801dd0f4c399856f8794bbffc8073560080ecc44e4129cd",
@@ -669,7 +670,8 @@
         "Apps/lib/EnneadTab/VERSION_CONTROL.py": "56f71883c91a715871df2873e48286cc1e8235e67f3ec6926fa4b1ed6b987c4b",
         "Apps/lib/EnneadTab/WEB_GUARD.py": "6052990b7c5c38513f0c7aadc042c249ebfb32dc6bff44dd8a5d887a46f478f3",
         "Apps/lib/EnneadTab/__init__.py": "72404b575428246805d687ba9608913982ccf8bacb635403ba5f84a59e2bcec4",
-        "Apps/lib/EnneadTab/check_sync_turn_email.py": "31836ed8c3e77a54417566588a5a7dc835efc7e2502de082ee44eb6671b7a14a",
+        "Apps/lib/EnneadTab/check_sync_turn_email.py": "2baaa4a77efce99c1f2ec7255e809922596410f8f2619667a77935b31959aafa",
+        "Apps/lib/EnneadTab/check_sync_turn_watch.py": "193ed45f974e695c5d5c030d95607dddaccd2cc461e2d8eb8ef73f8a9ba0465d",
         "Apps/lib/EnneadTab/scripts/ApplicationListToExcel.py": "5a4e78920da801e02776b663cd6696514b80032f92a349c3adabbc8fdbefd18d",
         "Apps/lib/EnneadTab/scripts/CompanyAgent/__init__.py": "e3ad06910dd7e53596f17a503c6c0cec136a25fb29bf1b91cf3a177294750cc6",
         "Apps/lib/EnneadTab/scripts/CompanyAgent/__main__.py": "50b5beae337be83b6c36be39397cf61359e126b66fbb9562ec861ea302720d3d",
@@ -697,11 +699,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-08-17T18:03:56",
-    "source_commit": "80804179adda907c282c843a01129fc26391ca20",
+    "published_at": "2026-08-17T18:09:42",
+    "source_commit": "9b4b3ec5d3631ce6a61a12cc529de3f23074248d",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.08.17.1803"
+    "version": "2026.08.17.1809"
 }
