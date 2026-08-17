@@ -55,6 +55,17 @@ def _open_sync_dashboard(doc):
         ERROR_HANDLE.print_note("Could not open sync dashboard '{}': {}".format(url, str(e)))
 
 
+def _watch_sync_turn(doc, dashboard_url=None):
+    try:
+        from EnneadTab import SYNC_TURN_WATCH, USER
+        from EnneadTab.REVIT import REVIT_SYNC
+        guid = REVIT_SYNC.get_model_guid(doc)
+        SYNC_TURN_WATCH.add_watch(
+            guid, doc.Title, USER.USER_NAME, dashboard_url)
+    except Exception as err:
+        ERROR_HANDLE.print_note("sync-turn watch add failed: {}".format(err))
+
+
 # Helper functions for sync queue management
 
 def _is_project_ignored(doc_title, ignore_list):
@@ -259,6 +270,7 @@ def _check_sync_queue_api_based(doc, user_name, api_result):
     # the dialog -- the name is already on the list). Honor the opt-in checkbox
     # to open the dashboard so the user can watch the queue while they wait.
     LEADER_BOARD.report_sync_queue_waited(doc.Title)
+    _watch_sync_turn(doc, api_result.get("dashboard_url"))
     if open_dashboard:
         _open_sync_dashboard(doc)
 
@@ -330,6 +342,7 @@ def _check_sync_queue_file_based(doc, user_name):
         return True
 
     LEADER_BOARD.report_sync_queue_waited(doc.Title)
+    _watch_sync_turn(doc, None)
 
     # Arm doc-synced's guard BEFORE cancelling: the doc-synced hook still fires
     # after this cancel, and without this flag its update_sync_queue() would drop
