@@ -138,20 +138,6 @@ def _write_inbox_item(data):
         print("Failed to write notification inbox item: {}".format(e))
         return False
 
-
-def _legacy_messenger_fallback(data):
-    """One-shot Messenger.exe path when NotificationHost cannot be started."""
-    DATA_FILE.set_data(data, "messenger_data")
-    result = EXE.try_open_app("Messenger")
-    if not result:
-        if EXE._is_rate_limited("Messenger"):
-            print("Messenger is temporarily rate limited. Message: {}".format(
-                data.get("main_text")))
-        else:
-            print("Messenger failed to start. Message: {}".format(
-                data.get("main_text")))
-
-
 def messenger(main_text,
              title=None,
              width=None,
@@ -173,7 +159,6 @@ def messenger(main_text,
     """Display a customizable popup notification via NotificationHost.
 
     Writes a unique inbox JSON then wakes the persistent host if needed.
-    Falls back to legacy one-shot Messenger.exe if the host cannot start.
 
     Args:
         main_text (str): Message to display (supports line breaks)
@@ -263,14 +248,10 @@ def messenger(main_text,
 
     wrote = _write_inbox_item(data)
     if not wrote:
-        _legacy_messenger_fallback(data)
+        print("Failed to enqueue notification to NotificationHost inbox. Message: {}".format(main_text))
         return
 
-    woke = EXE.ensure_notification_host()
-    if not woke:
-        print("NotificationHost unavailable; falling back to Messenger. Message: {}".format(
-            main_text))
-        _legacy_messenger_fallback(data)
+    EXE.ensure_notification_host()
 
 
 def duck_pop(main_text=None):

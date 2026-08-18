@@ -576,7 +576,7 @@
         "Apps/lib/EnneadTab/LEADER_BOARD.py": "929fdd7511305d1b0e9e6817c4879b583eb4acd15a383a3b8099135db7c98765",
         "Apps/lib/EnneadTab/LOG.py": "0100e8fe7e1c7ab2c55fe82749a04d35762df9066d5d54fe20d9eb2eef9b5e7b",
         "Apps/lib/EnneadTab/MODULE_HELPER.py": "8dc7eeb14b4ab8c13fb46606a3af66a037f273caebb4f98b8a4e46379593a584",
-        "Apps/lib/EnneadTab/NOTIFICATION.py": "85d701c71150baf26228892e51a98713d33d786602031b62577d1a700eed6d64",
+        "Apps/lib/EnneadTab/NOTIFICATION.py": "2b0ecfd5188df537de70d6a6361e6dd497def9624fdeda73ab94cd3b2f172aaa",
         "Apps/lib/EnneadTab/OUTPUT.py": "0056b6cc3e968c895e4114e99e19310862f6684d965d0db6e9cdf4ff56c5d55b",
         "Apps/lib/EnneadTab/OVERLOAD.py": "8a0d4b6aa3402d8d77c0b60520e3cec0507e520e44e7be5b028b3133eb2a8f9c",
         "Apps/lib/EnneadTab/PDF.py": "1c8c38ac0ff00a37b806c9f7d259d63d9cc6fec61afbc59deda53d71eb03d18c",
@@ -699,11 +699,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-08-18T14:43:03",
-    "source_commit": "ec229d278a7eda2abdaced8ca4213456c3276a3f",
+    "published_at": "2026-08-18T14:52:57",
+    "source_commit": "2d5966ec6d8db3a8cb041589955dfdf27063de79",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.08.18.1443"
+    "version": "2026.08.18.1452"
 }
