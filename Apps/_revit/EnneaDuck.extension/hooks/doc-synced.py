@@ -17,8 +17,8 @@ import proDUCKtion  # pyright: ignore
 proDUCKtion.validify()
 
 from EnneadTab import (
-    ERROR_HANDLE, FOLDER, SOUND, LOG, NOTIFICATION, SPEAK, 
-    MODULE_HELPER, ENVIRONMENT, USER, DATA_FILE, 
+    ERROR_HANDLE, FOLDER, SOUND, LOG, NOTIFICATION, SPEAK,
+    MODULE_HELPER, ENVIRONMENT, USER,
     TIME, SYNC_TURN_EMAIL
 )
 from EnneadTab.REVIT import (
@@ -441,9 +441,8 @@ def update_area_tracking(doc):
 def update_sync_queue(doc):
     """Remove current user from sync queue after successful sync.
 
-    Priority order:
-    1. EnneadTab-DB API (primary) - notifies next user via API response
-    2. File-based queue (fallback) - only if API fails AND L drive is available
+    The office L: drive is retired. enneadtab.com/sync is the only queue.
+    If the API is unreachable, skip cleanup -- do not write a dead share.
     """
     if REVIT_EVENT.is_sync_cancelled():
         return
@@ -454,7 +453,6 @@ def update_sync_queue(doc):
     except Exception as err:
         ERROR_HANDLE.print_note("sync-turn watch remove failed: {}".format(err))
 
-    # === PRIMARY: EnneadTab-DB API ===
     api_result = None
     if hasattr(REVIT_SYNC, "api_complete_sync"):
         try:
@@ -462,23 +460,21 @@ def update_sync_queue(doc):
         except Exception as e:
             ERROR_HANDLE.print_note("Sync queue API complete failed: {}".format(e))
 
-    if api_result is not None:
-        ERROR_HANDLE.print_note("Sync queue API: complete sync reported success={}".format(
-            api_result.get("success")))
-        _notify_next_user_from_api(doc, api_result)
-
-        # Also clean file-based queue if L drive is available (keep in sync during transition)
-        if not ENVIRONMENT.IS_OFFLINE_MODE:
-            _clean_file_based_queue(doc)
+    if api_result is None:
+        ERROR_HANDLE.print_note(
+            "Sync queue API unreachable for completion; L: fallback is retired, skipping.")
+        try:
+            ERROR_HANDLE.report_infra_warning_to_error_dump_async(
+                "revit-sync /complete unreachable; file-based L: fallback is retired",
+                "doc-synced.update_sync_queue",
+                throttle_key="sync_queue_api_complete_unreachable")
+        except Exception:
+            pass
         return
 
-    # === FALLBACK: File-based queue (only if L drive is available) ===
-    ERROR_HANDLE.print_note("Sync queue API unreachable for completion, checking fallback...")
-    if ENVIRONMENT.IS_OFFLINE_MODE:
-        ERROR_HANDLE.print_note("L drive unavailable, skipping file-based queue cleanup.")
-        return
-
-    _complete_file_based_queue(doc)
+    ERROR_HANDLE.print_note("Sync queue API: complete sync reported success={}".format(
+        api_result.get("success")))
+    _notify_next_user_from_api(doc, api_result)
 
 
 def _usernames_from_api_queue(queue):
@@ -488,13 +484,6 @@ def _usernames_from_api_queue(queue):
         if name:
             names.append(name)
     return names
-
-
-def _username_from_file_item(item):
-    text = str(item or "")
-    if "]" in text:
-        text = text.split("]")[-1]
-    return text.strip()
 
 
 def _send_turn_email(doc, next_user, remaining_after):
@@ -536,11 +525,10 @@ def _notify_next_user_from_api(doc, api_result):
         return
 
     # Defensively drop ourselves before picking the head. The /complete
-    # endpoint is documented to remove the caller server-side, but the
-    # file-based path (_complete_file_based_queue) filters self out explicitly
-    # and this path must match: if a server race / eventual-consistency window
-    # ever returns a queue that still contains us at index 0, we would email
-    # ourselves "your turn to sync" and show our own name in the popup.
+    # endpoint is documented to remove the caller server-side, but a server
+    # race / eventual-consistency window can still return a queue that still
+    # contains us at index 0. Without this filter we would email ourselves
+    # "your turn to sync" and show our own name in the popup.
     remaining = [entry for entry in queue
                  if entry.get("username", "") != USER.USER_NAME]
     if not remaining:
@@ -559,62 +547,6 @@ def _notify_next_user_from_api(doc, api_result):
     REVIT_FORMS.notification(
         main_text="[{}]\nshould sync next.".format(next_user),
         sub_text="Queue managed by EnneadTab-DB.",
-        window_width=500,
-        window_height=400,
-        self_destruct=15
-    )
-
-
-def _clean_file_based_queue(doc):
-    """Silently remove current user from file-based queue (transition cleanup)."""
-    try:
-        log_file = FOLDER.get_shared_dump_folder_file("SYNC_QUEUE_{}".format(doc.Title))
-        if not os.path.exists(log_file):
-            return
-        queue = DATA_FILE.get_list(log_file)
-        OUT = [item for item in queue if USER.USER_NAME not in item]
-        DATA_FILE.set_list(OUT, log_file)
-    except Exception as e:
-        ERROR_HANDLE.print_note("File-based queue cleanup failed: {}".format(e))
-
-
-def _complete_file_based_queue(doc):
-    """Full file-based queue completion with next-user notification (fallback path)."""
-    log_file = FOLDER.get_shared_dump_folder_file("SYNC_QUEUE_{}".format(doc.Title))
-
-    if not os.path.exists(log_file):
-        with io.open(log_file, "w", encoding="utf-8"):
-            pass
-
-    queue = DATA_FILE.get_list(log_file)
-    OUT = []
-
-    for item in queue:
-        if USER.USER_NAME in item:
-            continue
-        OUT.append(item)
-
-    if not DATA_FILE.set_list(OUT, log_file):
-        NOTIFICATION.messenger("Your account have no access to write in DB folder.")
-        return
-
-    if REVIT_EVENT.is_sync_queue_disabled():
-        return
-
-    if len(OUT) == 0:
-        return
-    try:
-        next_user = _username_from_file_item(OUT[0])
-    except Exception:
-        return
-
-    after = [_username_from_file_item(item) for item in OUT[1:]]
-    after = [name for name in after if name]
-    _send_turn_email(doc, next_user, after)
-
-    REVIT_FORMS.notification(
-        main_text="[{}]\nshould sync next.".format(next_user),
-        sub_text="Expect slight network lag between SH/NY server to transfer waitlist file.",
         window_width=500,
         window_height=400,
         self_destruct=15
