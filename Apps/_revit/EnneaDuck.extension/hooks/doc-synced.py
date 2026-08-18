@@ -438,6 +438,53 @@ def update_area_tracking(doc):
 # SYNC QUEUE MANAGEMENT
 # =============================================================================
 
+def _gather_sync_changes(doc):
+    changes = []
+    try:
+        from pyrevit.coreutils import envvars
+        import System
+        
+        # 1. Warning delta
+        before_str = envvars.get_pyrevit_env_var("EA_SYNC_WARNINGS_BEFORE")
+        if before_str is not None:
+            before = int(before_str)
+            from EnneadTab.SESSION_STATS import count_warnings
+            after = count_warnings(doc)
+            if after is not None:
+                delta = after - before
+                if delta < 0:
+                    changes.append("Cleared {} warning{}".format(abs(delta), "" if abs(delta) == 1 else "s"))
+                elif delta > 0:
+                    changes.append("Added {} warning{}".format(delta, "" if delta == 1 else "s"))
+
+        # 2. GetChangedElements (Revit 2023+)
+        if hasattr(doc, "GetChangedElements"):
+            guid_str = envvars.get_pyrevit_env_var("EA_SYNC_START_VERSION_GUID")
+            if guid_str:
+                guid = System.Guid(guid_str)
+                diff = doc.GetChangedElements(guid)
+                
+                created = diff.GetCreatedElementIds()
+                modified = diff.GetModifiedElementIds()
+                deleted = diff.GetDeletedElementIds()
+                
+                c_count = len(created) if created else 0
+                m_count = len(modified) if modified else 0
+                d_count = len(deleted) if deleted else 0
+                
+                if c_count > 0:
+                    changes.append("Created {} element{}".format(c_count, "" if c_count == 1 else "s"))
+                if m_count > 0:
+                    changes.append("Modified {} element{}".format(m_count, "" if m_count == 1 else "s"))
+                if d_count > 0:
+                    changes.append("Deleted {} element{}".format(d_count, "" if d_count == 1 else "s"))
+                    
+    except Exception as e:
+        from EnneadTab import ERROR_HANDLE
+        ERROR_HANDLE.print_note("Could not gather sync changes: {}".format(e))
+        
+    return changes
+
 def update_sync_queue(doc):
     """Remove current user from sync queue after successful sync.
 
@@ -456,7 +503,14 @@ def update_sync_queue(doc):
     api_result = None
     if hasattr(REVIT_SYNC, "api_complete_sync"):
         try:
-            api_result = REVIT_SYNC.api_complete_sync(doc)
+            changes = _gather_sync_changes(doc)
+            # Compatibility guard if api_complete_sync signature changes or doesn't support changes keyword
+            import inspect
+            sig = inspect.getargspec(REVIT_SYNC.api_complete_sync)
+            if "changes" in sig.args:
+                api_result = REVIT_SYNC.api_complete_sync(doc, changes=changes)
+            else:
+                api_result = REVIT_SYNC.api_complete_sync(doc)
         except Exception as e:
             ERROR_HANDLE.print_note("Sync queue API complete failed: {}".format(e))
 
