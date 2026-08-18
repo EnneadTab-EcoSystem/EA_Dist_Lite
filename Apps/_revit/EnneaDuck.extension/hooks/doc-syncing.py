@@ -244,6 +244,21 @@ def doc_syncing(doc):
 
     TIMESHEET.update_timesheet(doc.Title)
 
+    # OS: Snapshot in doc-syncing for model change log
+    try:
+        from pyrevit.coreutils import envvars
+        from EnneadTab.SESSION_STATS import count_warnings
+        # Snapshot warning count
+        warn_count = count_warnings(doc)
+        if warn_count is not None:
+            envvars.set_pyrevit_env_var("EA_SYNC_WARNINGS_BEFORE", str(warn_count))
+        # Snapshot document version (Revit 2023+)
+        if hasattr(DB.Document, "GetDocumentVersion"):
+            version_guid = DB.Document.GetDocumentVersion(doc).VersionGUID
+            envvars.set_pyrevit_env_var("EA_SYNC_START_VERSION_GUID", str(version_guid))
+    except Exception as e:
+        ERROR_HANDLE.print_note("Could not take sync snapshot: {}".format(e))
+
     # Everything below runs microseconds before the UI thread freezes, so it must stay
     # local-only: no network, no element collection, no filesystem walk.
 
