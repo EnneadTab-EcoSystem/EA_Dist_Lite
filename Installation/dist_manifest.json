@@ -553,7 +553,7 @@
         "Apps/lib/EnneadTab/DOCUMENTATION.py": "afbb3231b775dbdcd2e4b1657f392bc3c9d98a82c4ce54ac75027f313dd4961f",
         "Apps/lib/EnneadTab/DUCK.py": "b712e251e616dcaa21c47d438b5888d85285273297c94934ae73f5d85e4dcd57",
         "Apps/lib/EnneadTab/EARTH_MODEL.py": "2b6cadb274ac025f0f0d65af5bea54b271f3e64e9a9ff11336b14aa2089ad84d",
-        "Apps/lib/EnneadTab/EMAIL.py": "fe6492c1ff9ab5e69eaed850f5f480fb382780356d30f4786e5c2b89954056a0",
+        "Apps/lib/EnneadTab/EMAIL.py": "3eba2073ce5f844eb6bd9f172f0251e88791142eb37fb19fc62b1a8b8747b3f7",
         "Apps/lib/EnneadTab/EMOJI.py": "ef5ac0d4170d3c1553d028a4da3fca0fc9c7b12e77d8071bb06abe41dd2b030f",
         "Apps/lib/EnneadTab/ENCODING.py": "39b907e1824d41b6114a186405117a9a4506ea91020a94771b0c24b04f1e9019",
         "Apps/lib/EnneadTab/ENCOURAGING.py": "79d6bb24f1f48bb5d0e0f51e3d19965cdcbb9a6a9275b3dcbca695d42a04b7c7",
@@ -699,11 +699,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-08-17T18:09:42",
-    "source_commit": "9b4b3ec5d3631ce6a61a12cc529de3f23074248d",
+    "published_at": "2026-08-18T10:51:42",
+    "source_commit": "ae7b0d8afc8b3b9c3d2132f78f37d7965f59c395",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.08.17.1809"
+    "version": "2026.08.18.1051"
 }

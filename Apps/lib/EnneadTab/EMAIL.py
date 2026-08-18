@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Desktop email via enneadtab-email. No Outlook. No Emailer.exe.
 
 Posts through Home ``https://enneadtab.com/email/api/send`` with a Bearer token.
@@ -5,7 +6,7 @@ Identity is always ``enneadtab-os``. The gateway derives From; Reply-To is the
 signed-in colleague so "Your Turn To Sync!" still reads as a person (R6).
 
 Never put SERVICE_KEY on a workstation. Never call AUTH.get_token_blocking()
-from this module — a sync hook or crash-adjacent caller must not open a browser.
+from this module -- a sync hook or crash-adjacent caller must not open a browser.
 """
 
 import os
@@ -238,7 +239,7 @@ def send_blocks(
 ):
     """Send gateway blocks. Returns a status dict, never a boolean.
 
-    On 5xx / unknown fate the result includes mayHaveSent=True — do not retry.
+    On 5xx / unknown fate the result includes mayHaveSent=True -- do not retry.
     """
     if isinstance(to_list, str):
         to_list = [part.strip() for part in to_list.replace(";", ",").split(",") if part.strip()]
