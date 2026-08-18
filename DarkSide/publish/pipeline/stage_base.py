@@ -60,17 +60,32 @@ class PublishStage(ABC):
         """Execute the stage logic. Must raise PublishStageError on failure."""
         pass
 
+    def _notify_progress(self, context, message, level="info"):
+        """Best-effort desktop notification toast to NotificationHost."""
+        try:
+            import os
+            import sys
+            apps_lib = os.path.join(context.os_repo_folder, "Apps", "lib")
+            if apps_lib not in sys.path:
+                sys.path.insert(0, apps_lib)
+            from EnneadTab import NOTIFICATION
+            NOTIFICATION.messenger(message, title="Publish Pipeline: {}".format(self.name), level=level)
+        except Exception:
+            pass
+
     def run(self, context):
         """Run the stage with automatic timing and exception wrapping."""
         start_time = time.time()
         print("\n" + "=" * 70)
         print("STAGE: [{}] - {}".format(self.name, self.description))
         print("=" * 70)
+        self._notify_progress(context, "Starting stage...")
 
         try:
             self.execute(context)
             duration = time.time() - start_time
             print("[SUCCESS] Stage [{}] completed in {:.2f}s".format(self.name, duration))
+            self._notify_progress(context, "Completed in {:.1f}s".format(duration), level="success")
             return StageResult(self.name, StageStatus.SUCCESS, duration=duration)
         except Exception as e:
             duration = time.time() - start_time
@@ -78,6 +93,7 @@ class PublishStage(ABC):
             print("\n[FAILED] Stage [{}] FAILED after {:.2f}s".format(self.name, duration))
             print("Error: {}".format(e))
             print(tb)
+            self._notify_progress(context, "FAILED after {:.1f}s: {}".format(duration, e), level="error")
             result = StageResult(
                 self.name,
                 StageStatus.FAILED,
