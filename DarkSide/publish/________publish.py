@@ -3829,11 +3829,9 @@ This repository contains:
             self._remind_all_to_do_items()
 
             # 2026-08-11: publisher no longer writes to the office shared root
-            # (standalone exe collection, NightRunner scripts, BackupRepo mirror).
-            # L: is not a publish destination. Installers ship via EA_Dist /
-            # _mirror_service_factory_installers; NightRunner scripts stay in
-            # this repo. Consumers that still READ STAND_ALONE_FOLDER /
-            # BACKUP_REPO_FOLDER belong to the L-drive epic (#3171), not here.
+            # (standalone exe collection, NightRunner scripts). L: is not a
+            # publish destination. The Shanghai BackupRepo mirror is retired;
+            # updates go through EnneadTab_OS_Installer only.
             self._run_acc_project_summary()
 
             # generate wiki website

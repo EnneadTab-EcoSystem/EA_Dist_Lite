@@ -21,17 +21,16 @@ from pathlib import Path
 
 # ACC cache file path. #2360: the L: drive is being retired -- resolve the
 # shared root at runtime instead of hardcoding a drive letter.
-def _resolve_shared_db_folder():
-    """EA_SHARED_ROOT env var, else the legacy L: path."""
+def _resolve_acc_cache_dir():
+    """ACC cache lives in local Dump; L: is retired."""
     shared_root = (os.environ.get("EA_SHARED_ROOT") or "").strip()
-    if not shared_root or shared_root.upper() == "OFFLINE":
-        shared_root = "L:\\4b_Design Technology"
-    return os.path.join(shared_root, "05_EnneadTab-DB")
+    if shared_root and shared_root.upper() != "OFFLINE" and not shared_root.upper().startswith("L:"):
+        return os.path.join(shared_root, "05_EnneadTab-DB", "Shared Data Dump", "ACC_PROJECTS_CACHED_SUMMARY")
+    eco = os.path.join(os.environ.get("USERPROFILE", ""), "Documents", "EnneadTab Ecosystem")
+    return os.path.join(eco, "Dump", "ACC_PROJECTS_CACHED_SUMMARY")
 
 
-ACC_CACHE_PATH = os.path.join(_resolve_shared_db_folder(),
-                              "Shared Data Dump",
-                              "ACC_PROJECTS_CACHED_SUMMARY")
+ACC_CACHE_PATH = _resolve_acc_cache_dir()
 
 def format_size(size_bytes):
     """Format file size in human readable format."""

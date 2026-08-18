@@ -3,7 +3,6 @@ import os
 import random
 import tkinter as tk
 
-sys.path.append(r"L:\4b_Applied Computing\03_Rhino\12_EnneadTab for Rhino\Dependency Modules")
 import pyautogui # need pyautogui to show the label for dependecy reason, but for pyrevit might just import from site package
 from PIL import Image as pim
 
@@ -196,7 +195,7 @@ class EnneaDuck:
         records = ""
         is_my_turn = False
         # find all the queue file that has the user name
-        folder = r"L:\4b_Applied Computing\01_Revit\04_Tools\08_EA Extensions\Project Settings\Sync_Queue"
+        folder = FOLDER.DUMP_FOLDER
 
         monitor_file = FOLDER.get_local_dump_folder_file("last_sync_record_data")
         if not FOLDER.is_path_exist(monitor_file):

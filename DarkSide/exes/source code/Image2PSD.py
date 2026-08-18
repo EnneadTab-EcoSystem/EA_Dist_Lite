@@ -1,11 +1,10 @@
 """MAKE TO EXE AND RUN"""
 
 import sys
-sys.path.append("..\lib")
+sys.path.append(r"..\lib")
 from EnneadTab import ERROR_HANDLE, ENVIRONMENT
 
-sys.path.append(EnneadTab.ENVIRONMENT.DEPENDENCY_FOLDER_LEGACY)
-sys.path.append(r'L:\4b_Applied Computing\03_Rhino\12_EnneadTab for Rhino\Dependency Modules\win32ctypes')
+sys.path.append(ENVIRONMENT.DEPENDENCY_FOLDER)
 import win32api
 import win32com.client
 import os

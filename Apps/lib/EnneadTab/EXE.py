@@ -106,6 +106,8 @@ def locate_executable(exe_name):
         str: Path to the executable/batch file if found, None otherwise.
     """
     exe_name = exe_name.replace(".exe", "").replace(".bat", "")
+    if exe_name == "ShanghaiRepoAssist":
+        return None
 
     # Search order: .bat first (preferred - no recompilation needed), then .exe
     extensions = [".bat", ".exe"]
@@ -161,23 +163,14 @@ def create_temporary_copy(exe_path, exe_name):
         return None
 
 def try_open_legacy_app(exe_name):
-    """Attempt to open a legacy version of an application.
-    
+    """Legacy L: exe folder is retired. Always False.
+
     Args:
         exe_name (str): Name of the executable without extension.
-        
+
     Returns:
-        bool: True if legacy app was found and opened, False otherwise.
+        bool: False. The office share no longer exists.
     """
-    head = os.path.join(ENVIRONMENT.L_DRIVE_HOST_FOLDER, "01_Revit", "04_Tools", "08_EA Extensions", "Project Settings", "Exe")
-    if not os.path.exists(head):
-        return False
-    if os.path.exists(os.path.join(head, exe_name + ".exe")):
-        os.startfile(os.path.join(head, exe_name + ".exe"))
-        return True
-    if os.path.exists(os.path.join(head, exe_name, exe_name + ".exe")):
-        os.startfile(os.path.join(head, exe_name, exe_name + ".exe"))
-        return True
     return False
 
 def try_open_app(exe_name, legacy_name = None, safe_open = False, depth = 0):

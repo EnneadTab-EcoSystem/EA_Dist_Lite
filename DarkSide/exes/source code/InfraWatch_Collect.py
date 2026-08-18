@@ -12,7 +12,7 @@ Runs the unified collector in `Apps/lib/DumpScripts/collectors/collect_all.py`
 which POSTs drive-health + machine-spec + events to enneadtab.com/infra/api/ingest/*
 in one sweep. Replaces the four legacy collectors (MonitorDriveSilent,
 MonitorDriveDecoderSilent, DriveStorageHistory, MonitorBlueScreen) — all of
-which were already disabled (active=False) and wrote to L:\\ static HTML
+which were already disabled (active=False) and wrote static HTML
 that nobody read.
 
 Silent by design — no console (PyInstaller `console: false`), no popups,

@@ -20,7 +20,7 @@ these are retired, not deleted.
 | AccFileOpenner | `source code/AccFileOpenner/` |
 | SplashScreen | `source code/SplashScreen.py` |
 | IndesignAccOpenner | `source code/IndesignAccOpenner/` |
-| ShanghaiRepoAssist | `source code/ShanghaiRepoAssist.py` |
+| ShanghaiRepoAssist | `source code/ShanghaiRepoAssist.py` (source is now a refuse stub; BackupRepo copy deleted 2026-08-18) |
 
 ## Retired (orphans — no build recipe existed; binary removed only)
 `HealthMetricSender`, `NYU_HQ`, `AboutMe_ComputerInfo`, `AboutMe_ComputerInfo_Silent`.

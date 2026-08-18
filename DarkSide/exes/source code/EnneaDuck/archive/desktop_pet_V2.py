@@ -1,7 +1,6 @@
 #from __future__ import print_function
 
 import sys
-sys.path.append(r"L:\4b_Applied Computing\03_Rhino\12_EnneadTab for Rhino\Dependency Modules")
 import pyautogui  # need pyautogui to show the label for dependecy reason, but for pyrevit might just import from site package
 import random
 import tkinter as tk

@@ -4,7 +4,6 @@ import random
 import tkinter as tk
 import time
 
-sys.path.append(r"L:\4b_Applied Computing\03_Rhino\12_EnneadTab for Rhino\Dependency Modules")
 import pyautogui # need pyautogui to show the label for dependecy reason, but for pyrevit might just import from site package
 from PIL import Image as pim
 
