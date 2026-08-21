@@ -18,7 +18,7 @@ from pyrevit import routes
 from Autodesk.Revit import DB
 from StringIO import StringIO
 
-from _request_utils import get_param, route_error
+from _request_utils import get_param, route_error, json_safe
 
 
 def register_execute_code_routes(api):
@@ -81,6 +81,12 @@ def register_execute_code_routes(api):
                 "error": error_msg or "",
             }
             status = 200 if error_msg is None else 400
-            return routes.make_response(data=result, status_code=status)
+            # json_safe(): generated code routinely prints non-ASCII (sheet/family
+            # names, accented text). Without coercion those cp1252 bytes make
+            # pyRevit's ensure_ascii json.dumps raise 0xE9 AFTER this handler
+            # returns -- outside our try/except -- surfacing as an opaque 500/408
+            # with no traceback, so the assistant can't self-heal it. Coercing the
+            # response here makes ANY generated-code output survive serialization.
+            return routes.make_response(data=json_safe(result), status_code=status)
         except Exception:
             return route_error()

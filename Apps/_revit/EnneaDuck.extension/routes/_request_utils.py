@@ -54,3 +54,37 @@ def route_error(exc=None, status_code=500):
         data={"error": traceback.format_exc() if exc is None else str(exc)},
         status_code=status_code,
     )
+
+
+def json_safe(value):
+    """Coerce a value tree so pyRevit's json.dumps can always encode it.
+
+    THIRD hard fact about this build: pyRevit writes the response with
+    json.dumps(ensure_ascii=True) (handler.py parse_response). Revit .NET strings
+    surface in IronPython 2.7 as code-page (cp1252) BYTE strings, so a sheet name
+    or number with a non-ASCII glyph -- an e-acute is a lone 0xE9 -- makes
+    py_encode_basestring_ascii raise "'unknown' codec can't decode byte 0xe9",
+    which the client sees as a 500 (or, via the TargetSite masking bug above, a
+    bogus 408). Decoding every byte string to unicode here makes the whole payload
+    JSON-safe. Recurses dicts/lists; scalars pass through.
+
+    Apply to the data dict before make_response in any route that returns
+    user-authored strings (sheet/view/family/room names, parameter values, code
+    snippets, captured stdout, ...).
+    """
+    if isinstance(value, unicode):
+        return value
+    if isinstance(value, str):
+        for codec in ("utf-8", "cp1252", "latin-1"):
+            try:
+                return value.decode(codec)
+            except Exception:
+                continue
+        return value.decode("ascii", "replace")
+    if isinstance(value, dict):
+        return dict(
+            (json_safe(k), json_safe(v)) for k, v in value.items()
+        )
+    if isinstance(value, (list, tuple)):
+        return [json_safe(v) for v in value]
+    return value
