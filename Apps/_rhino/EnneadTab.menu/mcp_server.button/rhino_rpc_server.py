@@ -289,13 +289,40 @@ def _handle_request(context):
     _write_json(response, result, status)
 
 
+def _json_safe(value):
+    """Coerce a value tree so json.dumps(ensure_ascii=True) can always encode it.
+
+    Rhino .NET strings surface in IronPython 2.7 as cp1252 BYTE strings, so a
+    layer/block/material name with a non-ASCII glyph -- an e-acute is a lone 0xE9
+    -- makes py_encode_basestring_ascii raise "'unknown' codec can't decode byte
+    0xe9" INSIDE json.dumps (line below), crashing the response before UTF8.GetBytes
+    ever runs. Decoding byte strings to unicode here makes every Rhino route's
+    payload serialization-safe. Mirror of the Revit routes' _request_utils.json_safe
+    (Revit<->Rhino parity, per EnneadTab-OS CLAUDE.md).
+    """
+    if isinstance(value, unicode):
+        return value
+    if isinstance(value, str):
+        for codec in ("utf-8", "cp1252", "latin-1"):
+            try:
+                return value.decode(codec)
+            except Exception:
+                continue
+        return value.decode("ascii", "replace")
+    if isinstance(value, dict):
+        return dict((_json_safe(k), _json_safe(v)) for k, v in value.items())
+    if isinstance(value, (list, tuple)):
+        return [_json_safe(v) for v in value]
+    return value
+
+
 def _write_json(response, result, status):
     """Serialize `result` as JSON and write it to the HttpListener response.
 
     Shared by the normal UI-thread path and the off-UI-thread reference-route fast
     path -- there is no reusable inline writer otherwise, so both would drift.
     """
-    response_body = json.dumps(result, default=str)
+    response_body = json.dumps(_json_safe(result), default=str)
     response_bytes = System.Text.Encoding.UTF8.GetBytes(response_body)
     response.StatusCode = status
     response.ContentType = "application/json; charset=utf-8"

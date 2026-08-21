@@ -3743,6 +3743,41 @@ This repository contains:
         self._background_threads.append(thread)
         return True
 
+    def _sign_exeproducts(self):
+        """Code-sign the ExeProducts exes via Azure Trusted Signing (best-effort, non-fatal).
+
+        Runs DarkSide/exes/sign-exeproducts.ps1, which signs each exe with signtool + the Trusted
+        Signing dlib using the runner-local AZURE_* credential. The script self-degrades to a no-op
+        when AZURE_CLIENT_SECRET is absent, so this never blocks a publish -- it only signs when the
+        publish job lands on the `signing` runner. MUST be called BEFORE _generate_exe_hash_file so
+        exe_hash.json fingerprints the signed bytes. Never raises: a signing failure logs loudly and
+        continues (the unsigned exes still publish).
+        """
+        exe_dir = os.path.join(self.os_repo_folder, "Apps", "lib", "ExeProducts")
+        script = os.path.join(DARKSIDE_DIR, "exes", "sign-exeproducts.ps1")
+        if not os.path.isfile(script):
+            print("    sign-exeproducts.ps1 not found at {}, skipping signing".format(script))
+            return
+        if not os.path.isdir(exe_dir):
+            print("    ExeProducts folder not found, skipping signing")
+            return
+        print("Begin signing ExeProducts (Azure Trusted Signing)...")
+        try:
+            # -ExecutionPolicy Bypass so a Restricted runner policy can't block the script.
+            result = subprocess.run(
+                ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script,
+                 "-ExeProductsDir", exe_dir],
+                cwd=self.os_repo_folder, capture_output=True, text=True, timeout=1800)
+            if result.stdout:
+                print(result.stdout.strip())
+            if result.returncode != 0:
+                # Non-fatal: unsigned exes still publish. Surface loudly (never silent).
+                print("    WARNING: sign-exeproducts.ps1 exited {} -- publishing UNSIGNED exes.".format(result.returncode))
+                if result.stderr:
+                    print(result.stderr.strip())
+        except Exception as e:
+            print("    WARNING: signing step failed ({}) -- publishing UNSIGNED exes.".format(str(e)))
+
     def _start_exe_hash_thread(self):
         """
         Start exe hash file generation in a background thread.
@@ -3790,6 +3825,15 @@ This repository contains:
             # and to completion BEFORE _start_exe_hash_thread() so the hash thread's one-shot folder
             # enumeration includes the fresh installers. Never raises (skips-with-warning on failure).
             self._mirror_service_factory_installers()
+
+            # Sign the ExeProducts exes with Azure Trusted Signing so the copy that ships to
+            # EA_Dist (the fleet) is signed and passes corporate endpoint security. MUST run
+            # synchronously here -- BEFORE the exe-hash thread below -- so exe_hash.json reflects
+            # the SIGNED bytes. Degrades to a no-op when AZURE_CLIENT_SECRET is absent, so it never
+            # blocks publish. The monolith's own commit is local-only (never pushed), so nothing
+            # signed is committed to EnneadTab-OS history; only the EA_Dist copy ships signed.
+            # Requires this job to run on the `signing` runner (see publish-production.yml runs-on).
+            self._sign_exeproducts()
 
             # generate exe hash file in background
             self._start_exe_hash_thread()
