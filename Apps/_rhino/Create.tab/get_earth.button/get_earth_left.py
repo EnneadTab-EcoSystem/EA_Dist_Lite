@@ -20,6 +20,9 @@ Notes:
 - The boundary-curve sizing mode described in the service plan is NOT built yet;
   only the square-from-a-point mode ships here. get_earth_utility already has
   the bbox_from_points math it will need.
+- Not to be confused with GoogleEarthTutorial in the Render tab. That one is the
+  older MANUAL route: it opens a Blender walkthrough video. This button is the
+  automatic one. They are separate tools, not two versions of the same thing.
 """
 __is_popular__ = True
 
