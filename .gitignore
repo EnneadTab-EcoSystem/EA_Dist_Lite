@@ -270,3 +270,17 @@ DarkSide/publish/logs/
 # to the real, tracked ones. Ignore the mangled twins, never the originals.
 Apps/_revit\\knowledge_revit_database.sexyDuck
 Apps/_rhino\\knowledge_rhino_database.sexyDuck
+
+# Agent/tooling scratch inside the DIST repo. publish_guard's dirty predicate is
+# `git status --porcelain` and treats ANY output as dirty -- untracked included -- so a
+# stray worktree or scratch file here REFUSES every production publish until a human
+# clears it by hand. A local convenience must not be able to brick the fleet.
+# (2026-08-21: a worktree at EA_Dist/.claude/worktrees/ was one of the blockers in the
+# 3-day publish outage; see senzhang-todo #4456 / #4634.)
+.claude/
+
+# Crash residue from stage_04_stage_dist.py's ExeProducts backup window: the directory is
+# created at :80 and only removed at :123, so a crash in between orphans it. It is
+# untracked, so `git checkout -- .` never clears it and it would wedge the guard
+# indefinitely. See senzhang-todo #4657.
+.publish_exe_products_backup/
