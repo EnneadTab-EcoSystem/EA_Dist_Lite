@@ -16,6 +16,7 @@ conversion is a 1000x error, not a rounding error.
 """
 
 import math
+import re
 
 
 # --- Unit conversion --------------------------------------------------------
@@ -178,3 +179,45 @@ def crosses_antimeridian(bbox):
     """True when the AOI wraps past +/-180 -- the tile server needs this split
     into two requests, so it must be detected rather than silently mis-fetched."""
     return bbox["east"] < bbox["west"]
+
+
+# --- Coordinate input -------------------------------------------------------
+
+# Google Maps puts the viewport centre in the @lat,lon,zoom segment and the
+# dropped pin in !3dLAT!4dLON. Prefer the pin: when a designer drops one, that
+# IS the site, and the viewport centre can sit a long way off it.
+_RE_PIN = re.compile(r"!3d(-?\d+\.?\d*)!4d(-?\d+\.?\d*)")
+_RE_QUERY = re.compile(r"[?&]q=(-?\d+\.?\d*),\s*(-?\d+\.?\d*)")
+_RE_AT = re.compile(r"@(-?\d+\.?\d*),(-?\d+\.?\d*)")
+_RE_PLAIN = re.compile(r"^\s*(-?\d+\.?\d*)\s*[,;\s]\s*(-?\d+\.?\d*)\s*$")
+
+# Order matters and is the whole contract of this function: pin, then explicit
+# query, then viewport centre, then a bare typed pair.
+_COORD_PATTERNS = (_RE_PIN, _RE_QUERY, _RE_AT, _RE_PLAIN)
+
+
+def parse_coordinate(text):
+    """Return (lat, lon) parsed from a Google Maps URL or a plain pair.
+
+    Returns None on anything unreadable rather than raising: a mistyped
+    coordinate is an ordinary thing for a designer to do, and the caller turns
+    None into a message instead of a traceback.
+
+    Out-of-range values are treated as no-match rather than as an error, so a
+    URL carrying some other !3d-style number cannot be mistaken for a location.
+    """
+    if not text:
+        return None
+    for pattern in _COORD_PATTERNS:
+        match = pattern.search(text)
+        if not match:
+            continue
+        try:
+            lat = float(match.group(1))
+            lon = float(match.group(2))
+        except ValueError:
+            continue
+        if abs(lat) > 90 or abs(lon) > 180:
+            continue
+        return (lat, lon)
+    return None
