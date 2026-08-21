@@ -1,4 +1,268 @@
 {
+    "Block.tab\\batch_rename_blocks.button\\batch_rename_blocks_left.py": {
+        "script": "Block.tab\\batch_rename_blocks.button\\batch_rename_blocks_left.py",
+        "icon": "Block.tab\\batch_rename_blocks.button\\icon.png",
+        "alias": "BatchRenameBlocks",
+        "doc": "Block name batch editing utility for Rhino.\n\nFeatures:\n- Interactive table interface for block renaming\n- Real-time block preview in viewport\n- Double-click to isolate and inspect blocks\n- Validates name conflicts automatically\n- Preserves block definitions during renaming\n\nUsage:\n1. Edit desired names in the 'New Name' column\n2. Double-click entries to preview blocks\n3. Click 'Update Block Names' to apply changes",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": false
+    },
+    "Block.tab\\edit_distorted_block.button\\edit_distorted_block_left.py": {
+        "script": "Block.tab\\edit_distorted_block.button\\edit_distorted_block_left.py",
+        "icon": "Block.tab\\edit_distorted_block.button\\icon.png",
+        "alias": "EditDistortedBlock",
+        "doc": "Block editing utility for distorted instances.\n\nFeatures:\n- Creates editable copy of distorted block\n- Maintains block definition relationships\n- Automatic camera positioning for editing\n- Temporary isolation of edited block\n- Right-click to restore previous view",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": true
+    },
+    "Block.tab\\edit_distorted_block.button\\edit_distorted_block_right.py": {
+        "script": "Block.tab\\edit_distorted_block.button\\edit_distorted_block_right.py",
+        "icon": "Block.tab\\edit_distorted_block.button\\icon.png",
+        "alias": "EditDistortedBlockRestoreView",
+        "doc": "Restore view after block editing.\n\nFeatures:\n- Restores previous camera position\n- Shows all hidden objects\n- Cleans up temporary editing blocks",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": true
+    },
+    "Block.tab\\fall_geos_on_geo.button\\fall_geos_on_geo_left.py": {
+        "script": "Block.tab\\fall_geos_on_geo.button\\fall_geos_on_geo_left.py",
+        "icon": "Block.tab\\fall_geos_on_geo.button\\icon.png",
+        "alias": "FallGeosOnGeo",
+        "doc": "Project objects onto target geometry.\n\nFeatures:\n- Projects blocks using insertion points\n- Projects other objects using bounding box centers\n- Supports both top and bottom face projections\n- Works with surfaces, polysurfaces and meshes\n- Maintains object properties during projection",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": true
+    },
+    "Block.tab\\filter_block_by_name.button\\filter_block_by_name_left.py": {
+        "script": "Block.tab\\filter_block_by_name.button\\filter_block_by_name_left.py",
+        "icon": "Block.tab\\filter_block_by_name.button\\icon.png",
+        "alias": "FilterBlockByName",
+        "doc": "Smart block selection utility.\n\nFeatures:\n- Filter blocks by name patterns\n- Multi-select support for block names\n- Sorted block name display\n- Real-time search filtering\n- Automatic selection of matching instances",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": true
+    },
+    "Block.tab\\make_block_unique.button\\make_block_unique_left.py": {
+        "script": "Block.tab\\make_block_unique.button\\make_block_unique_left.py",
+        "icon": "Block.tab\\make_block_unique.button\\icon.png",
+        "alias": [
+            "MakeBlockUnique",
+            "MBU"
+        ],
+        "doc": "Create unique block definitions.\n\nFeatures:\n- Creates independent block definitions\n- Optional name tagging with creator info\n- Preserves block transformations\n- Handles nested block structures\n- Maintains layer assignments",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": true
+    },
+    "Block.tab\\make_block_unique.button\\make_block_unique_right.py": {
+        "script": "Block.tab\\make_block_unique.button\\make_block_unique_right.py",
+        "icon": "Block.tab\\make_block_unique.button\\icon.png",
+        "alias": "MakeBlockUniqueToOne",
+        "doc": "Consolidate blocks into single definition.\n\nFeatures:\n- Merges multiple block types into one\n- Creates new unified block definition\n- Preserves instance positions\n- Maintains transformation data",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": false
+    },
+    "Block.tab\\match_texture_mapping_in_block.button\\match_texture_mapping_in_block_left.py": {
+        "script": "Block.tab\\match_texture_mapping_in_block.button\\match_texture_mapping_in_block_left.py",
+        "icon": "Block.tab\\match_texture_mapping_in_block.button\\icon.png",
+        "alias": "MatchTextureMappingInBlock",
+        "doc": "Copy texture mapping between blocks.\n\nFeatures:\n- Transfers texture mapping from source block\n- Matches by layer correspondence\n- Preserves mapping parameters\n- Supports multiple target blocks\n- Layer-specific texture application",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": false
+    },
+    "Block.tab\\package_block_layer.button\\package_block_layer_left.py": {
+        "script": "Block.tab\\package_block_layer.button\\package_block_layer_left.py",
+        "icon": "Block.tab\\package_block_layer.button\\icon.png",
+        "alias": "PackageBlockLayer",
+        "doc": "Organize block content layers.\n\nFeatures:\n- Creates unified layer structure\n- Optional layer flattening\n- Preserves layer colors and materials\n- Handles nested block hierarchies\n- Streamlines material testing workflow",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": false
+    },
+    "Block.tab\\random_blocks_on_srfs.button\\random_blocks_on_srfs_left.py": {
+        "script": "Block.tab\\random_blocks_on_srfs.button\\random_blocks_on_srfs_left.py",
+        "icon": "Block.tab\\random_blocks_on_srfs.button\\icon.png",
+        "alias": "RandomBlocksOnSrfs",
+        "doc": "Advanced block distribution utility for surfaces.\n\nFeatures:\n- Distributes blocks randomly across target surfaces\n- Configurable edge distance and spacing controls\n- Optional edge-guided or curve-guided placement\n- Real-time preview of block placement\n- Supports multiple distribution patterns:\n  - Random interior placement\n  - Edge-aligned placement\n  - Even edge distribution\n\nUsage:\n1. Select target surfaces and sample blocks\n2. Configure placement parameters\n3. Choose distribution pattern\n4. Preview and adjust as needed",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": true
+    },
+    "Block.tab\\randomize_block_transformation.button\\randomize_block_transformation_left.py": {
+        "script": "Block.tab\\randomize_block_transformation.button\\randomize_block_transformation_left.py",
+        "icon": "Block.tab\\randomize_block_transformation.button\\icon.png",
+        "alias": "RandomizeBlockTransformation",
+        "doc": "Randomly transform block transformation for rotation and scale.\n\nFeatures:\n- Rotates blocks randomly\n- Scales blocks 1D height softly or taller\n- Scales 3D dimensions evenly\n- Animates transformation process",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": true
+    },
+    "Block.tab\\sample_layout.button\\sample_layout_left.py": {
+        "script": "Block.tab\\sample_layout.button\\sample_layout_left.py",
+        "icon": "Block.tab\\sample_layout.button\\icon.png",
+        "alias": "SampleLayout",
+        "doc": "Create sample block layout along crvs to quickly visualize design.\n\nFeatures:\n- Quick block layout visualization\n- Flexible block size configuration\n- Multiple layout modes:\n  - Panel mode: Blocks span between divider points\n  - Post mode: Blocks oriented to local coordinate of divider points\n- User-friendly interface with clear step-by-step instructions\n- Real-time preview of block placement\n- Supports both open and closed curves\n- Automatically handles curve segmentation for accurate block placement",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": true
+    },
+    "Block.tab\\similar_blocks.button\\similar_blocks_left.py": {
+        "script": "Block.tab\\similar_blocks.button\\similar_blocks_left.py",
+        "icon": "Block.tab\\similar_blocks.button\\icon.png",
+        "alias": "SelectSimilarBlocks",
+        "doc": "Selects all block instances that share the same block definition as the selected blocks.\n\nUsage:\n    1. Pre-select block instances (optional)\n    2. Run the command\n    3. Select additional blocks if none were pre-selected\n    \nNotes:\n    - Works with multiple block definitions at once\n    - Automatically filters for block objects only\n",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": true
+    },
+    "Block.tab\\similar_blocks.button\\similar_blocks_right.py": {
+        "script": "Block.tab\\similar_blocks.button\\similar_blocks_right.py",
+        "icon": "Block.tab\\similar_blocks.button\\icon.png",
+        "alias": "IsolateSimilarBlocks",
+        "doc": "Isolate blocks of similar definitions from the selected blocks.\n\nFeatures:\n- Automatically identifies and isolates blocks with identical definitions\n- Supports multiple block definitions at once\n- Maintains original selection state\n- Keeps other objects visible and unchanged",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": false
+    },
+    "Block.tab\\simplify_blocks.button\\simplify_blocks_left.py": {
+        "script": "Block.tab\\simplify_blocks.button\\simplify_blocks_left.py",
+        "icon": "Block.tab\\simplify_blocks.button\\icon.png",
+        "alias": "SimplifyBlocks",
+        "doc": "This button does SimplifyBlocks when left click",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": false
+    },
+    "Block.tab\\toggle_block_color_display.button\\display_setting_right.py": {
+        "script": "Block.tab\\toggle_block_color_display.button\\display_setting_right.py",
+        "icon": "Block.tab\\toggle_block_color_display.button\\icon.png",
+        "alias": "ToggleBlockColorDisplay_Setting",
+        "doc": "Toggle the on/off of block names.",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": false
+    },
+    "Block.tab\\toggle_block_color_display.button\\toggle_block_color_display_left.py": {
+        "script": "Block.tab\\toggle_block_color_display.button\\toggle_block_color_display_left.py",
+        "icon": "Block.tab\\toggle_block_color_display.button\\icon.png",
+        "alias": "ToggleBlockColorDisplay",
+        "doc": "Toggle on/off for highlighting the different block type. Very helpful when you have many block variation.",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": true
+    },
+    "Block.tab\\uniform_transform_geos.button\\uniform_transform_geos_left.py": {
+        "script": "Block.tab\\uniform_transform_geos.button\\uniform_transform_geos_left.py",
+        "icon": "Block.tab\\uniform_transform_geos.button\\icon.png",
+        "alias": "UniformTransformGeos",
+        "doc": "Apply the same rotation and/or uniform scale to blocks or geometries. Helpful when reorienting or resizing many instances, such as changing direction or size of cars on a street.",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": false
+    },
+    "Create.tab\\quick_massing.button\\quick_massing_left.py": {
+        "script": "Create.tab\\quick_massing.button\\quick_massing_left.py",
+        "icon": "Create.tab\\quick_massing.button\\icon.png",
+        "alias": "QuickMassing",
+        "doc": "Create parametric massing models with advanced level editor interface.\n\nFeatures:\n- Interactive level editor table with reorder, add, remove functionality\n- Dedicated surface picker with surface filter\n- Real-time elevation calculations\n- Persistent settings storage\n- Visual level management interface\n\nUsage:\n1. Left-click to activate the QuickMassing tool\n2. Use the level editor to configure building levels\n3. Pick surfaces for massing creation\n4. Generate massing model based on your specifications\n\nNote: All settings are saved between sessions for convenience.",
+        "tab": "Create.tab",
+        "tab_icon": "Create.tab\\icon.png",
+        "is_popular": true
+    },
+    "Create.tab\\slab_edge.button\\slab_edge_left.py": {
+        "script": "Create.tab\\slab_edge.button\\slab_edge_left.py",
+        "icon": "Create.tab\\slab_edge.button\\icon.png",
+        "alias": "SlabEdge",
+        "doc": "Create custom slab edges by sweeping a profile block along selected edges.\n\nFeatures:\n- Multiple selection methods:\n  * Individual edge selection\n  * Edge loop selection\n  * Curve selection\n- Profile block customization:\n  * Select from existing blocks\n  * Preview profile orientation\n  * Flip profile direction\n- Interactive preview:\n  * Real-time visualization\n  * Adjust before finalizing\n  * Cancel and retry options\n\nUsage:\n1. Choose selection method\n2. Select edges or curves\n3. Pick profile block\n4. Preview and adjust\n5. Confirm to create\n\nNote: Preview objects are automatically cleaned up after use.",
+        "tab": "Create.tab",
+        "tab_icon": "Create.tab\\icon.png",
+        "is_popular": false
+    },
+    "Create.tab\\stair_maker.button\\stair_maker_left.py": {
+        "script": "Create.tab\\stair_maker.button\\stair_maker_left.py",
+        "icon": "Create.tab\\stair_maker.button\\icon.png",
+        "alias": "StairMaker",
+        "doc": "Create parametric linear stairs with interactive controls and real-time preview.\n\nFeatures:\n- Dynamic stair creation with live preview\n- Customizable parameters:\n  * Riser height\n  * Tread width\n  * Stair width\n  * Landing configuration\n- Automatic step count calculation based on height\n- Intelligent error handling for invalid inputs\n- Support for multiple stair configurations\n- Interactive point selection for precise placement\n\nUsage:\n1. Select start point for stair base\n2. Define stair direction and height\n3. Adjust width using flip point\n4. Preview and confirm stair creation\n\nNote: All parameters are validated in real-time to ensure code compliance.",
+        "tab": "Create.tab",
+        "tab_icon": "Create.tab\\icon.png",
+        "is_popular": true
+    },
+    "Create.tab\\stair_maker.button\\stair_maker_right.py": {
+        "script": "Create.tab\\stair_maker.button\\stair_maker_right.py",
+        "icon": "Create.tab\\stair_maker.button\\icon.png",
+        "alias": "StairMakerSpiral",
+        "doc": "Interactively create spiral stairs in Rhino.\n\nKey Features:\n- Dynamic spiral stair creation with preview\n- Customizable riser height and tread width\n- Adjustable spiral radius and rotation\n- Automatic step count calculation\n- Support for clockwise and counter-clockwise rotation",
+        "tab": "Create.tab",
+        "tab_icon": "Create.tab\\icon.png",
+        "is_popular": false
+    },
+    "Drafting.tab\\color_picker.button\\color_picker_left.py": {
+        "script": "Drafting.tab\\color_picker.button\\color_picker_left.py",
+        "icon": "Drafting.tab\\color_picker.button\\icon.png",
+        "alias": "ColorPicker",
+        "doc": "Opens Coolors.co color palette generator in default web browser for color scheme inspiration",
+        "tab": "Drafting.tab",
+        "tab_icon": "Drafting.tab\\icon.png",
+        "is_popular": false
+    },
+    "Drafting.tab\\duplicate_layout.button\\duplicate_layout_left.py": {
+        "script": "Drafting.tab\\duplicate_layout.button\\duplicate_layout_left.py",
+        "icon": "Drafting.tab\\duplicate_layout.button\\icon.png",
+        "alias": "DuplicateLayout",
+        "doc": "Duplicate layouts with customizable viewport offsets.\n\nKey Features:\n- Maintain layout settings and properties\n- Adjust viewport positions with X-Y offsets\n- Capture different model space views\n- Preserve viewport scales and display settings\n- Support for multiple layout selection",
+        "tab": "Drafting.tab",
+        "tab_icon": "Drafting.tab\\icon.png",
+        "is_popular": false
+    },
+    "Drafting.tab\\export_selected_pages.button\\export_selected_pages_left.py": {
+        "script": "Drafting.tab\\export_selected_pages.button\\export_selected_pages_left.py",
+        "icon": "Drafting.tab\\export_selected_pages.button\\icon.png",
+        "alias": "ExportSelectedLayout",
+        "doc": "Export selected layouts to PDF format.\n\nKey Features:\n- Multiple layout selection support\n- Customizable output location\n- Maintains print settings and quality\n- Optional automatic PDF opening\n- Batch processing capability",
+        "tab": "Drafting.tab",
+        "tab_icon": "Drafting.tab\\icon.png",
+        "is_popular": false
+    },
+    "Drafting.tab\\section_crowd.button\\section_crowd_left.py": {
+        "script": "Drafting.tab\\section_crowd.button\\section_crowd_left.py",
+        "icon": "Drafting.tab\\section_crowd.button\\icon.png",
+        "alias": "SectionCrowd",
+        "doc": "Create section view crowd representations.\n\nKey Features:\n- Interactive crowd placement in TOP view\n- Customizable people spacing and density\n- Random variations for natural appearance\n- Support for multiple crowd patterns\n- Automatic group creation for easy management",
+        "tab": "Drafting.tab",
+        "tab_icon": "Drafting.tab\\icon.png",
+        "is_popular": false
+    },
+    "Drafting.tab\\visualize_excel.button\\visualize_excel_left.py": {
+        "script": "Drafting.tab\\visualize_excel.button\\visualize_excel_left.py",
+        "icon": "Drafting.tab\\visualize_excel.button\\icon.png",
+        "alias": "VisualizeExcel",
+        "doc": "Convert Excel data into visual diagrams.\n\nKey Features:\n- Multiple shape options (circles, squares, bars)\n- Customizable colors and sizes\n- Automatic area calculations\n- Support for grouped data visualization\n- Dynamic layout adjustments.",
+        "tab": "Drafting.tab",
+        "tab_icon": "Drafting.tab\\icon.png",
+        "is_popular": true
+    },
+    "Drafting.tab\\visualize_excel.button\\visualize_excel_right.py": {
+        "script": "Drafting.tab\\visualize_excel.button\\visualize_excel_right.py",
+        "icon": "Drafting.tab\\visualize_excel.button\\icon.png",
+        "alias": "OpenSampleExcel",
+        "doc": "Access sample Excel template for area visualization.\n\nKey Features:\n- Pre-formatted Excel template\n- Example data structure\n- Color coding guidelines\n- Area calculation formulas\n- Category organization samples",
+        "tab": "Drafting.tab",
+        "tab_icon": "Drafting.tab\\icon.png",
+        "is_popular": false
+    },
+    "EnneadTab.menu\\Uninstall.button\\Uninstall_left.py": {
+        "script": "EnneadTab.menu\\Uninstall.button\\Uninstall_left.py",
+        "icon": "EnneadTab.menu\\Uninstall.button\\icon.png",
+        "alias": "Uninstall EnneadTab",
+        "doc": "Completely uninstall EnneadTab from the system",
+        "tab": "EnneadTab.menu",
+        "tab_icon": "EnneadTab.menu\\icon.png",
+        "is_popular": false
+    },
     "EnneadTab.menu\\activate_enneadtab.button\\activate_enneadtab_left.py": {
         "script": "EnneadTab.menu\\activate_enneadtab.button\\activate_enneadtab_left.py",
         "icon": "EnneadTab.menu\\activate_enneadtab.button\\icon.png",
@@ -170,15 +434,6 @@
         "tab_icon": "EnneadTab.menu\\icon.png",
         "is_popular": false
     },
-    "EnneadTab.menu\\Uninstall.button\\Uninstall_left.py": {
-        "script": "EnneadTab.menu\\Uninstall.button\\Uninstall_left.py",
-        "icon": "EnneadTab.menu\\Uninstall.button\\icon.png",
-        "alias": "Uninstall EnneadTab",
-        "doc": "Completely uninstall EnneadTab from the system",
-        "tab": "EnneadTab.menu",
-        "tab_icon": "EnneadTab.menu\\icon.png",
-        "is_popular": false
-    },
     "EnneadTab.menu\\unit_test.button\\unit_test_left.py": {
         "script": "EnneadTab.menu\\unit_test.button\\unit_test_left.py",
         "icon": "EnneadTab.menu\\unit_test.button\\icon.png",
@@ -195,261 +450,6 @@
         "doc": "Access EnneadTab's video tutorial library.\n\nOpens the official EnneadTab YouTube playlist containing tutorials, \ndemonstrations and workflow guides.",
         "tab": "EnneadTab.menu",
         "tab_icon": "EnneadTab.menu\\icon.png",
-        "is_popular": false
-    },
-    "Block.tab\\batch_rename_blocks.button\\batch_rename_blocks_left.py": {
-        "script": "Block.tab\\batch_rename_blocks.button\\batch_rename_blocks_left.py",
-        "icon": "Block.tab\\batch_rename_blocks.button\\icon.png",
-        "alias": "BatchRenameBlocks",
-        "doc": "Block name batch editing utility for Rhino.\n\nFeatures:\n- Interactive table interface for block renaming\n- Real-time block preview in viewport\n- Double-click to isolate and inspect blocks\n- Validates name conflicts automatically\n- Preserves block definitions during renaming\n\nUsage:\n1. Edit desired names in the 'New Name' column\n2. Double-click entries to preview blocks\n3. Click 'Update Block Names' to apply changes",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": false
-    },
-    "Block.tab\\edit_distorted_block.button\\edit_distorted_block_left.py": {
-        "script": "Block.tab\\edit_distorted_block.button\\edit_distorted_block_left.py",
-        "icon": "Block.tab\\edit_distorted_block.button\\icon.png",
-        "alias": "EditDistortedBlock",
-        "doc": "Block editing utility for distorted instances.\n\nFeatures:\n- Creates editable copy of distorted block\n- Maintains block definition relationships\n- Automatic camera positioning for editing\n- Temporary isolation of edited block\n- Right-click to restore previous view",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": true
-    },
-    "Block.tab\\edit_distorted_block.button\\edit_distorted_block_right.py": {
-        "script": "Block.tab\\edit_distorted_block.button\\edit_distorted_block_right.py",
-        "icon": "Block.tab\\edit_distorted_block.button\\icon.png",
-        "alias": "EditDistortedBlockRestoreView",
-        "doc": "Restore view after block editing.\n\nFeatures:\n- Restores previous camera position\n- Shows all hidden objects\n- Cleans up temporary editing blocks",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": true
-    },
-    "Block.tab\\fall_geos_on_geo.button\\fall_geos_on_geo_left.py": {
-        "script": "Block.tab\\fall_geos_on_geo.button\\fall_geos_on_geo_left.py",
-        "icon": "Block.tab\\fall_geos_on_geo.button\\icon.png",
-        "alias": "FallGeosOnGeo",
-        "doc": "Project objects onto target geometry.\n\nFeatures:\n- Projects blocks using insertion points\n- Projects other objects using bounding box centers\n- Supports both top and bottom face projections\n- Works with surfaces, polysurfaces and meshes\n- Maintains object properties during projection",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": true
-    },
-    "Block.tab\\filter_block_by_name.button\\filter_block_by_name_left.py": {
-        "script": "Block.tab\\filter_block_by_name.button\\filter_block_by_name_left.py",
-        "icon": "Block.tab\\filter_block_by_name.button\\icon.png",
-        "alias": "FilterBlockByName",
-        "doc": "Smart block selection utility.\n\nFeatures:\n- Filter blocks by name patterns\n- Multi-select support for block names\n- Sorted block name display\n- Real-time search filtering\n- Automatic selection of matching instances",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": true
-    },
-    "Block.tab\\make_block_unique.button\\make_block_unique_left.py": {
-        "script": "Block.tab\\make_block_unique.button\\make_block_unique_left.py",
-        "icon": "Block.tab\\make_block_unique.button\\icon.png",
-        "alias": [
-            "MakeBlockUnique",
-            "MBU"
-        ],
-        "doc": "Create unique block definitions.\n\nFeatures:\n- Creates independent block definitions\n- Optional name tagging with creator info\n- Preserves block transformations\n- Handles nested block structures\n- Maintains layer assignments",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": true
-    },
-    "Block.tab\\make_block_unique.button\\make_block_unique_right.py": {
-        "script": "Block.tab\\make_block_unique.button\\make_block_unique_right.py",
-        "icon": "Block.tab\\make_block_unique.button\\icon.png",
-        "alias": "MakeBlockUniqueToOne",
-        "doc": "Consolidate blocks into single definition.\n\nFeatures:\n- Merges multiple block types into one\n- Creates new unified block definition\n- Preserves instance positions\n- Maintains transformation data",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": false
-    },
-    "Block.tab\\match_texture_mapping_in_block.button\\match_texture_mapping_in_block_left.py": {
-        "script": "Block.tab\\match_texture_mapping_in_block.button\\match_texture_mapping_in_block_left.py",
-        "icon": "Block.tab\\match_texture_mapping_in_block.button\\icon.png",
-        "alias": "MatchTextureMappingInBlock",
-        "doc": "Copy texture mapping between blocks.\n\nFeatures:\n- Transfers texture mapping from source block\n- Matches by layer correspondence\n- Preserves mapping parameters\n- Supports multiple target blocks\n- Layer-specific texture application",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": false
-    },
-    "Block.tab\\package_block_layer.button\\package_block_layer_left.py": {
-        "script": "Block.tab\\package_block_layer.button\\package_block_layer_left.py",
-        "icon": "Block.tab\\package_block_layer.button\\icon.png",
-        "alias": "PackageBlockLayer",
-        "doc": "Organize block content layers.\n\nFeatures:\n- Creates unified layer structure\n- Optional layer flattening\n- Preserves layer colors and materials\n- Handles nested block hierarchies\n- Streamlines material testing workflow",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": false
-    },
-    "Block.tab\\randomize_block_transformation.button\\randomize_block_transformation_left.py": {
-        "script": "Block.tab\\randomize_block_transformation.button\\randomize_block_transformation_left.py",
-        "icon": "Block.tab\\randomize_block_transformation.button\\icon.png",
-        "alias": "RandomizeBlockTransformation",
-        "doc": "Randomly transform block transformation for rotation and scale.\n\nFeatures:\n- Rotates blocks randomly\n- Scales blocks 1D height softly or taller\n- Scales 3D dimensions evenly\n- Animates transformation process",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": true
-    },
-    "Block.tab\\random_blocks_on_srfs.button\\random_blocks_on_srfs_left.py": {
-        "script": "Block.tab\\random_blocks_on_srfs.button\\random_blocks_on_srfs_left.py",
-        "icon": "Block.tab\\random_blocks_on_srfs.button\\icon.png",
-        "alias": "RandomBlocksOnSrfs",
-        "doc": "Advanced block distribution utility for surfaces.\n\nFeatures:\n- Distributes blocks randomly across target surfaces\n- Configurable edge distance and spacing controls\n- Optional edge-guided or curve-guided placement\n- Real-time preview of block placement\n- Supports multiple distribution patterns:\n  - Random interior placement\n  - Edge-aligned placement\n  - Even edge distribution\n\nUsage:\n1. Select target surfaces and sample blocks\n2. Configure placement parameters\n3. Choose distribution pattern\n4. Preview and adjust as needed",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": true
-    },
-    "Block.tab\\sample_layout.button\\sample_layout_left.py": {
-        "script": "Block.tab\\sample_layout.button\\sample_layout_left.py",
-        "icon": "Block.tab\\sample_layout.button\\icon.png",
-        "alias": "SampleLayout",
-        "doc": "Create sample block layout along crvs to quickly visualize design.\n\nFeatures:\n- Quick block layout visualization\n- Flexible block size configuration\n- Multiple layout modes:\n  - Panel mode: Blocks span between divider points\n  - Post mode: Blocks oriented to local coordinate of divider points\n- User-friendly interface with clear step-by-step instructions\n- Real-time preview of block placement\n- Supports both open and closed curves\n- Automatically handles curve segmentation for accurate block placement",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": true
-    },
-    "Block.tab\\similar_blocks.button\\similar_blocks_left.py": {
-        "script": "Block.tab\\similar_blocks.button\\similar_blocks_left.py",
-        "icon": "Block.tab\\similar_blocks.button\\icon.png",
-        "alias": "SelectSimilarBlocks",
-        "doc": "Selects all block instances that share the same block definition as the selected blocks.\n\nUsage:\n    1. Pre-select block instances (optional)\n    2. Run the command\n    3. Select additional blocks if none were pre-selected\n    \nNotes:\n    - Works with multiple block definitions at once\n    - Automatically filters for block objects only\n",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": true
-    },
-    "Block.tab\\similar_blocks.button\\similar_blocks_right.py": {
-        "script": "Block.tab\\similar_blocks.button\\similar_blocks_right.py",
-        "icon": "Block.tab\\similar_blocks.button\\icon.png",
-        "alias": "IsolateSimilarBlocks",
-        "doc": "Isolate blocks of similar definitions from the selected blocks.\n\nFeatures:\n- Automatically identifies and isolates blocks with identical definitions\n- Supports multiple block definitions at once\n- Maintains original selection state\n- Keeps other objects visible and unchanged",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": false
-    },
-    "Block.tab\\simplify_blocks.button\\simplify_blocks_left.py": {
-        "script": "Block.tab\\simplify_blocks.button\\simplify_blocks_left.py",
-        "icon": "Block.tab\\simplify_blocks.button\\icon.png",
-        "alias": "SimplifyBlocks",
-        "doc": "This button does SimplifyBlocks when left click",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": false
-    },
-    "Block.tab\\toggle_block_color_display.button\\toggle_block_color_display_left.py": {
-        "script": "Block.tab\\toggle_block_color_display.button\\toggle_block_color_display_left.py",
-        "icon": "Block.tab\\toggle_block_color_display.button\\icon.png",
-        "alias": "ToggleBlockColorDisplay",
-        "doc": "Toggle on/off for highlighting the different block type. Very helpful when you have many block variation.",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": true
-    },
-    "Block.tab\\toggle_block_color_display.button\\display_setting_right.py": {
-        "script": "Block.tab\\toggle_block_color_display.button\\display_setting_right.py",
-        "icon": "Block.tab\\toggle_block_color_display.button\\icon.png",
-        "alias": "ToggleBlockColorDisplay_Setting",
-        "doc": "Toggle the on/off of block names.",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": false
-    },
-    "Block.tab\\uniform_transform_geos.button\\uniform_transform_geos_left.py": {
-        "script": "Block.tab\\uniform_transform_geos.button\\uniform_transform_geos_left.py",
-        "icon": "Block.tab\\uniform_transform_geos.button\\icon.png",
-        "alias": "UniformTransformGeos",
-        "doc": "Apply the same rotation and/or uniform scale to blocks or geometries. Helpful when reorienting or resizing many instances, such as changing direction or size of cars on a street.",
-        "tab": "Block.tab",
-        "tab_icon": "Block.tab\\icon.png",
-        "is_popular": false
-    },
-    "Create.tab\\quick_massing.button\\quick_massing_left.py": {
-        "script": "Create.tab\\quick_massing.button\\quick_massing_left.py",
-        "icon": "Create.tab\\quick_massing.button\\icon.png",
-        "alias": "QuickMassing",
-        "doc": "Create parametric massing models with advanced level editor interface.\n\nFeatures:\n- Interactive level editor table with reorder, add, remove functionality\n- Dedicated surface picker with surface filter\n- Real-time elevation calculations\n- Persistent settings storage\n- Visual level management interface\n\nUsage:\n1. Left-click to activate the QuickMassing tool\n2. Use the level editor to configure building levels\n3. Pick surfaces for massing creation\n4. Generate massing model based on your specifications\n\nNote: All settings are saved between sessions for convenience.",
-        "tab": "Create.tab",
-        "tab_icon": "Create.tab\\icon.png",
-        "is_popular": true
-    },
-    "Create.tab\\slab_edge.button\\slab_edge_left.py": {
-        "script": "Create.tab\\slab_edge.button\\slab_edge_left.py",
-        "icon": "Create.tab\\slab_edge.button\\icon.png",
-        "alias": "SlabEdge",
-        "doc": "Create custom slab edges by sweeping a profile block along selected edges.\n\nFeatures:\n- Multiple selection methods:\n  * Individual edge selection\n  * Edge loop selection\n  * Curve selection\n- Profile block customization:\n  * Select from existing blocks\n  * Preview profile orientation\n  * Flip profile direction\n- Interactive preview:\n  * Real-time visualization\n  * Adjust before finalizing\n  * Cancel and retry options\n\nUsage:\n1. Choose selection method\n2. Select edges or curves\n3. Pick profile block\n4. Preview and adjust\n5. Confirm to create\n\nNote: Preview objects are automatically cleaned up after use.",
-        "tab": "Create.tab",
-        "tab_icon": "Create.tab\\icon.png",
-        "is_popular": false
-    },
-    "Create.tab\\stair_maker.button\\stair_maker_left.py": {
-        "script": "Create.tab\\stair_maker.button\\stair_maker_left.py",
-        "icon": "Create.tab\\stair_maker.button\\icon.png",
-        "alias": "StairMaker",
-        "doc": "Create parametric linear stairs with interactive controls and real-time preview.\n\nFeatures:\n- Dynamic stair creation with live preview\n- Customizable parameters:\n  * Riser height\n  * Tread width\n  * Stair width\n  * Landing configuration\n- Automatic step count calculation based on height\n- Intelligent error handling for invalid inputs\n- Support for multiple stair configurations\n- Interactive point selection for precise placement\n\nUsage:\n1. Select start point for stair base\n2. Define stair direction and height\n3. Adjust width using flip point\n4. Preview and confirm stair creation\n\nNote: All parameters are validated in real-time to ensure code compliance.",
-        "tab": "Create.tab",
-        "tab_icon": "Create.tab\\icon.png",
-        "is_popular": true
-    },
-    "Create.tab\\stair_maker.button\\stair_maker_right.py": {
-        "script": "Create.tab\\stair_maker.button\\stair_maker_right.py",
-        "icon": "Create.tab\\stair_maker.button\\icon.png",
-        "alias": "StairMakerSpiral",
-        "doc": "Interactively create spiral stairs in Rhino.\n\nKey Features:\n- Dynamic spiral stair creation with preview\n- Customizable riser height and tread width\n- Adjustable spiral radius and rotation\n- Automatic step count calculation\n- Support for clockwise and counter-clockwise rotation",
-        "tab": "Create.tab",
-        "tab_icon": "Create.tab\\icon.png",
-        "is_popular": false
-    },
-    "Drafting.tab\\color_picker.button\\color_picker_left.py": {
-        "script": "Drafting.tab\\color_picker.button\\color_picker_left.py",
-        "icon": "Drafting.tab\\color_picker.button\\icon.png",
-        "alias": "ColorPicker",
-        "doc": "Opens Coolors.co color palette generator in default web browser for color scheme inspiration",
-        "tab": "Drafting.tab",
-        "tab_icon": "Drafting.tab\\icon.png",
-        "is_popular": false
-    },
-    "Drafting.tab\\duplicate_layout.button\\duplicate_layout_left.py": {
-        "script": "Drafting.tab\\duplicate_layout.button\\duplicate_layout_left.py",
-        "icon": "Drafting.tab\\duplicate_layout.button\\icon.png",
-        "alias": "DuplicateLayout",
-        "doc": "Duplicate layouts with customizable viewport offsets.\n\nKey Features:\n- Maintain layout settings and properties\n- Adjust viewport positions with X-Y offsets\n- Capture different model space views\n- Preserve viewport scales and display settings\n- Support for multiple layout selection",
-        "tab": "Drafting.tab",
-        "tab_icon": "Drafting.tab\\icon.png",
-        "is_popular": false
-    },
-    "Drafting.tab\\export_selected_pages.button\\export_selected_pages_left.py": {
-        "script": "Drafting.tab\\export_selected_pages.button\\export_selected_pages_left.py",
-        "icon": "Drafting.tab\\export_selected_pages.button\\icon.png",
-        "alias": "ExportSelectedLayout",
-        "doc": "Export selected layouts to PDF format.\n\nKey Features:\n- Multiple layout selection support\n- Customizable output location\n- Maintains print settings and quality\n- Optional automatic PDF opening\n- Batch processing capability",
-        "tab": "Drafting.tab",
-        "tab_icon": "Drafting.tab\\icon.png",
-        "is_popular": false
-    },
-    "Drafting.tab\\section_crowd.button\\section_crowd_left.py": {
-        "script": "Drafting.tab\\section_crowd.button\\section_crowd_left.py",
-        "icon": "Drafting.tab\\section_crowd.button\\icon.png",
-        "alias": "SectionCrowd",
-        "doc": "Create section view crowd representations.\n\nKey Features:\n- Interactive crowd placement in TOP view\n- Customizable people spacing and density\n- Random variations for natural appearance\n- Support for multiple crowd patterns\n- Automatic group creation for easy management",
-        "tab": "Drafting.tab",
-        "tab_icon": "Drafting.tab\\icon.png",
-        "is_popular": false
-    },
-    "Drafting.tab\\visualize_excel.button\\visualize_excel_left.py": {
-        "script": "Drafting.tab\\visualize_excel.button\\visualize_excel_left.py",
-        "icon": "Drafting.tab\\visualize_excel.button\\icon.png",
-        "alias": "VisualizeExcel",
-        "doc": "Convert Excel data into visual diagrams.\n\nKey Features:\n- Multiple shape options (circles, squares, bars)\n- Customizable colors and sizes\n- Automatic area calculations\n- Support for grouped data visualization\n- Dynamic layout adjustments.",
-        "tab": "Drafting.tab",
-        "tab_icon": "Drafting.tab\\icon.png",
-        "is_popular": true
-    },
-    "Drafting.tab\\visualize_excel.button\\visualize_excel_right.py": {
-        "script": "Drafting.tab\\visualize_excel.button\\visualize_excel_right.py",
-        "icon": "Drafting.tab\\visualize_excel.button\\icon.png",
-        "alias": "OpenSampleExcel",
-        "doc": "Access sample Excel template for area visualization.\n\nKey Features:\n- Pre-formatted Excel template\n- Example data structure\n- Color coding guidelines\n- Area calculation formulas\n- Category organization samples",
-        "tab": "Drafting.tab",
-        "tab_icon": "Drafting.tab\\icon.png",
         "is_popular": false
     },
     "File.tab\\archive_file.button\\archive_file_left.py": {
@@ -753,15 +753,6 @@
         "tab_icon": "Layer.tab\\icon.png",
         "is_popular": false
     },
-    "Layer.tab\\random_layer_color.button\\random_layer_color_left.py": {
-        "script": "Layer.tab\\random_layer_color.button\\random_layer_color_left.py",
-        "icon": "Layer.tab\\random_layer_color.button\\icon.png",
-        "alias": "RandomLayerColor",
-        "doc": "Assign random colors to layers.\n\nKey Features:\n- Smart color assignment\n- Context-aware coloring\n- Desaturated color option\n- Color scheme preservation\n- Batch processing support",
-        "tab": "Layer.tab",
-        "tab_icon": "Layer.tab\\icon.png",
-        "is_popular": true
-    },
     "Layer.tab\\random_layer_color.button\\color_setting_right.py": {
         "script": "Layer.tab\\random_layer_color.button\\color_setting_right.py",
         "icon": "Layer.tab\\random_layer_color.button\\icon.png",
@@ -770,6 +761,15 @@
         "tab": "Layer.tab",
         "tab_icon": "Layer.tab\\icon.png",
         "is_popular": false
+    },
+    "Layer.tab\\random_layer_color.button\\random_layer_color_left.py": {
+        "script": "Layer.tab\\random_layer_color.button\\random_layer_color_left.py",
+        "icon": "Layer.tab\\random_layer_color.button\\icon.png",
+        "alias": "RandomLayerColor",
+        "doc": "Assign random colors to layers.\n\nKey Features:\n- Smart color assignment\n- Context-aware coloring\n- Desaturated color option\n- Color scheme preservation\n- Batch processing support",
+        "tab": "Layer.tab",
+        "tab_icon": "Layer.tab\\icon.png",
+        "is_popular": true
     },
     "Material.tab\\assign_empty_material_to_layer.button\\assign_empty_material_to_layer_left.py": {
         "script": "Material.tab\\assign_empty_material_to_layer.button\\assign_empty_material_to_layer_left.py",
@@ -915,20 +915,20 @@
         "tab_icon": "Modify.tab\\icon.png",
         "is_popular": false
     },
-    "Render.tab\\ai_render.button\\view2render_left.py": {
-        "script": "Render.tab\\ai_render.button\\view2render_left.py",
-        "icon": "Render.tab\\ai_render.button\\icon.png",
-        "alias": "AiRenderingFromView",
-        "doc": "Renders Rhino views using Gemini AI via EnneaDuck.\n\nCaptures current viewport, sends it with a style prompt to ennead-ai.com,\nand returns a polished architectural rendering. No local GPU required.\n",
-        "tab": "Render.tab",
-        "tab_icon": "Render.tab\\icon.png",
-        "is_popular": false
-    },
     "Render.tab\\ai_render.button\\render_upscale_right.py": {
         "script": "Render.tab\\ai_render.button\\render_upscale_right.py",
         "icon": "Render.tab\\ai_render.button\\icon.png",
         "alias": "AiRenderUpscale",
         "doc": "Upscale AI generated images.",
+        "tab": "Render.tab",
+        "tab_icon": "Render.tab\\icon.png",
+        "is_popular": false
+    },
+    "Render.tab\\ai_render.button\\view2render_left.py": {
+        "script": "Render.tab\\ai_render.button\\view2render_left.py",
+        "icon": "Render.tab\\ai_render.button\\icon.png",
+        "alias": "AiRenderingFromView",
+        "doc": "Renders Rhino views using Gemini AI via EnneaDuck.\n\nCaptures current viewport, sends it with a style prompt to ennead-ai.com,\nand returns a polished architectural rendering. No local GPU required.\n",
         "tab": "Render.tab",
         "tab_icon": "Render.tab\\icon.png",
         "is_popular": false
@@ -960,11 +960,29 @@
         "tab_icon": "Render.tab\\icon.png",
         "is_popular": true
     },
-    "Render.tab\\get_google_earth_model.button\\get_google_earth_model_left.py": {
-        "script": "Render.tab\\get_google_earth_model.button\\get_google_earth_model_left.py",
-        "icon": "Render.tab\\get_google_earth_model.button\\icon.png",
-        "alias": "GetGoogleEarthModel",
-        "doc": "This button does GetGoogleEarthModel when left click",
+    "Render.tab\\get_earth.button\\get_earth_left.py": {
+        "script": "Render.tab\\get_earth.button\\get_earth_left.py",
+        "icon": "Render.tab\\get_earth.button\\icon.png",
+        "alias": "GetEarth",
+        "doc": "Pull a real-world site context model into Rhino from a coordinate.\n\nPaste a Google Maps link (or a \"lat, lon\" pair), give it a size, and the\nEnneadTab EarthModel service returns a georeferenced textured mesh you can\nrender against. No Blender detour, no plugin to install, no API key of your own.\n\nHow to use:\n1. Paste a Google Maps URL, or type \"40.7128, -74.0060\".\n2. Give a square size in metres.\n3. The model arrives on its own layer, anchored to the file's EarthAnchorPoint.\n\nNotes:\n- Good enough to RENDER. Not survey geometry, and deliberately so: do not snap,\n  section, or measure against it.\n- Google attribution is attached to the layer and must not be stripped.\n- Right-click this button for the diagnostic (is the service up, am I signed in,\n  what is cached) and for cache purge.\n- The boundary-curve sizing mode described in the service plan is NOT built yet;\n  only the square-from-a-point mode ships here. get_earth_utility already has\n  the bbox_from_points math it will need.\n- Not to be confused with GoogleEarthTutorial in the Render tab. That one is the\n  older MANUAL route: it opens a Blender walkthrough video. This button is the\n  automatic one. They are separate tools, not two versions of the same thing.\n",
+        "tab": "Render.tab",
+        "tab_icon": "Render.tab\\icon.png",
+        "is_popular": true
+    },
+    "Render.tab\\get_earth.button\\get_earth_right.py": {
+        "script": "Render.tab\\get_earth.button\\get_earth_right.py",
+        "icon": "Render.tab\\get_earth.button\\icon.png",
+        "alias": "GetEarthSettings",
+        "doc": "Diagnose and configure GetEarth.\n\nRun this first when GetEarth misbehaves. It answers the four questions that\nactually explain a failure:\n\n- Can this machine reach the EarthModel service?\n- Am I signed in to EnneadTab?\n- What is cached locally, and how big has it got?\n- Which contract version is this client speaking?\n\nAlso sets the default site size and purges the local cache.\n\nThis diagnostic SHIPS on purpose. DarkSide/ is stripped at publish, so the test\nharness, the stub server and every developer driver are gone on a designer's\nmachine. Without this, a failing GetEarth button has nothing to run at all.\n",
+        "tab": "Render.tab",
+        "tab_icon": "Render.tab\\icon.png",
+        "is_popular": false
+    },
+    "Render.tab\\get_google_earth_model_tutorial.button\\get_google_earth_model_tutorial_left.py": {
+        "script": "Render.tab\\get_google_earth_model_tutorial.button\\get_google_earth_model_tutorial_left.py",
+        "icon": "Render.tab\\get_google_earth_model_tutorial.button\\icon.png",
+        "alias": "GoogleEarthTutorial",
+        "doc": "MANUAL route to site context: opens the Blender video tutorial.\n\nThis is the OLD, hand-driven way. It opens a YouTube walkthrough for capturing a\ncity in Blender and bringing it across into Rhino, plus a companion Blender\nscript in this button's folder that tidies up the imported materials.\n\nThere is now an AUTOMATIC one: GetEarth, in the Create tab. Paste a Google Maps\nlink, give it a size, and the site model arrives georeferenced and textured with\nno Blender step at all. Try that first.\n\nThis button stays for two reasons, and will be retired when neither holds:\n1. GetEarth's server-side model builder is not finished yet, so this is still\n   the only route that works end to end today.\n2. The Blender path gives you manual control over exactly what gets captured,\n   which the automatic one deliberately does not.\n",
         "tab": "Render.tab",
         "tab_icon": "Render.tab\\icon.png",
         "is_popular": false
@@ -1212,6 +1230,15 @@
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false
     },
+    "Tailor.tab\\SAIF_panel_mapping.button\\SAIF panel mapping_left.py": {
+        "script": "Tailor.tab\\SAIF_panel_mapping.button\\SAIF panel mapping_left.py",
+        "icon": "Tailor.tab\\SAIF_panel_mapping.button\\icon.png",
+        "alias": "SaifPanelMapping",
+        "doc": "Maps SAIF panels using new naming convention CW01_SOLID X_YYYY_ZZZZ and CW06_SOLID X_YYYY_ZZZZ, extracting pier width (X) as-is",
+        "tab": "Tailor.tab",
+        "tab_icon": "Tailor.tab\\icon.png",
+        "is_popular": false
+    },
     "Tailor.tab\\children_palace_massing.button\\children_palace_massing_left.py": {
         "script": "Tailor.tab\\children_palace_massing.button\\children_palace_massing_left.py",
         "icon": "Tailor.tab\\children_palace_massing.button\\icon.png",
@@ -1257,11 +1284,11 @@
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false
     },
-    "Tailor.tab\\SAIF_panel_mapping.button\\SAIF panel mapping_left.py": {
-        "script": "Tailor.tab\\SAIF_panel_mapping.button\\SAIF panel mapping_left.py",
-        "icon": "Tailor.tab\\SAIF_panel_mapping.button\\icon.png",
-        "alias": "SaifPanelMapping",
-        "doc": "Maps SAIF panels using new naming convention CW01_SOLID X_YYYY_ZZZZ and CW06_SOLID X_YYYY_ZZZZ, extracting pier width (X) as-is",
+    "Tailor.tab\\stack_enscape.button\\move_img_right.py": {
+        "script": "Tailor.tab\\stack_enscape.button\\move_img_right.py",
+        "icon": "Tailor.tab\\stack_enscape.button\\icon.png",
+        "alias": "MoveImg_1643",
+        "doc": "Image Relocation Tool for 1643 Project\n\nLaunches the file organizer GUI for relocating rendering images between study versions.\nFeatures:\n- Opens interactive file organizer interface\n- Supports study selection (angled_frame, sawtooth, solar_panel, etc.)\n- Handles glass/chrome version organization\n- Automates file cleanup and relocation\n- Maintains project-specific folder structure\n\nUsage:\n- Right-click to open file organizer GUI\n- Select target study and version\n- Automatically relocates PNG files to appropriate folders",
         "tab": "Tailor.tab",
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false
@@ -1271,15 +1298,6 @@
         "icon": "Tailor.tab\\stack_enscape.button\\icon.png",
         "alias": "StackPSD",
         "doc": "Stack PSD Files Tool\n\nAutomates the process of stacking and combining PSD files for rendering workflows.\nFeatures:\n- Processes glass and chrome version renderings\n- Creates layered PSD compositions with proper blend modes\n- Handles special camera views (cam 13, cam 17) with background templates\n- Exports final compositions as high-quality JPG files\n- Supports multiple study variations (angled_frame, sawtooth, solar_panel, etc.)\n\nWorkflow:\n1. Prepares data by matching glass/chrome version pairs\n2. Processes each pair through Photoshop automation\n3. Applies appropriate blend modes and adjustments\n4. Saves as PSD and exports as JPG for presentation",
-        "tab": "Tailor.tab",
-        "tab_icon": "Tailor.tab\\icon.png",
-        "is_popular": false
-    },
-    "Tailor.tab\\stack_enscape.button\\move_img_right.py": {
-        "script": "Tailor.tab\\stack_enscape.button\\move_img_right.py",
-        "icon": "Tailor.tab\\stack_enscape.button\\icon.png",
-        "alias": "MoveImg_1643",
-        "doc": "Image Relocation Tool for 1643 Project\n\nLaunches the file organizer GUI for relocating rendering images between study versions.\nFeatures:\n- Opens interactive file organizer interface\n- Supports study selection (angled_frame, sawtooth, solar_panel, etc.)\n- Handles glass/chrome version organization\n- Automates file cleanup and relocation\n- Maintains project-specific folder structure\n\nUsage:\n- Right-click to open file organizer GUI\n- Select target study and version\n- Automatically relocates PNG files to appropriate folders",
         "tab": "Tailor.tab",
         "tab_icon": "Tailor.tab\\icon.png",
         "is_popular": false

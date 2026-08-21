@@ -24,7 +24,7 @@ import webbrowser
 
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
-def get_google_earth_model():
+def get_google_earth_model_tutorial():
     # Say this BEFORE opening the browser. Once the video is up the designer is
     # already committed to the manual route; the point is to offer the automatic
     # one while the choice is still open.
@@ -40,4 +40,4 @@ def get_google_earth_model():
 
 
 if __name__ == "__main__":
-    get_google_earth_model()
+    get_google_earth_model_tutorial()
