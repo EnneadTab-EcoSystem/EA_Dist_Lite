@@ -344,15 +344,6 @@
         "tab_icon": "EnneadTab.menu\\icon.png",
         "is_popular": false
     },
-    "EnneadTab.menu\\monitor_drive_connection.button\\monitor_drive_connection_left.py": {
-        "script": "EnneadTab.menu\\monitor_drive_connection.button\\monitor_drive_connection_left.py",
-        "icon": "EnneadTab.menu\\monitor_drive_connection.button\\icon.png",
-        "alias": "MonitorDriveConnection",
-        "doc": "Launches the MonitorDrive application to track and manage network drive connections.\nThis tool provides real-time monitoring of network drive status and connection health.",
-        "tab": "EnneadTab.menu",
-        "tab_icon": "EnneadTab.menu\\icon.png",
-        "is_popular": false
-    },
     "EnneadTab.menu\\open_autosave_folder.button\\open_autosave_folder_left.py": {
         "script": "EnneadTab.menu\\open_autosave_folder.button\\open_autosave_folder_left.py",
         "icon": "EnneadTab.menu\\open_autosave_folder.button\\icon.png",
@@ -983,15 +974,6 @@
         "icon": "Render.tab\\get_google_earth_model_tutorial.button\\icon.png",
         "alias": "GoogleEarthTutorial",
         "doc": "MANUAL route to site context: opens the Blender video tutorial.\n\nThis is the OLD, hand-driven way. It opens a YouTube walkthrough for capturing a\ncity in Blender and bringing it across into Rhino, plus a companion Blender\nscript in this button's folder that tidies up the imported materials.\n\nThere is now an AUTOMATIC one: GetEarth, in the Create tab. Paste a Google Maps\nlink, give it a size, and the site model arrives georeferenced and textured with\nno Blender step at all. Try that first.\n\nThis button stays for two reasons, and will be retired when neither holds:\n1. GetEarth's server-side model builder is not finished yet, so this is still\n   the only route that works end to end today.\n2. The Blender path gives you manual control over exactly what gets captured,\n   which the automatic one deliberately does not.\n",
-        "tab": "Render.tab",
-        "tab_icon": "Render.tab\\icon.png",
-        "is_popular": false
-    },
-    "Render.tab\\get_inspired.button\\get_inspired_left.py": {
-        "script": "Render.tab\\get_inspired.button\\get_inspired_left.py",
-        "icon": "Render.tab\\get_inspired.button\\icon.png",
-        "alias": "GetInspired",
-        "doc": "Opens e.AI rendering website (https://enneadtab.com/rendering/home) in the default browser",
         "tab": "Render.tab",
         "tab_icon": "Render.tab\\icon.png",
         "is_popular": false
