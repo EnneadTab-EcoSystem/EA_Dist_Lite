@@ -684,6 +684,15 @@ def _handle_execute_code(data):
     """POST /enneadtab/execute-code/ — run Python code in Rhino context.
 
     Body: {"code": "import rhinoscriptsyntax as rs\\nprint rs.DocumentName()"}
+
+    No timeout/sandbox here beyond the 30s WaitOne above (bounds the HTTP
+    response, not the exec() itself). Before reaching for `rhinocode script`
+    as a timeout-safe replacement: measured 2026-08-21 (docs/plans/
+    2026-08-05-getearth-dev-mode-automation.md sec 2.1) that rhinocode-driven
+    scripts block this exact UI-thread serialization point too, and Rhino's
+    documented `# async:true` directive does not change that when dispatched
+    via the CLI (it's Script-Editor-only). rhinocode is not an escape from
+    this hazard.
     """
     code = data.get("code", "")
     if not code:
