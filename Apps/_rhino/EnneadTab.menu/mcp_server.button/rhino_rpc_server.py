@@ -172,6 +172,18 @@ def _handle_request(context):
     # coordinated change across EnneadTab-OS + EnneadTab-RhinoAssistant. Tracked
     # separately -- do not read this guard as full authentication.
     #
+    # Measured 2026-08-21 (senzhang-todo #4676): switching this transport to
+    # rhinocode's own named-pipe IPC (rhinocode_remotepipe_<PID>) does NOT close
+    # that same gap. GetAccessControl() on a live pipe showed the Windows DEFAULT
+    # named-pipe ACL -- FullControl to SYSTEM/Administrators/the owning user, Read+
+    # Synchronize to Everyone/ANONYMOUS LOGON (confirmed as Windows' documented
+    # default, not a McNeel choice: learn.microsoft.com/windows/win32/ipc/
+    # named-pipe-security-and-access-rights). A hostile process running as the SAME
+    # Windows user has full write access to the pipe, identical exposure to this
+    # port. The only thing the pipe adds is write-isolation between DIFFERENT
+    # Windows accounts on the same box -- relevant on a multi-session AVD host, not
+    # on a single-user workstation, and not the threat this comment names.
+    #
     # DO NOT add "Sec-Fetch-Mode" to this list. Node/undici (the Electron MAIN-process
     # fetch used by RhinoAssistant, and every Node fetch) unconditionally attaches
     # `Sec-Fetch-Mode: cors` -- it is a non-removable default header (undici #1305), NOT
