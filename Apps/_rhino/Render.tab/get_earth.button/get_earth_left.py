@@ -171,10 +171,32 @@ def get_earth():
 
     NOTIFICATION.messenger(
         main_text=("Asking for {:.0f} m of context at\n{:.5f}, {:.5f}\n"
-                   "Photogrammetry takes a while. Hang tight.").format(
+                   "Watch the command line for progress.").format(
                        size_m, lat, lon))
 
-    path = EARTH_MODEL.request_model(lat, lon, size_m)
+    # Two phases, two kinds of feedback (see get_earth_utility's progress
+    # section). Generation is one blocking POST with no progress channel, so
+    # it gets a worded status and no bar. The download has real bytes, so it
+    # gets a real bar -- pumped between chunks, because Rhino repaints nothing
+    # while the main thread is blocked.
+    #
+    # A dict, not a local rebind: IronPython 2.7 has no `nonlocal`, so a
+    # closure that has to hand something back to the outer scope mutates a
+    # container instead.
+    served = {}
+
+    with UTIL.RhinoProgressMeter() as meter:
+
+        def on_response(data):
+            """Generation finished; the download is what happens next."""
+            served["data"] = data
+            meter.set_status(UTIL.download_status())
+
+        meter.set_status(UTIL.generation_status(size_m))
+        path = EARTH_MODEL.request_model(lat, lon, size_m,
+                                         on_progress=meter.report,
+                                         on_response=on_response)
+
     if not path:
         # request_model already printed the operator-facing reason. The designer
         # gets a calm one. Both faces, per the repo's rule 13.
@@ -223,10 +245,17 @@ def get_earth():
         placement = ("This file had no EarthAnchorPoint, so it is now set to "
                      "{:.5f}, {:.5f}.").format(lat, lon)
 
+    # cache_hit / cost_usd are additive optional fields; an older service omits
+    # them and completion_note then returns "" rather than inventing a figure.
+    cost_note = UTIL.completion_note(served.get("data"))
+    if cost_note:
+        cost_note = "\n\n" + cost_note
+
     NOTIFICATION.messenger(
-        main_text=("Site context imported: {} object(s) on layer\n{}\n\n{}\n\n"
+        main_text=("Site context imported: {} object(s) on layer\n{}\n\n{}{}\n\n"
                    "Imagery (c) Google. Render against it; do not measure "
-                   "from it.").format(len(new_objs), CONTEXT_LAYER, placement))
+                   "from it.").format(len(new_objs), CONTEXT_LAYER, placement,
+                                      cost_note))
 
 
 if __name__ == "__main__":
