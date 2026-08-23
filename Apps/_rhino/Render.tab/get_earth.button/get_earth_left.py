@@ -43,6 +43,8 @@ import get_earth_utility as UTIL
 
 STICKY_SIZE = "GET_EARTH_SIZE_M"
 DEFAULT_SIZE_M = 500.0
+STICKY_ROTATION = "GET_EARTH_ROTATION_DEG"
+DEFAULT_ROTATION_DEG = 0.0
 
 # Layer the imported context lands on. The name carries the attribution, because
 # service plan section 5 makes "Google attribution visibly attached to imported
@@ -169,10 +171,32 @@ def get_earth():
                        "Try something in the hundreds of metres.").format(size_m))
         return
 
+    # #4857: rotation, so the AOI can align to context (e.g. Manhattan's grid,
+    # ~29deg off true north) instead of always being locked to true north.
+    # NOTE: `if not rotation_deg: return` -- this file's own idiom for the
+    # size prompt above -- would be WRONG here. 0 is a legitimate, common
+    # answer ("no rotation"), unlike size_m where 0 can never be valid
+    # (RealBox's own minimum=1.0 already excludes it). `is None` is the only
+    # correct way to tell "designer cancelled" apart from "designer typed 0".
+    default_rotation = DATA_FILE.get_sticky(STICKY_ROTATION, DEFAULT_ROTATION_DEG)
+    rotation_deg = rs.RealBox(
+        message=("Rotation from true north, in DEGREES clockwise "
+                 "(0 = no rotation).\nE.g. Manhattan's street grid runs "
+                 "about 29 degrees off north."),
+        default_number=float(default_rotation),
+        title="GetEarth - rotation? (optional)")
+    if rotation_deg is None:
+        return
+    rotation_deg = float(rotation_deg)
+    DATA_FILE.set_sticky(STICKY_ROTATION, rotation_deg)
+
+    rotation_note = ""
+    if rotation_deg:
+        rotation_note = "\nRotated {:.1f} deg from north.".format(rotation_deg)
     NOTIFICATION.messenger(
-        main_text=("Asking for {:.0f} m of context at\n{:.5f}, {:.5f}\n"
+        main_text=("Asking for {:.0f} m of context at\n{:.5f}, {:.5f}{}\n"
                    "Watch the command line for progress.").format(
-                       size_m, lat, lon))
+                       size_m, lat, lon, rotation_note))
 
     # Two phases, two kinds of feedback (see get_earth_utility's progress
     # section). Generation is one blocking POST with no progress channel, so
@@ -194,6 +218,7 @@ def get_earth():
 
         meter.set_status(UTIL.generation_status(size_m))
         path = EARTH_MODEL.request_model(lat, lon, size_m,
+                                         rotation_deg=rotation_deg,
                                          on_progress=meter.report,
                                          on_response=on_response)
 
