@@ -129,7 +129,7 @@ def sha256_of_file(path):
 
 
 def _atomic_download(url, dest_path, expected_sha256=None,
-                     timeout_ms=DOWNLOAD_TIMEOUT_MS):
+                     timeout_ms=DOWNLOAD_TIMEOUT_MS, on_progress=None):
     """Download to a temp file, verify, then rename into place.
 
     Restated here rather than imported from DEPOT._transport on purpose: the
@@ -147,7 +147,8 @@ def _atomic_download(url, dest_path, expected_sha256=None,
         except Exception:
             pass
 
-    _common.download_url_to_file(url, tmp_path, timeout_ms=timeout_ms)
+    _common.download_url_to_file(url, tmp_path, timeout_ms=timeout_ms,
+                                 on_progress=on_progress)
 
     if not os.path.exists(tmp_path) or os.path.getsize(tmp_path) == 0:
         raise EarthModelError("Downloaded model is empty: {}".format(url))
@@ -175,11 +176,29 @@ def _atomic_download(url, dest_path, expected_sha256=None,
 # --- The call ---------------------------------------------------------------
 
 def request_model_with_token(token, lat, lon, size_m, fmt=FORMAT_GLB,
-                             source=None, force=False):
+                             source=None, force=False,
+                             on_progress=None, on_response=None):
     """Ask the service for an AOI and return a local path to the model.
 
     `source` selects the server-side backend ("google" | "osm3dep"); None lets
     the server choose its default. `force` bypasses the local cache.
+
+    The two optional callbacks exist because this call has TWO phases with
+    very different progress available, and a caller drawing a UI has to be
+    able to tell them apart:
+
+      on_response(data)  -- fired once, with the parsed response dict, the
+          moment the blocking POST has returned a usable answer. That is the
+          only honest "generation finished, download starting" signal there
+          is: the POST has no progress channel at all, so nothing can be
+          reported between sending it and this callback.
+      on_progress(done, total) -- fired per chunk while the GLB downloads.
+          Real bytes, so a caller may draw a real percentage. `total` is None
+          when the server sent no Content-Length.
+
+    Both are wrapped: a caller's UI fault degrades the DISPLAY, never the
+    download. This module stays Rhino-free and message-free -- composing text
+    for a designer is the button's job, not the client's.
 
     Returns a local file path. Raises EarthModelError on a protocol failure.
     """
@@ -216,11 +235,21 @@ def request_model_with_token(token, lat, lon, size_m, fmt=FORMAT_GLB,
         raise EarthModelError(
             "Response carried no model_url. Keys: {}".format(sorted(data.keys())))
 
-    _atomic_download(url, dest, expected_sha256=data.get("sha256"))
+    if on_response:
+        try:
+            on_response(data)
+        except Exception as e:
+            # The caller's status line broke. That is not a reason to abandon a
+            # model the office has already paid to build.
+            print("EARTH_MODEL: response callback failed: {}".format(e))
+
+    _atomic_download(url, dest, expected_sha256=data.get("sha256"),
+                     on_progress=on_progress)
     return dest
 
 
-def request_model(lat, lon, size_m, fmt=FORMAT_GLB, source=None, force=False):
+def request_model(lat, lon, size_m, fmt=FORMAT_GLB, source=None, force=False,
+                  on_progress=None, on_response=None):
     """Blocking-auth convenience wrapper. Returns a local path, or None.
 
     Degradation is deliberate and two-faced (global rule 13): the DESIGNER gets
@@ -236,7 +265,8 @@ def request_model(lat, lon, size_m, fmt=FORMAT_GLB, source=None, force=False):
         return None
 
     try:
-        return request_model_with_token(token, lat, lon, size_m, fmt, source, force)
+        return request_model_with_token(token, lat, lon, size_m, fmt, source,
+                                        force, on_progress, on_response)
     except _common.AIRequestError as e:
         if getattr(e, "status_code", None) == 401:
             AUTH.clear_token()
@@ -246,7 +276,8 @@ def request_model(lat, lon, size_m, fmt=FORMAT_GLB, source=None, force=False):
                 return None
             try:
                 return request_model_with_token(token, lat, lon, size_m, fmt,
-                                                source, force)
+                                                source, force,
+                                                on_progress, on_response)
             except Exception as e2:
                 print("EARTH_MODEL: retry after re-auth failed: {}".format(e2))
                 return _serve_stale(lat, lon, size_m, fmt)
