@@ -186,10 +186,30 @@ try {
         # will actually force-push -- not whatever the caller believed. The
         # rehearsal path deliberately does not run this: there, WRONG_REMOTE
         # inside --report is the equivalent assertion against the override map.
+        # Capture stderr here too. The #4661 fix landed on the --report call below and
+        # left this one bare, so the PRODUCTION-only assertion -- the one gating a
+        # force-push to the fleet -- was still able to fail with nothing but an exit
+        # code. Same EAP dance and the same reason: on Windows PowerShell 5.1,
+        # $ErrorActionPreference = 'Stop' turns native stderr captured via 2>&1 into a
+        # terminating NativeCommandError, so the script would die here and never reach
+        # the Fail below. Do not "simplify" to a bare 2>&1 or a file redirect without
+        # re-testing on 5.1 specifically.
         Write-Host "publish_guard --assert-production:" -ForegroundColor Yellow
-        & $python $guardPy --assert-production
-        if ($LASTEXITCODE -ne 0) {
-            Fail "publish_guard --assert-production exited $LASTEXITCODE. -Production was passed but this tree does not provably target the production distribution."
+        $prevAssertEAP = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            $assertLines = & $python $guardPy --assert-production 2>&1
+            $assertExit = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $prevAssertEAP
+        }
+        $assertLines | ForEach-Object { Write-Host $_ }
+        if ($assertExit -ne 0) {
+            $assertText = ($assertLines | Out-String).Trim()
+            if ([string]::IsNullOrWhiteSpace($assertText)) {
+                $assertText = "(the guard produced NO output on stdout or stderr -- see senzhang-todo #4661)"
+            }
+            Fail "publish_guard --assert-production exited $assertExit. -Production was passed but this tree does not provably target the production distribution.`n--- publish_guard output ---`n$assertText"
         }
         Write-Host ""
     }

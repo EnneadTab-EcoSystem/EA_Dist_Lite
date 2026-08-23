@@ -474,7 +474,17 @@ def _route(path, method, body, query):
 # ---------------------------------------------------------------------------
 
 def _handle_status():
-    """GET /enneadtab/status/ — Rhino version, active document info."""
+    """GET /enneadtab/status/ — Rhino version, active document info.
+
+    `pid` is this Rhino process's own OS pid. It exists so an OUTSIDE caller can
+    reconcile the instance it already resolved here (by port / document path)
+    with McNeel's rhinocode CLI, whose instance discovery is keyed on pid via the
+    named pipe rhinocode_remotepipe_<pid>. Without it there is no way to prove a
+    rhinocode-dispatched script lands in THIS Rhino rather than another open one
+    -- and a write executed against the wrong document is unrecoverable (see the
+    non-transactional note on _handle_execute_code). Added for senzhang-todo
+    #4773; consumed by EnneadTab-RhinoAssistant's run_script_rhinocode tool.
+    """
     doc = Rhino.RhinoDoc.ActiveDoc
     return {
         "app": "rhino",
@@ -482,6 +492,7 @@ def _handle_status():
         "document": doc.Name if doc else None,
         "path": doc.Path if doc else "",
         "server_port": _active_port,
+        "pid": System.Diagnostics.Process.GetCurrentProcess().Id,
     }
 
 
