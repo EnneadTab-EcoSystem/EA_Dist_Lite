@@ -17,7 +17,12 @@ import time
 import random
 
 from pyrevit import script
-from pyrevit import ErrorSwallower
+try:
+    # Older pyRevit: ErrorSwallower was re-exported at the top-level package.
+    from pyrevit import ErrorSwallower
+except ImportError:
+    # Newer pyRevit: moved under pyrevit.revit (verified 2026-08-31 on this machine's clone).
+    from pyrevit.revit import ErrorSwallower
 from Autodesk.Revit import DB  # pyright: ignore
 
 from EnneadTab import (
@@ -25,8 +30,8 @@ from EnneadTab import (
     DATA_FILE, EXE, SOUND, ENVIRONMENT
 )
 from EnneadTab.REVIT import (
-    REVIT_UNIT, REVIT_APPLICATION, 
-    REVIT_EVENT, REVIT_EXPORT
+    REVIT_UNIT, REVIT_APPLICATION,
+    REVIT_EXPORT
 )
 
 # Global variables
@@ -67,8 +72,6 @@ class FamilyMetaDataExporter:
     @TIME.timer
     def export_data(self):
         """Export metadata for all family files."""
-        REVIT_EVENT.set_L_drive_alert_hook_depressed(stage=True)
-        
         # Dry run to get total family count
         self.is_dry_run = True
         self.process_folder(self.family_lib_folder)
@@ -81,8 +84,7 @@ class FamilyMetaDataExporter:
         
         print("Meta data exported!!!!")
         SOUND.play_sound("sound effect_mario stage clear.wav")
-        REVIT_EVENT.set_L_drive_alert_hook_depressed(stage=False)
-        
+
         try:
             self.clear_open_docs()
         except:

@@ -408,13 +408,14 @@ def get_revit_project_data_basic(doc):
 def auto_setup_project_data(doc):
     """Automatically set up project data when retrieval fails"""
     try:
-        # Check if we're already in a transaction by trying to start one
-        try:
+        # doc.IsModifiable is True precisely when a transaction is already open --
+        # check it directly instead of using Transaction.Start() failure as a proxy,
+        # which conflates "already in a transaction" with any other start failure.
+        if not doc.IsModifiable:
             t = DB.Transaction(doc, "Auto Setup Project Data")
             t.Start()
             transaction_started = True
-        except Exception as transaction_error:
-            # We're already in a transaction, so we'll work within it
+        else:
             print("  WARNING: Already in a transaction, working within existing transaction")
             t = None
             transaction_started = False

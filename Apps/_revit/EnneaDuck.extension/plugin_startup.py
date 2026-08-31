@@ -820,7 +820,6 @@ def EnneadTab_startup():
     except Exception:
         pass
     REVIT_EVENT.set_family_load_hook_stage(stage = True)
-    REVIT_EVENT.set_L_drive_alert_hook_depressed(stage = False)
 
     TIME.update_revit_uptime()
 

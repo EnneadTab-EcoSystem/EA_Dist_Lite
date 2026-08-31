@@ -51,7 +51,11 @@ ROOT = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-USER_PROFILE_FOLDER = os.environ["USERPROFILE"]
+# Bare os.environ["USERPROFILE"] at module top level took ENVIRONMENT down on
+# any host missing that var, which cascades to ~50 downstream modules AND
+# defeats the ErrorDump throttle that depends on ENVIRONMENT itself having
+# imported (senzhang-todo #5247). Never let this raise at import time again.
+USER_PROFILE_FOLDER = os.environ.get("USERPROFILE") or os.environ.get("HOME") or os.path.expanduser("~")
 USER_DOCUMENT_FOLDER = os.path.join(USER_PROFILE_FOLDER, "Documents")
 USER_DOWNLOAD_FOLDER = os.path.join(USER_PROFILE_FOLDER, "downloads")
 
