@@ -79,10 +79,41 @@ def is_route_offline(result):
     return result.status in (404, 410)
 
 
+# Non-interactive credential (D3/D5, EnneadTab-Depot DESIGN.md 4.2). Provisioned
+# at EA_Dist install time and cached to a MACHINE-WIDE (not per-user) location --
+# %ProgramData%, never %APPDATA% -- because a Task Scheduler / SYSTEM-context
+# caller has no user profile a browser could ever sign into, so AUTH.get_token()
+# returns None there and this is the only credential such a caller can present.
+_SERVICE_KEY_FILE = (
+    os.path.join(os.environ["PROGRAMDATA"], "EnneadTab", "depot_service_key")
+    if os.environ.get("PROGRAMDATA") else None
+)
+
+
+def _read_service_key():
+    """Best-effort read of the machine-wide non-interactive credential. A
+    missing file is not an error -- most machines have none provisioned yet
+    (todo #5023) -- this just returns None rather than raising."""
+    if not _SERVICE_KEY_FILE:
+        return None
+    try:
+        with open(_SERVICE_KEY_FILE, "r") as f:
+            value = f.read().strip()
+        return value or None
+    except Exception:
+        return None
+
+
 def _headers_with_auth(headers, token, if_none_match):
     out = dict(headers or {})
     if token:
         out["Authorization"] = "Bearer {0}".format(_common._safe_token(token))
+    else:
+        # No interactive session available -- fall back to the non-interactive
+        # service-key credential, if this machine has one provisioned.
+        service_key = _read_service_key()
+        if service_key:
+            out["X-Depot-Service-Key"] = service_key
     if if_none_match:
         # ETags are quoted per RFC; store/compare verbatim.
         out["If-None-Match"] = if_none_match
@@ -201,7 +232,10 @@ def _get_dotnet(url, headers, timeout_ms):
         if status is None:
             # No HTTP response reached us at all -> transport failure (offline).
             return Result(transport_failed=True, error=str(e))
-        return Result(status=status, error=str(e))
+        # A protocol status (e.g. 401) carries the {"error": "<code>"} envelope
+        # body -- callers (STATE._error_code) need it to distinguish an expired
+        # token from a real outage (#5013).
+        return Result(status=status, body=_dotnet_response_body(e), error=str(e))
     except Exception as e:
         return Result(transport_failed=True, error=str(e))
 
@@ -302,7 +336,15 @@ def _get_urllib(url, headers, timeout_ms):
             except Exception:
                 pass
             return Result(status=304, etag=etag)
-        return Result(status=e.code, error=str(e))
+        # A protocol status (e.g. 401) carries the {"error": "<code>"} envelope
+        # body -- callers (STATE._error_code) need it to distinguish an expired
+        # token from a real outage (#5013).
+        rbody = None
+        try:
+            rbody = e.read()
+        except Exception:
+            pass
+        return Result(status=e.code, body=rbody, error=str(e))
     except URLError as e:
         # DNS failure / connection refused / timeout -> offline.
         return Result(transport_failed=True, error=str(e))
