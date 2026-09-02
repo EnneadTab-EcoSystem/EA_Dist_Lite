@@ -23,4 +23,5 @@ layout:
   - app_store
   - remote_fix_code
   - check_error_log
+  - report_last_crash
   - revit_remote_server
