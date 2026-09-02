@@ -25,6 +25,8 @@ except ImportError:
     from pyrevit.revit import ErrorSwallower
 from Autodesk.Revit import DB  # pyright: ignore
 
+import proDUCKtion # pyright: ignore
+proDUCKtion.validify()
 from EnneadTab import (
     NOTIFICATION, TIME, ERROR_HANDLE, FOLDER, 
     DATA_FILE, EXE, SOUND, ENVIRONMENT
