@@ -1,0 +1,8 @@
+title:
+  en_us: Crash Detective
+  zh_cn: 崩溃分析
+tooltip:
+  en_us: Open Revit Crash Detective to triage journals and investigate errors.
+  zh_cn: 打开 Revit Crash Detective 分析日志并诊断崩溃。
+author: Ennead
+context: doc-or-zero-doc
