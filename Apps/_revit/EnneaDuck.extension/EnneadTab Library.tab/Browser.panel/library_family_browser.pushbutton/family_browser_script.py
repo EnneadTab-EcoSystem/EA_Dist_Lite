@@ -19,6 +19,7 @@ import System # pyright: ignore
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
 from EnneadTab import ENVIRONMENT, ERROR_HANDLE, DATA_FILE, NOTIFICATION
+from EnneadTab.DEPOT import ASSET
 import traceback
 from Autodesk.Revit import DB # pyright: ignore 
 
@@ -148,9 +149,9 @@ class family_browser_ModelessForm(WPFWindow):
         self.set_image_source(self.status_icon, "update_icon.png")
 
 
-        self.meta_data_folder = os.path.join(ENVIRONMENT.L_DRIVE_HOST_FOLDER, "01_Revit", "06_DB", "Family Browser")
+        self.meta_data_folder = ASSET.get_asset_folder('revit/db/family-browser')
 
-        if not ENVIRONMENT.require_shared_root("Family Browser"):
+        if not self.meta_data_folder:
             self.data_pool = []
             self.data_grid.ItemsSource = self.data_pool[:]
             self.Show()

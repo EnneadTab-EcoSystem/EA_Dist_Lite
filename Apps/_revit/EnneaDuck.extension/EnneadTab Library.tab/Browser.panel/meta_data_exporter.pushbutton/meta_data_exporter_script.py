@@ -28,9 +28,10 @@ from Autodesk.Revit import DB  # pyright: ignore
 import proDUCKtion # pyright: ignore
 proDUCKtion.validify()
 from EnneadTab import (
-    NOTIFICATION, TIME, ERROR_HANDLE, FOLDER, 
+    NOTIFICATION, TIME, ERROR_HANDLE, FOLDER,
     DATA_FILE, EXE, SOUND, ENVIRONMENT
 )
+from EnneadTab.DEPOT import ASSET
 from EnneadTab.REVIT import (
     REVIT_UNIT, REVIT_APPLICATION,
     REVIT_EXPORT
@@ -52,7 +53,7 @@ class FamilyMetaDataExporter:
     
     def __init__(self):
         """Initialize the exporter with necessary paths and settings."""
-        self.family_lib_folder = "{}\\01_Revit\\03_Library".format(ENVIRONMENT.L_DRIVE_HOST_FOLDER)
+        self.family_lib_folder = ASSET.get_asset_folder('revit/library/families')
         self.counter = 0
         self.meta_data_folder = "{}\\Family Browser".format(ENVIRONMENT.DB_FOLDER)
         self.opened_docs = []
@@ -74,6 +75,10 @@ class FamilyMetaDataExporter:
     @TIME.timer
     def export_data(self):
         """Export metadata for all family files."""
+        if not self.family_lib_folder:
+            NOTIFICATION.messenger("Cannot reach the family library from the depot. Family metadata export skipped.")
+            return
+
         # Dry run to get total family count
         self.is_dry_run = True
         self.process_folder(self.family_lib_folder)
