@@ -13,8 +13,9 @@ graft = itertools.combinations
 
 
 
-from EnneadTab import  NOTIFICATION, DATA_FILE, SOUND, ENVIRONMENT, USER, NOTIFICATION
+from EnneadTab import  NOTIFICATION, DATA_FILE, SOUND, USER, NOTIFICATION
 from EnneadTab.RHINO import RHINO_UI
+from EnneadTab.DEPOT import ASSET
 
 # make modal dialog
 class ImageSelectionDialog(Eto.Forms.Dialog[bool]):
@@ -38,7 +39,7 @@ class ImageSelectionDialog(Eto.Forms.Dialog[bool]):
         self.multi_select = False
 
         self.Button_Names = ["Place Asset!"]
-        self.FOLDER_PRIMARY = "{}\\00_Asset Library".format(ENVIRONMENT.DB_FOLDER)
+        self.FOLDER_PRIMARY = ASSET.get_asset_folder('rhino/asset-library') or ""
         self.FOLDER_APP_IMAGES = "{}\Database\\app images".format(self.FOLDER_PRIMARY)
         self.FOLDER_DATA = "{}\Database\\data".format(self.FOLDER_PRIMARY)
         self.DEFAULT_IMAGE_NOTHING_SELECTED = "{}\\DEFAULT PREVIEW_NOTHING SELECTED.png".format(self.FOLDER_APP_IMAGES)
