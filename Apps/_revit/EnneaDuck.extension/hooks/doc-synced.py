@@ -420,7 +420,7 @@ def update_area_tracking(doc):
         return
     
     try:
-        fullpath = "{}\\EnneadTab.tab\\Tools.panel\\generic_healthcare_tool.pushbutton\\dgsf_chart.py".format(
+        fullpath = "{}\\EnneadTab.tab\\Tools.panel\\project_config.pushbutton\\dgsf_chart.py".format(
             ENVIRONMENT.REVIT_PRIMARY_EXTENSION)
         ref_module = imp.load_source("dgsf_chart", fullpath)
         ref_module.dgsf_chart_update(doc, show_log=False)
