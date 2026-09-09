@@ -181,6 +181,19 @@ try {
     Write-Host "  HEAD $(git rev-parse --short HEAD) clean"
     Write-Host ""
 
+    # Capture the RESOLVED commit ONCE, right after the reset that is meant to land
+    # on it, and export it for ________publish.py to read. A publish run can take up
+    # to 90 minutes (timeout-minutes in publish-production.yml); if the stamp writer
+    # instead re-derives "the commit we published" via a live `git rev-parse HEAD` at
+    # write time, any later git operation on this same clone during that window
+    # (however unlikely) would silently drift the stamp away from the SHA this run
+    # actually dispatched on. Exporting it now removes that window (senzhang-todo #4417).
+    $resolvedSha = (git rev-parse HEAD | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($resolvedSha)) {
+        Fail "Could not resolve HEAD after reset to capture ENNEADTAB_PUBLISH_SHA"
+    }
+    $env:ENNEADTAB_PUBLISH_SHA = $resolvedSha
+
     if ($Production) {
         # Runs against the RESET clone, so it reads the siblings this publish
         # will actually force-push -- not whatever the caller believed. The

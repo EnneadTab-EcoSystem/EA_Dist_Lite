@@ -57,6 +57,10 @@ sys.path.append(r"{lib_path}")
 status = {{"ok": False, "error": None}}
 try:
     from EnneadTab.RHINO import RHINO_RUI
+    _required = ("update_my_rui", "add_startup_script") if {is_installing} else ("close_rui", "remove_startup_script")
+    _missing = [n for n in _required if not hasattr(RHINO_RUI, n)]
+    if _missing:
+        raise AttributeError("EnneadTab lib is stale/incomplete (missing: " + ", ".join(_missing) + "). Update EnneadTab, then retry.")
     if {is_installing}:
         RHINO_RUI.update_my_rui()
         RHINO_RUI.add_startup_script()
@@ -69,6 +73,14 @@ except Exception as e:
 with open(r"{status_path}", "w") as f:
     json.dump(status, f)
 '''
+
+
+# The RHINO_RUI helpers the bootstrap calls. A lib missing any of these is
+# stale/incomplete (e.g. a dev checkout parked on a branch predating the
+# installer's helpers, #5971) -- find_lib_path validates against this and falls
+# back to the published EA_Dist copy rather than launching Rhino only to hit a
+# bare AttributeError. Keep in sync with BOOTSTRAP_TEMPLATE's call list above.
+REQUIRED_RUI_HELPERS = ("update_my_rui", "add_startup_script", "close_rui", "remove_startup_script")
 
 _user32 = ctypes.windll.user32
 _EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
@@ -165,19 +177,54 @@ class EnneadTabRhinoInstallationManager:
         self.log("Error: Rhino not found (checked registry for 8.0 and 7.0). Install Rhino first.")
         return None
 
+    @staticmethod
+    def _lib_has_required_helpers(lib_path: str) -> bool:
+        """True if <lib>/EnneadTab/RHINO/RHINO_RUI.py defines every helper the
+        bootstrap needs. Checked by SOURCE inspection, not import: RHINO_RUI
+        imports rhinoscriptsyntax, which only exists inside Rhino, so it cannot
+        be imported from this CPython installer process.
+        """
+        rui = os.path.join(lib_path, "EnneadTab", "RHINO", "RHINO_RUI.py")
+        try:
+            with open(rui, "r", encoding="utf-8", errors="replace") as f:
+                src = f.read()
+        except Exception:
+            return False
+        return all("def {}(".format(fn) in src for fn in REQUIRED_RUI_HELPERS)
+
     def find_lib_path(self) -> Optional[str]:
-        """Locate the EnneadTab Apps/lib folder (cached)."""
+        """Locate a VALID EnneadTab Apps/lib folder (cached).
+
+        Tries candidates in order and returns the first whose RHINO_RUI has the
+        helpers the bootstrap calls: (1) find_main_repo() -- honours a local
+        checkout on a dev box; (2) the published EA_Dist copy -- what a real
+        user has. find_main_repo picks a checkout by NAME only, so a dev machine
+        parked on a stale branch would otherwise feed the bootstrap a lib
+        missing close_rui/etc and fail with a bare AttributeError (#5971).
+        """
         if self._lib_path is not None:
             return self._lib_path
 
         self.log("Looking for EnneadTab OS...")
-        lib_path = os.path.join(_Exe_Util.find_main_repo(), 'Apps', 'lib')
-        if not os.path.exists(lib_path):
-            self.log("Error: could not find {} lib folder.".format(_Exe_Util.PLUGIN_NAME))
-            return None
-        self.log("Found lib path: {}".format(lib_path))
-        self._lib_path = lib_path
-        return lib_path
+        candidates = []
+        for cand in (os.path.join(_Exe_Util.find_main_repo(), "Apps", "lib"),
+                     _Exe_Util.CORE_LIB_FOLDER):
+            if cand not in candidates:
+                candidates.append(cand)
+
+        for lib_path in candidates:
+            if not os.path.exists(lib_path):
+                continue
+            if not self._lib_has_required_helpers(lib_path):
+                self.log("Skipping stale/incomplete EnneadTab lib (missing installer helpers): {}".format(lib_path))
+                continue
+            self.log("Found lib path: {}".format(lib_path))
+            self._lib_path = lib_path
+            return lib_path
+
+        self.log("Error: no EnneadTab lib with the required installer helpers found. "
+                 "Checked: {}. Update EnneadTab, then retry.".format(", ".join(candidates) or "none"))
+        return None
 
     # ------------------------------------------------------------------
     # bootstrap runner

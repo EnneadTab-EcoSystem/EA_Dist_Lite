@@ -2738,12 +2738,36 @@ class RepoPublisher:
         """
         if not hasattr(self, "_dist_version_stamp"):
             source_commit = "unknown"
-            try:
-                source_commit = subprocess.check_output(
-                    [get_git_executable(), "rev-parse", "HEAD"],
-                    cwd=OS_REPO_FOLDER, universal_newlines=True).strip()
-            except Exception as e:
-                print("    Could not resolve source commit for version stamp: {}".format(str(e)))
+            # Prefer an explicit, captured-at-dispatch-time SHA over a live
+            # `git rev-parse HEAD` on OS_REPO_FOLDER. HEAD is correct only in the
+            # instant right after run-ci-publish.ps1's reset; a publish run can run
+            # for up to 90 minutes, and any later git operation on this same clone
+            # would silently drift the stamp away from what was actually dispatched
+            # (senzhang-todo #4417).
+            #
+            # ENNEADTAB_PUBLISH_SHA (set by run-ci-publish.ps1 right after its own
+            # reset) is preferred over GITHUB_SHA: it already reflects the workflow's
+            # own precedence of a manual `workflow_dispatch` `inputs.sha` override
+            # over the trigger commit, whereas Actions' own GITHUB_SHA is always the
+            # commit that triggered the workflow run and does NOT follow that input
+            # override. GITHUB_SHA is kept as a second fallback for a run that
+            # somehow reaches this code on an older wrapper that hasn't exported the
+            # new variable yet.
+            source_commit = (
+                os.environ.get("ENNEADTAB_PUBLISH_SHA")
+                or os.environ.get("GITHUB_SHA")
+                or None
+            )
+            if source_commit:
+                source_commit = source_commit.strip()
+            if not source_commit:
+                try:
+                    source_commit = subprocess.check_output(
+                        [get_git_executable(), "rev-parse", "HEAD"],
+                        cwd=OS_REPO_FOLDER, universal_newlines=True).strip()
+                except Exception as e:
+                    print("    Could not resolve source commit for version stamp: {}".format(str(e)))
+                    source_commit = "unknown"
             now = datetime.datetime.now()
             self._dist_version_stamp = {
                 "version": now.strftime("%Y.%m.%d.%H%M"),
