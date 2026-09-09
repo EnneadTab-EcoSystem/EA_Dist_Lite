@@ -46,7 +46,14 @@ def update_my_rui():
         update_rui_v7()
 
 
-    
+def close_rui():
+    """Uninstall counterpart to update_my_rui: close every EnneadTab
+    toolbar collection without reopening one.
+    """
+    for tool_bar_name in rs.ToolbarCollectionNames():
+        if ENVIRONMENT.PLUGIN_NAME.lower() in tool_bar_name.lower():
+            rs.CloseToolbarCollection(tool_bar_name, prompt=False)
+
 
 
 
@@ -149,7 +156,55 @@ Call StartupEnable()
                 raise
                 
     Rhino.RhinoApp.RunScript("-LoadScript " + rvb_startup_modifier_script_path, True)
-    
+
+
+def remove_startup_script():
+    """Uninstall counterpart to add_startup_script: clears any EnneadTab
+    startup script registration without adding a new one.
+
+    Filters on PLUGIN_NAME ("EnneadTab"), not "menu" -- confirmed live
+    (2026-09-08) that add_startup_script actually registers
+    "<WINDOW_TEMP_FOLDER>\\EnneadTab_StartupCaller.rvb", which contains no
+    "menu" substring at all. An earlier version of this function copied the
+    "menu" filter from add_startup_script's own internal self-cleanup loop
+    (which targets a DIFFERENT, older startup-script mechanism) without
+    checking it actually matched the current registration -- so it deleted
+    nothing, and EnneadTab kept auto-loading after "uninstall" (reproduced:
+    user ran the uninstaller, then reopened Rhino and EnneadTab was still
+    there).
+    """
+    rvb_path = "{}\\{}_StartupDisable.rvb".format(ENVIRONMENT.WINDOW_TEMP_FOLDER, ENVIRONMENT.PLUGIN_NAME)
+
+    rvb_content = """
+Option Explicit
+
+Sub StartupDisable()
+    On Error Resume Next
+
+    Dim intCount
+    Dim arrPaths
+    Dim strPath
+
+    intCount = Rhino.StartupScriptCount
+    If intCount > 0 Then
+        arrPaths = Rhino.StartupScriptList
+        For Each strPath in arrPaths
+            If InStr(strPath, "{}") > 0 Then
+                Call Rhino.DeleteStartupScript (strPath)
+            End If
+        Next
+    End If
+End Sub
+
+Call StartupDisable()
+""".format(ENVIRONMENT.PLUGIN_NAME)
+
+    with open(rvb_path, "w") as f:
+        f.write(rvb_content)
+
+    Rhino.RhinoApp.RunScript("-LoadScript " + rvb_path, True)
+
+
 def unit_test():
     pass
 
