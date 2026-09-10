@@ -35,6 +35,10 @@ except Exception:
 WAIT_THRESHOLD_SECONDS = 60
 FLAG_FILE_NAME = "arcade_wait_flag.json"
 
+# Soft install CTA on the sync session card links here -- never a direct
+# download, and never opened by the wait watcher (watcher stays exe-only).
+ARCADE_LANDING_URL = "https://enneadtab.com/arcade"
+
 # Windows process-creation flags so the watcher survives Revit and shows no console.
 CREATE_NO_WINDOW = 0x08000000
 DETACHED_PROCESS = 0x00000008

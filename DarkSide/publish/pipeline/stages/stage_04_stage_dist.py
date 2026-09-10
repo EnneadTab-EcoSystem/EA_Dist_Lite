@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Stage 04: Staging Distribution Repositories (EA_Dist & EA_Dist_Lite)."""
 
+import datetime
+import json
 import os
 import shutil
 import stat
@@ -280,6 +282,96 @@ def restore_dist_repos(context, repos, reason):
     print("=" * 70 + "\n")
 
 
+def _resolve_source_commit(context):
+    """The exact SHA this publish is shipping, for the version stamp.
+
+    Prefers ENNEADTAB_PUBLISH_SHA (set by run-ci-publish.ps1 right after its own reset,
+    following workflow_dispatch's inputs.sha override) over GITHUB_SHA (Actions' own
+    trigger-commit var, which does NOT follow that override) over a live `git rev-parse
+    HEAD` on os_repo_folder -- ported unchanged from the legacy ________publish.py
+    _write_dist_version_stamp, which senzhang-todo #4417 fixed. See that history for why
+    this precedence, not a fresher one, is correct.
+    """
+    source_commit = (
+        os.environ.get("ENNEADTAB_PUBLISH_SHA")
+        or os.environ.get("GITHUB_SHA")
+        or None
+    )
+    if source_commit:
+        source_commit = source_commit.strip()
+    if source_commit:
+        return source_commit
+    try:
+        return subprocess.check_output(
+            [context.git_exe, "rev-parse", "HEAD"],
+            cwd=context.os_repo_folder, universal_newlines=True, timeout=30).strip()
+    except Exception as exc:
+        print("    Could not resolve source commit for version stamp: {}".format(exc))
+        return "unknown"
+
+
+def _write_dist_version_stamp(dist_folder, stamp):
+    """Write Apps/lib/EnneadTab/DIST_VERSION.json into the dist copy.
+
+    Runtime code (ENVIRONMENT.get_dist_version) reads this so every error report carries
+    the exact publish a machine is running; absence of the file means a dev tree.
+
+    MUST run after _sync_dist_repo (which wipes Apps/) and before stage_05 commits --
+    ported from the legacy, now-dead ________publish.py._write_dist_version_stamp. That
+    function kept working correctly through the 2026-08-18 stage-pipeline migration, but
+    the migration never called it: StageDistStage replaced the monolith's copy-and-commit
+    method without carrying this step over, so the stamp silently stopped shipping on
+    every publish since (senzhang-todo #2391, confirmed against EA_Dist's own git history
+    -- the file was removed in the first post-migration commit and never reappeared).
+    """
+    stamp_path = os.path.join(dist_folder, "Apps", "lib", "EnneadTab", "DIST_VERSION.json")
+    os.makedirs(os.path.dirname(stamp_path), exist_ok=True)
+    with open(stamp_path, "w") as f:
+        json.dump(stamp, f, indent=4)
+    print("    DIST_VERSION stamp written: {}".format(stamp["version"]))
+
+
+def _write_dist_manifest(dist_folder, stamp):
+    """Write Installation/dist_manifest.json into the dist copy.
+
+    A SHA-256 of every shipped .py file under Apps/lib/EnneadTab and
+    Apps/_revit/EnneaDuck.extension -- the integrity manifest that lets a user machine
+    prove its install is internally consistent. EnneadTab.INTEGRITY.verify() reads it.
+    Scope lives in INTEGRITY.MANIFEST_TREES so the writer and reader cannot drift.
+
+    Same provenance and same "must run after copy, before commit" rule as
+    _write_dist_version_stamp above -- ported from the same dead legacy method for the
+    same reason.
+
+    Imports EnneadTab.INTEGRITY lazily: this stage must remain importable (for tests,
+    for a rehearsal with no EnneadTab lib on sys.path) even when the real package is not
+    reachable. A missing INTEGRITY module degrades to "no manifest this run", loud on
+    stdout, never a hard failure -- write failures here must never block the fleet from
+    getting the rest of the publish.
+    """
+    try:
+        from EnneadTab import INTEGRITY
+    except Exception as exc:
+        print("    Warning: EnneadTab.INTEGRITY not importable, skipping dist_manifest.json: "
+              "{}: {}".format(type(exc).__name__, exc))
+        return
+
+    files = INTEGRITY.build_manifest_files(dist_folder)
+    manifest = {
+        "version": stamp["version"],
+        "source_commit": stamp["source_commit"],
+        "published_at": stamp["published_at"],
+        "trees": INTEGRITY.MANIFEST_TREES,
+        "files": files,
+    }
+    manifest_dir = os.path.join(dist_folder, "Installation")
+    os.makedirs(manifest_dir, exist_ok=True)
+    manifest_path = os.path.join(manifest_dir, INTEGRITY.MANIFEST_NAME)
+    with open(manifest_path, "w") as f:
+        json.dump(manifest, f, indent=4, sort_keys=True)
+    print("    dist_manifest written: {} files hashed".format(len(files)))
+
+
 class StageDistStage(PublishStage):
     """Staging stage: copies OS content into EA_Dist and EA_Dist_Lite with filtering."""
 
@@ -308,6 +400,15 @@ class StageDistStage(PublishStage):
         # it is outside the repo so it cannot wedge a publish any more, but an unbounded
         # pile of multi-hundred-MB exe copies in %TEMP% is its own slow failure.
         self._exe_backup_dirs = []
+        # Computed once, shared by both targets, so EA_Dist and EA_Dist_Lite from the same
+        # publish run carry an identical version -- same intent as the legacy (now dead)
+        # ________publish.py._write_dist_version_stamp this was ported from.
+        now = datetime.datetime.now()
+        dist_version_stamp = {
+            "version": now.strftime("%Y.%m.%d.%H%M"),
+            "source_commit": _resolve_source_commit(context),
+            "published_at": now.strftime("%Y-%m-%dT%H:%M:%S"),
+        }
         try:
             for dist_folder, is_lite, label in dist_targets:
                 if not os.path.exists(os.path.dirname(dist_folder)):
@@ -315,6 +416,21 @@ class StageDistStage(PublishStage):
                         label, dist_folder))
                 touched.append((dist_folder, label))
                 self._sync_dist_repo(context, dist_folder, is_lite, label)
+
+                # Written AFTER the sync (which wipes Apps/lib/EnneadTab and Installation/)
+                # and BEFORE stage_05 commits, so the stamp rides the same auto-commit.
+                # Never allowed to block the publish: a missing stamp only degrades version
+                # reporting for one run, a skipped commit stops fleet updates entirely.
+                try:
+                    _write_dist_version_stamp(dist_folder, dist_version_stamp)
+                except Exception as exc:
+                    print("    Warning: failed to write DIST_VERSION.json for {}: {}".format(
+                        label, exc))
+                try:
+                    _write_dist_manifest(dist_folder, dist_version_stamp)
+                except Exception as exc:
+                    print("    Warning: failed to write dist_manifest.json for {}: {}".format(
+                        label, exc))
         except BaseException:
             # BaseException so a cancelled CI job (KeyboardInterrupt) repairs too.
             # Repair, then re-raise the ORIGINAL with a bare raise: the traceback is

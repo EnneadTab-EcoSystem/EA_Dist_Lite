@@ -2664,6 +2664,26 @@ class RepoPublisher:
         """
         Copy files to distribution repository and commit changes.
         Enhanced with better retry logic and progress reporting.
+
+        DEAD CODE (confirmed, not "probably"): this whole method lives on
+        RepoPublisher, and RepoPublisher is never constructed anywhere in the live
+        path -- PR #176 replaced it with the stage-based pipeline (see
+        tools/_publisher_loader.py's module docstring). Its only caller,
+        _sync_repositories, is itself only called from RepoPublisher.run(), which
+        nothing invokes. The real CI entrypoint (publish() near the bottom of this
+        file, run by run-ci-publish.ps1) builds a PipelineRunner from the 7
+        pipeline.stages.* classes instead.
+
+        This is exactly how DIST_VERSION.json / dist_manifest.json stopped shipping
+        on every publish from 2026-08-18 onward: this method's
+        _write_dist_version_stamp / _write_dist_manifest calls kept being maintained
+        (senzhang-todo #4417 fixed a bug in the former as recently as 2026-09-10) while
+        silently running against nothing. The live equivalents now live in
+        pipeline/stages/stage_04_stage_dist.py (_write_dist_version_stamp /
+        _write_dist_manifest module functions, called from StageDistStage.execute).
+        senzhang-todo #2391. Left in place rather than deleted: RepoPublisher is a
+        large class and a full removal deserves its own reviewed pass, not a
+        drive-by inside this fix.
         """
         try:
             # Copy files to distribution repository with status updates

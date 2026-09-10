@@ -32,6 +32,7 @@ try:
     import tkinter as tk
     import tkinter.ttk as ttk
     from tkinter import scrolledtext
+    from tkinter import messagebox
 
     IMPORT_FINE = True
 except ImportError as e:
@@ -132,6 +133,7 @@ class RepositoryUpdater:
             self.start_update()
 
     def start_update(self):
+        success = False
         try:
             # Fetch the latest commit before downloading the zip
             self.commit_sha, self.commit_message = self.get_latest_commit()
@@ -153,12 +155,60 @@ class RepositoryUpdater:
             self.cleanup_empty_EA_dist_folder()
             self.create_duck_file(success=True)
             print("\n\nUpdate completed. You can now close this window!")
+            success = True
         except Exception as e:
             self.create_duck_file(success=False, error_details=traceback.format_exc())
             print(f"Update failed with error: {e}")
 
         if self.use_gui:
-            self.root.after(10000, self.root.destroy)  # Close the GUI after 10 seconds
+            # Marshal onto the main thread -- this worker thread must not touch
+            # Tk widgets/dialogs directly (start_update runs in a background
+            # thread; see run_update).
+            self.root.after(0, lambda: self._finish_gui(success))
+
+    def _finish_gui(self, success):
+        """First-time install only (use_gui True): offer to chain straight
+        into the Revit/Rhino installers, then close. Runs on the main thread.
+        """
+        if success:
+            self._offer_chain_installs()
+        self.root.after(3000, self.root.destroy)
+
+    def _offer_chain_installs(self):
+        """Offer to install EnneadTab for Rhino and/or Revit right after the
+        core install finishes, mirroring the Wiki install guide's own order
+        (OS installer, then "Choose Rhino, Revit, or both") instead of
+        leaving the user to go find those installers on their own.
+
+        Both installers are now fully guided/non-interactive from here on
+        (Rhino via the headless RhinoCode installer, Revit via pyRevit
+        attach) -- see senzhang-todo #5884. Only offered on first-time
+        install (use_gui) and only when the exe actually exists in this
+        distribution (the Lite build may not carry it) -- missing means a
+        silent skip, not an error.
+        """
+        exe_product_folder = os.path.join(self.final_dir, "Apps", "lib", "ExeProducts")
+        installers = [
+            ("Rhino", os.path.join(exe_product_folder, "EnneadTab_For_Rhino_Installer.exe")),
+            ("Revit", os.path.join(exe_product_folder, "EnneadTab_For_Revit_Installer.exe")),
+        ]
+        for product_name, installer_path in installers:
+            if not os.path.exists(installer_path):
+                continue
+            try:
+                wants_it = messagebox.askyesno(
+                    "Install EnneadTab for {}?".format(product_name),
+                    "EnneadTab is now set up.\n\nInstall EnneadTab for {} now?".format(product_name),
+                )
+            except Exception as e:
+                print(f"Could not prompt for {product_name} install: {e}")
+                continue
+            if wants_it:
+                try:
+                    os.startfile(installer_path)
+                    print(f"Launched EnneadTab for {product_name} installer.")
+                except Exception as e:
+                    print(f"Failed to launch EnneadTab for {product_name} installer: {e}")
 
     def download_zip(self):
         for attempt in range(self.max_retries):
