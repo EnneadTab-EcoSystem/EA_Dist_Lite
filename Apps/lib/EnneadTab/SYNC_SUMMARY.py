@@ -77,11 +77,18 @@ MIN_SESSION_SECONDS = 5 * 60
 KEY_RECOMMENDATION = "EA_SYNC_CARD_RECOMMENDATION"
 KEY_LAST_SHOWN = "EA_SYNC_CARD_LAST_SHOWN"
 
+# Independent of KEY_LAST_SHOWN: caps how often the soft "Get Arcade" install
+# CTA may appear. Play arcade (when installed) is not gated by this.
+KEY_ARCADE_INSTALL_CTA_LAST_SHOWN = "EA_ARCADE_INSTALL_CTA_LAST_SHOWN"
+ARCADE_INSTALL_CTA_COOLDOWN_SECONDS = 7 * 24 * 60 * 60
+
 # One card per this window. Someone syncing every two minutes gets the card
 # occasionally, not every time.
 MIN_SECONDS_BETWEEN_CARDS = 45 * 60
 
 BANK_URL = "https://enneadtab.com/bank"
+ACTION_ID_ARCADE_PLAY = "sync_card_arcade"
+ACTION_ID_ARCADE_GET = "sync_card_arcade_get"
 
 
 def is_enabled():
@@ -208,11 +215,23 @@ def _coin_line(balance, earned):
     return "Balance: {} quacks.".format(balance)
 
 
+def _arcade_install_cta_due():
+    """True when the soft Get Arcade CTA may appear (7-day cooldown elapsed)."""
+    last = SESSION_STATS.store_get(KEY_ARCADE_INSTALL_CTA_LAST_SHOWN)
+    if last is None:
+        return True
+    try:
+        return (time.time() - float(last)) >= ARCADE_INSTALL_CTA_COOLDOWN_SECONDS
+    except Exception:
+        return True
+
+
 def _actions(balance):
     """At most two -- the renderer's hard cap.
 
-    Arcade first when it is installed and wanted: on a long sync it is the more
-    useful of the two, and the watcher is about to offer it anyway.
+    Arcade CTA first (Play when installed, soft Get when not and due), then
+    Bank. Opt-out and install-CTA cooldown can leave the first slot empty so
+    Bank still fills it when eligible.
     """
     actions = []
     try:
@@ -220,10 +239,17 @@ def _actions(balance):
             exe = ARCADE.get_installed_arcade_exe()
             if exe:
                 actions.append({
-                    "id": "sync_card_arcade",
+                    "id": ACTION_ID_ARCADE_PLAY,
                     "label": "Play arcade",
                     "type": "open_path",
                     "payload": exe,
+                })
+            elif _arcade_install_cta_due():
+                actions.append({
+                    "id": ACTION_ID_ARCADE_GET,
+                    "label": "Get Arcade",
+                    "type": "open_url",
+                    "payload": ARCADE.ARCADE_LANDING_URL,
                 })
     except Exception:
         pass
@@ -238,6 +264,16 @@ def _actions(balance):
             "payload": BANK_URL,
         })
     return actions
+
+
+def _record_arcade_install_cta_shown(actions):
+    """Stamp the install-CTA cooldown only when Get Arcade was on the shown card."""
+    if not actions:
+        return
+    for action in actions:
+        if isinstance(action, dict) and action.get("id") == ACTION_ID_ARCADE_GET:
+            SESSION_STATS.store_set(KEY_ARCADE_INSTALL_CTA_LAST_SHOWN, time.time())
+            return
 
 
 # --------------------------------------------------------------- recommendation
@@ -374,6 +410,7 @@ def show_session_card(doc_title=None, doc=None):
         return False
 
     SESSION_STATS.store_set(KEY_LAST_SHOWN, time.time())
+    _record_arcade_install_cta_shown(card.get("actions"))
 
     kwargs = {
         "main_text": render_text(card),
