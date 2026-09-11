@@ -2,7 +2,7 @@ title:
   en_us: Crash Detective
   zh_cn: 崩溃分析
 tooltip:
-  en_us: Auto-upload the latest Revit crash journal to Crash Detective and open the diagnosis.
-  zh_cn: 自动上传最近的 Revit 崩溃日志到 Crash Detective 并打开诊断结果。
+  en_us: Find the latest Revit crash journal, confirm, then upload to Crash Detective and open the diagnosis.
+  zh_cn: 查找最近的 Revit 崩溃日志，确认后再上传到 Crash Detective 并打开诊断结果。
 author: Ennead
 context: doc-or-zero-doc
