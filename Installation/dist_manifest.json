@@ -334,7 +334,7 @@
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/property_line_from_excel.pushbutton/property_line_from_excel_script.py": "0ea4fd4a955e5d09ea43baeeddd96d2af8b4311306f6052b83190c61355fa8a2",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/relationship_diagram.pushbutton/relationship_diagram_script.py": "10bf19cb41a2d354acfd5202d673f74cdb626d7bd8e10506d19b5f35c74121d2",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/repath_dwg_drive_letter.pushbutton/repath_dwg_drive_letter_script.py": "9fb6206182cc6c45834617bea254848e8daff0fb221a626269f0d02f012e3b21",
-        "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/report_crash.pushbutton/report_crash_script.py": "b9e58ff431442c7b83d5920739ec83c2fb823697f02e34fb5bef31e125554b97",
+        "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/report_crash.pushbutton/report_crash_script.py": "c492d12b7cc9ce572a40c3686055b17dbaa67955e9b848e9729cd013c1714911",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/revision_cloud_color_manager.pushbutton/revision_cloud_color_manager_script.py": "968b12476e3f7ad08fdf9b64a6dcdbe2e36d0c18d37deffcc0a7b66a9818116f",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/sheet_tree.pushbutton/sheet_tree_script.py": "d324fb73559da88dc101112f6fd26f01c97f0a7474e243cbe5eef38b2944dcb4",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/smart_egress_path.pushbutton/smart_egress_path_script.py": "d507abdcc7e085156d79502fd7c9abcbd68446962d8a33d77612f2b2a514368a",
@@ -541,6 +541,7 @@
         "Apps/lib/EnneadTab/COLOR.py": "5e2f1758a6b1fea3ab60ca8f97a26c735406ca7566e281bee9b117f86d22b359",
         "Apps/lib/EnneadTab/CONFIG.py": "2b35f29a76d88ec6b02ffbcb312538b6334728ebef6fbc65b1a8af0ebfa18291",
         "Apps/lib/EnneadTab/COPY.py": "85e71d4f54b1b4735550f70396f0e609fdb39c4db2596fbd7f762ce65f826285",
+        "Apps/lib/EnneadTab/CRASH_DETECTIVE.py": "e7a648da320e171b16cff338e8daaa793d0a1f044a1e17d4f473a1a1ad235993",
         "Apps/lib/EnneadTab/DATA_CONVERSION.py": "fb91cf52b5219c7f0c4f7c7fdd619cb41f12c1aa3f74cfa41684b0394185d991",
         "Apps/lib/EnneadTab/DATA_FILE.py": "72b876822d0fe417e62b2d4560bc396b205a6e8cea69abe88ee057b5edfb99c8",
         "Apps/lib/EnneadTab/DATA_VIZ.py": "62cb4e2514867b47c03e958c67fd3dbeaf9919d8c03f5bbd42c0398e1bbac152",
@@ -700,11 +701,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-09-10T17:44:50",
-    "source_commit": "809e4b00305b89965adba2bea2b60da0e99c000c",
+    "published_at": "2026-09-10T20:05:20",
+    "source_commit": "a2e99e61d82b31e3ccc563906ed9e370a7a73b63",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.09.10.1744"
+    "version": "2026.09.10.2005"
 }
