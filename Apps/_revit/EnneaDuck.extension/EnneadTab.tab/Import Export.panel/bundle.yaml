@@ -10,6 +10,7 @@ layout:
   - schedule2excel
   - apply_doh_sheet_number
   - Rhino
+  - arvr_overlay
   - ">>>"
   - export isolated walltype 
   - update_miro
