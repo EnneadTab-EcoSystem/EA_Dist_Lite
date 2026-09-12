@@ -4233,6 +4233,7 @@ def publish(is_production=False, mode=None):
     from pipeline.stages.stage_01_preflight import PreflightStage
     from pipeline.stages.stage_02_build_assets import BuildAssetsStage
     from pipeline.stages.stage_03_docs_wiki import DocsWikiStage
+    from pipeline.stages.stage_03b_wiki_ingest import WikiIngestStage
     from pipeline.stages.stage_04_stage_dist import StageDistStage
     from pipeline.stages.stage_05_git_push import GitPushStage
     from pipeline.stages.stage_06_rollback_tags import RollbackTagsStage
@@ -4248,6 +4249,7 @@ def publish(is_production=False, mode=None):
     runner.add_stage(PreflightStage())
     runner.add_stage(BuildAssetsStage())
     runner.add_stage(DocsWikiStage())
+    runner.add_stage(WikiIngestStage())
     runner.add_stage(StageDistStage())
     runner.add_stage(GitPushStage())
     runner.add_stage(RollbackTagsStage())

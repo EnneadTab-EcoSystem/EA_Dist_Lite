@@ -924,6 +924,15 @@
         "tab_icon": "Render.tab\\icon.png",
         "is_popular": false
     },
+    "Render.tab\\arvr_overlay.button\\arvr_overlay_left.py": {
+        "script": "Render.tab\\arvr_overlay.button\\arvr_overlay_left.py",
+        "icon": "Render.tab\\arvr_overlay.button\\icon.png",
+        "alias": "ARVROverlay",
+        "doc": "EnneadTab-ARVR: Zero-Install Mobile Camera AR Overlay for 3D Models.\n\nBeam your 3D models onto your smartphone camera in augmented reality:\n- Export selected Rhino objects to .GLB\n- Direct upload to active cloud room session\n- Pick existing local .GLB / .GLTF / .USDZ file to beam\n- Instant mobile camera AR pairing via QR code\n- Launch Web Hub (https://enneadtab.com/arvr)\n",
+        "tab": "Render.tab",
+        "tab_icon": "Render.tab\\icon.png",
+        "is_popular": true
+    },
     "Render.tab\\assign_empty_material.button\\assign_empty_material_left.py": {
         "script": "Render.tab\\assign_empty_material.button\\assign_empty_material_left.py",
         "icon": "Render.tab\\assign_empty_material.button\\icon.png",

@@ -1,0 +1,136 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="EnneadTab-ARVR Mobile Camera Overlay"
+        Width="480"
+        Height="420"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="NoResize"
+        Background="#0A0E1A"
+        Foreground="#E2E8F0">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="20">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="[ AR/VR SPATIAL OVERLAY ]"
+                       FontFamily="Consolas"
+                       FontSize="16"
+                       FontWeight="Bold"
+                       Foreground="#00F0FF"
+                       HorizontalAlignment="Center" />
+            <TextBlock Text="Zero-install mobile camera AR overlay for Revit 3D models"
+                       FontFamily="Segoe UI"
+                       FontSize="11"
+                       Foreground="#8A99AD"
+                       HorizontalAlignment="Center"
+                       Margin="0,4,0,0" />
+        </StackPanel>
+
+        <!-- Info / Room card -->
+        <Border Grid.Row="1"
+                Background="#121829"
+                BorderBrush="#1E293B"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="12"
+                Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock x:Name="status_text"
+                           Text=">> Ready to beam 3D model into mobile AR room"
+                           FontFamily="Consolas"
+                           FontSize="11"
+                           Foreground="#00FF66"
+                           TextWrapping="Wrap" />
+                <Grid Margin="0,10,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Room Code:"
+                               VerticalAlignment="Center"
+                               FontFamily="Segoe UI"
+                               FontSize="11"
+                               Foreground="#94A3B8"
+                               Margin="0,0,8,0" />
+                    <TextBox x:Name="room_textbox"
+                             Grid.Column="1"
+                             Height="26"
+                             Background="#0A0E1A"
+                             Foreground="#FFE600"
+                             BorderBrush="#334155"
+                             Padding="6,2"
+                             FontFamily="Consolas"
+                             FontSize="12" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- Actions -->
+        <StackPanel Grid.Row="2">
+            <!-- Export / Beam Current View Button -->
+            <Button x:Name="btn_export_view"
+                    Content="⚡ EXPORT CURRENT 3D VIEW &amp; BEAM TO AR"
+                    Height="40"
+                    Background="#FF007F"
+                    Foreground="#FFFFFF"
+                    BorderThickness="0"
+                    Margin="0,0,0,10"
+                    Click="on_export_view_clicked" />
+
+            <!-- Browse & Beam Button -->
+            <Button x:Name="btn_browse_model"
+                    Content="📁 BROWSE 3D MODEL (.GLB/.GLTF/.USDZ) &amp; BEAM"
+                    Height="34"
+                    Background="#1E293B"
+                    Foreground="#00F0FF"
+                    BorderThickness="1"
+                    BorderBrush="#334155"
+                    Margin="0,0,0,10"
+                    Click="on_browse_model_clicked" />
+
+            <!-- Open Web Hub Button -->
+            <Button x:Name="btn_open_web"
+                    Content="🌐 OPEN AR/VR WEB HUB (BROWSER)"
+                    Height="34"
+                    Background="#121829"
+                    Foreground="#FFE600"
+                    BorderThickness="1"
+                    BorderBrush="#334155"
+                    Margin="0,0,0,10"
+                    Click="on_open_web_clicked" />
+        </StackPanel>
+
+        <!-- Footer -->
+        <Grid Grid.Row="4" Margin="0,10,0,0">
+            <TextBlock Text="enneadtab.com/arvr"
+                       FontFamily="Consolas"
+                       FontSize="10"
+                       Foreground="#475569"
+                       VerticalAlignment="Center" />
+            <Button x:Name="btn_close"
+                    Content="CLOSE"
+                    Width="80"
+                    Height="26"
+                    Background="#0A0E1A"
+                    Foreground="#64748B"
+                    BorderBrush="#334155"
+                    BorderThickness="1"
+                    HorizontalAlignment="Right"
+                    Click="on_close_clicked" />
+        </Grid>
+    </Grid>
+</Window>
