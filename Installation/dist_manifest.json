@@ -656,6 +656,7 @@
         "Apps/lib/EnneadTab/SERVER/server.py": "4f21addc608cc78c097bb7af31c129a7194c64a2c9a852e7b921123d54095b5f",
         "Apps/lib/EnneadTab/SESSION_STATS.py": "d815b719a34cdccc502e12fa5165a29c0845abb5ad1e9ec7caff56e22eaf267d",
         "Apps/lib/EnneadTab/SHAREPOINT.py": "4412a06334c14eb37a99da9c65764c82b964e85c5e42fe711e68adb73002b996",
+        "Apps/lib/EnneadTab/SHOW_ROOM_PUSH.py": "f950bbf59bfde7656e92817ce8a437999fc611eba3bf90af5a046141914462a8",
         "Apps/lib/EnneadTab/SIGNIN_NUDGE.py": "14544d75aead40f44771a244d22d3b462e807d98a767c1662f7cb7f4e473454e",
         "Apps/lib/EnneadTab/SOUND.py": "49a6e0dbf85398e4ba3f59894d37b5c39f28477a2763b910cee9b3dd2882ad12",
         "Apps/lib/EnneadTab/SPEAK.py": "f7abee1ba4d01f1d580356f1ddd4bf9cbdbc0748be552e9937adf87febc78da7",
@@ -705,11 +706,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-09-13T21:42:38",
-    "source_commit": "bcae5c59b069794a78b3c28c025dd2758e536e36",
+    "published_at": "2026-09-13T22:05:23",
+    "source_commit": "238d690ad4cad3502556109ece94f2d30d9c0141",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.09.13.2142"
+    "version": "2026.09.13.2205"
 }
