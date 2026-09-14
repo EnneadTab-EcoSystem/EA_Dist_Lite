@@ -5,6 +5,7 @@ __doc__ = """Open EnneadTab-ARVR: Mobile Camera AR Overlay for 3D Models.
 
 Beam your Revit 3D views onto your smartphone camera in augmented reality:
 - Export active 3D view or pick an existing .glb / .gltf / .usdz
+- Staged safely in local temporary dump directory
 - Upload directly into cloud room session
 - Scan QR code to launch mobile camera AR overlay with 1:1 scale
 - Zero app installs needed on phone or headset
@@ -36,7 +37,7 @@ DOC = REVIT_APPLICATION.get_doc()
 
 
 class ARVROverlayWindow(WPFWindow):
-    """Arcade-styled WPF Dialog for Revit ARVR export and web pairing."""
+    """Arcade-styled WPF Dialog for Revit ARVR export, staging, and web pairing."""
 
     def __init__(self, doc):
         xaml_path = os.path.join(os.path.dirname(__file__), "ARVR_Overlay_Form.xaml")
@@ -66,52 +67,37 @@ class ARVROverlayWindow(WPFWindow):
             NOTIFICATION.messenger("Please open or activate a 3D view in Revit first, or browse an existing .glb file.")
             return
 
-        dump_dir = FOLDER.get_local_dump_folder_folder("ARVR_Exports")
-        if not os.path.exists(dump_dir):
-            try:
-                os.makedirs(dump_dir)
-            except:
-                pass
-
+        staging_dir = ARVR.get_staging_directory()
         view_name = "".join(c for c in active_view.Name if c.isalnum() or c in (' ', '_', '-')).strip()
-        out_base = os.path.join(dump_dir, view_name)
+        if not view_name:
+            view_name = "Revit_3D_View"
+        out_base = os.path.join(staging_dir, view_name)
 
-        # Attempt export: check if glTF/GLB or DWG/FBX/OBJ export is available
-        # In Revit, direct .glb export may require third party or can export 3D DWG/FBX or browse .glb
+        # Check if already exported in staging
         out_glb = out_base + ".glb"
-
         if os.path.exists(out_glb) and os.path.getsize(out_glb) > 0:
-            self.perform_upload(out_glb)
+            room_id = self.get_room_id()
+            ok, r, u, err = ARVR.stage_and_upload(out_glb, room_id=room_id, auto_open_browser=True)
+            if ok:
+                self.Close()
             return
 
-        # If direct glb not exported yet, notify user and prompt to select or convert
+        # Guide user to pick / confirm exported glb
         NOTIFICATION.messenger(
-            "Ready to beam 3D view [{}]!\nOpening model file picker to confirm exported .glb...".format(active_view.Name))
+            "Ready to stage & beam [{}]!\nPlease select the exported 3D model (.glb / .gltf / .usdz)...".format(active_view.Name))
         self.on_browse_model_clicked(sender, e)
 
     def on_browse_model_clicked(self, sender, e):
         dlg = Microsoft.Win32.OpenFileDialog()
-        dlg.Title = "Select 3D Model to Beam into Mobile AR"
+        dlg.Title = "Select 3D Model to Stage & Beam into Mobile AR"
         dlg.Filter = "3D Models (*.glb;*.gltf;*.usdz)|*.glb;*.gltf;*.usdz|All Files (*.*)|*.*"
         if dlg.ShowDialog():
             filepath = dlg.FileName
             if filepath and os.path.exists(filepath):
-                self.perform_upload(filepath)
-
-    def perform_upload(self, filepath):
-        room_id = self.get_room_id()
-        NOTIFICATION.messenger("Uploading [{}] to ARVR Room {}...".format(
-            os.path.basename(filepath), room_id))
-
-        ok, room_id, web_url, err = ARVR.upload_model_file(filepath, room_id=room_id)
-        if ok:
-            NOTIFICATION.messenger(
-                "Model beamed successfully to Room {}!\nOpening pairing hub...".format(room_id))
-            webbrowser.open(web_url)
-            self.Close()
-        else:
-            NOTIFICATION.messenger("Upload error: {}\nOpening default web hub instead.".format(err))
-            webbrowser.open(ARVR.ARVR_URL_BASE)
+                room_id = self.get_room_id()
+                ok, r, u, err = ARVR.stage_and_upload(filepath, room_id=room_id, auto_open_browser=True)
+                if ok:
+                    self.Close()
 
     def on_open_web_clicked(self, sender, e):
         room_id = self.get_room_id()
