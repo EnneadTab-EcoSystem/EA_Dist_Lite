@@ -409,6 +409,10 @@ DEPOT_MANIFEST_TTL_SEC = 4 * 60 * 60  # 4 hours
 # (or a local stub) without a code change. Read by DEPOT/ROUTES, not here.
 EA_DEPOT_URL_ENV_VAR = "EA_DEPOT_URL"
 
+# Same escape hatch for the EnneadTab-Library catalog webapp (separate service
+# from the depot -- see senzhang-todo #5447). Read by DEPOT/LIBRARY_CATALOG.
+EA_LIBRARY_URL_ENV_VAR = "EA_LIBRARY_URL"
+
 # Per-user SharePoint sync root for the retired project drives (J:/I:/W:,
 # plan 5.5 / D4). The project files moved to a SharePoint library each user
 # syncs to a different local path, so the root is user-configured. Config path

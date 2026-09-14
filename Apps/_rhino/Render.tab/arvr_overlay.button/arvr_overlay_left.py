@@ -4,9 +4,9 @@ __doc__ = """EnneadTab-ARVR: Zero-Install Mobile Camera AR Overlay for 3D Models
 
 Beam your 3D models onto your smartphone camera in augmented reality:
 - Export selected Rhino objects to .GLB
-- Direct upload to active cloud room session
+- Stage model in local temp folder
+- Direct upload to cloud room session
 - Pick existing local .GLB / .GLTF / .USDZ file to beam
-- Instant mobile camera AR pairing via QR code
 - Launch Web Hub (https://enneadtab.com/arvr)
 """
 
@@ -27,7 +27,7 @@ from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION, FOLDER, ARVR
 from EnneadTab.RHINO import RHINO_UI
 
 class ARVRExportDialog(object):
-    """Arcade-styled dialog for Rhino ARVR Export & Web Beaming."""
+    """Arcade-styled dialog for Rhino ARVR Export, Staging & Web Beaming."""
 
     def __init__(self):
         self.dialog = Eto.Forms.Dialog[bool]()
@@ -163,29 +163,22 @@ class ARVRExportDialog(object):
                 NOTIFICATION.messenger("No objects found to export. Please select objects in Rhino first.")
                 return
 
-        # Prepare export target path
+        # Prepare export target path in staging folder
         doc_name = rs.DocumentName()
         if doc_name:
             clean_name = os.path.splitext(doc_name)[0]
         else:
             clean_name = "Rhino_Model"
 
-        dump_dir = FOLDER.get_local_dump_folder_folder("ARVR_Exports")
-        if not os.path.exists(dump_dir):
-            try:
-                os.makedirs(dump_dir)
-            except:
-                pass
+        staging_dir = ARVR.get_staging_directory()
+        out_path = os.path.join(staging_dir, clean_name + ".glb")
 
-        out_path = os.path.join(dump_dir, clean_name + ".glb")
-        
-        # Try export using Rhino 8 GLB export or fallback to OBJ
+        # In Rhino 8, GLB export is native. In Rhino 7, user can export or fallback to OBJ
         cmd = '-_Export "{}" _Enter _Enter'.format(out_path.replace("\\", "/"))
         rs.Command(cmd, echo=False)
 
         if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
-            # Try with obj if glb direct native export was not recognized
-            out_obj = os.path.join(dump_dir, clean_name + ".obj")
+            out_obj = os.path.join(staging_dir, clean_name + ".obj")
             cmd_obj = '-_Export "{}" _Enter _Enter'.format(out_obj.replace("\\", "/"))
             rs.Command(cmd_obj, echo=False)
             if os.path.exists(out_obj) and os.path.getsize(out_obj) > 0:
@@ -195,31 +188,21 @@ class ARVRExportDialog(object):
             NOTIFICATION.messenger("Could not export geometry. Please check Rhino export formats or use Browse.")
             return
 
-        self.perform_upload(out_path)
+        room_input = self.room_tb.Text.strip() if self.room_tb.Text else None
+        ok, room_id, url, err = ARVR.stage_and_upload(out_path, room_id=room_input, auto_open_browser=True)
+        if ok:
+            self.dialog.Close(True)
 
     def on_browse_click(self, sender, e):
         filter_str = "3D Models (*.glb;*.gltf;*.usdz)|*.glb;*.gltf;*.usdz|All Files (*.*)|*.*"
         filepath = rs.OpenFileName("Select 3D Model to Beam to AR/VR", filter_str)
         if not filepath or not os.path.exists(filepath):
             return
-        self.perform_upload(filepath)
 
-    def perform_upload(self, filepath):
         room_input = self.room_tb.Text.strip() if self.room_tb.Text else None
-        if not room_input:
-            room_input = ARVR.generate_room_id()
-
-        NOTIFICATION.messenger("Uploading 3D model to ARVR room {}...".format(room_input))
-
-        ok, room_id, web_url, err = ARVR.upload_model_file(filepath, room_id=room_input)
+        ok, room_id, url, err = ARVR.stage_and_upload(filepath, room_id=room_input, auto_open_browser=True)
         if ok:
-            NOTIFICATION.messenger(
-                "3D Model beamed successfully to Room {}!\nOpening pairing hub...".format(room_id))
-            webbrowser.open(web_url)
             self.dialog.Close(True)
-        else:
-            NOTIFICATION.messenger("Upload error: {}\nOpening default web hub instead.".format(err))
-            webbrowser.open(ARVR.ARVR_URL_BASE)
 
     def on_web_click(self, sender, e):
         room_input = self.room_tb.Text.strip() if self.room_tb.Text else None
