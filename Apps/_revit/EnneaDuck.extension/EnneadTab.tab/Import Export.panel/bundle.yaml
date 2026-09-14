@@ -6,6 +6,7 @@
 
 layout:
   - content_transfer
+  - publish_to_bimrunner
   - ennead_exporter
   - schedule2excel
   - apply_doh_sheet_number
