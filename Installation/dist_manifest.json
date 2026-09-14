@@ -549,7 +549,7 @@
         "Apps/lib/EnneadTab/DATA_FILE.py": "72b876822d0fe417e62b2d4560bc396b205a6e8cea69abe88ee057b5edfb99c8",
         "Apps/lib/EnneadTab/DATA_VIZ.py": "62cb4e2514867b47c03e958c67fd3dbeaf9919d8c03f5bbd42c0398e1bbac152",
         "Apps/lib/EnneadTab/DEPOT/ASSET.py": "d4731ba8dc8792a2549f4d26402eaeeb9d6198d204745eb456f7a2c2b0299674",
-        "Apps/lib/EnneadTab/DEPOT/LIBRARY_CATALOG.py": "4776d6f60d8d27984bb597d06150bfe3dc87efbac9fd19b1d89e73e0922a98b3",
+        "Apps/lib/EnneadTab/DEPOT/LIBRARY_CATALOG.py": "a84697e2d8b2c7b4a4f039f155761a8c449ed4f30b38d89218de3ddf8b5a1369",
         "Apps/lib/EnneadTab/DEPOT/ROUTES.py": "45e1b4659124334b5b05d656757f6884b6c976079d5f2a1a555a8a0d58c266f7",
         "Apps/lib/EnneadTab/DEPOT/STATE.py": "942af7659f2f26f2e6a3c0a9b0d1d22f1f454441fb0be17e323261d344106266",
         "Apps/lib/EnneadTab/DEPOT/__init__.py": "8b63f8c512478fce2a0324f2ed88c65d6cedb2a72167bfecfac46a38df17b4b5",
@@ -707,11 +707,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-09-14T10:30:50",
-    "source_commit": "bf432d06b23c93ea5f986782b8d1616225993c07",
+    "published_at": "2026-09-14T10:32:12",
+    "source_commit": "8ffb4bac1f3801c695e350591ae63eb21469d905",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.09.14.1030"
+    "version": "2026.09.14.1032"
 }

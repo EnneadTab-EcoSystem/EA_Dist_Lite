@@ -118,15 +118,41 @@ def list_assets(query=None, category=None, asset_format=None, software=None, tag
 
 def resolve_media_url(path_or_url):
     """Join a possibly-relative media/download path (previewUrl, downloadUrl)
-    from the catalog onto the Library base URL. Already-absolute URLs pass
-    through unchanged. Returns None for an empty/missing input."""
+    from the catalog onto the Library base URL. Already-absolute URLs are
+    allowed through only when their host matches Library's own configured
+    host -- these values come straight from Library's JSON response, and
+    with a second live consumer of download_asset() as of senzhang-todo
+    #5511 (Rhino's place_asset.button, downloading straight to disk and
+    inserting the result as a block), fetching whatever absolute URL a
+    response happens to contain is not a risk worth carrying. Library's
+    documented job is to serve its own bytes (EnneadTab-Library/CLAUDE.md)
+    -- there is no legitimate case today for a different host. Returns None
+    for an empty/missing input, or for an absolute URL on a foreign host."""
     if not path_or_url:
         return None
     if path_or_url.startswith("http://") or path_or_url.startswith("https://"):
+        if not _is_allowed_absolute_url(path_or_url):
+            return None
         return path_or_url
     if not path_or_url.startswith("/"):
         path_or_url = "/" + path_or_url
     return "{0}{1}".format(get_base_url(), path_or_url)
+
+
+def _is_allowed_absolute_url(url):
+    base_host = _host_of(get_base_url())
+    return base_host is not None and _host_of(url) == base_host
+
+
+def _host_of(url):
+    # Minimal "scheme://host[:port][/path]" host extraction -- deliberately
+    # not using urlparse here so this stays a two-line, easy-to-audit check
+    # rather than pulling in a general-purpose URL parser for one field.
+    try:
+        after_scheme = url.split("://", 1)[1]
+    except IndexError:
+        return None
+    return after_scheme.split("/", 1)[0].lower() or None
 
 
 def get_download_folder():
