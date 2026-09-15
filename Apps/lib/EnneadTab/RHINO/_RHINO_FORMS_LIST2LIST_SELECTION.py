@@ -178,7 +178,10 @@ class List2ListSelectionDialog(REF_CLASS):
         self.lb_A.SelectedRowsChanged += self.RowsChanged_A
         self.lb_A.CellClick  += self.event_cell_click_A
         self.lb_A.CellFormatting += self.cell_formatting_A
-        self.lb_A.CellToolTipNeeded += self.cell_tooltip_A
+        try:
+            self.lb_A.CellToolTipNeeded += self.cell_tooltip_A
+        except Exception:
+            pass
 
         # Create Gridview Column
         column0 = Eto.Forms.GridColumn()
