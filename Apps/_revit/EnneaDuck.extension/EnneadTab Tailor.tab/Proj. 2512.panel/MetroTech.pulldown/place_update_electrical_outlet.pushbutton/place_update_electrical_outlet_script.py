@@ -10,10 +10,13 @@ corrects every outlet automatically.
 
 Each marker instance names its own outlet family/type and mount height via its
 `_para_map` JSON parameter, so markers nested in the same furniture instance can
-each place a different outlet at a different height; the outlet's Z always comes
-from its host furniture instance's level plus that mount height, never the
-marker's raw position (markers are modeled above the furniture body on purpose, to
-stay visible/pickable -- see the comment above PARA_MAP_TEMPLATE).
+each place a different outlet at a different height. The outlet instance itself is
+always placed at its host level with zero elevation offset -- mount height is
+instead written onto the outlet's Placement Height parameter (see
+PLACEMENT_HEIGHT_PARAMETER_NAME), and the outlet family's own internal geometry
+does the visual raising. The marker's raw position is never used directly either
+(markers are modeled above the furniture body on purpose, to stay visible/pickable
+-- see the comment above PARA_MAP_TEMPLATE).
 
 Every outlet this tool creates is tagged with the marker that generated it (see
 SOURCE_MARKER_TAG_PARAMETER_NAME), so a later run finds it by exact lookup instead
@@ -102,9 +105,16 @@ PARA_MAP_PARAMETER_NAME = "_para_map"
 # (floor boxes, base plugs); a marker placed at that real height would be buried
 # inside or below the furniture body, making it hard to see and pick in views/3D. So
 # the marker's raw Z is a MODELING/VISIBILITY convenience only -- it has no design
-# meaning and must never be read as the outlet's height. The actual intended height is
-# `mount_height`, applied against the host furniture instance's level; the marker's
-# X/Y are still trustworthy (that's real plan position) and are used as-is.
+# meaning and must never be read as the outlet's height. The marker's X/Y are still
+# trustworthy (that's real plan position) and are used as-is.
+#
+# WHY `mount_height` ISN'T BAKED INTO THE INSTANCE'S Z EITHER: the outlet instance is
+# placed at its host level with ZERO elevation offset (see PLACEMENT_HEIGHT_PARAMETER_
+# NAME below) -- `mount_height` is instead written onto that Placement Height instance
+# parameter, and the outlet family's own internal geometry (an offset/extrusion driven
+# by that parameter, set up in the Family Editor) does the actual visual raising. The
+# ray-cast that finds the host wall/floor uses the level elevation as its target Z, not
+# mount_height.
 PARA_MAP_TEMPLATE = {
     "family_name": None,
     "type_name": None,
@@ -122,12 +132,23 @@ PARA_MAP_TEMPLATE = {
 # REQUIRED: this Text instance parameter must exist on every OUTLET family this tool
 # targets -- there is no silent fallback. A marker whose target outlet type already
 # has an existing instance without this parameter fails resolution up front (see
-# check_outlet_type_supports_tag) with a clear reason, before any ray-casting runs
-# for it. A marker whose target type has NO existing instance yet cannot be checked
-# that early, so the check happens at creation time instead: if the newly placed
-# instance turns out to have no such parameter, apply_marker_outlets deletes it
-# again and reports the item failed, rather than leaving an untracked outlet behind.
+# check_outlet_type_supports_parameter) with a clear reason, before any ray-casting
+# runs for it. A marker whose target type has NO existing instance yet cannot be
+# checked that early, so the check happens at creation time instead: if the newly
+# placed instance turns out to have no such parameter, apply_marker_outlets deletes
+# it again and reports the item failed, rather than leaving an untracked outlet
+# behind.
 SOURCE_MARKER_TAG_PARAMETER_NAME = "_source_marker_tag"
+
+# REQUIRED, same enforcement as SOURCE_MARKER_TAG_PARAMETER_NAME above. The outlet
+# instance itself is placed AT ITS HOST LEVEL with zero elevation offset -- the
+# instance's actual Z is never raised to the marker's mount_height. Instead, this
+# Length instance parameter is set to that mount_height value, and the outlet
+# family's own internal geometry (an offset/extrusion driven by this parameter, set
+# up in the Family Editor) is what visually raises the outlet to the right height.
+# This keeps the real placement level-hosted and lets Revit schedule/tag the height
+# as a normal parameter, instead of it only being implicit in the instance's raw Z.
+PLACEMENT_HEIGHT_PARAMETER_NAME = "Placement Height"
 
 
 def get_marker_para_map(marker):
@@ -195,30 +216,53 @@ def get_outlet_source_marker_tag(instance):
     return param.AsString() if param else None
 
 
-def set_outlet_source_marker_tag(instance, tag):
-    """Write `tag` (see build_marker_tag) onto `instance`'s source-marker-tag
-    parameter.
+def _set_required_outlet_param(instance, param_name, value):
+    """Write `value` onto `instance`'s `param_name` parameter (a plain .Set, no type
+    coercion beyond what the caller passes in).
 
-    SOURCE_MARKER_TAG_PARAMETER_NAME is a REQUIRED parameter on the outlet family --
-    unlike the earlier graceful-degradation convention, a missing parameter here is
-    treated as a hard setup error by every caller (see check_outlet_type_supports_tag
-    and apply_marker_outlets), not a silent fallback. This function only writes and
-    reports whether it could; it never decides what to do about a failure.
+    Shared by set_outlet_source_marker_tag and set_outlet_placement_height: both
+    parameters are REQUIRED on the outlet family -- a missing parameter here is
+    treated as a hard setup error by every caller (see
+    check_outlet_type_supports_parameter and apply_marker_outlets), not a silent
+    fallback. This function only writes and reports whether it could; it never
+    decides what to do about a failure.
 
     Returns:
-        bool: True if the tag was written, False if the outlet family has no such
+        bool: True if the value was written, False if the outlet family has no such
         parameter.
     """
-    param = instance.LookupParameter(SOURCE_MARKER_TAG_PARAMETER_NAME)
+    param = instance.LookupParameter(param_name)
     if not param:
         return False
-    param.Set(tag)
+    param.Set(value)
     return True
 
 
-def check_outlet_type_supports_tag(doc, family_name, type_name, cache):
+def set_outlet_source_marker_tag(instance, tag):
+    """Write `tag` (see build_marker_tag) onto `instance`'s source-marker-tag
+    parameter. See _set_required_outlet_param for the required-parameter contract.
+    """
+    return _set_required_outlet_param(instance, SOURCE_MARKER_TAG_PARAMETER_NAME, tag)
+
+
+def get_outlet_placement_height(instance):
+    param = instance.LookupParameter(PLACEMENT_HEIGHT_PARAMETER_NAME)
+    return param.AsDouble() if param else None
+
+
+def set_outlet_placement_height(instance, mount_height):
+    """Write `mount_height` onto `instance`'s Placement Height parameter -- the
+    family's own internal geometry uses this to visually raise the outlet, since the
+    instance itself is placed at its host level with zero elevation offset (see
+    PLACEMENT_HEIGHT_PARAMETER_NAME). See _set_required_outlet_param for the
+    required-parameter contract.
+    """
+    return _set_required_outlet_param(instance, PLACEMENT_HEIGHT_PARAMETER_NAME, mount_height)
+
+
+def check_outlet_type_supports_parameter(doc, family_name, type_name, param_name, cache):
     """Return whether an outlet of (family_name, type_name) already placed in `doc`
-    has the required SOURCE_MARKER_TAG_PARAMETER_NAME parameter.
+    has the required `param_name` parameter.
 
     Returns:
         True/False if an existing instance answered the question definitively, or
@@ -227,17 +271,17 @@ def check_outlet_type_supports_tag(doc, family_name, type_name, cache):
         enforces it there instead; see its to_create handling).
 
     `cache` is a plain dict the caller owns and reuses across every marker in one
-    run, keyed by (family_name, type_name); only definitive True/False answers are
-    cached, never the "unknown" case, since a later marker of the same type earlier
-    in the SAME run cannot have created an instance yet either.
+    run, keyed by (family_name, type_name, param_name); only definitive True/False
+    answers are cached, never the "unknown" case, since a later marker of the same
+    type earlier in the SAME run cannot have created an instance yet either.
     """
-    key = (family_name, type_name)
+    key = (family_name, type_name, param_name)
     if key in cache:
         return cache[key]
     instances = REVIT_FAMILY.get_family_instances_by_family_name_and_type_name(family_name, type_name, doc=doc)
     if not instances:
         return None
-    supported = instances[0].LookupParameter(SOURCE_MARKER_TAG_PARAMETER_NAME) is not None
+    supported = instances[0].LookupParameter(param_name) is not None
     cache[key] = supported
     return supported
 
@@ -726,9 +770,9 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
     mount_height) must fail that ONE marker, never abort the whole run.
 
     Returns:
-        tuple (reason, host, face, hit_point, stable_ref, family, family_type).
-        `reason` is None on success; every Revit-object field is None when `reason`
-        is set.
+        tuple (reason, host, face, hit_point, stable_ref, family, family_type,
+        mount_height). `reason` is None on success; every other field is None when
+        `reason` is set.
     """
     para_map = get_marker_para_map(marker)
     if any(value is not None for value in para_map.values()):
@@ -739,43 +783,52 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
     mount_height = para_map.get("mount_height")
     if not outlet_family_name or not outlet_type_name or mount_height is None:
         return ("{} needs family_name, type_name, and mount_height all set".format(PARA_MAP_PARAMETER_NAME),
-                None, None, None, None, None, None)
+                None, None, None, None, None, None, None)
 
     family, family_type = resolve_outlet_symbol(doc, outlet_family_name, outlet_type_name, symbol_cache)
     if not family or not family_type:
         return ("outlet [{}] - [{}] is not loaded".format(outlet_family_name, outlet_type_name),
-                None, None, None, None, None, None)
+                None, None, None, None, None, None, None)
 
-    # SOURCE_MARKER_TAG_PARAMETER_NAME is required, no silent fallback. If an outlet
-    # of this exact type already exists, check it now and fail fast before any
-    # ray-casting; if none exists yet, this can't be known until the first one is
-    # created (apply_marker_outlets enforces it there instead).
-    tag_supported = check_outlet_type_supports_tag(doc, outlet_family_name, outlet_type_name, tag_support_cache)
-    if tag_supported is False:
-        return ("outlet [{}] - [{}] is missing the required {} parameter -- add a Text instance parameter "
-                 "with this name to the family in the Family Editor, then rerun".format(
-                     outlet_family_name, outlet_type_name, SOURCE_MARKER_TAG_PARAMETER_NAME),
-                 None, None, None, None, None, None)
+    # SOURCE_MARKER_TAG_PARAMETER_NAME and PLACEMENT_HEIGHT_PARAMETER_NAME are both
+    # required, no silent fallback. If an outlet of this exact type already exists,
+    # check both now and fail fast before any ray-casting; if none exists yet, this
+    # can't be known until the first one is created (apply_marker_outlets enforces it
+    # there instead).
+    for required_param_name in (SOURCE_MARKER_TAG_PARAMETER_NAME, PLACEMENT_HEIGHT_PARAMETER_NAME):
+        supported = check_outlet_type_supports_parameter(
+            doc, outlet_family_name, outlet_type_name, required_param_name, tag_support_cache)
+        if supported is False:
+            return ("outlet [{}] - [{}] is missing the required {} parameter -- add it to the family in the "
+                     "Family Editor, then rerun".format(outlet_family_name, outlet_type_name, required_param_name),
+                     None, None, None, None, None, None, None)
 
     if family.FamilyPlacementType not in (DB.FamilyPlacementType.WorkPlaneBased, DB.FamilyPlacementType.OneLevelBasedHosted):
         return ("outlet [{}] is neither face-based nor wall-hosted".format(outlet_family_name),
-                None, None, None, None, None, None)
+                None, None, None, None, None, None, None)
 
     if furniture_level is None:
         return ("host furniture [{}] has no level".format(furniture.Id),
-                None, None, None, None, None, None)
+                None, None, None, None, None, None, None)
 
     local_point, _orientation = REVIT_FAMILY.get_nested_instance_placement(marker)
     if local_point is None:
-        return ("no location available", None, None, None, None, None, None)
+        return ("no location available", None, None, None, None, None, None, None)
 
-    corrected_point = DB.XYZ(local_point.X, local_point.Y, furniture_level.Elevation + mount_height)
+    # The outlet is placed AT its host level, zero elevation offset -- mount_height is
+    # never baked into the instance's real Z. Instead it gets written onto the
+    # PLACEMENT_HEIGHT_PARAMETER_NAME parameter (see apply_marker_outlets), and the
+    # outlet family's own internal geometry is what visually raises it to that height.
+    # So the ray-cast target Z here is just the furniture's level elevation.
+    corrected_point = DB.XYZ(local_point.X, local_point.Y, furniture_level.Elevation)
     if link_transform is not None:
         corrected_point = link_transform.OfPoint(corrected_point)
     debug_log(
-        "Marker [{}]: furniture [{}] level [{}] (elev {}) + mount_height {} -> corrected point {}".format(
+        "Marker [{}]: furniture [{}] level [{}] (elev {}) -> corrected point {} (mount_height {} goes onto "
+        "the {} parameter, not the instance Z)".format(
             marker.Id, furniture.Id, furniture_level.Name, round(furniture_level.Elevation, 2),
-            mount_height, (round(corrected_point.X, 2), round(corrected_point.Y, 2), round(corrected_point.Z, 2))))
+            (round(corrected_point.X, 2), round(corrected_point.Y, 2), round(corrected_point.Z, 2)),
+            mount_height, PLACEMENT_HEIGHT_PARAMETER_NAME))
 
     # Sanity check, diagnostic only: the furniture instance's OWN position, mapped
     # through the same link_transform used for the marker. The marker should land a
@@ -800,9 +853,9 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
     if host is None:
         needed = "wall" if required_host_type is not None else "wall/floor"
         return ("no {} within {} ft in any direction".format(needed, MARKER_RAYCAST_MAX_DISTANCE),
-                None, None, None, None, None, None)
+                None, None, None, None, None, None, None)
 
-    return (None, host, face, hit_point, stable_ref, family, family_type)
+    return (None, host, face, hit_point, stable_ref, family, family_type, mount_height)
 
 
 def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, scopes):
@@ -814,11 +867,12 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
     to its host face (see _resolve_one_marker for the per-marker logic).
 
     A furniture instance can nest more than one marker (each independently naming its
-    own outlet/height), so the outlet's final Z always comes from the FURNITURE
-    instance's own level plus that marker's _para_map mount_height -- never the
-    marker's raw Z and never the ray-cast hit's Z. Only the marker's X/Y are taken
-    as-is. That corrected point is what the fan is cast FROM, not a value applied
-    after the cast.
+    own outlet/height), so the ray-cast target Z always comes from the FURNITURE
+    instance's own level elevation (zero offset) -- never the marker's raw Z. Only
+    the marker's X/Y are taken as-is. The outlet's real-world height is never baked
+    into its instance Z at all; mount_height is written onto
+    PLACEMENT_HEIGHT_PARAMETER_NAME instead (see apply_marker_outlets), and the
+    outlet family's own internal geometry does the visual raising.
 
     `scopes` is a list of (search_doc, link_transform) pairs from get_search_scopes;
     the corrected point is built in each entry's own `search_doc` local space (X/Y
@@ -838,7 +892,8 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
 
     Returns:
         tuple (resolved, unresolved):
-          resolved   -- list of (marker, marker_tag, host, face, hit_point, stable_ref, family, family_type)
+          resolved   -- list of (marker, marker_tag, host, face, hit_point, stable_ref,
+                        family, family_type, mount_height)
           unresolved -- list of (marker, reason) for markers that can't be placed
     """
     entries_by_family = {}
@@ -889,12 +944,12 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
 
             for index, (furniture, furniture_level, marker, scope_doc, link_transform) in enumerate(entries):
                 try:
-                    reason, host, face, hit_point, stable_ref, family, family_type = _resolve_one_marker(
+                    reason, host, face, hit_point, stable_ref, family, family_type, mount_height = _resolve_one_marker(
                         doc, scope_doc, link_transform, furniture, furniture_level, marker, intersector,
                         symbol_cache, tag_support_cache)
                 except Exception as e:
                     reason = "internal error: {}".format(e)
-                    host = face = hit_point = stable_ref = family = family_type = None
+                    host = face = hit_point = stable_ref = family = family_type = mount_height = None
 
                 processed += 1
                 pb.update_progress(processed, total_markers)
@@ -905,7 +960,8 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
 
                 if reason is None:
                     marker_tag = build_marker_tag(scope_doc, marker)
-                    resolved.append((marker, marker_tag, host, face, hit_point, stable_ref, family, family_type))
+                    resolved.append(
+                        (marker, marker_tag, host, face, hit_point, stable_ref, family, family_type, mount_height))
                     streak_reason = None
                     streak_count = 0
                 else:
@@ -968,21 +1024,26 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
     is no modeless review step in this flow, so no ExternalEvent is needed.
 
     - `to_create`: list of (OutletPlacementTarget, marker_tag) -- nothing exists for
-      this marker yet; place it and tag it.
+      this marker yet; place it (at its host level, zero elevation offset -- see
+      OutletPlacementTarget), tag it, and set its Placement Height.
     - `to_replace`: list of (old_instance_id, OutletPlacementTarget, marker_tag) --
       the tagged/matched existing instance is a DIFFERENT FAMILY than the marker now
       targets; Revit cannot reassign an instance across families (only across types
-      within the same family), so the old one is deleted and a new one created and
-      tagged in its place.
+      within the same family), so the old one is deleted and a new one created,
+      tagged, and height-set in its place.
     - `to_update`: list of (instance_id, target_point, new_type_name_or_None,
-      marker_tag) -- the existing instance is already the correct family. If
-      `new_type_name_or_None` is set, its type differs and gets swapped via
-      `Symbol =` (same-family retype, no delete needed); either way it is moved to
-      `target_point` and re-tagged.
-    - `to_retag`: list of (instance_id, marker_tag) -- a legacy, untagged instance
-      that already exactly matches its marker's target family/type/position; just
-      needs the tag written so a future run finds it directly instead of falling
-      back to position/type matching again.
+      marker_tag, mount_height) -- the existing instance is already the correct
+      family. If `new_type_name_or_None` is set, its type differs and gets swapped
+      via `Symbol =` (same-family retype, no delete needed); either way it is moved
+      to `target_point`, re-tagged, and its Placement Height is (re)set to
+      `mount_height` -- this can be the ONLY thing that changed, since mount_height no
+      longer affects `target_point` at all (see PLACEMENT_HEIGHT_PARAMETER_NAME).
+    - `to_retag`: list of (instance_id, marker_tag, mount_height) -- a legacy,
+      untagged instance that already exactly matches its marker's target
+      family/type/position (found by position+type proximity, which never checks
+      height); the tag AND Placement Height are (re)written unconditionally, so a
+      future run finds it directly instead of falling back to position/type matching
+      again, and its height is guaranteed correct rather than assumed.
     """
     doc = DOC
     symbol_cache = {}
@@ -1015,19 +1076,24 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
             "(host type: {}).".format(item.family_name, item.type_name, item.host_id, type(host).__name__))
         return None
 
-    def tag_or_delete(instance, marker_tag, item):
-        """Tag a NEWLY CREATED `instance`; if the family lacks the required tag
-        parameter, delete `instance` again rather than leave an untracked outlet
-        behind (SOURCE_MARKER_TAG_PARAMETER_NAME is required, no silent fallback for
-        a brand-new placement -- see that constant's comment). Returns True on
+    def apply_required_params_or_delete(instance, marker_tag, mount_height, item):
+        """Set both required parameters on a NEWLY CREATED `instance`; if the family
+        lacks either one, delete `instance` again rather than leave an incompletely
+        configured outlet behind (SOURCE_MARKER_TAG_PARAMETER_NAME and
+        PLACEMENT_HEIGHT_PARAMETER_NAME are both required, no silent fallback for a
+        brand-new placement -- see those constants' comments). Returns True on
         success, False if it deleted the instance.
         """
-        if set_outlet_source_marker_tag(instance, marker_tag):
+        tag_ok = set_outlet_source_marker_tag(instance, marker_tag)
+        height_ok = set_outlet_placement_height(instance, mount_height)
+        if tag_ok and height_ok:
             return True
+        missing = [name for ok, name in (
+            (tag_ok, SOURCE_MARKER_TAG_PARAMETER_NAME), (height_ok, PLACEMENT_HEIGHT_PARAMETER_NAME)) if not ok]
         debug_log(
-            "Outlet family [{}] has no required {} parameter -- deleting the outlet just placed for type "
-            "[{}] and marking it failed. Add a Text instance parameter with this name to the family, then "
-            "rerun.".format(item.family_name, SOURCE_MARKER_TAG_PARAMETER_NAME, item.type_name))
+            "Outlet family [{}] is missing the required {} parameter(s) -- deleting the outlet just placed "
+            "for type [{}] and marking it failed. Add {} to the family, then rerun.".format(
+                item.family_name, " and ".join(missing), item.type_name, " and ".join(missing)))
         doc.Delete(instance.Id)
         return False
 
@@ -1035,7 +1101,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
     replaced = 0
     updated = 0
     retagged = 0
-    retag_failed = 0
+    required_param_failed = 0
     failed = []
 
     total_items = len(to_create) + len(to_replace) + len(to_update) + len(to_retag)
@@ -1054,10 +1120,11 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                 for item, marker_tag in to_create:
                     try:
                         instance = do_create(item)
-                        if instance and tag_or_delete(instance, marker_tag, item):
+                        if instance and apply_required_params_or_delete(instance, marker_tag, item.mount_height, item):
                             created += 1
-                            debug_log("Placed outlet [{}] - [{}]/[{}] on host [{}] at {}, tagged.".format(
-                                instance.Id, item.family_name, item.type_name, item.host_id, item.point))
+                            debug_log("Placed outlet [{}] - [{}]/[{}] on host [{}] at {} (height {}), tagged.".format(
+                                instance.Id, item.family_name, item.type_name, item.host_id, item.point,
+                                item.mount_height))
                         else:
                             failed.append(item.host_id)
                     except Exception as e:
@@ -1076,10 +1143,11 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                     try:
                         doc.Delete(DB.ElementId(old_instance_id))
                         instance = do_create(item)
-                        if instance and tag_or_delete(instance, marker_tag, item):
+                        if instance and apply_required_params_or_delete(instance, marker_tag, item.mount_height, item):
                             replaced += 1
-                            debug_log("Replaced outlet [{}] with [{}] - [{}]/[{}] at {}, tagged.".format(
-                                old_instance_id, instance.Id, item.family_name, item.type_name, item.point))
+                            debug_log("Replaced outlet [{}] with [{}] - [{}]/[{}] at {} (height {}), tagged.".format(
+                                old_instance_id, instance.Id, item.family_name, item.type_name, item.point,
+                                item.mount_height))
                         else:
                             failed.append(old_instance_id)
                     except Exception as e:
@@ -1094,7 +1162,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         break
 
             if not user_cancelled:
-                for instance_id, target_point_tuple, new_type_name, marker_tag in to_update:
+                for instance_id, target_point_tuple, new_type_name, marker_tag, mount_height in to_update:
                     try:
                         existing = doc.GetElement(DB.ElementId(instance_id))
                         if existing is None:
@@ -1110,22 +1178,24 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         if current_point is not None:
                             DB.ElementTransformUtils.MoveElement(doc, existing.Id, target_point - current_point)
                         # This instance PRE-EXISTED (not created by this run), so a missing
-                        # tag parameter here does not undo the move/retype that already
+                        # required parameter here does not undo the move/retype that already
                         # succeeded -- deleting someone's existing outlet over a bookkeeping
                         # gap would be far worse than just flagging it loudly.
-                        if set_outlet_source_marker_tag(existing, marker_tag):
-                            updated += 1
-                        else:
-                            updated += 1
-                            retag_failed += 1
+                        tag_ok = set_outlet_source_marker_tag(existing, marker_tag)
+                        height_ok = set_outlet_placement_height(existing, mount_height)
+                        updated += 1
+                        if not (tag_ok and height_ok):
+                            required_param_failed += 1
+                            missing = [name for ok, name in (
+                                (tag_ok, SOURCE_MARKER_TAG_PARAMETER_NAME),
+                                (height_ok, PLACEMENT_HEIGHT_PARAMETER_NAME)) if not ok]
                             debug_log(
-                                "Outlet [{}]'s family has no required {} parameter -- moved/retyped it, but could not "
-                                "tag it; a future run will fall back to position/type matching for it instead of an "
-                                "exact lookup. Add the parameter to the family.".format(
-                                    instance_id, SOURCE_MARKER_TAG_PARAMETER_NAME))
-                        debug_log("Updated outlet [{}]{} to {}.".format(
+                                "Outlet [{}]'s family has no required {} parameter(s) -- moved/retyped it, but "
+                                "could not fully configure it. Add {} to the family, then rerun.".format(
+                                    instance_id, " and ".join(missing), " and ".join(missing)))
+                        debug_log("Updated outlet [{}]{} to {} (height {}).".format(
                             instance_id, " (retyped to [{}])".format(new_type_name) if new_type_name else "",
-                            target_point_tuple))
+                            target_point_tuple, mount_height))
                     except Exception as e:
                         debug_log("Failed to update outlet [{}]: {}".format(instance_id, e))
                         failed.append(instance_id)
@@ -1138,21 +1208,26 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         break
 
             if not user_cancelled:
-                for instance_id, marker_tag in to_retag:
+                for instance_id, marker_tag, mount_height in to_retag:
                     existing = None
                     try:
                         existing = doc.GetElement(DB.ElementId(instance_id))
                         if existing is None:
                             failed.append(instance_id)
                             continue
-                        if set_outlet_source_marker_tag(existing, marker_tag):
+                        tag_ok = set_outlet_source_marker_tag(existing, marker_tag)
+                        height_ok = set_outlet_placement_height(existing, mount_height)
+                        if tag_ok and height_ok:
                             retagged += 1
                         else:
-                            retag_failed += 1
+                            required_param_failed += 1
+                            missing = [name for ok, name in (
+                                (tag_ok, SOURCE_MARKER_TAG_PARAMETER_NAME),
+                                (height_ok, PLACEMENT_HEIGHT_PARAMETER_NAME)) if not ok]
                             debug_log(
-                                "Outlet [{}]'s family has no required {} parameter -- left it as-is (already correct "
-                                "position/type), but could not tag it. Add the parameter to the family.".format(
-                                    instance_id, SOURCE_MARKER_TAG_PARAMETER_NAME))
+                                "Outlet [{}]'s family has no required {} parameter(s) -- left it as-is (already "
+                                "correct position/type), but could not fully configure it. Add {} to the family, "
+                                "then rerun.".format(instance_id, " and ".join(missing), " and ".join(missing)))
                     except Exception as e:
                         debug_log("Failed to tag existing outlet [{}]: {}".format(instance_id, e))
                         failed.append(instance_id)
@@ -1181,10 +1256,11 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
     if user_cancelled:
         lines.append("Cancelled by user after {} of {} item(s); already-applied changes were kept.".format(
             processed, total_items))
-    if retag_failed:
+    if required_param_failed:
         lines.append(
-            "{} instance(s) updated/adopted but could not be tagged (family missing {} parameter).".format(
-                retag_failed, SOURCE_MARKER_TAG_PARAMETER_NAME))
+            "{} instance(s) updated/adopted but could not be fully configured (family missing {} and/or {} "
+            "parameter).".format(
+                required_param_failed, SOURCE_MARKER_TAG_PARAMETER_NAME, PLACEMENT_HEIGHT_PARAMETER_NAME))
     if failed:
         lines.append("Failed on {} item(s), see output for detail.".format(len(failed)))
     result = " | ".join(lines)
@@ -1249,15 +1325,16 @@ def place_from_markers(doc):
 
         to_create = []        # (OutletPlacementTarget, marker_tag)
         to_replace = []       # (old_instance_id, OutletPlacementTarget, marker_tag)
-        to_update = []        # (instance_id, target_point, new_type_name_or_None, marker_tag)
-        to_retag = []         # (instance_id, marker_tag)
+        to_update = []        # (instance_id, target_point, new_type_name_or_None, marker_tag, mount_height)
+        to_retag = []         # (instance_id, marker_tag, mount_height)
         already_placed = []   # existing instance, no action needed
         skipped_foreign = []  # existing instance nearby but owned by another user
-        for marker, marker_tag, host, face, hit_point, stable_ref, family, family_type in resolved:
+        for marker, marker_tag, host, face, hit_point, stable_ref, family, family_type, mount_height in resolved:
             point_tuple = (hit_point.X, hit_point.Y, hit_point.Z)
             type_name = type_name_of(family_type)
             use_stable_ref = stable_ref if family.FamilyPlacementType == DB.FamilyPlacementType.WorkPlaneBased else None
-            target = OutletPlacementTarget(element_int_id(host), point_tuple, family.Name, type_name, use_stable_ref)
+            target = OutletPlacementTarget(
+                element_int_id(host), point_tuple, family.Name, type_name, mount_height, use_stable_ref)
 
             existing = outlets_by_marker_tag.get(marker_tag)
             if existing is None:
@@ -1269,7 +1346,7 @@ def place_from_markers(doc):
                 legacy, _distance = find_nearby_instance(hit_point, candidates, EXISTING_OUTLET_SAME_SPOT_TOLERANCE)
                 if legacy is not None:
                     already_placed.append(legacy)
-                    to_retag.append((element_int_id(legacy), marker_tag))
+                    to_retag.append((element_int_id(legacy), marker_tag, mount_height))
                 else:
                     to_create.append((target, marker_tag))
                 continue
@@ -1286,15 +1363,21 @@ def place_from_markers(doc):
             existing_point = get_instance_point(existing)
             same_position = (
                 existing_point is not None and existing_point.DistanceTo(hit_point) <= EXISTING_OUTLET_SAME_SPOT_TOLERANCE)
+            # Height is no longer part of the ray-cast target (see PLACEMENT_HEIGHT_
+            # PARAMETER_NAME) -- so same_position alone can no longer tell "nothing to
+            # do" apart from "mount_height changed in the marker but the wall/floor
+            # target didn't move." Both must match for a true no-op.
+            existing_height = get_outlet_placement_height(existing)
+            same_height = existing_height is not None and abs(existing_height - mount_height) < 0.001
 
             if existing_family_name != family.Name:
                 to_replace.append((element_int_id(existing), target, marker_tag))
-            elif existing_type_name == type_name and same_position:
+            elif existing_type_name == type_name and same_position and same_height:
                 already_placed.append(existing)
             elif existing_type_name == type_name:
-                to_update.append((element_int_id(existing), point_tuple, None, marker_tag))
+                to_update.append((element_int_id(existing), point_tuple, None, marker_tag, mount_height))
             else:
-                to_update.append((element_int_id(existing), point_tuple, type_name, marker_tag))
+                to_update.append((element_int_id(existing), point_tuple, type_name, marker_tag, mount_height))
 
         result = apply_marker_outlets(to_create, to_replace, to_update, to_retag)
         lines = ["Furniture: [{}]".format(furniture_label), result]

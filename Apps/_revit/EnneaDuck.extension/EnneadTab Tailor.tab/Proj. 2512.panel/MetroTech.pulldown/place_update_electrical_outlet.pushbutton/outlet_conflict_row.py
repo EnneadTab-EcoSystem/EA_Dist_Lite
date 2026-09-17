@@ -13,14 +13,20 @@ class OutletPlacementTarget(object):
     own _para_map (see place_update_electrical_outlet_script.PARA_MAP_TEMPLATE) --
     different markers of the same marker family can each name a different outlet.
 
+    `point` is at the host level's elevation (zero offset) -- `mount_height` is NOT
+    baked into it. mount_height instead gets written onto the outlet's
+    PLACEMENT_HEIGHT_PARAMETER_NAME instance parameter at placement time, and the
+    outlet family's own internal geometry is what visually raises it.
+
     `stable_ref` (a string from DB.Reference.ConvertToStableRepresentation) is set
     for face-based placement and re-parsed back into a live DB.Reference inside the
     apply handler; it is None for wall-hosted (non-face) placement, where only the
     host wall id and point are needed.
     """
-    def __init__(self, host_id, point, family_name, type_name, stable_ref=None):
+    def __init__(self, host_id, point, family_name, type_name, mount_height, stable_ref=None):
         self.host_id = host_id  # int
-        self.point = point  # (x, y, z) plain floats
+        self.point = point  # (x, y, z) plain floats, at host level elevation
         self.family_name = family_name
         self.type_name = type_name
+        self.mount_height = mount_height  # float, goes onto PLACEMENT_HEIGHT_PARAMETER_NAME
         self.stable_ref = stable_ref  # str or None
