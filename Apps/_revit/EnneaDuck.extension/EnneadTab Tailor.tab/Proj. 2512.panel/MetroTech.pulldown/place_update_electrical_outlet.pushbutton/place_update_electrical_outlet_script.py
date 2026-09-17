@@ -1105,7 +1105,13 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
         if item.stable_ref:
             reference = DB.Reference.ParseFromStableRepresentation(doc, item.stable_ref)
             face = host.GetGeometryObjectFromReference(reference)
-            return REVIT_FAMILY.place_instance_by_face(family_type, face, point, doc=doc)
+            # DB.XYZ.BasisZ as reference_direction is the API equivalent of the Revit
+            # UI's "Place on Vertical Face" tool (vs. plain "Place on Face"): it keeps
+            # the instance plumb/upright regardless of the exact face tilt, instead of
+            # place_instance_by_face's default fallback (the face's own local X axis,
+            # which follows whatever orientation the face itself happens to have).
+            return REVIT_FAMILY.place_instance_by_face(
+                family_type, face, point, reference_direction=DB.XYZ.BasisZ, doc=doc)
         if isinstance(host, DB.Wall):
             level = doc.GetElement(host.LevelId)
             return REVIT_FAMILY.place_instance_by_wall(family_type, point, host, level=level, doc=doc)
