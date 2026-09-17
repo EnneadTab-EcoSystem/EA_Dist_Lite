@@ -569,26 +569,38 @@ def get_furniture_instances(doc, family_names):
     return [instance for instance in instances if REVIT_FAMILY.get_family_name(instance) in family_names]
 
 
-def get_para_map_markers(host_instance, doc=None):
-    """Return every nested family instance directly inside `host_instance` that
-    carries a _para_map parameter -- these are outlet position markers, whatever
-    their own family name is. A furniture instance can nest more than one marker,
-    each independently naming its own outlet/height via that parameter.
+def build_para_map_markers_by_furniture_id(doc):
+    """One project-wide pass over `doc`: group every _para_map-carrying instance by
+    its top-level host furniture instance's ElementId (walking SuperComponent all the
+    way up, same as discover_qualified_furniture_family_names).
+
+    Returns:
+        dict {furniture_id (int): [marker, ...]}
+
+    Deliberately a project-wide collector + SuperComponent walk-up, NOT
+    host_instance.GetDependentElements() per furniture instance. This matches the
+    library's own established pattern for Shared nested families --
+    REVIT_FAMILY.get_shared_nested_instances_by_family_name's docstring explicitly
+    says a Shared nested family "registers as its own first-class element... found
+    directly with a project-wide collector INSTEAD OF walking every host's
+    dependents." A marker needs to be independently selectable/editable in the model
+    (to hand-edit its _para_map, see that parameter's own comment above), which is
+    exactly what marking a nested family Shared is for -- so this file never assumes
+    GetDependentElements reliably surfaces it, and does one full-document scan per
+    search scope instead (cheap relative to the ray-casting this run already does).
     """
-    doc = doc or DOC
-    class_filter = DB.ElementClassFilter(DB.FamilyInstance)
-    try:
-        dependent_ids = host_instance.GetDependentElements(class_filter)
-    except Exception:
-        return []
-    markers = []
-    for element_id in dependent_ids:
-        element = doc.GetElement(element_id)
-        if element is None or element.Id == host_instance.Id:
+    instances = DB.FilteredElementCollector(doc).OfClass(DB.FamilyInstance).WhereElementIsNotElementType().ToElements()
+    by_furniture_id = {}
+    for instance in instances:
+        if instance.LookupParameter(PARA_MAP_PARAMETER_NAME) is None:
             continue
-        if element.LookupParameter(PARA_MAP_PARAMETER_NAME) is not None:
-            markers.append(element)
-    return markers
+        top = instance
+        while getattr(top, "SuperComponent", None) is not None:
+            top = top.SuperComponent
+        if top.Id == instance.Id:
+            continue  # not nested inside anything -- not a marker under this convention
+        by_furniture_id.setdefault(element_int_id(top), []).append(instance)
+    return by_furniture_id
 
 
 def resolve_outlet_symbol(doc, family_name, type_name, cache):
@@ -670,7 +682,7 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
 def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, scopes):
     """Find every instance of `furniture_family_names` across every search scope (the
     host document plus every loaded link -- see get_search_scopes), and within each
-    one, every nested marker (get_para_map_markers). Each marker's own _para_map
+    one, every nested marker (build_para_map_markers_by_furniture_id). Each marker's own _para_map
     names the outlet family/type and mount height to place there, so this also
     resolves that outlet symbol and fan-casts the marker's corrected point to its
     host face (see _resolve_one_marker for the per-marker logic).
@@ -709,11 +721,12 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
 
     for scope_doc, link_transform in scopes:
         furniture_instances = get_furniture_instances(scope_doc, furniture_family_names)
+        markers_by_furniture_id = build_para_map_markers_by_furniture_id(scope_doc)
         debug_log("Found {} furniture instance(s) of {} in [{}]".format(
             len(furniture_instances), furniture_family_names, scope_doc.Title))
         for furniture in furniture_instances:
             furniture_level = get_instance_level(scope_doc, furniture)
-            markers = get_para_map_markers(furniture, doc=scope_doc)
+            markers = markers_by_furniture_id.get(element_int_id(furniture), [])
             furniture_family_name = REVIT_FAMILY.get_family_name(furniture)
             debug_log("Furniture [{}] ({}) in [{}]: {} marker(s), level [{}]".format(
                 furniture.Id, furniture_family_name, scope_doc.Title, len(markers),
