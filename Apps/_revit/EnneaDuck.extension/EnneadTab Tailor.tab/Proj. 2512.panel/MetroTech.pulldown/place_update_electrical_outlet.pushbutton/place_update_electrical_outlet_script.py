@@ -725,6 +725,24 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
             marker.Id, furniture.Id, furniture_level.Name, round(furniture_level.Elevation, 2),
             mount_height, (round(corrected_point.X, 2), round(corrected_point.Y, 2), round(corrected_point.Z, 2))))
 
+    # Sanity check, diagnostic only: the furniture instance's OWN position, mapped
+    # through the same link_transform used for the marker. The marker should land a
+    # few feet from its own host furniture -- if this distance is huge (tens/hundreds
+    # of feet, or a wildly different Z), the bug is in resolving marker/furniture
+    # coordinates through the link, not in the wall/floor search that follows.
+    furniture_point = get_instance_point(furniture)
+    if furniture_point is not None:
+        furniture_point_in_host = (
+            link_transform.OfPoint(furniture_point) if link_transform is not None else furniture_point)
+        debug_log(
+            "  (sanity check: furniture [{}] itself is at {} in host coordinates -- {} ft from the marker's "
+            "corrected point above; if that's more than a few feet, marker/furniture coordinate resolution "
+            "through the link is the bug, not the wall/floor search.)".format(
+                furniture.Id,
+                (round(furniture_point_in_host.X, 2), round(furniture_point_in_host.Y, 2),
+                 round(furniture_point_in_host.Z, 2)),
+                round(furniture_point_in_host.DistanceTo(corrected_point), 2)))
+
     required_host_type = DB.Wall if family.FamilyPlacementType == DB.FamilyPlacementType.OneLevelBasedHosted else None
     host, face, hit_point, stable_ref = find_nearest_host_face(
         doc, intersector, corrected_point, required_host_type=required_host_type)
