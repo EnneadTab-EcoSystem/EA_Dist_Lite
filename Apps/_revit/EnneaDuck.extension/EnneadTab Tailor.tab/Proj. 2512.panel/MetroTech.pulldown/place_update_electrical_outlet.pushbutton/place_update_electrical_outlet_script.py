@@ -727,6 +727,33 @@ def zoom_active_view_to_point(point, margin=10.0):
             _zoom_diagnostics_logged["error"] = True
 
 
+def set_progress_title(pb, verb, level_name, family_name=None, type_name=None, mount_height=None):
+    """Update `pb.title` with the CURRENT item's context (level, and when available
+    outlet family/type/mount height), so the progress bar itself shows what's being
+    worked on instead of just a bare item count.
+
+    Safe to call every iteration regardless of progress_step: setting a Python
+    attribute is cheap, and pyRevit's own forms.ProgressBar only actually repaints
+    the title on screen every `step` calls to update_progress() (the same step value
+    this tool already passes as progress_step) -- see forms.ProgressBar._update_pbar
+    and .update_progress in pyRevit's own source. So this piggybacks on throttling
+    pyRevit already does internally, rather than needing its own progress_step gate.
+
+    `{{value}}`/`{{max_value}}` (escaped braces) are left as literal `{value}`/
+    `{max_value}` placeholders for pyRevit's OWN renderer to fill in on the next
+    actual repaint -- see forms.ProgressBar._update_pbar, which formats `pb.title`
+    against those two keys.
+    """
+    level_label = level_name or "?"
+    if family_name and type_name and mount_height is not None:
+        detail = "{} - {} @ {} ({} ft)".format(family_name, type_name, level_label, mount_height)
+    elif family_name and type_name:
+        detail = "{} - {} @ {}".format(family_name, type_name, level_label)
+    else:
+        detail = level_label
+    pb.title = "{}: {} ({{value}} of {{max_value}})".format(verb, detail)
+
+
 def get_search_scopes(doc):
     """Return every (search_doc, link_transform) scope to search for furniture/markers:
     the host document itself (link_transform=None), plus one entry per loaded,
@@ -1025,6 +1052,10 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
                     host = face = hit_point = stable_ref = family = family_type = mount_height = level_name = None
 
                 processed += 1
+                set_progress_title(
+                    pb, "Resolving", level_name or (furniture_level.Name if furniture_level else None),
+                    family.Name if family else None, type_name_of(family_type) if family_type else None,
+                    mount_height)
                 pb.update_progress(processed, total_markers)
                 if processed % progress_step == 0:
                     furniture_point = get_instance_point(furniture)
@@ -1266,6 +1297,8 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         if check_failure_streak(create_streak, str(e), "to_create", len(to_create), index):
                             break
                     processed += 1
+                    set_progress_title(pb, "Placing", item.level_name, item.family_name, item.type_name,
+                                        item.mount_height)
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0:
                         zoom_active_view_to_point(DB.XYZ(*item.point))
@@ -1297,6 +1330,8 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         if check_failure_streak(replace_streak, str(e), "to_replace", len(to_replace), index):
                             break
                     processed += 1
+                    set_progress_title(pb, "Replacing", item.level_name, item.family_name, item.type_name,
+                                        item.mount_height)
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0:
                         zoom_active_view_to_point(DB.XYZ(*item.point))
@@ -1310,6 +1345,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         in enumerate(to_update):
                     if user_cancelled:
                         break
+                    existing = None
                     try:
                         existing = doc.GetElement(DB.ElementId(instance_id))
                         if existing is None:
@@ -1353,6 +1389,11 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         if check_failure_streak(update_streak, str(e), "to_update", len(to_update), index):
                             break
                     processed += 1
+                    if existing is not None:
+                        set_progress_title(pb, "Updating", level_name, REVIT_FAMILY.get_family_name(existing),
+                                            type_name_of(existing.Symbol), mount_height)
+                    else:
+                        set_progress_title(pb, "Updating", level_name)
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0:
                         zoom_active_view_to_point(DB.XYZ(*target_point_tuple))
@@ -1394,6 +1435,11 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         if check_failure_streak(retag_streak, str(e), "to_retag", len(to_retag), index):
                             break
                     processed += 1
+                    if existing is not None:
+                        set_progress_title(pb, "Tagging", level_name, REVIT_FAMILY.get_family_name(existing),
+                                            type_name_of(existing.Symbol), mount_height)
+                    else:
+                        set_progress_title(pb, "Tagging", level_name)
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0 and existing is not None:
                         existing_point = get_instance_point(existing)
