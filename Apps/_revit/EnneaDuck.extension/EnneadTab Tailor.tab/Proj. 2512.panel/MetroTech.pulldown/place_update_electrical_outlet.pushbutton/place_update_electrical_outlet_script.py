@@ -77,13 +77,16 @@ EXISTING_OUTLET_SAME_SPOT_TOLERANCE = 0.05  # feet; close enough to skip as a no
 # subset of the discovered names for a surgical run (e.g. re-running on just one
 # furniture type after a model fix) instead of always processing every family.
 
-# If this many markers of the SAME furniture family in a row fail with the EXACT SAME
-# reason, resolve_marker_targets stops processing THAT family's remaining markers
-# early instead of grinding through all of them: an identical repeated reason (e.g.
-# "host furniture has no level") signals a systemic modeling/setup problem for that
-# family, not a string of unrelated one-off marker issues, so nothing is gained by
-# continuing -- fail fast, fix the root cause, rerun. Other selected furniture
-# families are unaffected (the streak is scoped per family, not global).
+# Shared fail-fast threshold for BOTH phases of a run:
+# - resolve_marker_targets: if this many markers of the SAME furniture family in a
+#   row fail with the EXACT SAME reason, that family's remaining markers are skipped.
+# - apply_marker_outlets: if this many items in the SAME bucket (to_create/to_replace/
+#   to_update/to_retag) in a row raise the EXACT SAME exception during actual
+#   placement, that bucket's remaining items are skipped (see check_failure_streak).
+# Either way, an identical repeated reason signals a systemic bug or setup problem,
+# not a string of unrelated one-off issues, so nothing is gained by continuing --
+# fail fast, fix the root cause, rerun. The streak is always scoped to one
+# family/bucket, never global, so other families/buckets are unaffected.
 CONSECUTIVE_UNRESOLVED_ABORT_THRESHOLD = 5
 
 # Revit has no native JSON/dict parameter type, so a marker instance carries its
@@ -1104,14 +1107,16 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
         point = DB.XYZ(item.point[0], item.point[1], item.point[2])
         if item.stable_ref:
             reference = DB.Reference.ParseFromStableRepresentation(doc, item.stable_ref)
-            face = host.GetGeometryObjectFromReference(reference)
-            # DB.XYZ.BasisZ as reference_direction is the API equivalent of the Revit
-            # UI's "Place on Vertical Face" tool (vs. plain "Place on Face"): it keeps
-            # the instance plumb/upright regardless of the exact face tilt, instead of
-            # place_instance_by_face's default fallback (the face's own local X axis,
-            # which follows whatever orientation the face itself happens to have).
-            return REVIT_FAMILY.place_instance_by_face(
-                family_type, face, point, reference_direction=DB.XYZ.BasisZ, doc=doc)
+            # Pass the Reference straight to NewFamilyInstance rather than extracting a
+            # DB.Face from it first (host.GetGeometryObjectFromReference(reference)) --
+            # that Face's internal .Reference isn't reliably populated for every host
+            # face type, which fails with "The Reference of the input face is null"
+            # even though the Face DID come from a Reference (see
+            # REVIT_FAMILY.place_instance_by_reference's docstring). DB.XYZ.BasisZ as
+            # reference_direction is the API equivalent of the Revit UI's "Place on
+            # Vertical Face" tool: keeps the instance plumb regardless of face tilt.
+            return REVIT_FAMILY.place_instance_by_reference(
+                family_type, reference, point, reference_direction=DB.XYZ.BasisZ, doc=doc)
         if isinstance(host, DB.Wall):
             level = doc.GetElement(host.LevelId)
             return REVIT_FAMILY.place_instance_by_wall(family_type, point, host, level=level, doc=doc)
@@ -1152,6 +1157,37 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
             "created": 0, "replaced": 0, "updated": 0, "retagged": 0, "needs_attention": 0})
         stats[key] += 1
 
+    def check_failure_streak(streak_state, reason, bucket_name, total_in_bucket, index):
+        """Update `streak_state` (a mutable [reason, count] pair, one per bucket) with
+        one more exception `reason`, and return True if that bucket should stop
+        processing its remaining items now.
+
+        Mirrors resolve_marker_targets's per-family fail-fast, applied here to the
+        APPLY phase instead: resolve's circuit breaker only ever sees ray-cast/lookup
+        failures, since it never calls NewFamilyInstance -- an exception during actual
+        placement (e.g. a bad API call, a corrupt host face) is invisible to it and
+        was previously caught per-item with no streak-based abort at all, so a
+        systemic bug would silently fail on every single item without ever stopping
+        early (see the "Reference of the input face is null" incident this was built
+        to catch). CONSECUTIVE_UNRESOLVED_ABORT_THRESHOLD identical exception messages
+        in a row -> abort just THIS bucket's remaining items; the other three buckets
+        are unaffected, since each gets its own streak_state.
+        """
+        if reason == streak_state[0]:
+            streak_state[1] += 1
+        else:
+            streak_state[0] = reason
+            streak_state[1] = 1
+        if streak_state[1] >= CONSECUTIVE_UNRESOLVED_ABORT_THRESHOLD:
+            remaining = total_in_bucket - index - 1
+            debug_log(
+                "Aborting '{}' early: {} consecutive item(s) failed with the same error [{}] -- likely a "
+                "systemic bug or setup issue, not independent per-item problems. Skipping its remaining {} "
+                "item(s); other buckets are unaffected. Fix the root cause and rerun.".format(
+                    bucket_name, streak_state[1], reason, remaining))
+            return True
+        return False
+
     created = 0
     replaced = 0
     updated = 0
@@ -1171,8 +1207,11 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                 title="Placing/updating outlets... ({value} of {max_value})",
                 step=progress_step, cancellable=True) as pb:
 
+            create_streak = [None, 0]
             if not user_cancelled:
-                for item, marker_tag in to_create:
+                for index, (item, marker_tag) in enumerate(to_create):
+                    if user_cancelled:
+                        break
                     try:
                         instance = do_create(item)
                         if instance and apply_required_params_or_delete(instance, marker_tag, item.mount_height, item):
@@ -1188,6 +1227,8 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         debug_log("Failed to place outlet on host [{}]: {}".format(item.host_id, e))
                         failed.append(item.host_id)
                         bump_level_stat(item.level_name, "needs_attention")
+                        if check_failure_streak(create_streak, str(e), "to_create", len(to_create), index):
+                            break
                     processed += 1
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0:
@@ -1196,8 +1237,11 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         user_cancelled = True
                         break
 
+            replace_streak = [None, 0]
             if not user_cancelled:
-                for old_instance_id, item, marker_tag in to_replace:
+                for index, (old_instance_id, item, marker_tag) in enumerate(to_replace):
+                    if user_cancelled:
+                        break
                     try:
                         doc.Delete(DB.ElementId(old_instance_id))
                         instance = do_create(item)
@@ -1214,6 +1258,8 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         debug_log("Failed to replace outlet [{}]: {}".format(old_instance_id, e))
                         failed.append(old_instance_id)
                         bump_level_stat(item.level_name, "needs_attention")
+                        if check_failure_streak(replace_streak, str(e), "to_replace", len(to_replace), index):
+                            break
                     processed += 1
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0:
@@ -1222,8 +1268,12 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         user_cancelled = True
                         break
 
+            update_streak = [None, 0]
             if not user_cancelled:
-                for instance_id, target_point_tuple, new_type_name, marker_tag, mount_height, level_name in to_update:
+                for index, (instance_id, target_point_tuple, new_type_name, marker_tag, mount_height, level_name) \
+                        in enumerate(to_update):
+                    if user_cancelled:
+                        break
                     try:
                         existing = doc.GetElement(DB.ElementId(instance_id))
                         if existing is None:
@@ -1264,6 +1314,8 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         debug_log("Failed to update outlet [{}]: {}".format(instance_id, e))
                         failed.append(instance_id)
                         bump_level_stat(level_name, "needs_attention")
+                        if check_failure_streak(update_streak, str(e), "to_update", len(to_update), index):
+                            break
                     processed += 1
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0:
@@ -1272,8 +1324,11 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         user_cancelled = True
                         break
 
+            retag_streak = [None, 0]
             if not user_cancelled:
-                for instance_id, marker_tag, mount_height, level_name in to_retag:
+                for index, (instance_id, marker_tag, mount_height, level_name) in enumerate(to_retag):
+                    if user_cancelled:
+                        break
                     existing = None
                     try:
                         existing = doc.GetElement(DB.ElementId(instance_id))
@@ -1300,6 +1355,8 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         debug_log("Failed to tag existing outlet [{}]: {}".format(instance_id, e))
                         failed.append(instance_id)
                         bump_level_stat(level_name, "needs_attention")
+                        if check_failure_streak(retag_streak, str(e), "to_retag", len(to_retag), index):
+                            break
                     processed += 1
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0 and existing is not None:
