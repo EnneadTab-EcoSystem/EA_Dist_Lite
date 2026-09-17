@@ -771,8 +771,8 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
 
     Returns:
         tuple (reason, host, face, hit_point, stable_ref, family, family_type,
-        mount_height). `reason` is None on success; every other field is None when
-        `reason` is set.
+        mount_height, level_name). `reason` is None on success; every other field is
+        None when `reason` is set.
     """
     para_map = get_marker_para_map(marker)
     if any(value is not None for value in para_map.values()):
@@ -783,12 +783,12 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
     mount_height = para_map.get("mount_height")
     if not outlet_family_name or not outlet_type_name or mount_height is None:
         return ("{} needs family_name, type_name, and mount_height all set".format(PARA_MAP_PARAMETER_NAME),
-                None, None, None, None, None, None, None)
+                None, None, None, None, None, None, None, None)
 
     family, family_type = resolve_outlet_symbol(doc, outlet_family_name, outlet_type_name, symbol_cache)
     if not family or not family_type:
         return ("outlet [{}] - [{}] is not loaded".format(outlet_family_name, outlet_type_name),
-                None, None, None, None, None, None, None)
+                None, None, None, None, None, None, None, None)
 
     # SOURCE_MARKER_TAG_PARAMETER_NAME and PLACEMENT_HEIGHT_PARAMETER_NAME are both
     # required, no silent fallback. If an outlet of this exact type already exists,
@@ -801,19 +801,19 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
         if supported is False:
             return ("outlet [{}] - [{}] is missing the required {} parameter -- add it to the family in the "
                      "Family Editor, then rerun".format(outlet_family_name, outlet_type_name, required_param_name),
-                     None, None, None, None, None, None, None)
+                     None, None, None, None, None, None, None, None)
 
     if family.FamilyPlacementType not in (DB.FamilyPlacementType.WorkPlaneBased, DB.FamilyPlacementType.OneLevelBasedHosted):
         return ("outlet [{}] is neither face-based nor wall-hosted".format(outlet_family_name),
-                None, None, None, None, None, None, None)
+                None, None, None, None, None, None, None, None)
 
     if furniture_level is None:
         return ("host furniture [{}] has no level".format(furniture.Id),
-                None, None, None, None, None, None, None)
+                None, None, None, None, None, None, None, None)
 
     local_point, _orientation = REVIT_FAMILY.get_nested_instance_placement(marker)
     if local_point is None:
-        return ("no location available", None, None, None, None, None, None, None)
+        return ("no location available", None, None, None, None, None, None, None, None)
 
     # The outlet is placed AT its host level, zero elevation offset -- mount_height is
     # never baked into the instance's real Z. Instead it gets written onto the
@@ -853,9 +853,9 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
     if host is None:
         needed = "wall" if required_host_type is not None else "wall/floor"
         return ("no {} within {} ft in any direction".format(needed, MARKER_RAYCAST_MAX_DISTANCE),
-                None, None, None, None, None, None, None)
+                None, None, None, None, None, None, None, None)
 
-    return (None, host, face, hit_point, stable_ref, family, family_type, mount_height)
+    return (None, host, face, hit_point, stable_ref, family, family_type, mount_height, furniture_level.Name)
 
 
 def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, scopes):
@@ -893,7 +893,7 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
     Returns:
         tuple (resolved, unresolved):
           resolved   -- list of (marker, marker_tag, host, face, hit_point, stable_ref,
-                        family, family_type, mount_height)
+                        family, family_type, mount_height, level_name)
           unresolved -- list of (marker, reason) for markers that can't be placed
     """
     entries_by_family = {}
@@ -944,12 +944,13 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
 
             for index, (furniture, furniture_level, marker, scope_doc, link_transform) in enumerate(entries):
                 try:
-                    reason, host, face, hit_point, stable_ref, family, family_type, mount_height = _resolve_one_marker(
-                        doc, scope_doc, link_transform, furniture, furniture_level, marker, intersector,
-                        symbol_cache, tag_support_cache)
+                    reason, host, face, hit_point, stable_ref, family, family_type, mount_height, level_name = \
+                        _resolve_one_marker(
+                            doc, scope_doc, link_transform, furniture, furniture_level, marker, intersector,
+                            symbol_cache, tag_support_cache)
                 except Exception as e:
                     reason = "internal error: {}".format(e)
-                    host = face = hit_point = stable_ref = family = family_type = mount_height = None
+                    host = face = hit_point = stable_ref = family = family_type = mount_height = level_name = None
 
                 processed += 1
                 pb.update_progress(processed, total_markers)
@@ -961,7 +962,8 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
                 if reason is None:
                     marker_tag = build_marker_tag(scope_doc, marker)
                     resolved.append(
-                        (marker, marker_tag, host, face, hit_point, stable_ref, family, family_type, mount_height))
+                        (marker, marker_tag, host, face, hit_point, stable_ref, family, family_type, mount_height,
+                         level_name))
                     streak_reason = None
                     streak_count = 0
                 else:
@@ -1032,18 +1034,21 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
       within the same family), so the old one is deleted and a new one created,
       tagged, and height-set in its place.
     - `to_update`: list of (instance_id, target_point, new_type_name_or_None,
-      marker_tag, mount_height) -- the existing instance is already the correct
-      family. If `new_type_name_or_None` is set, its type differs and gets swapped
-      via `Symbol =` (same-family retype, no delete needed); either way it is moved
-      to `target_point`, re-tagged, and its Placement Height is (re)set to
+      marker_tag, mount_height, level_name) -- the existing instance is already the
+      correct family. If `new_type_name_or_None` is set, its type differs and gets
+      swapped via `Symbol =` (same-family retype, no delete needed); either way it is
+      moved to `target_point`, re-tagged, and its Placement Height is (re)set to
       `mount_height` -- this can be the ONLY thing that changed, since mount_height no
       longer affects `target_point` at all (see PLACEMENT_HEIGHT_PARAMETER_NAME).
-    - `to_retag`: list of (instance_id, marker_tag, mount_height) -- a legacy,
-      untagged instance that already exactly matches its marker's target
+    - `to_retag`: list of (instance_id, marker_tag, mount_height, level_name) -- a
+      legacy, untagged instance that already exactly matches its marker's target
       family/type/position (found by position+type proximity, which never checks
       height); the tag AND Placement Height are (re)written unconditionally, so a
       future run finds it directly instead of falling back to position/type matching
       again, and its height is guaranteed correct rather than assumed.
+
+    `level_name` (the HOST FURNITURE's level, e.g. "4TH FLOOR") is carried purely for
+    the per-level summary this function returns -- see level_stats below.
     """
     doc = DOC
     symbol_cache = {}
@@ -1097,6 +1102,17 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
         doc.Delete(instance.Id)
         return False
 
+    # Per-level breakdown for the run summary (see level_summary_lines below), keyed
+    # by the HOST FURNITURE's level name -- an outlet at a furniture with no level
+    # cannot exist (_resolve_one_marker already fails that marker), so this key is
+    # never None in practice, but "(no level)" is the fallback just in case.
+    level_stats = {}
+
+    def bump_level_stat(level_name, key):
+        stats = level_stats.setdefault(level_name or "(no level)", {
+            "created": 0, "replaced": 0, "updated": 0, "retagged": 0, "needs_attention": 0})
+        stats[key] += 1
+
     created = 0
     replaced = 0
     updated = 0
@@ -1122,14 +1138,17 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         instance = do_create(item)
                         if instance and apply_required_params_or_delete(instance, marker_tag, item.mount_height, item):
                             created += 1
+                            bump_level_stat(item.level_name, "created")
                             debug_log("Placed outlet [{}] - [{}]/[{}] on host [{}] at {} (height {}), tagged.".format(
                                 instance.Id, item.family_name, item.type_name, item.host_id, item.point,
                                 item.mount_height))
                         else:
                             failed.append(item.host_id)
+                            bump_level_stat(item.level_name, "needs_attention")
                     except Exception as e:
                         debug_log("Failed to place outlet on host [{}]: {}".format(item.host_id, e))
                         failed.append(item.host_id)
+                        bump_level_stat(item.level_name, "needs_attention")
                     processed += 1
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0:
@@ -1145,14 +1164,17 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         instance = do_create(item)
                         if instance and apply_required_params_or_delete(instance, marker_tag, item.mount_height, item):
                             replaced += 1
+                            bump_level_stat(item.level_name, "replaced")
                             debug_log("Replaced outlet [{}] with [{}] - [{}]/[{}] at {} (height {}), tagged.".format(
                                 old_instance_id, instance.Id, item.family_name, item.type_name, item.point,
                                 item.mount_height))
                         else:
                             failed.append(old_instance_id)
+                            bump_level_stat(item.level_name, "needs_attention")
                     except Exception as e:
                         debug_log("Failed to replace outlet [{}]: {}".format(old_instance_id, e))
                         failed.append(old_instance_id)
+                        bump_level_stat(item.level_name, "needs_attention")
                     processed += 1
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0:
@@ -1162,11 +1184,12 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         break
 
             if not user_cancelled:
-                for instance_id, target_point_tuple, new_type_name, marker_tag, mount_height in to_update:
+                for instance_id, target_point_tuple, new_type_name, marker_tag, mount_height, level_name in to_update:
                     try:
                         existing = doc.GetElement(DB.ElementId(instance_id))
                         if existing is None:
                             failed.append(instance_id)
+                            bump_level_stat(level_name, "needs_attention")
                             continue
                         if new_type_name is not None:
                             family_name = REVIT_FAMILY.get_family_name(existing)
@@ -1184,8 +1207,10 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         tag_ok = set_outlet_source_marker_tag(existing, marker_tag)
                         height_ok = set_outlet_placement_height(existing, mount_height)
                         updated += 1
+                        bump_level_stat(level_name, "updated")
                         if not (tag_ok and height_ok):
                             required_param_failed += 1
+                            bump_level_stat(level_name, "needs_attention")
                             missing = [name for ok, name in (
                                 (tag_ok, SOURCE_MARKER_TAG_PARAMETER_NAME),
                                 (height_ok, PLACEMENT_HEIGHT_PARAMETER_NAME)) if not ok]
@@ -1199,6 +1224,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                     except Exception as e:
                         debug_log("Failed to update outlet [{}]: {}".format(instance_id, e))
                         failed.append(instance_id)
+                        bump_level_stat(level_name, "needs_attention")
                     processed += 1
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0:
@@ -1208,19 +1234,22 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         break
 
             if not user_cancelled:
-                for instance_id, marker_tag, mount_height in to_retag:
+                for instance_id, marker_tag, mount_height, level_name in to_retag:
                     existing = None
                     try:
                         existing = doc.GetElement(DB.ElementId(instance_id))
                         if existing is None:
                             failed.append(instance_id)
+                            bump_level_stat(level_name, "needs_attention")
                             continue
                         tag_ok = set_outlet_source_marker_tag(existing, marker_tag)
                         height_ok = set_outlet_placement_height(existing, mount_height)
                         if tag_ok and height_ok:
                             retagged += 1
+                            bump_level_stat(level_name, "retagged")
                         else:
                             required_param_failed += 1
+                            bump_level_stat(level_name, "needs_attention")
                             missing = [name for ok, name in (
                                 (tag_ok, SOURCE_MARKER_TAG_PARAMETER_NAME),
                                 (height_ok, PLACEMENT_HEIGHT_PARAMETER_NAME)) if not ok]
@@ -1231,6 +1260,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                     except Exception as e:
                         debug_log("Failed to tag existing outlet [{}]: {}".format(instance_id, e))
                         failed.append(instance_id)
+                        bump_level_stat(level_name, "needs_attention")
                     processed += 1
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0 and existing is not None:
@@ -1252,7 +1282,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
         t.RollBack()
         raise
 
-    lines = ["Placed {} | Replaced {} | Updated {} | Tagged {}".format(created, replaced, updated, retagged)]
+    lines = ["Total: Placed {} | Replaced {} | Updated {} | Tagged {}".format(created, replaced, updated, retagged)]
     if user_cancelled:
         lines.append("Cancelled by user after {} of {} item(s); already-applied changes were kept.".format(
             processed, total_items))
@@ -1263,7 +1293,18 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                 required_param_failed, SOURCE_MARKER_TAG_PARAMETER_NAME, PLACEMENT_HEIGHT_PARAMETER_NAME))
     if failed:
         lines.append("Failed on {} item(s), see output for detail.".format(len(failed)))
-    result = " | ".join(lines)
+
+    if level_stats:
+        lines.append("By level:")
+        for level_name in sorted(level_stats.keys()):
+            s = level_stats[level_name]
+            level_line = "  {}: Placed {} | Replaced {} | Updated {} | Tagged {}".format(
+                level_name, s["created"], s["replaced"], s["updated"], s["retagged"])
+            if s["needs_attention"]:
+                level_line += " | Needs attention {}".format(s["needs_attention"])
+            lines.append(level_line)
+
+    result = "\n".join(lines)
     debug_log(result)
     return result
 
@@ -1325,16 +1366,17 @@ def place_from_markers(doc):
 
         to_create = []        # (OutletPlacementTarget, marker_tag)
         to_replace = []       # (old_instance_id, OutletPlacementTarget, marker_tag)
-        to_update = []        # (instance_id, target_point, new_type_name_or_None, marker_tag, mount_height)
-        to_retag = []         # (instance_id, marker_tag, mount_height)
+        to_update = []        # (instance_id, target_point, new_type_name_or_None, marker_tag, mount_height, level_name)
+        to_retag = []         # (instance_id, marker_tag, mount_height, level_name)
         already_placed = []   # existing instance, no action needed
         skipped_foreign = []  # existing instance nearby but owned by another user
-        for marker, marker_tag, host, face, hit_point, stable_ref, family, family_type, mount_height in resolved:
+        for marker, marker_tag, host, face, hit_point, stable_ref, family, family_type, mount_height, level_name \
+                in resolved:
             point_tuple = (hit_point.X, hit_point.Y, hit_point.Z)
             type_name = type_name_of(family_type)
             use_stable_ref = stable_ref if family.FamilyPlacementType == DB.FamilyPlacementType.WorkPlaneBased else None
             target = OutletPlacementTarget(
-                element_int_id(host), point_tuple, family.Name, type_name, mount_height, use_stable_ref)
+                element_int_id(host), point_tuple, family.Name, type_name, mount_height, level_name, use_stable_ref)
 
             existing = outlets_by_marker_tag.get(marker_tag)
             if existing is None:
@@ -1346,7 +1388,7 @@ def place_from_markers(doc):
                 legacy, _distance = find_nearby_instance(hit_point, candidates, EXISTING_OUTLET_SAME_SPOT_TOLERANCE)
                 if legacy is not None:
                     already_placed.append(legacy)
-                    to_retag.append((element_int_id(legacy), marker_tag, mount_height))
+                    to_retag.append((element_int_id(legacy), marker_tag, mount_height, level_name))
                 else:
                     to_create.append((target, marker_tag))
                 continue
@@ -1375,9 +1417,10 @@ def place_from_markers(doc):
             elif existing_type_name == type_name and same_position and same_height:
                 already_placed.append(existing)
             elif existing_type_name == type_name:
-                to_update.append((element_int_id(existing), point_tuple, None, marker_tag, mount_height))
+                to_update.append((element_int_id(existing), point_tuple, None, marker_tag, mount_height, level_name))
             else:
-                to_update.append((element_int_id(existing), point_tuple, type_name, marker_tag, mount_height))
+                to_update.append(
+                    (element_int_id(existing), point_tuple, type_name, marker_tag, mount_height, level_name))
 
         result = apply_marker_outlets(to_create, to_replace, to_update, to_retag)
         lines = ["Furniture: [{}]".format(furniture_label), result]
