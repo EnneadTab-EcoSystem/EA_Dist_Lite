@@ -441,6 +441,42 @@ def build_fan_directions(horizontal_count):
     return directions
 
 
+def _log_out_of_range_probe(doc, intersector, point, directions, required_host_type):
+    """Diagnostic only -- never affects resolution. Called from find_nearest_host_face
+    when the normal fan-cast (bounded by MARKER_RAYCAST_MAX_DISTANCE) finds nothing, to
+    re-cast the SAME directions with no distance limit and log the nearest matching
+    element actually out there, if any.
+
+    This distinguishes two very different failure modes that otherwise look identical
+    ("0 rays hit"): NOTHING found at any distance in any direction (something is
+    fundamentally off -- the 3D view's Walls/Floors category visibility or phase
+    filter, or the furniture link's placement/shared-coordinates not lining up with
+    this document) versus something found just past MARKER_RAYCAST_MAX_DISTANCE (the
+    marker really is near a wall/floor, just farther than expected -- a distance-tuning
+    problem, not a setup problem).
+    """
+    nearest = None
+    for direction in directions:
+        for hit in intersector.Find(point, direction):
+            reference = hit.GetReference()
+            element = doc.GetElement(reference)
+            if required_host_type is not None and not isinstance(element, required_host_type):
+                continue
+            if nearest is None or hit.Proximity < nearest[0]:
+                nearest = (hit.Proximity, element)
+    if nearest is None:
+        debug_log(
+            "  (diagnostic: no matching wall/floor found in ANY direction at ANY distance -- check the 3D "
+            "view's category visibility/phase filter for Walls and Floors, and whether the furniture link's "
+            "placement (shared coordinates) actually lines up with this document.)")
+    else:
+        proximity, element = nearest
+        debug_log(
+            "  (diagnostic: nearest matching element is {} ft away (past the {} ft limit) -- host [{}]. If "
+            "this is the intended wall/floor, MARKER_RAYCAST_MAX_DISTANCE may need to be larger.)".format(
+                round(proximity, 2), MARKER_RAYCAST_MAX_DISTANCE, element.Id))
+
+
 def find_nearest_host_face(doc, intersector, point, required_host_type=None):
     """Cast a fan of rays outward from `point` and return the nearest wall/floor hit.
 
@@ -486,6 +522,7 @@ def find_nearest_host_face(doc, intersector, point, required_host_type=None):
                 round(point.X, 2), round(point.Y, 2), round(point.Z, 2), len(directions),
                 " matching" if required_host_type is not None else " wall/floor",
                 MARKER_RAYCAST_MAX_DISTANCE))
+        _log_out_of_range_probe(doc, intersector, point, directions, required_host_type)
         return None, None, None, None
     host, face, hit_point, stable_ref = best
     debug_log(
@@ -493,6 +530,33 @@ def find_nearest_host_face(doc, intersector, point, required_host_type=None):
             round(point.X, 2), round(point.Y, 2), round(point.Z, 2),
             hit_count, len(directions), host.Id, round(best_distance, 3)))
     return best
+
+
+def log_view3d_raycast_diagnostics(doc, view3d):
+    """Log once per run whether Walls/Floors are actually visible in `view3d` and what
+    phase it's showing.
+
+    DB.ReferenceIntersector only finds geometry that is VISIBLE in the view it was built
+    from (build_wall_floor_intersector) -- a category hidden by V/G overrides, or a phase
+    filter that hides not-yet-existing/demolished elements, makes every ray-cast in the
+    whole run come up empty with no error at all, which looks identical to "the marker
+    really isn't near a wall/floor." This is a fact worth ruling out up front rather than
+    rediscovering it one fan-cast miss at a time -- and unlike _log_out_of_range_probe,
+    it does not depend on the view-bound intersector, so it still tells the truth even
+    when the category IS hidden (a case the probe alone cannot distinguish from "nothing
+    is really there").
+    """
+    for bic in (DB.BuiltInCategory.OST_Walls, DB.BuiltInCategory.OST_Floors):
+        category = DB.Category.GetCategory(doc, bic)
+        try:
+            hidden = view3d.GetCategoryHidden(category.Id) if category else "category not found"
+        except Exception as e:
+            hidden = "could not check ({})".format(e)
+        debug_log("View3D [{}] '{}': {} hidden = {}".format(view3d.Id, view3d.Name, bic, hidden))
+    phase = doc.GetElement(view3d.get_Parameter(DB.BuiltInParameter.VIEW_PHASE).AsElementId()) \
+        if view3d.get_Parameter(DB.BuiltInParameter.VIEW_PHASE) else None
+    debug_log("View3D [{}] '{}': phase = {}".format(
+        view3d.Id, view3d.Name, phase.Name if phase else "(none)"))
 
 
 def get_search_scopes(doc):
@@ -1072,6 +1136,8 @@ def place_from_markers(doc):
 
     start_run_log()
     try:
+        debug_log("Host document: [{}]".format(doc.Title))
+        log_view3d_raycast_diagnostics(doc, view3d)
         symbol_cache = {}
         resolved, unresolved = resolve_marker_targets(doc, selected_names, view3d, symbol_cache, scopes)
         for marker, reason in unresolved:
