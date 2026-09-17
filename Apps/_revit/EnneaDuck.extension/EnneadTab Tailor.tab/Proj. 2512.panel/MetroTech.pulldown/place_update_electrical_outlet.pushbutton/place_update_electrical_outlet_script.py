@@ -116,10 +116,16 @@ PARA_MAP_TEMPLATE = {
 # look an outlet up by exact match instead of guessing from position/type, so it can
 # tell "already correct" apart from "same family, wrong type" (retype in place) and
 # "different family entirely" (delete and replace) -- see build_marker_tag and
-# build_outlets_by_marker_tag. Requires this Text instance parameter to exist on the
-# OUTLET family; if it doesn't, that family's outlets fall back to the old
-# position+type matching (see place_from_markers), same graceful-degradation
-# convention as _para_map on a marker family missing that parameter.
+# build_outlets_by_marker_tag.
+#
+# REQUIRED: this Text instance parameter must exist on every OUTLET family this tool
+# targets -- there is no silent fallback. A marker whose target outlet type already
+# has an existing instance without this parameter fails resolution up front (see
+# check_outlet_type_supports_tag) with a clear reason, before any ray-casting runs
+# for it. A marker whose target type has NO existing instance yet cannot be checked
+# that early, so the check happens at creation time instead: if the newly placed
+# instance turns out to have no such parameter, apply_marker_outlets deletes it
+# again and reports the item failed, rather than leaving an untracked outlet behind.
 SOURCE_MARKER_TAG_PARAMETER_NAME = "_source_marker_tag"
 
 
@@ -190,18 +196,49 @@ def get_outlet_source_marker_tag(instance):
 
 def set_outlet_source_marker_tag(instance, tag):
     """Write `tag` (see build_marker_tag) onto `instance`'s source-marker-tag
-    parameter. No-ops (with a note) if the outlet family has no such parameter --
-    that family's outlets then fall back to position+type matching on the next run
-    instead of an exact lookup, but placement still works either way.
+    parameter.
+
+    SOURCE_MARKER_TAG_PARAMETER_NAME is a REQUIRED parameter on the outlet family --
+    unlike the earlier graceful-degradation convention, a missing parameter here is
+    treated as a hard setup error by every caller (see check_outlet_type_supports_tag
+    and apply_marker_outlets), not a silent fallback. This function only writes and
+    reports whether it could; it never decides what to do about a failure.
+
+    Returns:
+        bool: True if the tag was written, False if the outlet family has no such
+        parameter.
     """
     param = instance.LookupParameter(SOURCE_MARKER_TAG_PARAMETER_NAME)
     if not param:
-        debug_log(
-            "Outlet [{}]'s family has no {} parameter -- cannot tag it back to its source marker, so a future "
-            "run will fall back to matching by position/type for it. Add a Text instance parameter with this "
-            "name to the outlet family to enable exact tracking.".format(instance.Id, SOURCE_MARKER_TAG_PARAMETER_NAME))
-        return
+        return False
     param.Set(tag)
+    return True
+
+
+def check_outlet_type_supports_tag(doc, family_name, type_name, cache):
+    """Return whether an outlet of (family_name, type_name) already placed in `doc`
+    has the required SOURCE_MARKER_TAG_PARAMETER_NAME parameter.
+
+    Returns:
+        True/False if an existing instance answered the question definitively, or
+        None if no instance of this type exists yet in `doc` -- in that case the
+        answer is unknown until the first one is created (apply_marker_outlets
+        enforces it there instead; see its to_create handling).
+
+    `cache` is a plain dict the caller owns and reuses across every marker in one
+    run, keyed by (family_name, type_name); only definitive True/False answers are
+    cached, never the "unknown" case, since a later marker of the same type earlier
+    in the SAME run cannot have created an instance yet either.
+    """
+    key = (family_name, type_name)
+    if key in cache:
+        return cache[key]
+    instances = REVIT_FAMILY.get_family_instances_by_family_name_and_type_name(family_name, type_name, doc=doc)
+    if not instances:
+        return None
+    supported = instances[0].LookupParameter(SOURCE_MARKER_TAG_PARAMETER_NAME) is not None
+    cache[key] = supported
+    return supported
 
 
 def build_outlets_by_marker_tag(doc):
@@ -564,7 +601,8 @@ def resolve_outlet_symbol(doc, family_name, type_name, cache):
     return cache[key]
 
 
-def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_level, marker, intersector, symbol_cache):
+def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_level, marker, intersector,
+                         symbol_cache, tag_support_cache):
     """Resolve one marker to its outlet symbol and host face, or the reason it can't be.
 
     Isolated into its own function so resolve_marker_targets can wrap a single call in
@@ -591,6 +629,17 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
     if not family or not family_type:
         return ("outlet [{}] - [{}] is not loaded".format(outlet_family_name, outlet_type_name),
                 None, None, None, None, None, None)
+
+    # SOURCE_MARKER_TAG_PARAMETER_NAME is required, no silent fallback. If an outlet
+    # of this exact type already exists, check it now and fail fast before any
+    # ray-casting; if none exists yet, this can't be known until the first one is
+    # created (apply_marker_outlets enforces it there instead).
+    tag_supported = check_outlet_type_supports_tag(doc, outlet_family_name, outlet_type_name, tag_support_cache)
+    if tag_supported is False:
+        return ("outlet [{}] - [{}] is missing the required {} parameter -- add a Text instance parameter "
+                 "with this name to the family in the Family Editor, then rerun".format(
+                     outlet_family_name, outlet_type_name, SOURCE_MARKER_TAG_PARAMETER_NAME),
+                 None, None, None, None, None, None)
 
     if family.FamilyPlacementType not in (DB.FamilyPlacementType.WorkPlaneBased, DB.FamilyPlacementType.OneLevelBasedHosted):
         return ("outlet [{}] is neither face-based nor wall-hosted".format(outlet_family_name),
@@ -681,6 +730,7 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
                     (furniture, furniture_level, marker, scope_doc, link_transform))
 
     intersector = build_wall_floor_intersector(view3d)
+    tag_support_cache = {}
 
     resolved = []
     unresolved = []
@@ -693,7 +743,8 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
         for index, (furniture, furniture_level, marker, scope_doc, link_transform) in enumerate(entries):
             try:
                 reason, host, face, hit_point, stable_ref, family, family_type = _resolve_one_marker(
-                    doc, scope_doc, link_transform, furniture, furniture_level, marker, intersector, symbol_cache)
+                    doc, scope_doc, link_transform, furniture, furniture_level, marker, intersector,
+                    symbol_cache, tag_support_cache)
             except Exception as e:
                 reason = "internal error: {}".format(e)
                 host = face = hit_point = stable_ref = family = family_type = None
@@ -801,10 +852,27 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
             "(host type: {}).".format(item.family_name, item.type_name, item.host_id, type(host).__name__))
         return None
 
+    def tag_or_delete(instance, marker_tag, item):
+        """Tag a NEWLY CREATED `instance`; if the family lacks the required tag
+        parameter, delete `instance` again rather than leave an untracked outlet
+        behind (SOURCE_MARKER_TAG_PARAMETER_NAME is required, no silent fallback for
+        a brand-new placement -- see that constant's comment). Returns True on
+        success, False if it deleted the instance.
+        """
+        if set_outlet_source_marker_tag(instance, marker_tag):
+            return True
+        debug_log(
+            "Outlet family [{}] has no required {} parameter -- deleting the outlet just placed for type "
+            "[{}] and marking it failed. Add a Text instance parameter with this name to the family, then "
+            "rerun.".format(item.family_name, SOURCE_MARKER_TAG_PARAMETER_NAME, item.type_name))
+        doc.Delete(instance.Id)
+        return False
+
     created = 0
     replaced = 0
     updated = 0
     retagged = 0
+    retag_failed = 0
     failed = []
     t = DB.Transaction(doc, "Place/Update Electrical Outlet From Marker")
     t.Start()
@@ -812,8 +880,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
         for item, marker_tag in to_create:
             try:
                 instance = do_create(item)
-                if instance:
-                    set_outlet_source_marker_tag(instance, marker_tag)
+                if instance and tag_or_delete(instance, marker_tag, item):
                     created += 1
                     debug_log("Placed outlet [{}] - [{}]/[{}] on host [{}] at {}, tagged.".format(
                         instance.Id, item.family_name, item.type_name, item.host_id, item.point))
@@ -827,8 +894,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
             try:
                 doc.Delete(DB.ElementId(old_instance_id))
                 instance = do_create(item)
-                if instance:
-                    set_outlet_source_marker_tag(instance, marker_tag)
+                if instance and tag_or_delete(instance, marker_tag, item):
                     replaced += 1
                     debug_log("Replaced outlet [{}] with [{}] - [{}]/[{}] at {}, tagged.".format(
                         old_instance_id, instance.Id, item.family_name, item.type_name, item.point))
@@ -853,9 +919,21 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                 target_point = DB.XYZ(target_point_tuple[0], target_point_tuple[1], target_point_tuple[2])
                 if current_point is not None:
                     DB.ElementTransformUtils.MoveElement(doc, existing.Id, target_point - current_point)
-                set_outlet_source_marker_tag(existing, marker_tag)
-                updated += 1
-                debug_log("Updated outlet [{}]{} to {}, tagged.".format(
+                # This instance PRE-EXISTED (not created by this run), so a missing
+                # tag parameter here does not undo the move/retype that already
+                # succeeded -- deleting someone's existing outlet over a bookkeeping
+                # gap would be far worse than just flagging it loudly.
+                if set_outlet_source_marker_tag(existing, marker_tag):
+                    updated += 1
+                else:
+                    updated += 1
+                    retag_failed += 1
+                    debug_log(
+                        "Outlet [{}]'s family has no required {} parameter -- moved/retyped it, but could not "
+                        "tag it; a future run will fall back to position/type matching for it instead of an "
+                        "exact lookup. Add the parameter to the family.".format(
+                            instance_id, SOURCE_MARKER_TAG_PARAMETER_NAME))
+                debug_log("Updated outlet [{}]{} to {}.".format(
                     instance_id, " (retyped to [{}])".format(new_type_name) if new_type_name else "",
                     target_point_tuple))
             except Exception as e:
@@ -868,8 +946,14 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                 if existing is None:
                     failed.append(instance_id)
                     continue
-                set_outlet_source_marker_tag(existing, marker_tag)
-                retagged += 1
+                if set_outlet_source_marker_tag(existing, marker_tag):
+                    retagged += 1
+                else:
+                    retag_failed += 1
+                    debug_log(
+                        "Outlet [{}]'s family has no required {} parameter -- left it as-is (already correct "
+                        "position/type), but could not tag it. Add the parameter to the family.".format(
+                            instance_id, SOURCE_MARKER_TAG_PARAMETER_NAME))
             except Exception as e:
                 debug_log("Failed to tag existing outlet [{}]: {}".format(instance_id, e))
                 failed.append(instance_id)
@@ -879,6 +963,10 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
         raise
 
     lines = ["Placed {} | Replaced {} | Updated {} | Tagged {}".format(created, replaced, updated, retagged)]
+    if retag_failed:
+        lines.append(
+            "{} instance(s) updated/adopted but could not be tagged (family missing {} parameter).".format(
+                retag_failed, SOURCE_MARKER_TAG_PARAMETER_NAME))
     if failed:
         lines.append("Failed on {} item(s), see output for detail.".format(len(failed)))
     result = " | ".join(lines)
