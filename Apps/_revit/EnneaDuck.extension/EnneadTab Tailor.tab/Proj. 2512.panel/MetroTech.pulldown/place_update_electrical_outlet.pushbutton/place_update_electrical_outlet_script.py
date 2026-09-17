@@ -1548,6 +1548,20 @@ def place_from_markers(doc):
         return
 
     start_run_log()
+
+    # zoom_active_view_to_point can only show a marker if the active view actually
+    # contains it -- a run spans furniture on MANY different levels, so leaving
+    # whatever plan view happened to be active (e.g. one specific floor's plan) means
+    # every item on any OTHER level has nothing to zoom to at all, even though the
+    # zoom call itself succeeds. Switching to view3d (the same non-section-boxed 3D
+    # view the ray-cast itself already depends on seeing the whole building through)
+    # guarantees the active view can show whichever level is currently being
+    # processed, for the whole run.
+    try:
+        UIDOC.RequestViewChange(view3d)
+    except Exception as e:
+        debug_log("Could not switch the active view to the 3D view used for ray-casting: {} -- zoom may not "
+                   "be visible for levels other than whatever view was already active.".format(e))
     try:
         debug_log("Host document: [{}]".format(doc.Title))
         log_view3d_raycast_diagnostics(doc, view3d)
