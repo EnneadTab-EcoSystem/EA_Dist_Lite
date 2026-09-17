@@ -11,9 +11,11 @@ outlet family: pick whichever family/type your project uses each time.
 Features:
 - Face-based outlet families are placed on the wall or floor face you click
 - Wall-hosted outlet families are placed at the point you click on a wall
-- Furniture families can carry a nested position marker; this tool finds every
-  marker of that family, ray-casts to the nearest wall/floor, and places or
-  updates the matching outlet there
+- Furniture families can carry a nested position marker, in the current model or a
+  linked one; this tool finds every marker of that family, fans rays outward to the
+  nearest wall/floor (the marker carries position only, no dependable facing
+  rotation to aim a single ray), and places or updates the matching outlet in the
+  current model
 - The outlet family/type you pick for a marker family can be locked in and shared
   with the whole project team, so nobody has to re-pick it on future runs
 - An outlet already sitting near a marker is never deleted: a review grid lists
@@ -31,6 +33,8 @@ Usage:
    already nearby open a review grid first (Zoom, Previous/Next, Keep/Move per row)
 4. Update Type: pick the family, current type, new type, then confirm"""
 __title__ = "Place/Update\nElectrical Outlet"
+
+import math
 
 import proDUCKtion  # pyright: ignore
 proDUCKtion.validify()
@@ -70,11 +74,12 @@ MARKER_TO_OUTLET_KEY_MAP = {
 # {marker_family_name: [outlet_family_name, outlet_type_name]}.
 SHARED_OUTLET_MAP_KEY_PREFIX = "MetroTechOutletMarkerMap_"
 
-# Local axis of the marker family that points AWAY from its host wall/floor, into
-# the room. This tool ray-casts from the marker along the OPPOSITE of this axis to
-# find the wall/floor it belongs to. Change to "BasisX" or "BasisZ" if your marker
-# family encodes facing direction on a different axis.
-MARKER_FACING_AXIS = "BasisY"
+# The marker family carries position only, no dependable facing rotation, so the
+# host wall/floor is found with a fan of rays cast outward from the marker point
+# rather than trusting one axis of its orientation. Horizontal rays (evenly spaced
+# around a full circle) cover walls; a straight-down and straight-up ray cover
+# floors, which the horizontal fan alone would never hit.
+MARKER_RAYCAST_FAN_COUNT = 16  # horizontal rays in the fan; higher = finer angular coverage
 
 MARKER_RAYCAST_MAX_DISTANCE = 3.0  # feet; how far to ray-cast to find a host face
 EXISTING_OUTLET_SEARCH_RADIUS = 1.0  # feet; how close counts as "already at this marker"
@@ -249,28 +254,78 @@ def find_host_face_along_ray(doc, view3d, point, direction):
     return host, face, reference.GlobalPoint, stable_ref
 
 
-def resolve_marker_targets(doc, marker_family_name, view3d):
-    """Find every instance of `marker_family_name`, and ray-cast each to its host face.
+def build_fan_directions(horizontal_count):
+    """Return `horizontal_count` evenly-spaced unit vectors around a full horizontal
+    circle, plus straight-down and straight-up.
+
+    Horizontal rays find walls; a marker's own rotation cannot be trusted to point
+    at one (see MARKER_RAYCAST_FAN_COUNT), so every angle is tried and the nearest
+    hit wins. Floors are horizontal planes, so only the vertical rays can hit one --
+    no amount of horizontal fan density would.
+    """
+    directions = []
+    for i in range(horizontal_count):
+        angle = 2.0 * math.pi * i / horizontal_count
+        directions.append(DB.XYZ(math.cos(angle), math.sin(angle), 0.0))
+    directions.append(DB.XYZ(0.0, 0.0, -1.0))
+    directions.append(DB.XYZ(0.0, 0.0, 1.0))
+    return directions
+
+
+def find_nearest_host_face(doc, view3d, point):
+    """Cast a fan of rays outward from `point` and return the nearest wall/floor hit.
+
+    The marker only carries a position, not a dependable facing rotation, so the
+    direction to the host wall/floor cannot be read off its orientation the way a
+    single trusted axis would. Trying every direction in the fan and keeping the
+    globally nearest hit finds the host regardless of which way the marker sits.
+
+    Returns:
+        tuple (DB.Element host, DB.Face face, DB.XYZ hit_point, str stable_ref), or
+        (None, None, None, None) when nothing is hit within MARKER_RAYCAST_MAX_DISTANCE
+        in any direction.
+    """
+    best = None
+    best_distance = None
+    for direction in build_fan_directions(MARKER_RAYCAST_FAN_COUNT):
+        host, face, hit_point, stable_ref = find_host_face_along_ray(doc, view3d, point, direction)
+        if host is None:
+            continue
+        distance = point.DistanceTo(hit_point)
+        if best_distance is None or distance < best_distance:
+            best = (host, face, hit_point, stable_ref)
+            best_distance = distance
+    return best if best is not None else (None, None, None, None)
+
+
+def resolve_marker_targets(doc, marker_family_name, view3d, marker_doc=None, link_transform=None):
+    """Find every instance of `marker_family_name`, and fan-cast each to its host face.
+
+    `marker_doc` is searched for marker instances (defaults to `doc`, the current/host
+    document); pass the linked document here when the markers live in a link.
+    `link_transform` (a link instance's total transform) maps each marker's point from
+    link-local space into host-doc space before casting, since the ray-cast and every
+    downstream placement always target the CURRENT (host) document's walls/floors --
+    never the link's -- regardless of where the marker itself lives.
 
     Returns:
         tuple (resolved, unresolved):
           resolved   -- list of (marker, host, face, hit_point, stable_ref)
           unresolved -- list of (marker, reason) for markers with no host hit
     """
-    markers = REVIT_FAMILY.get_shared_nested_instances_by_family_name(marker_family_name, doc=doc)
+    marker_doc = marker_doc or doc
+    markers = REVIT_FAMILY.get_shared_nested_instances_by_family_name(marker_family_name, doc=marker_doc)
     resolved = []
     unresolved = []
     for marker in markers:
-        point, orientation = REVIT_FAMILY.get_nested_instance_placement(marker)
-        if point is None or orientation is None:
-            unresolved.append((marker, "no location or orientation available"))
+        point, _orientation = REVIT_FAMILY.get_nested_instance_placement(marker, host_transform=link_transform)
+        if point is None:
+            unresolved.append((marker, "no location available"))
             continue
-        # Ray goes opposite the "into room" facing axis, toward the host wall/floor.
-        direction = getattr(orientation, MARKER_FACING_AXIS).Negate()
-        host, face, hit_point, stable_ref = find_host_face_along_ray(doc, view3d, point, direction)
+        host, face, hit_point, stable_ref = find_nearest_host_face(doc, view3d, point)
         if host is None:
-            unresolved.append((marker, "no wall/floor within {} ft along {}".format(
-                MARKER_RAYCAST_MAX_DISTANCE, MARKER_FACING_AXIS)))
+            unresolved.append((marker, "no wall/floor within {} ft in any direction".format(
+                MARKER_RAYCAST_MAX_DISTANCE)))
             continue
         resolved.append((marker, host, face, hit_point, stable_ref))
     return resolved, unresolved
@@ -638,15 +693,39 @@ class OutletConflictReviewWindow(WPFWindow):
             pass
 
 
+def resolve_picked_marker(doc, ref):
+    """Resolve a PickObject Reference to the marker it points at, whether picked
+    directly in `doc` or drilled (Tab) into a linked model instance.
+
+    Picking through into a link is standard PickObject(ObjectType.Element,...)
+    behavior: `ref.ElementId` is then the RevitLinkInstance's id in `doc`, and
+    `ref.LinkedElementId` is the marker's id inside the link's own document.
+
+    Returns:
+        tuple (DB.Element marker, DB.Document marker_doc, DB.Transform link_transform)
+        `link_transform` is None for a marker picked directly in `doc`.
+    """
+    picked = doc.GetElement(ref.ElementId)
+    if isinstance(picked, DB.RevitLinkInstance) and ref.LinkedElementId != DB.ElementId.InvalidElementId:
+        link_doc = picked.GetLinkDocument()
+        marker = link_doc.GetElement(ref.LinkedElementId) if link_doc else None
+        return marker, link_doc, picked.GetTotalTransform()
+    return picked, doc, None
+
+
 def place_from_markers(doc):
     marker_selection_filter = None  # any category: a shared nested marker can be Generic Model or similar
     try:
         ref = UIDOC.Selection.PickObject(
             ObjectType.Element, marker_selection_filter,
-            "Pick one sample position marker nested inside a furniture family")
+            "Pick one sample position marker nested inside a furniture family "
+            "(Tab to pick one nested inside a linked model)")
     except OperationCanceledException:
         return
-    marker_example = DOC.GetElement(ref.ElementId)
+    marker_example, marker_doc, link_transform = resolve_picked_marker(doc, ref)
+    if marker_example is None or marker_doc is None:
+        NOTIFICATION.messenger("Could not resolve the picked element to a marker (broken or unloaded link?).")
+        return
     marker_family_name = REVIT_FAMILY.get_family_name(marker_example)
     if not marker_family_name:
         NOTIFICATION.messenger("Could not read a family name from the picked element.")
@@ -657,9 +736,11 @@ def place_from_markers(doc):
         NOTIFICATION.messenger("No 3D view available and none could be created; cannot ray-cast to a host face.")
         return
 
-    resolved, unresolved = resolve_marker_targets(doc, marker_family_name, view3d)
+    resolved, unresolved = resolve_marker_targets(
+        doc, marker_family_name, view3d, marker_doc=marker_doc, link_transform=link_transform)
+    marker_doc_label = "[{}] ".format(marker_doc.Title) if link_transform is not None else ""
     for marker, reason in unresolved:
-        print("Marker {}: {}".format(marker.Id, reason))
+        print("Marker {}{}: {}".format(marker_doc_label, marker.Id, reason))
     if not resolved:
         NOTIFICATION.messenger(
             "Found {} marker(s) of [{}], but none resolved to a nearby wall/floor.".format(
