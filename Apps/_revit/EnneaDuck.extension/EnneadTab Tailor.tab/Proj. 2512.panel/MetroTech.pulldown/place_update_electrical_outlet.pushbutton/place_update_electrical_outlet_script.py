@@ -43,6 +43,9 @@ proDUCKtion.validify()
 
 from Autodesk.Revit import DB  # pyright: ignore
 from System.Collections.Generic import List  # pyright: ignore
+import clr  # pyright: ignore
+clr.AddReference("System.Windows.Forms")
+from System.Windows.Forms import Application  # pyright: ignore
 from pyrevit import forms
 
 from EnneadTab import ERROR_HANDLE, FOLDER, LOG, NOTIFICATION
@@ -305,27 +308,44 @@ def build_outlets_by_marker_tag(doc):
 
 _run_log_lines = []
 _run_log_path = None
+_run_log_file = None
 
 
 def start_run_log():
-    """Reset the debug log buffer and pick a fresh timestamped file path for one
-    "Place From Marker" run. Call once, at the start of that run.
+    """Reset the debug log buffer, pick a fresh timestamped file path, and open it
+    for LIVE writing -- every debug_log call below writes and flushes immediately, so
+    the file on disk can be tailed WHILE the run is still in progress (e.g. in a
+    second window, or by this session checking mid-run), not only after it finishes.
+    Call once, at the start of one "Place From Marker" run.
     """
-    global _run_log_lines, _run_log_path
+    global _run_log_lines, _run_log_path, _run_log_file
     _run_log_lines = []
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     _run_log_path = FOLDER.get_local_dump_folder_file("MetroTechOutlet_{}.log".format(timestamp))
+    try:
+        _run_log_file = open(_run_log_path, "w")
+    except Exception as e:
+        _run_log_file = None
+        ERROR_HANDLE.print_note("Failed to open debug log for live writing: {}".format(e))
 
 
 def debug_log(message):
-    """Append one line to this run's debug log and echo it via ERROR_HANDLE.print_note.
+    """Append one line to this run's debug log, flush it to disk immediately, and
+    echo it via ERROR_HANDLE.print_note.
 
-    Unlike print_note (gated on USER.IS_DEVELOPER), the buffered copy is never gated:
-    the whole point of this per-run log file is that whoever is testing the tool can
-    open it afterward and see exactly what happened, not just a developer watching
-    the pyRevit output window live.
+    Unlike print_note (gated on USER.IS_DEVELOPER), the buffered/written copy is
+    never gated: the whole point of this per-run log file is that whoever is testing
+    the tool can open it WHILE the run is still going (immediate flush) or afterward,
+    and see exactly what happened -- not just a developer watching the pyRevit output
+    window live.
     """
     _run_log_lines.append(message)
+    if _run_log_file is not None:
+        try:
+            _run_log_file.write(message + "\n")
+            _run_log_file.flush()
+        except Exception:
+            pass
     try:
         ERROR_HANDLE.print_note(message)
     except Exception:
@@ -333,22 +353,27 @@ def debug_log(message):
 
 
 def save_run_log():
-    """Flush this run's accumulated debug lines to _run_log_path.
+    """Close this run's live log file handle.
 
-    Quietly no-ops if start_run_log() was never called or nothing was logged.
+    debug_log already writes and flushes every line to disk immediately, so this is
+    no longer what actually persists the content -- it just closes the handle
+    cleanly. Kept as the caller-facing "finish the log" step (called from
+    place_from_markers's `finally`) and to report the final path. Quietly no-ops if
+    start_run_log() was never called or nothing was logged.
 
     Returns:
         str or None: the file path written, or None if there was nothing to save.
     """
+    global _run_log_file
     if not _run_log_path or not _run_log_lines:
         return None
-    try:
-        with open(_run_log_path, "w") as f:
-            f.write("\n".join(_run_log_lines))
-        return _run_log_path
-    except Exception as e:
-        ERROR_HANDLE.print_note("Failed to save debug log: {}".format(e))
-        return None
+    if _run_log_file is not None:
+        try:
+            _run_log_file.close()
+        except Exception as e:
+            ERROR_HANDLE.print_note("Failed to close debug log: {}".format(e))
+        _run_log_file = None
+    return _run_log_path
 
 
 def type_name_of(family_type):
@@ -641,6 +666,13 @@ def zoom_active_view_to_point(point, margin=10.0):
     Silently no-ops on any failure (no open UIView for the active view -- e.g. the
     active view is a schedule/sheet, or nothing is actually on screen) -- this is a
     nice-to-have and must never interrupt or fail the run.
+
+    RefreshActiveView() alone only REQUESTS a repaint; Revit's UI thread doesn't
+    actually paint it until it gets to process its Windows message queue, which a
+    tight Python loop never yields to on its own -- without pumping messages here,
+    nothing visibly changes on screen until the whole run finishes. Application.
+    DoEvents() forces that pump immediately, so the pan/zoom is actually visible
+    live instead of a frozen screen that jumps to its final state at the very end.
     """
     try:
         active_id = UIDOC.ActiveView.Id
@@ -651,6 +683,7 @@ def zoom_active_view_to_point(point, margin=10.0):
                 ui_view.ZoomAndCenterRectangle(corner1, corner2)
                 break
         UIDOC.RefreshActiveView()
+        Application.DoEvents()
     except Exception:
         pass
 
