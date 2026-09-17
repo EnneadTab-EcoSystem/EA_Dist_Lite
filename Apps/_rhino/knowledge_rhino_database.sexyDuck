@@ -1427,5 +1427,18 @@
         "tab": null,
         "tab_icon": null,
         "is_popular": false
+    },
+    "Drafting.tab\\\\phone_scanner.button\\\\phone_scanner_left.py": {
+        "script": "Drafting.tab\\\\phone_scanner.button\\\\phone_scanner_left.py",
+        "icon": "Drafting.tab\\\\phone_scanner.button\\\\icon.png",
+        "alias": [
+            "PhoneScanner",
+            "MobileScanner",
+            "PictureScanner"
+        ],
+        "doc": "Connect your phone camera to Rhino for instant photo & sketch scanning.\n\nFeatures:\n- On-screen pairing portal with QR code & PIN\n- Staging dock in Rhino with live auto-refresh\n- One-click PictureFrame drop into active document\n- Copy bitmap to clipboard & batch insert",
+        "tab": "Drafting.tab",
+        "tab_icon": "Drafting.tab\\\\icon.png",
+        "is_popular": true
     }
 }
