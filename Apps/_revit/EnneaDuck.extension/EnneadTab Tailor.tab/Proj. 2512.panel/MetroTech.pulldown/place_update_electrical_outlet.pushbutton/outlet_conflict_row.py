@@ -1,32 +1,9 @@
-"""Row model for the outlet-conflict review grid.
+"""Plain-data row model for place_update_electrical_outlet_script.py.
 
-Plain data only (ints, strings, floats/tuples) - see CLAUDE.md's "Modeless
-WPF DataGrid forms" checklist: never store a Revit API element on a row
-object the DataGrid selects, since WPF's selection machinery can call
-GetHashCode/ToString/property-enumeration on it outside the API context.
-The window re-fetches by id inside an ExternalEvent handler at apply time.
+Plain data only (ints, strings, floats/tuples) - never a live Revit API element,
+since this crosses the resolve/apply boundary inside apply_marker_outlets and is
+re-fetched by id there rather than trusted to still be valid.
 """
-
-ACTION_OPTIONS = ["Keep", "Move"]
-
-
-class OutletConflictRow(object):
-    def __init__(self, existing_instance_id, level_name, family_name, type_name,
-                 distance, target_point):
-        self.existing_instance_id = existing_instance_id  # int
-        self.level_name = level_name or "?"
-        self.family_name = family_name
-        self.type_name = type_name
-        self.distance = distance
-        self.reason = "{:.2f} ft from marker position".format(distance)
-        self.target_point = target_point  # (x, y, z) plain floats, never a DB.XYZ
-        self.action = "Keep"
-
-    def __repr__(self):
-        # Plain string only, so WPF's ToString on the selected item can never
-        # touch the API (same rule as FamilyRenameRow).
-        return "OutletConflictRow({} / {} - {})".format(
-            self.level_name, self.family_name, self.type_name)
 
 
 class OutletPlacementTarget(object):
