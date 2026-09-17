@@ -489,15 +489,26 @@ def build_wall_floor_intersector(view3d):
     return intersector
 
 
-def find_host_face_along_ray(doc, intersector, point, direction):
+def find_host_face_along_ray(doc, intersector, point, direction, avoid_normal_parallel_to=None):
     """Ray-cast from `point` along `direction` for the nearest wall/floor face.
 
     `intersector` is built once per run by build_wall_floor_intersector and reused
     across every ray of every marker -- see that function's docstring for why.
 
+    `avoid_normal_parallel_to`, if given (e.g. DB.XYZ.BasisZ), rejects this hit when
+    the face's own normal is nearly parallel to it (dot product magnitude > 0.99) --
+    used for face-based (WorkPlaneBased) placement, where NewFamilyInstance's
+    referenceDirection must lie roughly WITHIN the face's plane, not along its
+    normal. Without this, a horizontal face (a floor/ceiling/soffit -- nothing
+    restricts a WorkPlaneBased family's ray-cast to walls only, unlike a wall-hosted
+    OneLevelBasedHosted one) can win the fan-cast and then crash placement with
+    "Reference direction is parallel to face normal at insertion point." Rejecting it
+    here instead lets a DIFFERENT ray's hit (typically an actual wall) win instead.
+
     Returns:
         tuple (DB.Element host, DB.Face face, DB.XYZ hit_point, str stable_ref), or
-        (None, None, None, None) when nothing is hit within MARKER_RAYCAST_MAX_DISTANCE.
+        (None, None, None, None) when nothing is hit within MARKER_RAYCAST_MAX_DISTANCE
+        (or the only hit was rejected by avoid_normal_parallel_to).
         `stable_ref` is the Reference's stable representation, so the exact face can
         be re-resolved later (via DB.Reference.ParseFromStableRepresentation) without
         holding the live Face/Reference object across a modeless dialog's idle time.
@@ -514,6 +525,14 @@ def find_host_face_along_ray(doc, intersector, point, direction):
     reference = best.GetReference()
     host = doc.GetElement(reference)
     face = host.GetGeometryObjectFromReference(reference)
+    if avoid_normal_parallel_to is not None:
+        try:
+            uv = face.Project(reference.GlobalPoint).UVPoint
+            normal = face.ComputeNormal(uv)
+            if abs(normal.DotProduct(avoid_normal_parallel_to)) > 0.99:
+                return None, None, None, None
+        except Exception:
+            pass  # if the normal can't be computed, don't block placement over a guard check
     stable_ref = reference.ConvertToStableRepresentation(doc)
     return host, face, reference.GlobalPoint, stable_ref
 
@@ -572,7 +591,7 @@ def _log_out_of_range_probe(doc, intersector, point, directions, required_host_t
                 round(proximity, 2), MARKER_RAYCAST_MAX_DISTANCE, element.Id))
 
 
-def find_nearest_host_face(doc, intersector, point, required_host_type=None):
+def find_nearest_host_face(doc, intersector, point, required_host_type=None, avoid_normal_parallel_to=None):
     """Cast a fan of rays outward from `point` and return the nearest wall/floor hit.
 
     The marker only carries a position, not a dependable facing rotation, so the
@@ -591,6 +610,12 @@ def find_nearest_host_face(doc, intersector, point, required_host_type=None):
     happens to be marginally closer than the nearest wall would win the fan-cast, and
     placement would then silently fail downstream with no host type to attach to.
 
+    `avoid_normal_parallel_to`, if given (e.g. DB.XYZ.BasisZ), is passed straight
+    through to find_host_face_along_ray -- see its docstring. Used for face-based
+    (WorkPlaneBased) placement to reject horizontal faces the ray-cast would
+    otherwise be free to match, since nothing else restricts that placement type to
+    walls only.
+
     Returns:
         tuple (DB.Element host, DB.Face face, DB.XYZ hit_point, str stable_ref), or
         (None, None, None, None) when nothing matching is hit within
@@ -601,7 +626,8 @@ def find_nearest_host_face(doc, intersector, point, required_host_type=None):
     best_distance = None
     hit_count = 0
     for direction in directions:
-        host, face, hit_point, stable_ref = find_host_face_along_ray(doc, intersector, point, direction)
+        host, face, hit_point, stable_ref = find_host_face_along_ray(
+            doc, intersector, point, direction, avoid_normal_parallel_to=avoid_normal_parallel_to)
         if host is None:
             continue
         hit_count += 1
@@ -947,8 +973,16 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
                 round(furniture_point_in_host.DistanceTo(corrected_point), 2)))
 
     required_host_type = DB.Wall if family.FamilyPlacementType == DB.FamilyPlacementType.OneLevelBasedHosted else None
+    # Face-based placement always uses DB.XYZ.BasisZ as its reference_direction (do_create
+    # -- Place on Vertical Face), which Revit rejects if it's parallel to the matched
+    # face's own normal (a horizontal face -- floor/ceiling/soffit). Nothing else
+    # restricts a WorkPlaneBased family's ray-cast to walls only, so reject those hits
+    # here instead of letting one win the fan-cast and crash placement downstream.
+    avoid_normal_parallel_to = (
+        DB.XYZ.BasisZ if family.FamilyPlacementType == DB.FamilyPlacementType.WorkPlaneBased else None)
     host, face, hit_point, stable_ref = find_nearest_host_face(
-        doc, intersector, corrected_point, required_host_type=required_host_type)
+        doc, intersector, corrected_point, required_host_type=required_host_type,
+        avoid_normal_parallel_to=avoid_normal_parallel_to)
     if host is None:
         needed = "wall" if required_host_type is not None else "wall/floor"
         return ("no {} within {} ft in any direction".format(needed, MARKER_RAYCAST_MAX_DISTANCE),
