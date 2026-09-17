@@ -735,43 +735,69 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
     resolved = []
     unresolved = []
 
-    for family_name in furniture_family_names:
-        entries = entries_by_family.get(family_name, [])
-        streak_reason = None
-        streak_count = 0
+    total_markers = sum(len(entries) for entries in entries_by_family.values())
+    # step > 1 for a large batch: a live repaint on every single marker (e.g. all 800+
+    # of them) is wasted UI overhead once the bar is already fine-grained enough to be
+    # useful -- one visible tick per ~1% of the run reads just as smoothly.
+    progress_step = max(1, total_markers // 100)
+    processed = 0
+    user_cancelled = False
 
-        for index, (furniture, furniture_level, marker, scope_doc, link_transform) in enumerate(entries):
-            try:
-                reason, host, face, hit_point, stable_ref, family, family_type = _resolve_one_marker(
-                    doc, scope_doc, link_transform, furniture, furniture_level, marker, intersector,
-                    symbol_cache, tag_support_cache)
-            except Exception as e:
-                reason = "internal error: {}".format(e)
-                host = face = hit_point = stable_ref = family = family_type = None
+    with forms.ProgressBar(
+            title="Resolving outlet markers... ({value} of {max_value})",
+            step=progress_step, cancellable=True) as pb:
 
-            if reason is None:
-                marker_tag = build_marker_tag(scope_doc, marker)
-                resolved.append((marker, marker_tag, host, face, hit_point, stable_ref, family, family_type))
-                streak_reason = None
-                streak_count = 0
-                continue
-
-            unresolved.append((marker, reason))
-            if reason == streak_reason:
-                streak_count += 1
-            else:
-                streak_reason = reason
-                streak_count = 1
-            if streak_count >= CONSECUTIVE_UNRESOLVED_ABORT_THRESHOLD:
-                remaining = len(entries) - index - 1
-                debug_log(
-                    "Aborting furniture family [{}] early: {} consecutive markers failed with the same reason "
-                    "[{}] -- likely a systemic model/family setup issue for this family, not independent "
-                    "per-marker problems. Skipping its remaining {} marker(s); other selected families are "
-                    "unaffected. Fix the root cause and rerun.".format(family_name, streak_count, reason, remaining))
+        for family_name in furniture_family_names:
+            if user_cancelled:
                 break
+            entries = entries_by_family.get(family_name, [])
+            streak_reason = None
+            streak_count = 0
 
-    debug_log("resolve_marker_targets: {} resolved, {} unresolved".format(len(resolved), len(unresolved)))
+            for index, (furniture, furniture_level, marker, scope_doc, link_transform) in enumerate(entries):
+                try:
+                    reason, host, face, hit_point, stable_ref, family, family_type = _resolve_one_marker(
+                        doc, scope_doc, link_transform, furniture, furniture_level, marker, intersector,
+                        symbol_cache, tag_support_cache)
+                except Exception as e:
+                    reason = "internal error: {}".format(e)
+                    host = face = hit_point = stable_ref = family = family_type = None
+
+                processed += 1
+                pb.update_progress(processed, total_markers)
+
+                if reason is None:
+                    marker_tag = build_marker_tag(scope_doc, marker)
+                    resolved.append((marker, marker_tag, host, face, hit_point, stable_ref, family, family_type))
+                    streak_reason = None
+                    streak_count = 0
+                else:
+                    unresolved.append((marker, reason))
+                    if reason == streak_reason:
+                        streak_count += 1
+                    else:
+                        streak_reason = reason
+                        streak_count = 1
+                    if streak_count >= CONSECUTIVE_UNRESOLVED_ABORT_THRESHOLD:
+                        remaining = len(entries) - index - 1
+                        debug_log(
+                            "Aborting furniture family [{}] early: {} consecutive markers failed with the same "
+                            "reason [{}] -- likely a systemic model/family setup issue for this family, not "
+                            "independent per-marker problems. Skipping its remaining {} marker(s); other selected "
+                            "families are unaffected. Fix the root cause and rerun.".format(
+                                family_name, streak_count, reason, remaining))
+                        break
+
+                if pb.cancelled:
+                    user_cancelled = True
+                    debug_log(
+                        "User cancelled resolving after {} of {} marker(s); {} family/families not yet reached "
+                        "are skipped entirely, and the current family's remaining markers are skipped too.".format(
+                            processed, total_markers, len(furniture_family_names)))
+                    break
+
+    debug_log("resolve_marker_targets: {} resolved, {} unresolved{}".format(
+        len(resolved), len(unresolved), " (cancelled early)" if user_cancelled else ""))
     return resolved, unresolved
 
 
@@ -874,95 +900,139 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
     retagged = 0
     retag_failed = 0
     failed = []
+
+    total_items = len(to_create) + len(to_replace) + len(to_update) + len(to_retag)
+    progress_step = max(1, total_items // 100)
+    processed = 0
+    user_cancelled = False
+
     t = DB.Transaction(doc, "Place/Update Electrical Outlet From Marker")
     t.Start()
     try:
-        for item, marker_tag in to_create:
-            try:
-                instance = do_create(item)
-                if instance and tag_or_delete(instance, marker_tag, item):
-                    created += 1
-                    debug_log("Placed outlet [{}] - [{}]/[{}] on host [{}] at {}, tagged.".format(
-                        instance.Id, item.family_name, item.type_name, item.host_id, item.point))
-                else:
-                    failed.append(item.host_id)
-            except Exception as e:
-                debug_log("Failed to place outlet on host [{}]: {}".format(item.host_id, e))
-                failed.append(item.host_id)
+        with forms.ProgressBar(
+                title="Placing/updating outlets... ({value} of {max_value})",
+                step=progress_step, cancellable=True) as pb:
 
-        for old_instance_id, item, marker_tag in to_replace:
-            try:
-                doc.Delete(DB.ElementId(old_instance_id))
-                instance = do_create(item)
-                if instance and tag_or_delete(instance, marker_tag, item):
-                    replaced += 1
-                    debug_log("Replaced outlet [{}] with [{}] - [{}]/[{}] at {}, tagged.".format(
-                        old_instance_id, instance.Id, item.family_name, item.type_name, item.point))
-                else:
-                    failed.append(old_instance_id)
-            except Exception as e:
-                debug_log("Failed to replace outlet [{}]: {}".format(old_instance_id, e))
-                failed.append(old_instance_id)
+            if not user_cancelled:
+                for item, marker_tag in to_create:
+                    try:
+                        instance = do_create(item)
+                        if instance and tag_or_delete(instance, marker_tag, item):
+                            created += 1
+                            debug_log("Placed outlet [{}] - [{}]/[{}] on host [{}] at {}, tagged.".format(
+                                instance.Id, item.family_name, item.type_name, item.host_id, item.point))
+                        else:
+                            failed.append(item.host_id)
+                    except Exception as e:
+                        debug_log("Failed to place outlet on host [{}]: {}".format(item.host_id, e))
+                        failed.append(item.host_id)
+                    processed += 1
+                    pb.update_progress(processed, total_items)
+                    if pb.cancelled:
+                        user_cancelled = True
+                        break
 
-        for instance_id, target_point_tuple, new_type_name, marker_tag in to_update:
-            try:
-                existing = doc.GetElement(DB.ElementId(instance_id))
-                if existing is None:
-                    failed.append(instance_id)
-                    continue
-                if new_type_name is not None:
-                    family_name = REVIT_FAMILY.get_family_name(existing)
-                    new_type = resolve_symbol(family_name, new_type_name)
-                    if new_type:
-                        existing.Symbol = new_type
-                current_point = get_instance_point(existing)
-                target_point = DB.XYZ(target_point_tuple[0], target_point_tuple[1], target_point_tuple[2])
-                if current_point is not None:
-                    DB.ElementTransformUtils.MoveElement(doc, existing.Id, target_point - current_point)
-                # This instance PRE-EXISTED (not created by this run), so a missing
-                # tag parameter here does not undo the move/retype that already
-                # succeeded -- deleting someone's existing outlet over a bookkeeping
-                # gap would be far worse than just flagging it loudly.
-                if set_outlet_source_marker_tag(existing, marker_tag):
-                    updated += 1
-                else:
-                    updated += 1
-                    retag_failed += 1
-                    debug_log(
-                        "Outlet [{}]'s family has no required {} parameter -- moved/retyped it, but could not "
-                        "tag it; a future run will fall back to position/type matching for it instead of an "
-                        "exact lookup. Add the parameter to the family.".format(
-                            instance_id, SOURCE_MARKER_TAG_PARAMETER_NAME))
-                debug_log("Updated outlet [{}]{} to {}.".format(
-                    instance_id, " (retyped to [{}])".format(new_type_name) if new_type_name else "",
-                    target_point_tuple))
-            except Exception as e:
-                debug_log("Failed to update outlet [{}]: {}".format(instance_id, e))
-                failed.append(instance_id)
+            if not user_cancelled:
+                for old_instance_id, item, marker_tag in to_replace:
+                    try:
+                        doc.Delete(DB.ElementId(old_instance_id))
+                        instance = do_create(item)
+                        if instance and tag_or_delete(instance, marker_tag, item):
+                            replaced += 1
+                            debug_log("Replaced outlet [{}] with [{}] - [{}]/[{}] at {}, tagged.".format(
+                                old_instance_id, instance.Id, item.family_name, item.type_name, item.point))
+                        else:
+                            failed.append(old_instance_id)
+                    except Exception as e:
+                        debug_log("Failed to replace outlet [{}]: {}".format(old_instance_id, e))
+                        failed.append(old_instance_id)
+                    processed += 1
+                    pb.update_progress(processed, total_items)
+                    if pb.cancelled:
+                        user_cancelled = True
+                        break
 
-        for instance_id, marker_tag in to_retag:
-            try:
-                existing = doc.GetElement(DB.ElementId(instance_id))
-                if existing is None:
-                    failed.append(instance_id)
-                    continue
-                if set_outlet_source_marker_tag(existing, marker_tag):
-                    retagged += 1
-                else:
-                    retag_failed += 1
-                    debug_log(
-                        "Outlet [{}]'s family has no required {} parameter -- left it as-is (already correct "
-                        "position/type), but could not tag it. Add the parameter to the family.".format(
-                            instance_id, SOURCE_MARKER_TAG_PARAMETER_NAME))
-            except Exception as e:
-                debug_log("Failed to tag existing outlet [{}]: {}".format(instance_id, e))
-                failed.append(instance_id)
+            if not user_cancelled:
+                for instance_id, target_point_tuple, new_type_name, marker_tag in to_update:
+                    try:
+                        existing = doc.GetElement(DB.ElementId(instance_id))
+                        if existing is None:
+                            failed.append(instance_id)
+                            continue
+                        if new_type_name is not None:
+                            family_name = REVIT_FAMILY.get_family_name(existing)
+                            new_type = resolve_symbol(family_name, new_type_name)
+                            if new_type:
+                                existing.Symbol = new_type
+                        current_point = get_instance_point(existing)
+                        target_point = DB.XYZ(target_point_tuple[0], target_point_tuple[1], target_point_tuple[2])
+                        if current_point is not None:
+                            DB.ElementTransformUtils.MoveElement(doc, existing.Id, target_point - current_point)
+                        # This instance PRE-EXISTED (not created by this run), so a missing
+                        # tag parameter here does not undo the move/retype that already
+                        # succeeded -- deleting someone's existing outlet over a bookkeeping
+                        # gap would be far worse than just flagging it loudly.
+                        if set_outlet_source_marker_tag(existing, marker_tag):
+                            updated += 1
+                        else:
+                            updated += 1
+                            retag_failed += 1
+                            debug_log(
+                                "Outlet [{}]'s family has no required {} parameter -- moved/retyped it, but could not "
+                                "tag it; a future run will fall back to position/type matching for it instead of an "
+                                "exact lookup. Add the parameter to the family.".format(
+                                    instance_id, SOURCE_MARKER_TAG_PARAMETER_NAME))
+                        debug_log("Updated outlet [{}]{} to {}.".format(
+                            instance_id, " (retyped to [{}])".format(new_type_name) if new_type_name else "",
+                            target_point_tuple))
+                    except Exception as e:
+                        debug_log("Failed to update outlet [{}]: {}".format(instance_id, e))
+                        failed.append(instance_id)
+                    processed += 1
+                    pb.update_progress(processed, total_items)
+                    if pb.cancelled:
+                        user_cancelled = True
+                        break
+
+            if not user_cancelled:
+                for instance_id, marker_tag in to_retag:
+                    try:
+                        existing = doc.GetElement(DB.ElementId(instance_id))
+                        if existing is None:
+                            failed.append(instance_id)
+                            continue
+                        if set_outlet_source_marker_tag(existing, marker_tag):
+                            retagged += 1
+                        else:
+                            retag_failed += 1
+                            debug_log(
+                                "Outlet [{}]'s family has no required {} parameter -- left it as-is (already correct "
+                                "position/type), but could not tag it. Add the parameter to the family.".format(
+                                    instance_id, SOURCE_MARKER_TAG_PARAMETER_NAME))
+                    except Exception as e:
+                        debug_log("Failed to tag existing outlet [{}]: {}".format(instance_id, e))
+                        failed.append(instance_id)
+                    processed += 1
+                    pb.update_progress(processed, total_items)
+                    if pb.cancelled:
+                        user_cancelled = True
+                        break
+
+            if user_cancelled:
+                debug_log(
+                    "User cancelled placing/updating after {} of {} item(s); everything applied so far is still "
+                    "committed -- nothing is rolled back, the remaining items just weren't reached yet.".format(
+                        processed, total_items))
+
         t.Commit()
     except Exception:
         t.RollBack()
         raise
 
     lines = ["Placed {} | Replaced {} | Updated {} | Tagged {}".format(created, replaced, updated, retagged)]
+    if user_cancelled:
+        lines.append("Cancelled by user after {} of {} item(s); already-applied changes were kept.".format(
+            processed, total_items))
     if retag_failed:
         lines.append(
             "{} instance(s) updated/adopted but could not be tagged (family missing {} parameter).".format(
