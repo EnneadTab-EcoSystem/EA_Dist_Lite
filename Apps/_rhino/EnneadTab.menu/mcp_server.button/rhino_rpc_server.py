@@ -646,8 +646,24 @@ def _handle_views():
 def _handle_block_defs(data):
     """GET /enneadtab/blocks/ — list block definitions."""
     names = rs.BlockNames(sort=True) or []
+    try:
+        limit = int(data.get("limit", 500))
+    except (TypeError, ValueError):
+        limit = 500
+    if limit < 1:
+        limit = 1
+    if limit > 500:
+        limit = 500
+    try:
+        offset = int(data.get("offset", 0))
+    except (TypeError, ValueError):
+        offset = 0
+    if offset < 0:
+        offset = 0
+
+    page = names[offset:offset + limit]
     blocks = []
-    for name in names:
+    for name in page:
         count = rs.BlockInstanceCount(name)
         blocks.append({
             "name": name,
@@ -656,6 +672,9 @@ def _handle_block_defs(data):
 
     return {
         "count": len(blocks),
+        "offset": offset,
+        "limit": limit,
+        "truncated": (offset + len(page)) < len(names),
         "blocks": blocks,
     }
 
