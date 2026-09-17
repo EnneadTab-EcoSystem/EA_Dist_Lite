@@ -311,18 +311,28 @@ def type_name_of(family_type):
 
 
 def get_any_3d_view(doc):
-    """Return an existing non-template 3D view, or create one.
+    """Return an existing non-template, non-section-boxed 3D view, or create one.
 
     A view is required by DB.ReferenceIntersector for the marker-driven raycast; a
-    plan/section view cannot be used for it. The created view is NOT deleted after
-    use -- it becomes a permanent addition to the project (there's no reliable way to
-    "borrow" a view for a single ray-cast and clean it back up mid-transaction).
-    Creating a view is a document change and must run inside an open transaction, so
-    this opens its own single-purpose one only when the fallback is actually needed.
+    plan/section view cannot be used for it. DB.ReferenceIntersector only finds
+    geometry inside the view's active section box, if one is set -- a view like a
+    "working" view scoped down to one area of the building would silently make every
+    ray-cast outside that area come up with zero hits, indistinguishable from "no wall
+    nearby" (this is exactly what an out-of-range probe in find_nearest_host_face
+    caught: real, plausible coordinates, correct category visibility, correct phase,
+    yet nothing found even at unlimited distance -- a section box is the one thing
+    that crops visible geometry independently of all of those). So a section-boxed
+    view is skipped entirely rather than risked.
+
+    The created view is NOT deleted after use -- it becomes a permanent addition to
+    the project (there's no reliable way to "borrow" a view for a single ray-cast and
+    clean it back up mid-transaction). Creating a view is a document change and must
+    run inside an open transaction, so this opens its own single-purpose one only
+    when the fallback is actually needed.
     """
     views = DB.FilteredElementCollector(doc).OfClass(DB.View3D).WhereElementIsNotElementType().ToElements()
     for view in views:
-        if not view.IsTemplate:
+        if not view.IsTemplate and not view.IsSectionBoxActive:
             return view
     view_family_type = next(
         (v for v in DB.FilteredElementCollector(doc).OfClass(DB.ViewFamilyType).ToElements()
@@ -557,6 +567,12 @@ def log_view3d_raycast_diagnostics(doc, view3d):
         if view3d.get_Parameter(DB.BuiltInParameter.VIEW_PHASE) else None
     debug_log("View3D [{}] '{}': phase = {}".format(
         view3d.Id, view3d.Name, phase.Name if phase else "(none)"))
+    # A section box crops which geometry is visible in the view independently of
+    # category visibility and phase -- get_any_3d_view already skips a section-boxed
+    # view when picking one, but this confirms it explicitly in the log rather than
+    # leaving it implicit, in case every existing view happened to have one active.
+    debug_log("View3D [{}] '{}': section box active = {}".format(
+        view3d.Id, view3d.Name, view3d.IsSectionBoxActive))
 
 
 def get_search_scopes(doc):
