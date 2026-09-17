@@ -276,6 +276,33 @@ def set_outlet_placement_height(instance, mount_height):
     return _set_required_outlet_param(instance, PLACEMENT_HEIGHT_PARAMETER_NAME, mount_height)
 
 
+def set_outlet_schedule_level(instance, level):
+    """Best-effort: set `instance`'s Schedule Level parameter to `level` (a DB.Level
+    in the SAME document as `instance`).
+
+    Face-based placement via NewFamilyInstance(Reference, ...) does not associate a
+    level automatically the way level-hosted placement does -- this leaves Schedule
+    Level (BuiltInParameter.INSTANCE_SCHEDULE_ONLY_LEVEL_PARAM) empty, and since
+    "Elevation from Level" is CALCULATED from Schedule Level, it shows up empty too
+    even though it's not a separate bug -- both symptoms trace to this one missing
+    parameter.
+
+    Deliberately best-effort, unlike SOURCE_MARKER_TAG_PARAMETER_NAME/PLACEMENT_
+    HEIGHT_PARAMETER_NAME: not every category necessarily exposes this exact
+    BuiltInParameter, and a missing Schedule Level is a schedule-correctness issue,
+    not a placement-correctness one -- never worth deleting an otherwise
+    successfully placed outlet over.
+
+    Returns:
+        bool: True if the parameter was found and set, False otherwise.
+    """
+    param = instance.get_Parameter(DB.BuiltInParameter.INSTANCE_SCHEDULE_ONLY_LEVEL_PARAM)
+    if not param:
+        return False
+    param.Set(level.Id)
+    return True
+
+
 def check_outlet_type_supports_parameter(doc, family_name, type_name, param_name, cache):
     """Return whether an outlet of (family_name, type_name) already placed in `doc`
     has the required `param_name` parameter.
@@ -1198,6 +1225,41 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
             symbol_cache[key] = family_type
         return symbol_cache[key]
 
+    level_by_name_cache = {}
+
+    def find_host_level(level_name):
+        """Look up a DB.Level in `doc` (the HOST document) by name, cached across the
+        whole run. A furniture's level may live in a DIFFERENT document (a link) --
+        Level ElementIds are never valid across documents, so an outlet's Schedule
+        Level must reference a level that actually lives in the host doc, found here
+        by matching name (levels are named consistently across linked files in
+        practice) rather than any direct object reference.
+        """
+        if level_name not in level_by_name_cache:
+            levels = DB.FilteredElementCollector(doc).OfClass(DB.Level).ToElements()
+            level_by_name_cache[level_name] = next((lv for lv in levels if lv.Name == level_name), None)
+        return level_by_name_cache[level_name]
+
+    _schedule_level_missing_logged = [False]
+
+    def apply_schedule_level(instance, level_name):
+        """Best-effort: set `instance`'s Schedule Level to the host-doc level named
+        `level_name` (see set_outlet_schedule_level). Silently no-ops (after one log
+        line for the whole run) if no host-doc level has that name -- never blocks or
+        fails the item over this, since it's a schedule-correctness nicety, not a
+        placement one.
+        """
+        host_level = find_host_level(level_name) if level_name else None
+        if host_level is None:
+            if not _schedule_level_missing_logged[0]:
+                debug_log(
+                    "Could not find a host-doc level named '{}' to set as Schedule Level (logged once) -- "
+                    "Schedule Level/Elevation from Level will stay empty for items on this level.".format(
+                        level_name))
+                _schedule_level_missing_logged[0] = True
+            return
+        set_outlet_schedule_level(instance, host_level)
+
     def do_create(item):
         family_type = resolve_symbol(item.family_name, item.type_name)
         if not family_type:
@@ -1316,6 +1378,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                     try:
                         instance = do_create(item)
                         if instance and apply_required_params_or_delete(instance, marker_tag, item.mount_height, item):
+                            apply_schedule_level(instance, item.level_name)
                             created += 1
                             bump_level_stat(item.level_name, "created")
                             debug_log("Placed outlet [{}] - [{}]/[{}] on host [{}] at {} (height {}), tagged.".format(
@@ -1349,6 +1412,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         doc.Delete(DB.ElementId(old_instance_id))
                         instance = do_create(item)
                         if instance and apply_required_params_or_delete(instance, marker_tag, item.mount_height, item):
+                            apply_schedule_level(instance, item.level_name)
                             replaced += 1
                             bump_level_stat(item.level_name, "replaced")
                             debug_log("Replaced outlet [{}] with [{}] - [{}]/[{}] at {} (height {}), tagged.".format(
@@ -1401,6 +1465,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         # gap would be far worse than just flagging it loudly.
                         tag_ok = set_outlet_source_marker_tag(existing, marker_tag)
                         height_ok = set_outlet_placement_height(existing, mount_height)
+                        apply_schedule_level(existing, level_name)
                         updated += 1
                         bump_level_stat(level_name, "updated")
                         if not (tag_ok and height_ok):
@@ -1449,6 +1514,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                             continue
                         tag_ok = set_outlet_source_marker_tag(existing, marker_tag)
                         height_ok = set_outlet_placement_height(existing, mount_height)
+                        apply_schedule_level(existing, level_name)
                         if tag_ok and height_ok:
                             retagged += 1
                             bump_level_stat(level_name, "retagged")
