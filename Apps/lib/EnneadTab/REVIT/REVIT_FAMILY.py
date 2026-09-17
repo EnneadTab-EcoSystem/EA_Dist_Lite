@@ -595,6 +595,44 @@ def place_instance_by_face(family_symbol, face, location, reference_direction=No
     return doc.Create.NewFamilyInstance(face, location, reference_direction, family_symbol)
 
 
+def place_instance_by_reference(family_symbol, reference, location, reference_direction=None, doc=None):
+    """Place a face-based family instance using a DB.Reference directly, instead of
+    a DB.Face extracted from one.
+
+    Robustness note: Element.GetGeometryObjectFromReference(reference) does not
+    reliably return a Face whose internal .Reference is populated for every host
+    element/face type. Passing that Face straight to NewFamilyInstance(Face, ...)
+    (see place_instance_by_face) can then fail with "The Reference of the input
+    face is null. If the face was obtained from Element.Geometry, make sure to turn
+    on the option 'ComputeReferences'." -- even though the Face DID come from a
+    Reference. The Reference-based NewFamilyInstance overload sidesteps this
+    entirely: it needs no Face object at all, only the Reference itself, so there
+    is no internal-reference field on a Face that can be missing.
+
+    Must be called inside an open transaction. `family_symbol` must belong to a
+    face-based ("Work Plane Based") family.
+
+    Args:
+        family_symbol (DB.FamilySymbol): the type to place.
+        reference (DB.Reference): host face reference, e.g. from
+            DB.Reference.ParseFromStableRepresentation or a picked ObjectType.Face.
+        location (DB.XYZ): insertion point on the face.
+        reference_direction (DB.XYZ, optional): orientation hint; defaults to world
+            Z (DB.XYZ.BasisZ) -- keeps the instance plumb regardless of the face's
+            exact tilt, matching the Revit UI's "Place on Vertical Face" tool
+            (plain "Place on Face" instead follows the face's own local axis).
+        doc (DB.Document, optional): defaults to the current document.
+
+    Returns:
+        DB.FamilyInstance
+    """
+    doc = doc or DOC
+    _ensure_symbol_active(family_symbol, doc=doc)
+    if reference_direction is None:
+        reference_direction = DB.XYZ.BasisZ
+    return doc.Create.NewFamilyInstance(reference, location, reference_direction, family_symbol)
+
+
 def place_instance_by_wall(family_symbol, location, wall, level=None, doc=None, structural_type=None):
     """Place a wall-hosted family instance (a "Wall Based" family, e.g. a wall-mounted device).
 
