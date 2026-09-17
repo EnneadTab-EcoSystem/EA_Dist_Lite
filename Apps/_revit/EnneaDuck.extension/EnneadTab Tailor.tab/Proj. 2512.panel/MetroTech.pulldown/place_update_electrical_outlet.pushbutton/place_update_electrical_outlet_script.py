@@ -37,6 +37,7 @@ __title__ = "Place/Update\nElectrical Outlet"
 import datetime
 import json
 import math
+import time
 
 import proDUCKtion  # pyright: ignore
 proDUCKtion.validify()
@@ -67,6 +68,15 @@ MARKER_RAYCAST_FAN_COUNT = 16  # horizontal rays in the fan; higher = finer angu
 MARKER_RAYCAST_MAX_DISTANCE = 3.0  # feet; how far to ray-cast to find a host face
 EXISTING_OUTLET_SEARCH_RADIUS = 1.0  # feet; how close counts as "already at this marker"
 EXISTING_OUTLET_SAME_SPOT_TOLERANCE = 0.05  # feet; close enough to skip as a no-op
+
+# Seconds to pause after each zoom_active_view_to_point call. The zoom only fires
+# once every progress_step items (never per item -- see that constant's own
+# comments), which on an 800+ item run can be as few as ~8 items apart; without a
+# deliberate pause here, that many placements finish faster than the eye can
+# register the frame DoEvents() just forced onto screen, so the zoom LOOKS like it
+# never happened even though it did. This cost is bounded: at most ~100 pauses per
+# run (one per progress_step tick), so total added time is small relative to the run.
+ZOOM_PAUSE_SECONDS = 0.2
 
 # Which furniture families carry markers is NEVER hardcoded here: discover_qualified_
 # furniture_family_names() finds them live, by scanning for _para_map-carrying
@@ -330,6 +340,8 @@ def start_run_log():
     except Exception as e:
         _run_log_file = None
         ERROR_HANDLE.print_note("Failed to open debug log for live writing: {}".format(e))
+    for key in _zoom_diagnostics_logged:
+        _zoom_diagnostics_logged[key] = False
 
 
 def debug_log(message):
@@ -658,6 +670,9 @@ def to_host_point(point, link_transform):
     return link_transform.OfPoint(point) if link_transform is not None else point
 
 
+_zoom_diagnostics_logged = {"no_match": False, "error": False, "success": False}
+
+
 def zoom_active_view_to_point(point, margin=10.0):
     """Best-effort: pan/zoom whatever UIView is showing the active view to frame
     `point` (host-doc coordinates), so a long run is visually watchable instead of a
@@ -666,9 +681,12 @@ def zoom_active_view_to_point(point, margin=10.0):
     on every single marker across an 800+ item run would be a real performance cost,
     working directly against the fail-fast/iterate-fast goal this tool is built for.
 
-    Silently no-ops on any failure (no open UIView for the active view -- e.g. the
-    active view is a schedule/sheet, or nothing is actually on screen) -- this is a
-    nice-to-have and must never interrupt or fail the run.
+    On failure this must never interrupt or fail the run -- but it used to swallow
+    EVERY exception with zero logging, which made a silent no-op indistinguishable
+    from a working-but-invisible zoom. Each distinct outcome (no matching UIView, an
+    exception, or the first confirmed success) is now logged ONCE per run via
+    _zoom_diagnostics_logged, so a run where nothing visibly zoomed leaves a clear
+    reason in the log instead of just silence.
 
     RefreshActiveView() alone only REQUESTS a repaint; Revit's UI thread doesn't
     actually paint it until it gets to process its Windows message queue, which a
@@ -678,17 +696,35 @@ def zoom_active_view_to_point(point, margin=10.0):
     live instead of a frozen screen that jumps to its final state at the very end.
     """
     try:
-        active_id = UIDOC.ActiveView.Id
+        active_view = UIDOC.ActiveView
+        active_id = active_view.Id
+        matched = False
         for ui_view in UIDOC.GetOpenUIViews():
             if ui_view.ViewId == active_id:
+                matched = True
                 corner1 = DB.XYZ(point.X - margin, point.Y - margin, point.Z - margin)
                 corner2 = DB.XYZ(point.X + margin, point.Y + margin, point.Z + margin)
                 ui_view.ZoomAndCenterRectangle(corner1, corner2)
                 break
+        if matched and not _zoom_diagnostics_logged["success"]:
+            debug_log(
+                "zoom_active_view_to_point: first zoom succeeded, on active view [{}] '{}' ({}).".format(
+                    active_id, active_view.Name, active_view.ViewType))
+            _zoom_diagnostics_logged["success"] = True
+        if not matched and not _zoom_diagnostics_logged["no_match"]:
+            debug_log(
+                "zoom_active_view_to_point: active view [{}] '{}' ({}) has no open UIView -- nothing to zoom. "
+                "Keep that exact view open and active for the whole run to see it live.".format(
+                    active_id, active_view.Name, active_view.ViewType))
+            _zoom_diagnostics_logged["no_match"] = True
         UIDOC.RefreshActiveView()
         Application.DoEvents()
-    except Exception:
-        pass
+        if matched:
+            time.sleep(ZOOM_PAUSE_SECONDS)
+    except Exception as e:
+        if not _zoom_diagnostics_logged["error"]:
+            debug_log("zoom_active_view_to_point failed (logged once, run continues): {}".format(e))
+            _zoom_diagnostics_logged["error"] = True
 
 
 def get_search_scopes(doc):
