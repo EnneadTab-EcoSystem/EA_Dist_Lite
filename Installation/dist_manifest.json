@@ -142,7 +142,7 @@
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2512.panel/MetroTech.pulldown/dob_sheet_cleanup.pushbutton/dob_sheet_cleanup_script.py": "9b817872398b9402a2df45a281cb426cc4517f00740c29ba7325bc6c72109979",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2512.panel/MetroTech.pulldown/invalid_phase_element.pushbutton/invalid_phase_element_script.py": "e8236e8feac2efdaf1f9fe73eeb6133b52bc153cb3f899f672bac707ed7ce79f",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2512.panel/MetroTech.pulldown/place_update_electrical_outlet.pushbutton/outlet_conflict_row.py": "301bf6abfb321c6f76fe386f57435ebba01940f093ba35665db0762a10aa3371",
-        "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2512.panel/MetroTech.pulldown/place_update_electrical_outlet.pushbutton/place_update_electrical_outlet_script.py": "a86b7f5483f28cef6712e8ee7da356e553dc52609d983e5351de6f8688cd5a25",
+        "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2512.panel/MetroTech.pulldown/place_update_electrical_outlet.pushbutton/place_update_electrical_outlet_script.py": "d38a4109d567b66c7f0b383da9a67d3dcca4d7db0672a33c23a381f7fd5212c1",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2512.panel/MetroTech.pulldown/room_bounding_to_area_b_line.pushbutton/room_bounding_to_area_b_line_script.py": "8388df10eef3cd7dab745722b5d24fee89417d1eedc822e3b917dd48e2523556",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2512.panel/MetroTech.pulldown/update_door_info_by_room.pushbutton/update_door_info_by_room_script.py": "e04f312ef86e9c4e9d0dc2dc4a3d5a8a7a040e5ad597ccaf90f8fe8c3ae873ef",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2526.panel/St Paul.pulldown/check_arc_center.pushbutton/check_arc_center_script.py": "f43990306aeb76713a6da73ab566decc140ed38967d2061d6618ac4478fa7514",
@@ -711,11 +711,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-09-17T18:17:20",
-    "source_commit": "295617c6af3e840393e954d6accfa88ca87392a4",
+    "published_at": "2026-09-17T18:31:54",
+    "source_commit": "f951dff783ff1a31102d60676264272e617cf2b4",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.09.17.1817"
+    "version": "2026.09.17.1831"
 }
