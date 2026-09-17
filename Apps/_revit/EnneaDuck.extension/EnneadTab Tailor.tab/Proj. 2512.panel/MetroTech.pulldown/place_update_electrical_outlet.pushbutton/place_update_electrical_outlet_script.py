@@ -1,54 +1,34 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-__doc__ = """Place new electrical outlet instances by picking faces or walls, from a
-furniture family's nested position marker, or batch-update the type of outlets
-already in the model.
+__doc__ = """Create or update electrical outlet instances from furniture markers.
 
-Works with any loaded family, so it is not locked to a single MetroTech (2512)
-outlet family: pick whichever family/type your project uses each time.
+No menu, no picking: running the button scans the current model AND every loaded
+link for any furniture family that carries a `_para_map` marker, lets you
+multi-select which of those discovered families to process, then creates or
+corrects every outlet automatically.
 
-Features:
-- Face-based outlet families are placed on the wall or floor face you click
-- Wall-hosted outlet families are placed at the point you click on a wall
-- No furniture family name is ever hardcoded, and nothing needs to be picked: this
-  automatically scans the current model AND every loaded link for any furniture
-  family that carries a `_para_map` marker, then lets you multi-select which of
-  those discovered families to process, so you can run surgically on just one
-  furniture type after a model fix instead of always reprocessing everything
-- Within each selected furniture instance, every nested marker fans rays outward from
-  its corrected point to the nearest wall/floor (the marker carries position only, no
-  dependable facing rotation to aim a single ray), and creates or repositions the
-  matching outlet in the current model automatically -- no per-conflict review step
-- Each marker instance names its own outlet family/type and mount height via its
-  `_para_map` JSON parameter, so markers nested in the same furniture instance can
-  each place a different outlet at a different height; the outlet's Z always comes
-  from its host furniture instance's level plus that mount height, never the
-  marker's raw position (markers are modeled above the furniture body on purpose, to
-  stay visible/pickable -- see the comment above PARA_MAP_TEMPLATE)
-- Every "Place From Marker" run writes a timestamped debug log to the local dump
-  folder (path printed at the end of the run) recording what was found, resolved,
-  skipped, and placed -- open it when a run gets stuck to see exactly what happened.
-  If many markers of the SAME furniture family in a row fail for the identical
-  reason, that family's remaining markers are skipped (other selected families are
-  unaffected) instead of grinding through a doomed setup; a per-marker error (e.g. a
-  hand-edited _para_map typo) never aborts more than that one marker
-- An outlet that already exists exactly on a marker's target point is left untouched;
-  one that exists nearby but off-target is moved there automatically (never
-  retyped -- it was only found because it already matched the target family/type);
-  one owned by another user in a workshared model is left alone either way, and
-  never duplicated
-- Existing outlet instances of a type can be swapped to a different type in one pass
+Each marker instance names its own outlet family/type and mount height via its
+`_para_map` JSON parameter, so markers nested in the same furniture instance can
+each place a different outlet at a different height; the outlet's Z always comes
+from its host furniture instance's level plus that mount height, never the
+marker's raw position (markers are modeled above the furniture body on purpose, to
+stay visible/pickable -- see the comment above PARA_MAP_TEMPLATE).
 
-Usage:
-1. Run the button and choose Place, Place From Marker, or Update Type
-2. Place: pick a family and type, then click faces/walls until you press Escape
-3. Place From Marker: multi-select which discovered furniture families to process
-   (found automatically across the current model and every loaded link -- nothing to
-   pick first). Each nested marker's own `_para_map` names the outlet family/type and
-   mount height; outlets are created or repositioned automatically, with a summary
-   and a debug log path reported at the end
-4. Update Type: pick the family, current type, new type, then confirm"""
+Every outlet this tool creates is tagged with the marker that generated it (see
+SOURCE_MARKER_TAG_PARAMETER_NAME), so a later run finds it by exact lookup instead
+of guessing from position/type -- and can tell the three cases apart: already
+correct (left alone), same family but wrong type (retyped in place), or a
+completely different family (deleted and replaced). An outlet owned by another
+user in a workshared model is left alone either way, and never duplicated.
+
+Every run writes a timestamped debug log to the local dump folder (path printed at
+the end) recording what was found, resolved, skipped, and placed -- open it when a
+run gets stuck to see exactly what happened. If many markers of the SAME furniture
+family in a row fail for the identical reason, that family's remaining markers are
+skipped (other selected families are unaffected) instead of grinding through a
+doomed setup; a per-marker error (e.g. a hand-edited _para_map typo) never aborts
+more than that one marker."""
 __title__ = "Place/Update\nElectrical Outlet"
 
 import datetime
@@ -59,17 +39,14 @@ import proDUCKtion  # pyright: ignore
 proDUCKtion.validify()
 
 from Autodesk.Revit import DB  # pyright: ignore
-from Autodesk.Revit.UI.Selection import ObjectType, ISelectionFilter  # pyright: ignore
-from Autodesk.Revit.Exceptions import OperationCanceledException  # pyright: ignore
 from System.Collections.Generic import List  # pyright: ignore
 from pyrevit import forms
 
 from EnneadTab import ERROR_HANDLE, FOLDER, LOG, NOTIFICATION
-from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_SELECTION, REVIT_FORMS, REVIT_FAMILY
+from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_SELECTION, REVIT_FAMILY
 
 from outlet_conflict_row import OutletPlacementTarget
 
-UIDOC = REVIT_APPLICATION.get_uidoc()
 DOC = REVIT_APPLICATION.get_doc()
 __persistentengine__ = True
 
@@ -133,6 +110,18 @@ PARA_MAP_TEMPLATE = {
     "mount_height": None,
 }
 
+# Written onto every OUTLET this tool creates (never onto the marker -- a marker can
+# live inside a read-only link, so it can never be written to; the outlet always
+# lives in the CURRENT/host document, which is always writable). Lets a later run
+# look an outlet up by exact match instead of guessing from position/type, so it can
+# tell "already correct" apart from "same family, wrong type" (retype in place) and
+# "different family entirely" (delete and replace) -- see build_marker_tag and
+# build_outlets_by_marker_tag. Requires this Text instance parameter to exist on the
+# OUTLET family; if it doesn't, that family's outlets fall back to the old
+# position+type matching (see place_from_markers), same graceful-degradation
+# convention as _para_map on a marker family missing that parameter.
+SOURCE_MARKER_TAG_PARAMETER_NAME = "_source_marker_tag"
+
 
 def get_marker_para_map(marker):
     """Read and JSON-parse `marker`'s _para_map text parameter.
@@ -180,6 +169,56 @@ def set_marker_para_map(marker, data):
             "Marker [{}] has no {} parameter, cannot write.".format(marker.Id, PARA_MAP_PARAMETER_NAME))
         return
     param.Set(json.dumps(data, indent=2))
+
+
+def build_marker_tag(scope_doc, marker):
+    """Build a string identifying `marker` uniquely, even across documents (the host
+    model and any number of links), for tagging the OUTLET it generates.
+
+    Never written to the marker itself -- only ever read from it. `scope_doc.Title`
+    disambiguates `marker.UniqueId` (a GUID unique within its own document) across
+    documents; the outlet-side tag is what actually gets persisted, always in the
+    host document, which is always writable.
+    """
+    return "{}::{}".format(scope_doc.Title, marker.UniqueId)
+
+
+def get_outlet_source_marker_tag(instance):
+    param = instance.LookupParameter(SOURCE_MARKER_TAG_PARAMETER_NAME)
+    return param.AsString() if param else None
+
+
+def set_outlet_source_marker_tag(instance, tag):
+    """Write `tag` (see build_marker_tag) onto `instance`'s source-marker-tag
+    parameter. No-ops (with a note) if the outlet family has no such parameter --
+    that family's outlets then fall back to position+type matching on the next run
+    instead of an exact lookup, but placement still works either way.
+    """
+    param = instance.LookupParameter(SOURCE_MARKER_TAG_PARAMETER_NAME)
+    if not param:
+        debug_log(
+            "Outlet [{}]'s family has no {} parameter -- cannot tag it back to its source marker, so a future "
+            "run will fall back to matching by position/type for it. Add a Text instance parameter with this "
+            "name to the outlet family to enable exact tracking.".format(instance.Id, SOURCE_MARKER_TAG_PARAMETER_NAME))
+        return
+    param.Set(tag)
+
+
+def build_outlets_by_marker_tag(doc):
+    """One project-wide pass over `doc` (the HOST document -- outlets always live
+    there, never in a link), grouping every tagged instance by its
+    SOURCE_MARKER_TAG_PARAMETER_NAME value.
+
+    Returns:
+        dict {marker_tag (str): DB.FamilyInstance}
+    """
+    instances = DB.FilteredElementCollector(doc).OfClass(DB.FamilyInstance).WhereElementIsNotElementType().ToElements()
+    by_tag = {}
+    for instance in instances:
+        tag = get_outlet_source_marker_tag(instance)
+        if tag:
+            by_tag[tag] = instance
+    return by_tag
 
 
 _run_log_lines = []
@@ -230,103 +269,8 @@ def save_run_log():
         return None
 
 
-class WallOrFloorFaceFilter(ISelectionFilter):
-    """Restrict face picking to walls and floors, the two hosts an outlet is placed on."""
-    def AllowElement(self, elem):
-        return isinstance(elem, (DB.Wall, DB.Floor))
-
-    def AllowReference(self, ref, point):
-        return True
-
-
-class WallPointFilter(ISelectionFilter):
-    """Restrict point-on-element picking to walls, for wall-hosted outlet families."""
-    def AllowElement(self, elem):
-        return isinstance(elem, DB.Wall)
-
-    def AllowReference(self, ref, point):
-        return True
-
-
 def type_name_of(family_type):
     return family_type.LookupParameter("Type Name").AsString()
-
-
-def pick_faces_on_walls_and_floors():
-    """Loop DB.Reference picks on wall/floor faces until the user presses Escape.
-
-    Returns:
-        list of (DB.Element host, DB.Face face, DB.XYZ point)
-    """
-    picks = []
-    face_filter = WallOrFloorFaceFilter()
-    while True:
-        try:
-            ref = UIDOC.Selection.PickObject(
-                ObjectType.Face, face_filter,
-                "Pick a wall or floor face to place an outlet (Escape to finish)")
-        except OperationCanceledException:
-            break
-        host = DOC.GetElement(ref)
-        face = host.GetGeometryObjectFromReference(ref)
-        picks.append((host, face, ref.GlobalPoint))
-    return picks
-
-
-def pick_points_on_walls():
-    """Loop point-on-wall picks until the user presses Escape.
-
-    Returns:
-        list of (DB.Wall wall, DB.XYZ point)
-    """
-    picks = []
-    wall_filter = WallPointFilter()
-    while True:
-        try:
-            ref = UIDOC.Selection.PickObject(
-                ObjectType.PointOnElement, wall_filter,
-                "Pick a point on a wall to place an outlet (Escape to finish)")
-        except OperationCanceledException:
-            break
-        wall = DOC.GetElement(ref.ElementId)
-        picks.append((wall, ref.GlobalPoint))
-    return picks
-
-
-def place_face_based(doc, family_symbol, picks):
-    placed = []
-    failed = []
-    for host, face, point in picks:
-        try:
-            if isinstance(host, DB.Floor):
-                instance = REVIT_FAMILY.place_instance_by_floor(family_symbol, host, location=point, doc=doc)
-            else:
-                instance = REVIT_FAMILY.place_instance_by_face(family_symbol, face, point, doc=doc)
-            if instance:
-                placed.append(instance)
-            else:
-                failed.append(host.Id)
-        except Exception as e:
-            ERROR_HANDLE.print_note("Failed to place outlet on host [{}]: {}".format(host.Id, e))
-            failed.append(host.Id)
-    return placed, failed
-
-
-def place_wall_hosted(doc, family_symbol, picks):
-    placed = []
-    failed = []
-    for wall, point in picks:
-        try:
-            level = doc.GetElement(wall.LevelId)
-            instance = REVIT_FAMILY.place_instance_by_wall(family_symbol, point, wall, level=level, doc=doc)
-            if instance:
-                placed.append(instance)
-            else:
-                failed.append(wall.Id)
-        except Exception as e:
-            ERROR_HANDLE.print_note("Failed to place outlet on wall [{}]: {}".format(wall.Id, e))
-            failed.append(wall.Id)
-    return placed, failed
 
 
 def get_any_3d_view(doc):
@@ -682,10 +626,10 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
 def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, scopes):
     """Find every instance of `furniture_family_names` across every search scope (the
     host document plus every loaded link -- see get_search_scopes), and within each
-    one, every nested marker (build_para_map_markers_by_furniture_id). Each marker's own _para_map
-    names the outlet family/type and mount height to place there, so this also
-    resolves that outlet symbol and fan-casts the marker's corrected point to its
-    host face (see _resolve_one_marker for the per-marker logic).
+    one, every nested marker (build_para_map_markers_by_furniture_id). Each marker's
+    own _para_map names the outlet family/type and mount height to place there, so
+    this also resolves that outlet symbol and fan-casts the marker's corrected point
+    to its host face (see _resolve_one_marker for the per-marker logic).
 
     A furniture instance can nest more than one marker (each independently naming its
     own outlet/height), so the outlet's final Z always comes from the FURNITURE
@@ -712,7 +656,7 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
 
     Returns:
         tuple (resolved, unresolved):
-          resolved   -- list of (marker, host, face, hit_point, stable_ref, family, family_type)
+          resolved   -- list of (marker, marker_tag, host, face, hit_point, stable_ref, family, family_type)
           unresolved -- list of (marker, reason) for markers that can't be placed
     """
     entries_by_family = {}
@@ -755,7 +699,8 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
                 host = face = hit_point = stable_ref = family = family_type = None
 
             if reason is None:
-                resolved.append((marker, host, face, hit_point, stable_ref, family, family_type))
+                marker_tag = build_marker_tag(scope_doc, marker)
+                resolved.append((marker, marker_tag, host, face, hit_point, stable_ref, family, family_type))
                 streak_reason = None
                 streak_count = 0
                 continue
@@ -801,20 +746,29 @@ def find_nearby_instance(point, instances, radius):
     return nearest, nearest_distance
 
 
-def apply_marker_outlets(to_create, to_update):
-    """Create missing outlets and reposition already-correct-type outlets that sit
-    near a marker but not exactly on it, in one transaction.
+def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
+    """Create, replace, move/retype, or retag outlets in one transaction.
 
     Called directly and synchronously from place_from_markers, which is itself
-    already running in Revit's API context (the button's own entry point) -- there is
-    no modeless review step in this flow, so no ExternalEvent is needed.
+    already running in Revit's API context (the button's own entry point) -- there
+    is no modeless review step in this flow, so no ExternalEvent is needed.
 
-    `to_create` items each name their own outlet family/type (read from their
-    marker's _para_map -- different markers can name different outlets), resolved
-    here by name. `to_update` items are (existing_instance_id, target_point) pairs:
-    the existing instance is ALREADY the correct family/type -- that is how it was
-    found, see get_existing_instances in place_from_markers -- so only a move is ever
-    needed here, never a retype.
+    - `to_create`: list of (OutletPlacementTarget, marker_tag) -- nothing exists for
+      this marker yet; place it and tag it.
+    - `to_replace`: list of (old_instance_id, OutletPlacementTarget, marker_tag) --
+      the tagged/matched existing instance is a DIFFERENT FAMILY than the marker now
+      targets; Revit cannot reassign an instance across families (only across types
+      within the same family), so the old one is deleted and a new one created and
+      tagged in its place.
+    - `to_update`: list of (instance_id, target_point, new_type_name_or_None,
+      marker_tag) -- the existing instance is already the correct family. If
+      `new_type_name_or_None` is set, its type differs and gets swapped via
+      `Symbol =` (same-family retype, no delete needed); either way it is moved to
+      `target_point` and re-tagged.
+    - `to_retag`: list of (instance_id, marker_tag) -- a legacy, untagged instance
+      that already exactly matches its marker's target family/type/position; just
+      needs the tag written so a future run finds it directly instead of falling
+      back to position/type matching again.
     """
     doc = DOC
     symbol_cache = {}
@@ -827,38 +781,41 @@ def apply_marker_outlets(to_create, to_update):
             symbol_cache[key] = family_type
         return symbol_cache[key]
 
+    def do_create(item):
+        family_type = resolve_symbol(item.family_name, item.type_name)
+        if not family_type:
+            debug_log("Outlet [{}] - [{}] is no longer loaded, skipping host [{}].".format(
+                item.family_name, item.type_name, item.host_id))
+            return None
+        host = doc.GetElement(DB.ElementId(item.host_id))
+        point = DB.XYZ(item.point[0], item.point[1], item.point[2])
+        if item.stable_ref:
+            reference = DB.Reference.ParseFromStableRepresentation(doc, item.stable_ref)
+            face = host.GetGeometryObjectFromReference(reference)
+            return REVIT_FAMILY.place_instance_by_face(family_type, face, point, doc=doc)
+        if isinstance(host, DB.Wall):
+            level = doc.GetElement(host.LevelId)
+            return REVIT_FAMILY.place_instance_by_wall(family_type, point, host, level=level, doc=doc)
+        debug_log(
+            "Cannot place outlet [{}] - [{}] on host [{}]: no face reference and host is not a wall "
+            "(host type: {}).".format(item.family_name, item.type_name, item.host_id, type(host).__name__))
+        return None
+
     created = 0
-    moved = 0
+    replaced = 0
+    updated = 0
+    retagged = 0
     failed = []
     t = DB.Transaction(doc, "Place/Update Electrical Outlet From Marker")
     t.Start()
     try:
-        for item in to_create:
+        for item, marker_tag in to_create:
             try:
-                family_type = resolve_symbol(item.family_name, item.type_name)
-                if not family_type:
-                    debug_log("Outlet [{}] - [{}] is no longer loaded, skipping host [{}].".format(
-                        item.family_name, item.type_name, item.host_id))
-                    failed.append(item.host_id)
-                    continue
-                host = doc.GetElement(DB.ElementId(item.host_id))
-                point = DB.XYZ(item.point[0], item.point[1], item.point[2])
-                if item.stable_ref:
-                    reference = DB.Reference.ParseFromStableRepresentation(doc, item.stable_ref)
-                    face = host.GetGeometryObjectFromReference(reference)
-                    instance = REVIT_FAMILY.place_instance_by_face(family_type, face, point, doc=doc)
-                elif isinstance(host, DB.Wall):
-                    level = doc.GetElement(host.LevelId)
-                    instance = REVIT_FAMILY.place_instance_by_wall(family_type, point, host, level=level, doc=doc)
-                else:
-                    instance = None
-                    debug_log(
-                        "Cannot place outlet [{}] - [{}] on host [{}]: no face reference and host is not a "
-                        "wall (host type: {}).".format(
-                            item.family_name, item.type_name, item.host_id, type(host).__name__))
+                instance = do_create(item)
                 if instance:
+                    set_outlet_source_marker_tag(instance, marker_tag)
                     created += 1
-                    debug_log("Placed outlet [{}] - [{}]/[{}] on host [{}] at {}".format(
+                    debug_log("Placed outlet [{}] - [{}]/[{}] on host [{}] at {}, tagged.".format(
                         instance.Id, item.family_name, item.type_name, item.host_id, item.point))
                 else:
                     failed.append(item.host_id)
@@ -866,26 +823,62 @@ def apply_marker_outlets(to_create, to_update):
                 debug_log("Failed to place outlet on host [{}]: {}".format(item.host_id, e))
                 failed.append(item.host_id)
 
-        for existing_instance_id, target_point_tuple in to_update:
+        for old_instance_id, item, marker_tag in to_replace:
             try:
-                existing = doc.GetElement(DB.ElementId(existing_instance_id))
+                doc.Delete(DB.ElementId(old_instance_id))
+                instance = do_create(item)
+                if instance:
+                    set_outlet_source_marker_tag(instance, marker_tag)
+                    replaced += 1
+                    debug_log("Replaced outlet [{}] with [{}] - [{}]/[{}] at {}, tagged.".format(
+                        old_instance_id, instance.Id, item.family_name, item.type_name, item.point))
+                else:
+                    failed.append(old_instance_id)
+            except Exception as e:
+                debug_log("Failed to replace outlet [{}]: {}".format(old_instance_id, e))
+                failed.append(old_instance_id)
+
+        for instance_id, target_point_tuple, new_type_name, marker_tag in to_update:
+            try:
+                existing = doc.GetElement(DB.ElementId(instance_id))
                 if existing is None:
-                    failed.append(existing_instance_id)
+                    failed.append(instance_id)
                     continue
+                if new_type_name is not None:
+                    family_name = REVIT_FAMILY.get_family_name(existing)
+                    new_type = resolve_symbol(family_name, new_type_name)
+                    if new_type:
+                        existing.Symbol = new_type
                 current_point = get_instance_point(existing)
                 target_point = DB.XYZ(target_point_tuple[0], target_point_tuple[1], target_point_tuple[2])
-                DB.ElementTransformUtils.MoveElement(doc, existing.Id, target_point - current_point)
-                moved += 1
-                debug_log("Moved outlet [{}] to {}".format(existing_instance_id, target_point_tuple))
+                if current_point is not None:
+                    DB.ElementTransformUtils.MoveElement(doc, existing.Id, target_point - current_point)
+                set_outlet_source_marker_tag(existing, marker_tag)
+                updated += 1
+                debug_log("Updated outlet [{}]{} to {}, tagged.".format(
+                    instance_id, " (retyped to [{}])".format(new_type_name) if new_type_name else "",
+                    target_point_tuple))
             except Exception as e:
-                debug_log("Failed to move outlet [{}]: {}".format(existing_instance_id, e))
-                failed.append(existing_instance_id)
+                debug_log("Failed to update outlet [{}]: {}".format(instance_id, e))
+                failed.append(instance_id)
+
+        for instance_id, marker_tag in to_retag:
+            try:
+                existing = doc.GetElement(DB.ElementId(instance_id))
+                if existing is None:
+                    failed.append(instance_id)
+                    continue
+                set_outlet_source_marker_tag(existing, marker_tag)
+                retagged += 1
+            except Exception as e:
+                debug_log("Failed to tag existing outlet [{}]: {}".format(instance_id, e))
+                failed.append(instance_id)
         t.Commit()
     except Exception:
         t.RollBack()
         raise
 
-    lines = ["Placed {} | Moved {}".format(created, moved)]
+    lines = ["Placed {} | Replaced {} | Updated {} | Tagged {}".format(created, replaced, updated, retagged)]
     if failed:
         lines.append("Failed on {} item(s), see output for detail.".format(len(failed)))
     result = " | ".join(lines)
@@ -931,6 +924,7 @@ def place_from_markers(doc):
                     len(unresolved), furniture_label))
             return
 
+        outlets_by_marker_tag = build_outlets_by_marker_tag(doc)
         existing_instances_cache = {}  # (family_name, type_name) -> list of DB.FamilyInstance
 
         def get_existing_instances(family, family_type):
@@ -940,35 +934,61 @@ def place_from_markers(doc):
                 # outlet owned by another workshared user must still be found here so
                 # this marker is never treated as empty and given a duplicate right
                 # on top of it. Ownership is only checked separately, below, when
-                # actually deciding whether to move one.
+                # actually deciding whether to move/retype/replace one.
                 existing_instances_cache[key] = REVIT_FAMILY.get_family_instances_by_family_name_and_type_name(
                     family.Name, type_name_of(family_type), doc=doc)
             return existing_instances_cache[key]
 
-        to_create = []        # OutletPlacementTarget - no existing outlet nearby
-        to_update = []        # (existing_instance_id, target_point) - move to target
+        to_create = []        # (OutletPlacementTarget, marker_tag)
+        to_replace = []       # (old_instance_id, OutletPlacementTarget, marker_tag)
+        to_update = []        # (instance_id, target_point, new_type_name_or_None, marker_tag)
+        to_retag = []         # (instance_id, marker_tag)
         already_placed = []   # existing instance, no action needed
         skipped_foreign = []  # existing instance nearby but owned by another user
-        for marker, host, face, hit_point, stable_ref, family, family_type in resolved:
-            existing_instances = get_existing_instances(family, family_type)
-            nearby, distance = find_nearby_instance(hit_point, existing_instances, EXISTING_OUTLET_SEARCH_RADIUS)
+        for marker, marker_tag, host, face, hit_point, stable_ref, family, family_type in resolved:
             point_tuple = (hit_point.X, hit_point.Y, hit_point.Z)
             type_name = type_name_of(family_type)
-            if nearby is None:
-                use_stable_ref = stable_ref if family.FamilyPlacementType == DB.FamilyPlacementType.WorkPlaneBased else None
-                to_create.append(OutletPlacementTarget(
-                    element_int_id(host), point_tuple, family.Name, type_name, use_stable_ref))
-            elif distance <= EXISTING_OUTLET_SAME_SPOT_TOLERANCE:
-                already_placed.append(nearby)
-            elif REVIT_SELECTION.is_changable(nearby):
-                to_update.append((element_int_id(nearby), point_tuple))
-            else:
-                skipped_foreign.append(nearby)
-                debug_log(
-                    "Outlet near marker [{}] is owned by another user; leaving it in place, not "
-                    "creating a duplicate.".format(marker.Id))
+            use_stable_ref = stable_ref if family.FamilyPlacementType == DB.FamilyPlacementType.WorkPlaneBased else None
+            target = OutletPlacementTarget(element_int_id(host), point_tuple, family.Name, type_name, use_stable_ref)
 
-        result = apply_marker_outlets(to_create, to_update)
+            existing = outlets_by_marker_tag.get(marker_tag)
+            if existing is None:
+                # No tagged outlet yet for this marker -- fall back to a position+type
+                # check so a pre-existing, untagged, already-correct instance (hand
+                # placed, or placed by this tool before tagging existed) is adopted
+                # (tagged) rather than duplicated.
+                candidates = get_existing_instances(family, family_type)
+                legacy, _distance = find_nearby_instance(hit_point, candidates, EXISTING_OUTLET_SAME_SPOT_TOLERANCE)
+                if legacy is not None:
+                    already_placed.append(legacy)
+                    to_retag.append((element_int_id(legacy), marker_tag))
+                else:
+                    to_create.append((target, marker_tag))
+                continue
+
+            if not REVIT_SELECTION.is_changable(existing):
+                skipped_foreign.append(existing)
+                debug_log(
+                    "Outlet tagged for marker [{}] is owned by another user; leaving it in place, not "
+                    "creating a duplicate or changing it.".format(marker.Id))
+                continue
+
+            existing_family_name = REVIT_FAMILY.get_family_name(existing)
+            existing_type_name = type_name_of(existing.Symbol)
+            existing_point = get_instance_point(existing)
+            same_position = (
+                existing_point is not None and existing_point.DistanceTo(hit_point) <= EXISTING_OUTLET_SAME_SPOT_TOLERANCE)
+
+            if existing_family_name != family.Name:
+                to_replace.append((element_int_id(existing), target, marker_tag))
+            elif existing_type_name == type_name and same_position:
+                already_placed.append(existing)
+            elif existing_type_name == type_name:
+                to_update.append((element_int_id(existing), point_tuple, None, marker_tag))
+            else:
+                to_update.append((element_int_id(existing), point_tuple, type_name, marker_tag))
+
+        result = apply_marker_outlets(to_create, to_replace, to_update, to_retag)
         lines = ["Furniture: [{}]".format(furniture_label), result]
         if already_placed:
             lines.append("{} outlet(s) already sat exactly on their marker, left untouched".format(len(already_placed)))
@@ -984,119 +1004,10 @@ def place_from_markers(doc):
             print("Debug log saved to: {}".format(log_path))
 
 
-def place_outlets(doc):
-    family = REVIT_SELECTION.pick_family(doc, include_2D=False, include_3D=True)
-    if not family:
-        return
-    family_symbol = REVIT_SELECTION.pick_type(family)
-    if not family_symbol:
-        return
-
-    placement_type = family.FamilyPlacementType
-    if placement_type == DB.FamilyPlacementType.WorkPlaneBased:
-        picks = pick_faces_on_walls_and_floors()
-        if not picks:
-            return
-        t = DB.Transaction(doc, "Place Electrical Outlet - {}".format(family.Name))
-        t.Start()
-        try:
-            placed, failed = place_face_based(doc, family_symbol, picks)
-            t.Commit()
-        except Exception:
-            t.RollBack()
-            raise
-    elif placement_type == DB.FamilyPlacementType.OneLevelBasedHosted:
-        picks = pick_points_on_walls()
-        if not picks:
-            return
-        t = DB.Transaction(doc, "Place Electrical Outlet - {}".format(family.Name))
-        t.Start()
-        try:
-            placed, failed = place_wall_hosted(doc, family_symbol, picks)
-            t.Commit()
-        except Exception:
-            t.RollBack()
-            raise
-    else:
-        NOTIFICATION.messenger(
-            "[{}] is neither a face-based nor a wall-hosted family. "
-            "Use a Face Based or Wall Based outlet family with this tool.".format(family.Name))
-        return
-
-    lines = ["Placed {} outlet(s) of [{}] - [{}]".format(len(placed), family.Name, type_name_of(family_symbol))]
-    if failed:
-        lines.append("Failed on {} host(s), see output for detail.".format(len(failed)))
-    NOTIFICATION.messenger(main_text="\n".join(lines))
-
-
-def update_outlet_type(doc):
-    family = REVIT_SELECTION.pick_family(doc, include_2D=False, include_3D=True)
-    if not family:
-        return
-    old_type = REVIT_SELECTION.pick_type(family)
-    if not old_type:
-        return
-
-    instances = REVIT_FAMILY.get_family_instances_by_family_name_and_type_name(
-        family.Name, type_name_of(old_type), doc=doc, editable_only=True)
-    if not instances:
-        NOTIFICATION.messenger(
-            "No editable instance of [{}] - [{}] found in the model.".format(family.Name, type_name_of(old_type)))
-        return
-
-    new_type = REVIT_SELECTION.pick_type(family)
-    if not new_type:
-        return
-    if new_type.Id == old_type.Id:
-        NOTIFICATION.messenger("New type is the same as the current type, nothing to update.")
-        return
-
-    confirm = REVIT_FORMS.dialogue(
-        main_text="Update Electrical Outlet Type",
-        sub_text="Change {} instance(s) of [{}] from [{}] to [{}]?".format(
-            len(instances), family.Name, type_name_of(old_type), type_name_of(new_type)),
-        options=["Run", "Cancel"],
-        icon="warning")
-    if confirm != "Run":
-        return
-
-    updated = []
-    failed = []
-    t = DB.Transaction(doc, "Update Electrical Outlet Type - {}".format(family.Name))
-    t.Start()
-    try:
-        for instance in instances:
-            try:
-                instance.Symbol = new_type
-                updated.append(instance.Id)
-            except Exception as e:
-                ERROR_HANDLE.print_note("Failed to update outlet [{}]: {}".format(instance.Id, e))
-                failed.append(instance.Id)
-        t.Commit()
-    except Exception:
-        t.RollBack()
-        raise
-
-    lines = ["Updated {} outlet(s) to [{}]".format(len(updated), type_name_of(new_type))]
-    if failed:
-        lines.append("Failed on {} instance(s), see output for detail.".format(len(failed)))
-    NOTIFICATION.messenger(main_text="\n".join(lines))
-
-
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def main(doc):
-    mode = REVIT_FORMS.dialogue(
-        main_text="MetroTech Electrical Outlet",
-        sub_text="Place new outlet instances, place them from a furniture family's "
-                 "nested position marker, or update the type of outlets already in the model.",
-        options=["Place", "Place From Marker", "Update Type", "Cancel"])
-    if mode == "Place":
-        place_outlets(doc)
-    elif mode == "Place From Marker":
-        place_from_markers(doc)
-    elif mode == "Update Type":
-        update_outlet_type(doc)
+    place_from_markers(doc)
 
 
 ################## main code below #####################
