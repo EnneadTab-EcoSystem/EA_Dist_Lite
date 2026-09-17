@@ -723,16 +723,90 @@ def to_host_point(point, link_transform):
     return link_transform.OfPoint(point) if link_transform is not None else point
 
 
+def find_host_level_by_elevation(doc, elevation, cache):
+    """Return the DB.Level in `doc` (the HOST document) whose Elevation is closest
+    to `elevation` (host-doc-space Z).
+
+    Matches by ELEVATION rather than by level NAME on purpose: different
+    consultants/trades often name what is physically the same floor slightly
+    differently across linked files (e.g. "4TH FLOOR" vs "Level 4" vs "04 - Fourth
+    Floor"), so a name-based match can silently miss or mismatch across documents.
+    Elevation is a physical, shared-coordinate-system value every discipline's
+    levels should agree on for the same floor, making it the more reliable match
+    key -- and Level ElementIds can never be referenced across documents at all, so
+    this always resolves against the HOST doc's own levels regardless of which
+    document the furniture/marker actually came from.
+
+    `cache` is a plain dict the caller owns, keyed by elevation rounded to 0.01 ft,
+    reused across a whole run so repeated markers on the same floor don't re-scan
+    every level each time.
+
+    Returns:
+        DB.Level or None if `doc` has no levels at all.
+    """
+    cache_key = round(elevation, 2)
+    if cache_key not in cache:
+        levels = DB.FilteredElementCollector(doc).OfClass(DB.Level).ToElements()
+        best = None
+        best_diff = None
+        for level in levels:
+            diff = abs(level.Elevation - elevation)
+            if best_diff is None or diff < best_diff:
+                best = level
+                best_diff = diff
+        cache[cache_key] = best
+        if best is not None and best_diff > 1.0:
+            debug_log(
+                "Host-doc level match: nearest level to elevation {} ft is [{}] '{}' at {} ft -- {} ft off. "
+                "If this looks wrong, the host document may be missing a level near this elevation.".format(
+                    round(elevation, 2), best.Id, best.Name, round(best.Elevation, 2), round(best_diff, 2)))
+    return cache[cache_key]
+
+
+def find_host_plan_view_for_level(doc, level, cache):
+    """Return a non-template 2D plan view in `doc` associated with `level`, cached
+    by level.Id across the whole run. Prefers a FloorPlan over other plan view
+    types (CeilingPlan, etc.) when more than one exists for the same level.
+
+    Used so zoom_active_view_to_point can switch to a real 2D plan for whichever
+    level is currently being processed -- 3D navigation reads poorly for "watch it
+    work," and a single fixed 3D camera can't usefully frame one floor at a time
+    across a run spanning many levels.
+
+    Returns:
+        DB.ViewPlan or None if no plan view in `doc` is associated with this level.
+    """
+    if level.Id in cache:
+        return cache[level.Id]
+    views = DB.FilteredElementCollector(doc).OfClass(DB.ViewPlan).WhereElementIsNotElementType().ToElements()
+    candidates = [v for v in views if not v.IsTemplate and v.GenLevel is not None and v.GenLevel.Id == level.Id]
+    best = next((v for v in candidates if v.ViewType == DB.ViewType.FloorPlan), None)
+    if best is None and candidates:
+        best = candidates[0]
+    cache[level.Id] = best
+    return best
+
+
 _zoom_diagnostics_logged = {"no_match": False, "error": False, "success": False}
+_zoom_plan_view_cache = {}
+_zoom_last_view_id = [None]
 
 
-def zoom_active_view_to_point(point, margin=10.0):
+def zoom_active_view_to_point(point, margin=10.0, level=None, fallback_view=None):
     """Best-effort: pan/zoom whatever UIView is showing the active view to frame
     `point` (host-doc coordinates), so a long run is visually watchable instead of a
     frozen screen while it works. Called at the same throttled cadence as the
     progress bar's own updates (progress_step), never per item -- zooming/repainting
     on every single marker across an 800+ item run would be a real performance cost,
     working directly against the fail-fast/iterate-fast goal this tool is built for.
+
+    `level`, if given (a DB.Level in the HOST doc), switches the active view to that
+    level's own 2D plan view (find_host_plan_view_for_level) before zooming, so the
+    marker/outlet is framed on a real floor plan instead of navigating a single 3D
+    camera around the whole building. Falls back to `fallback_view` (the 3D view
+    built for ray-casting) if this level has no plan view in the host doc. The view
+    is only actually switched when it differs from whatever's already active, to
+    avoid a needless view-change (and its own repaint cost) on every call.
 
     On failure this must never interrupt or fail the run -- but it used to swallow
     EVERY exception with zero logging, which made a silent no-op indistinguishable
@@ -749,6 +823,13 @@ def zoom_active_view_to_point(point, margin=10.0):
     live instead of a frozen screen that jumps to its final state at the very end.
     """
     try:
+        target_view = find_host_plan_view_for_level(DOC, level, _zoom_plan_view_cache) if level is not None else None
+        if target_view is None:
+            target_view = fallback_view
+        if target_view is not None and _zoom_last_view_id[0] != element_int_id(target_view):
+            UIDOC.RequestViewChange(target_view)
+            _zoom_last_view_id[0] = element_int_id(target_view)
+
         active_view = UIDOC.ActiveView
         active_id = active_view.Id
         matched = False
@@ -1079,6 +1160,7 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
 
     intersector = build_wall_floor_intersector(view3d)
     tag_support_cache = {}
+    level_by_elevation_cache = {}
 
     resolved = []
     unresolved = []
@@ -1093,7 +1175,7 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
 
     with forms.ProgressBar(
             title="Resolving outlet markers... ({value} of {max_value})",
-            step=progress_step, cancellable=True) as pb:
+            step=1, cancellable=True) as pb:
 
         for family_name in furniture_family_names:
             if user_cancelled:
@@ -1120,8 +1202,13 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
                 pb.update_progress(processed, total_markers)
                 if processed % progress_step == 0:
                     furniture_point = get_instance_point(furniture)
-                    if furniture_point is not None:
-                        zoom_active_view_to_point(to_host_point(furniture_point, link_transform))
+                    if furniture_point is not None and furniture_level is not None:
+                        host_furniture_point = to_host_point(furniture_point, link_transform)
+                        host_level_elevation = to_host_point(
+                            DB.XYZ(0, 0, furniture_level.Elevation), link_transform).Z
+                        host_level = find_host_level_by_elevation(
+                            doc, host_level_elevation, level_by_elevation_cache)
+                        zoom_active_view_to_point(host_furniture_point, level=host_level, fallback_view=view3d)
 
                 if reason is None:
                     marker_tag = build_marker_tag(scope_doc, marker)
@@ -1182,7 +1269,7 @@ def find_nearby_instance(point, instances, radius):
     return nearest, nearest_distance
 
 
-def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
+def apply_marker_outlets(to_create, to_replace, to_update, to_retag, view3d):
     """Create, replace, move/retype, or retag outlets in one transaction.
 
     Called directly and synchronously from place_from_markers, which is itself
@@ -1225,40 +1312,31 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
             symbol_cache[key] = family_type
         return symbol_cache[key]
 
-    level_by_name_cache = {}
-
-    def find_host_level(level_name):
-        """Look up a DB.Level in `doc` (the HOST document) by name, cached across the
-        whole run. A furniture's level may live in a DIFFERENT document (a link) --
-        Level ElementIds are never valid across documents, so an outlet's Schedule
-        Level must reference a level that actually lives in the host doc, found here
-        by matching name (levels are named consistently across linked files in
-        practice) rather than any direct object reference.
-        """
-        if level_name not in level_by_name_cache:
-            levels = DB.FilteredElementCollector(doc).OfClass(DB.Level).ToElements()
-            level_by_name_cache[level_name] = next((lv for lv in levels if lv.Name == level_name), None)
-        return level_by_name_cache[level_name]
-
+    level_by_elevation_cache = {}
     _schedule_level_missing_logged = [False]
 
-    def apply_schedule_level(instance, level_name):
-        """Best-effort: set `instance`'s Schedule Level to the host-doc level named
-        `level_name` (see set_outlet_schedule_level). Silently no-ops (after one log
-        line for the whole run) if no host-doc level has that name -- never blocks or
-        fails the item over this, since it's a schedule-correctness nicety, not a
-        placement one.
+    def apply_schedule_level(instance, elevation):
+        """Best-effort: set `instance`'s Schedule Level to the host-doc level nearest
+        `elevation` (see find_host_level_by_elevation and set_outlet_schedule_level).
+        Silently no-ops (after one log line for the whole run) if the host doc has no
+        levels at all -- never blocks or fails the item over this, since it's a
+        schedule-correctness nicety, not a placement one.
+
+        Returns:
+            DB.Level or None -- the matched host level, so callers (the zoom call
+            right after) can switch to its plan view without a duplicate lookup.
         """
-        host_level = find_host_level(level_name) if level_name else None
+        host_level = find_host_level_by_elevation(doc, elevation, level_by_elevation_cache) \
+            if elevation is not None else None
         if host_level is None:
             if not _schedule_level_missing_logged[0]:
                 debug_log(
-                    "Could not find a host-doc level named '{}' to set as Schedule Level (logged once) -- "
-                    "Schedule Level/Elevation from Level will stay empty for items on this level.".format(
-                        level_name))
+                    "Could not find any host-doc level to set as Schedule Level (logged once) -- Schedule "
+                    "Level/Elevation from Level will stay empty.")
                 _schedule_level_missing_logged[0] = True
-            return
+            return None
         set_outlet_schedule_level(instance, host_level)
+        return host_level
 
     def do_create(item):
         family_type = resolve_symbol(item.family_name, item.type_name)
@@ -1368,17 +1446,18 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
     try:
         with forms.ProgressBar(
                 title="Placing/updating outlets... ({value} of {max_value})",
-                step=progress_step, cancellable=True) as pb:
+                step=1, cancellable=True) as pb:
 
             create_streak = [None, 0]
             if not user_cancelled:
                 for index, (item, marker_tag) in enumerate(to_create):
                     if user_cancelled:
                         break
+                    host_level = None
                     try:
                         instance = do_create(item)
                         if instance and apply_required_params_or_delete(instance, marker_tag, item.mount_height, item):
-                            apply_schedule_level(instance, item.level_name)
+                            host_level = apply_schedule_level(instance, item.point[2])
                             created += 1
                             bump_level_stat(item.level_name, "created")
                             debug_log("Placed outlet [{}] - [{}]/[{}] on host [{}] at {} (height {}), tagged.".format(
@@ -1398,7 +1477,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                                         item.mount_height)
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0:
-                        zoom_active_view_to_point(DB.XYZ(*item.point))
+                        zoom_active_view_to_point(DB.XYZ(*item.point), level=host_level, fallback_view=view3d)
                     if pb.cancelled:
                         user_cancelled = True
                         break
@@ -1408,11 +1487,12 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                 for index, (old_instance_id, item, marker_tag) in enumerate(to_replace):
                     if user_cancelled:
                         break
+                    host_level = None
                     try:
                         doc.Delete(DB.ElementId(old_instance_id))
                         instance = do_create(item)
                         if instance and apply_required_params_or_delete(instance, marker_tag, item.mount_height, item):
-                            apply_schedule_level(instance, item.level_name)
+                            host_level = apply_schedule_level(instance, item.point[2])
                             replaced += 1
                             bump_level_stat(item.level_name, "replaced")
                             debug_log("Replaced outlet [{}] with [{}] - [{}]/[{}] at {} (height {}), tagged.".format(
@@ -1432,7 +1512,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                                         item.mount_height)
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0:
-                        zoom_active_view_to_point(DB.XYZ(*item.point))
+                        zoom_active_view_to_point(DB.XYZ(*item.point), level=host_level, fallback_view=view3d)
                     if pb.cancelled:
                         user_cancelled = True
                         break
@@ -1444,6 +1524,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                     if user_cancelled:
                         break
                     existing = None
+                    host_level = None
                     try:
                         existing = doc.GetElement(DB.ElementId(instance_id))
                         if existing is None:
@@ -1465,7 +1546,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         # gap would be far worse than just flagging it loudly.
                         tag_ok = set_outlet_source_marker_tag(existing, marker_tag)
                         height_ok = set_outlet_placement_height(existing, mount_height)
-                        apply_schedule_level(existing, level_name)
+                        host_level = apply_schedule_level(existing, target_point_tuple[2])
                         updated += 1
                         bump_level_stat(level_name, "updated")
                         if not (tag_ok and height_ok):
@@ -1495,7 +1576,8 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         set_progress_title(pb, "Updating", level_name)
                     pb.update_progress(processed, total_items)
                     if processed % progress_step == 0:
-                        zoom_active_view_to_point(DB.XYZ(*target_point_tuple))
+                        zoom_active_view_to_point(
+                            DB.XYZ(*target_point_tuple), level=host_level, fallback_view=view3d)
                     if pb.cancelled:
                         user_cancelled = True
                         break
@@ -1506,6 +1588,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                     if user_cancelled:
                         break
                     existing = None
+                    host_level = None
                     try:
                         existing = doc.GetElement(DB.ElementId(instance_id))
                         if existing is None:
@@ -1514,7 +1597,9 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                             continue
                         tag_ok = set_outlet_source_marker_tag(existing, marker_tag)
                         height_ok = set_outlet_placement_height(existing, mount_height)
-                        apply_schedule_level(existing, level_name)
+                        existing_point_for_level = get_instance_point(existing)
+                        host_level = apply_schedule_level(
+                            existing, existing_point_for_level.Z if existing_point_for_level else None)
                         if tag_ok and height_ok:
                             retagged += 1
                             bump_level_stat(level_name, "retagged")
@@ -1544,7 +1629,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                     if processed % progress_step == 0 and existing is not None:
                         existing_point = get_instance_point(existing)
                         if existing_point is not None:
-                            zoom_active_view_to_point(existing_point)
+                            zoom_active_view_to_point(existing_point, level=host_level, fallback_view=view3d)
                     if pb.cancelled:
                         user_cancelled = True
                         break
@@ -1615,19 +1700,11 @@ def place_from_markers(doc):
 
     start_run_log()
 
-    # zoom_active_view_to_point can only show a marker if the active view actually
-    # contains it -- a run spans furniture on MANY different levels, so leaving
-    # whatever plan view happened to be active (e.g. one specific floor's plan) means
-    # every item on any OTHER level has nothing to zoom to at all, even though the
-    # zoom call itself succeeds. Switching to view3d (the same non-section-boxed 3D
-    # view the ray-cast itself already depends on seeing the whole building through)
-    # guarantees the active view can show whichever level is currently being
-    # processed, for the whole run.
-    try:
-        UIDOC.RequestViewChange(view3d)
-    except Exception as e:
-        debug_log("Could not switch the active view to the 3D view used for ray-casting: {} -- zoom may not "
-                   "be visible for levels other than whatever view was already active.".format(e))
+    # zoom_active_view_to_point switches to each item's OWN level's 2D plan view as it
+    # goes (preferred over one fixed 3D camera -- 3D navigation reads poorly for
+    # "watch it work," and a run spans many different levels a single 3D view can't
+    # usefully frame one at a time), falling back to view3d only if a level has no
+    # plan view in the host doc. No initial forced view switch is needed here.
     try:
         debug_log("Host document: [{}]".format(doc.Title))
         log_view3d_raycast_diagnostics(doc, view3d)
@@ -1714,7 +1791,7 @@ def place_from_markers(doc):
                 to_update.append(
                     (element_int_id(existing), point_tuple, type_name, marker_tag, mount_height, level_name))
 
-        result = apply_marker_outlets(to_create, to_replace, to_update, to_retag)
+        result = apply_marker_outlets(to_create, to_replace, to_update, to_retag, view3d)
         lines = ["Furniture: [{}]".format(furniture_label), result]
         if already_placed:
             lines.append("{} outlet(s) already sat exactly on their marker, left untouched".format(len(already_placed)))
