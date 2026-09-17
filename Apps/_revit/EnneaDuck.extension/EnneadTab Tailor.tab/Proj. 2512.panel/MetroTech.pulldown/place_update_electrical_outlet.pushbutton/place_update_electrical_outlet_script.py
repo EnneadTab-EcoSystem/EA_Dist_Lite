@@ -1017,10 +1017,14 @@ def resolve_picked_furniture(doc, ref):
 
 
 def place_from_markers(doc):
-    element_selection_filter = None  # any category: furniture or one of its nested markers can vary
     try:
+        # No ISelectionFilter: any category is allowed (furniture or one of its nested
+        # markers). PickObject's 3-arg overload throws "Value cannot be null, Parameter
+        # name: pSelFilter" if passed None for the filter -- Revit does NOT treat a null
+        # filter as "allow anything" the way it does for other API surfaces -- so the
+        # no-filter 2-arg overload must be used instead, not ObjectType.Element, None, prompt.
         ref = UIDOC.Selection.PickObject(
-            ObjectType.Element, element_selection_filter,
+            ObjectType.Element,
             "Pick any furniture instance or one of its markers, to select which "
             "document to search (Tab to pick one inside a linked model)")
     except OperationCanceledException:
