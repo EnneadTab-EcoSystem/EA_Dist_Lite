@@ -48,6 +48,7 @@ from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_SELECTION, REVIT_FAMILY
 from outlet_conflict_row import OutletPlacementTarget
 
 DOC = REVIT_APPLICATION.get_doc()
+UIDOC = REVIT_APPLICATION.get_uidoc()
 __persistentengine__ = True
 
 # The marker family carries position only, no dependable facing rotation, so the
@@ -575,6 +576,41 @@ def log_view3d_raycast_diagnostics(doc, view3d):
         view3d.Id, view3d.Name, view3d.IsSectionBoxActive))
 
 
+def to_host_point(point, link_transform):
+    """Map `point` from its scope document's own local space into host-doc
+    coordinates via `link_transform`, or return it unchanged when link_transform is
+    None (the point already belongs to the host doc). Shared by the marker/furniture
+    sanity-check log and zoom_active_view_to_point, so both agree on exactly how a
+    link-local point becomes a host-space one.
+    """
+    return link_transform.OfPoint(point) if link_transform is not None else point
+
+
+def zoom_active_view_to_point(point, margin=10.0):
+    """Best-effort: pan/zoom whatever UIView is showing the active view to frame
+    `point` (host-doc coordinates), so a long run is visually watchable instead of a
+    frozen screen while it works. Called at the same throttled cadence as the
+    progress bar's own updates (progress_step), never per item -- zooming/repainting
+    on every single marker across an 800+ item run would be a real performance cost,
+    working directly against the fail-fast/iterate-fast goal this tool is built for.
+
+    Silently no-ops on any failure (no open UIView for the active view -- e.g. the
+    active view is a schedule/sheet, or nothing is actually on screen) -- this is a
+    nice-to-have and must never interrupt or fail the run.
+    """
+    try:
+        active_id = UIDOC.ActiveView.Id
+        for ui_view in UIDOC.GetOpenUIViews():
+            if ui_view.ViewId == active_id:
+                corner1 = DB.XYZ(point.X - margin, point.Y - margin, point.Z - margin)
+                corner2 = DB.XYZ(point.X + margin, point.Y + margin, point.Z + margin)
+                ui_view.ZoomAndCenterRectangle(corner1, corner2)
+                break
+        UIDOC.RefreshActiveView()
+    except Exception:
+        pass
+
+
 def get_search_scopes(doc):
     """Return every (search_doc, link_transform) scope to search for furniture/markers:
     the host document itself (link_transform=None), plus one entry per loaded,
@@ -748,8 +784,7 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
     # coordinates through the link, not in the wall/floor search that follows.
     furniture_point = get_instance_point(furniture)
     if furniture_point is not None:
-        furniture_point_in_host = (
-            link_transform.OfPoint(furniture_point) if link_transform is not None else furniture_point)
+        furniture_point_in_host = to_host_point(furniture_point, link_transform)
         debug_log(
             "  (sanity check: furniture [{}] itself is at {} in host coordinates -- {} ft from the marker's "
             "corrected point above; if that's more than a few feet, marker/furniture coordinate resolution "
@@ -863,6 +898,10 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
 
                 processed += 1
                 pb.update_progress(processed, total_markers)
+                if processed % progress_step == 0:
+                    furniture_point = get_instance_point(furniture)
+                    if furniture_point is not None:
+                        zoom_active_view_to_point(to_host_point(furniture_point, link_transform))
 
                 if reason is None:
                     marker_tag = build_marker_tag(scope_doc, marker)
@@ -1026,6 +1065,8 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         failed.append(item.host_id)
                     processed += 1
                     pb.update_progress(processed, total_items)
+                    if processed % progress_step == 0:
+                        zoom_active_view_to_point(DB.XYZ(*item.point))
                     if pb.cancelled:
                         user_cancelled = True
                         break
@@ -1046,6 +1087,8 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         failed.append(old_instance_id)
                     processed += 1
                     pb.update_progress(processed, total_items)
+                    if processed % progress_step == 0:
+                        zoom_active_view_to_point(DB.XYZ(*item.point))
                     if pb.cancelled:
                         user_cancelled = True
                         break
@@ -1088,12 +1131,15 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         failed.append(instance_id)
                     processed += 1
                     pb.update_progress(processed, total_items)
+                    if processed % progress_step == 0:
+                        zoom_active_view_to_point(DB.XYZ(*target_point_tuple))
                     if pb.cancelled:
                         user_cancelled = True
                         break
 
             if not user_cancelled:
                 for instance_id, marker_tag in to_retag:
+                    existing = None
                     try:
                         existing = doc.GetElement(DB.ElementId(instance_id))
                         if existing is None:
@@ -1112,6 +1158,10 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag):
                         failed.append(instance_id)
                     processed += 1
                     pb.update_progress(processed, total_items)
+                    if processed % progress_step == 0 and existing is not None:
+                        existing_point = get_instance_point(existing)
+                        if existing_point is not None:
+                            zoom_active_view_to_point(existing_point)
                     if pb.cancelled:
                         user_cancelled = True
                         break
