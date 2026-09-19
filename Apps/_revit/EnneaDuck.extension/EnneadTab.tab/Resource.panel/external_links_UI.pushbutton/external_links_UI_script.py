@@ -200,7 +200,8 @@ class AssistantUI(forms.WPFWindow):
             return
         files = os.listdir(folder)
         special_folder = "#PDF in this directory are reference only"
-        files.remove(special_folder)
+        if special_folder in files:
+            files.remove(special_folder)
 
         keyword = "<Open Entire Code Folder...>"
         files.insert(0, keyword)
@@ -210,11 +211,11 @@ class AssistantUI(forms.WPFWindow):
 
 
         if keyword == selected_opt:
-
-            dd_folder = ASSET.get_asset_folder('revit/library-docs/dd-samples')
-            if dd_folder:
-                path = os.path.join(dd_folder, "#PDF in this directory are reference only")
+            path = os.path.join(folder, special_folder)
+            if os.path.exists(path):
                 subprocess.Popen(r'explorer /select, {}'.format(path))
+            else:
+                subprocess.Popen(r'explorer "{}"'.format(folder))
             return
 
         filepath = folder + "\\" + selected_opt
