@@ -372,7 +372,7 @@
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/apply_doh_sheet_number.pushbutton/apply_doh_sheet_number_script.py": "09accf05f46520f62bb3352b1856430645cb2d96b3e033c99881ca239c47f01c",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/apply_doh_sheet_number.pushbutton/apply_logic.py": "cb20461d963912c7eb64af0a8a15e49233fd8256fa6968169faeb5462e97a7c9",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/apply_doh_sheet_number.pushbutton/test_apply_logic.py": "8608691973bc790d8805687ceb4390bd06327990a769403405e495c7c479124b",
-        "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/arvr_overlay.pushbutton/arvr_overlay_script.py": "c9755e4b6b1bc96f4ec9cf26ae210ddac456a4f1c727a18a81f697d34b8c8b83",
+        "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/arvr_overlay.pushbutton/arvr_overlay_script.py": "84737bb4829f94a83b39c7d27aeb035fa11c754f5b87f44b6a216f59afdd7718",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/content_transfer.pushbutton/content_transfer_script.py": "777b3e0186982bd60573f7bb31aae7e0ffa72db83f4c7e20ba1409d14ca738af",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/ennead_exporter.pushbutton/HELPER.py": "eef5599ac1f94f2014214c49e8a67f4b0b1775958bdae3f45d82d00a9e0f8707",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/ennead_exporter.pushbutton/data_grid_id_map_obj.py": "e9e05f6e275218bbc68d7cb6b07c2efa7c9ed2cb148573d380db02eb41a0cb04",
@@ -711,11 +711,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-09-21T14:30:31",
-    "source_commit": "9122b597fbd8d000d30cb4f51cb3dfa20d4ecc7e",
+    "published_at": "2026-09-21T14:48:31",
+    "source_commit": "054341aef7ffa5dd2bc84aa63b2f218d1e4a2794",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.09.21.1430"
+    "version": "2026.09.21.1448"
 }

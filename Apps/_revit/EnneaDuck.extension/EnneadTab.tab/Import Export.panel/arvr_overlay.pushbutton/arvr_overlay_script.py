@@ -3,12 +3,17 @@
 
 __doc__ = """Open EnneadTab-ARVR: Mobile Camera AR Overlay for 3D Models.
 
-Beam your Revit 3D views onto your smartphone camera in augmented reality:
-- Export active 3D view or pick an existing .glb / .gltf / .usdz
+Beam an already-exported 3D model onto your smartphone camera in augmented reality:
+- Auto-detect a staged .glb matching the active 3D view, or browse to pick an
+  existing .glb / .gltf / .usdz you exported some other way
 - Staged safely in local temporary dump directory
 - Upload directly into cloud room session
 - Scan QR code to launch mobile camera AR overlay with 1:1 scale
 - Zero app installs needed on phone or headset
+
+Note: this tool does not export the Revit 3D view itself (Revit has no native
+glTF/GLB exporter). Export your model to .glb/.gltf/.usdz first, then use this
+tool to stage & beam it.
 
 Opens https://enneadtab.com/arvr
 """
@@ -51,7 +56,7 @@ class ARVROverlayWindow(WPFWindow):
         # Update active view info
         active_view = doc.ActiveView if doc else None
         if active_view and active_view.ViewType == DB.ViewType.ThreeD:
-            self.status_text.Text = ">> Active View: [{}] ready to export & beam".format(active_view.Name)
+            self.status_text.Text = ">> Active View: [{}] - browse exported .glb/.gltf/.usdz to beam".format(active_view.Name)
         else:
             self.status_text.Text = ">> Switch to a 3D view or browse a local .glb/.gltf file"
 
