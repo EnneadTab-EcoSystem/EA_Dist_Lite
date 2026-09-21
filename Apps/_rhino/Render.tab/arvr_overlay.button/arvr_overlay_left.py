@@ -34,7 +34,7 @@ class ARVRExportDialog(object):
         self.dialog.Title = "EnneadTab-ARVR :: Mobile AR Overlay Hub"
         self.dialog.Resizable = False
         self.dialog.Padding = Eto.Drawing.Padding(16)
-        self.dialog.Width = 480
+        self.dialog.Width = 560
         self.dialog.Height = 440
 
         # Colors
@@ -55,7 +55,7 @@ class ARVRExportDialog(object):
 
         # Header Title
         title_lbl = Eto.Forms.Label()
-        title_lbl.Text = "[ AR/VR SPATIAL OVERLAY ]"
+        title_lbl.Text = "View Model in AR / VR"
         title_lbl.Font = Eto.Drawing.Font("Consolas", 14, Eto.Drawing.FontStyle.Bold)
         title_lbl.TextColor = self.col_cyan
         title_lbl.TextAlignment = Eto.Forms.TextAlignment.Center
@@ -63,7 +63,7 @@ class ARVRExportDialog(object):
 
         # Subtitle
         sub_lbl = Eto.Forms.Label()
-        sub_lbl.Text = "Zero-install mobile camera AR beam for Rhino 3D models"
+        sub_lbl.Text = "Send your Rhino model to your phone - no app install needed"
         sub_lbl.Font = Eto.Drawing.Font("Arial", 9)
         sub_lbl.TextColor = self.col_dim
         sub_lbl.TextAlignment = Eto.Forms.TextAlignment.Center
@@ -88,7 +88,7 @@ class ARVRExportDialog(object):
             self.status_lbl.Text = ">> {} object(s) selected ready to export".format(sel_count)
             self.status_lbl.TextColor = self.col_green
         else:
-            self.status_lbl.Text = ">> No objects selected (Select objects first or browse .glb)"
+            self.status_lbl.Text = ">> No objects selected (select objects first, or use Browse below)"
             self.status_lbl.TextColor = self.col_yellow
         self.status_lbl.Font = Eto.Drawing.Font("Consolas", 9)
         status_layout.AddRow(self.status_lbl)
@@ -104,7 +104,7 @@ class ARVRExportDialog(object):
         self.room_tb.PlaceholderText = "Auto-generated (or enter 6-char code)"
         self.room_tb.BackgroundColor = self.col_bg
         self.room_tb.TextColor = self.col_cyan
-        self.room_tb.Width = 240
+        self.room_tb.Width = 320
         room_row.AddRow(r_lbl, self.room_tb)
         status_layout.AddRow(room_row)
 
@@ -114,7 +114,7 @@ class ARVRExportDialog(object):
 
         # Action Buttons
         self.btn_export = Eto.Forms.Button()
-        self.btn_export.Text = "⚡ EXPORT SELECTED & BEAM TO MOBILE AR"
+        self.btn_export.Text = "SEND SELECTED OBJECTS TO YOUR PHONE"
         self.btn_export.Font = Eto.Drawing.Font("Arial", 10, Eto.Drawing.FontStyle.Bold)
         self.btn_export.BackgroundColor = self.col_magenta
         self.btn_export.TextColor = self.col_white
@@ -123,7 +123,7 @@ class ARVRExportDialog(object):
         layout.AddRow(self.btn_export)
 
         self.btn_browse = Eto.Forms.Button()
-        self.btn_browse.Text = "📁 BROWSE LOCAL 3D MODEL (.GLB/.GLTF/.USDZ) & BEAM"
+        self.btn_browse.Text = "BROWSE LOCAL MODEL (.GLB/.GLTF/.USDZ) && BEAM"
         self.btn_browse.Font = Eto.Drawing.Font("Arial", 9)
         self.btn_browse.BackgroundColor = self.col_panel
         self.btn_browse.TextColor = self.col_cyan
@@ -132,7 +132,7 @@ class ARVRExportDialog(object):
         layout.AddRow(self.btn_browse)
 
         self.btn_web = Eto.Forms.Button()
-        self.btn_web.Text = "🌐 OPEN AR/VR WEB HUB (BROWSER)"
+        self.btn_web.Text = "OPEN AR/VR WEB HUB (BROWSER)"
         self.btn_web.Font = Eto.Drawing.Font("Arial", 9)
         self.btn_web.BackgroundColor = self.col_panel
         self.btn_web.TextColor = self.col_yellow
@@ -173,19 +173,28 @@ class ARVRExportDialog(object):
         staging_dir = ARVR.get_staging_directory()
         out_path = os.path.join(staging_dir, clean_name + ".glb")
 
-        # In Rhino 8, GLB export is native. In Rhino 7, user can export or fallback to OBJ
-        cmd = '-_Export "{}" _Enter _Enter'.format(out_path.replace("\\", "/"))
-        rs.Command(cmd, echo=False)
+        # Delete any leftover file from a previous run first. Without this, a
+        # failed export here would silently re-upload a stale .glb from an
+        # earlier successful export instead of reporting failure.
+        if os.path.exists(out_path):
+            try:
+                os.remove(out_path)
+            except Exception:
+                pass
 
-        if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
-            out_obj = os.path.join(staging_dir, clean_name + ".obj")
-            cmd_obj = '-_Export "{}" _Enter _Enter'.format(out_obj.replace("\\", "/"))
-            rs.Command(cmd_obj, echo=False)
-            if os.path.exists(out_obj) and os.path.getsize(out_obj) > 0:
-                out_path = out_obj
+        # Use RhinoDoc.ExportSelected directly (same proven pattern as
+        # File.tab/external_trimmer.button) instead of scripting -_Export
+        # with blind _Enter presses -- that macro approach has no way to
+        # know how many dialogs a given selection will trigger.
+        rs.SelectObjects(objs)
+        try:
+            exported = sc.doc.ExportSelected(out_path)
+        except Exception as export_err:
+            exported = False
+            NOTIFICATION.messenger("Export raised an error: {}".format(export_err))
 
-        if not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
-            NOTIFICATION.messenger("Could not export geometry. Please check Rhino export formats or use Browse.")
+        if not exported or not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+            NOTIFICATION.messenger("Could not export geometry to .GLB. Please check Rhino export formats or use Browse.")
             return
 
         room_input = self.room_tb.Text.strip() if self.room_tb.Text else None

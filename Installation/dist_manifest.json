@@ -539,7 +539,7 @@
         "Apps/lib/EnneadTab/AI/_common.py": "554ec660261432514ff124e1a556f844aaebdd2f10ff90607cf618a8ea688d0d",
         "Apps/lib/EnneadTab/AI/_gate_translate.py": "b35338be86d8beae3d59bd28b978f65276ec5698069eb6ab342273f14d0f257d",
         "Apps/lib/EnneadTab/ARCADE.py": "b85946ed379b7fe6e95888202694dc6f0c7cf2862e9dc2a7dd5edda183514a9a",
-        "Apps/lib/EnneadTab/ARVR.py": "04f5a44dc93448773383f7c9d30747303e9a34748a1f1eafa5c48467018d1260",
+        "Apps/lib/EnneadTab/ARVR.py": "5dad4bb6bd88df3ea8796944362eadea97309fcd02311c216b5fcb682827eedf",
         "Apps/lib/EnneadTab/ASYNC.py": "a3eeb0d2ec327cb8e5f40e42d52c58f6a725075ada5e613ff8657aa46e6d9c76",
         "Apps/lib/EnneadTab/AUTH.py": "0692c15ada1e067eb8114cd2d069b66f6e3272565d945327ceba45281487c29b",
         "Apps/lib/EnneadTab/CODE.py": "676deee7d01e878e906f7b6fe2299eb20838e22a87803aa1da37e8629b64250b",
@@ -711,11 +711,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-09-21T14:17:33",
-    "source_commit": "d0fbb61b814e16210fdfe9f116c3f18ec716e2a1",
+    "published_at": "2026-09-21T14:30:31",
+    "source_commit": "9122b597fbd8d000d30cb4f51cb3dfa20d4ecc7e",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.09.21.1417"
+    "version": "2026.09.21.1430"
 }

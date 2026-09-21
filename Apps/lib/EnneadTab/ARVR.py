@@ -102,7 +102,11 @@ def upload_model_file(filepath, room_id=None, timeout_ms=60000):
         
     filename = os.path.basename(filepath)
     ext = os.path.splitext(filename)[1].lower()
-    content_type = "model/vnd.usdz+zip" if ext == ".usdz" else "model/gltf-binary"
+    content_type = {
+        ".usdz": "model/vnd.usdz+zip",
+        ".glb": "model/gltf-binary",
+        ".gltf": "model/gltf+json",
+    }.get(ext, "application/octet-stream")
     
     # Send request using .NET if in IronPython, or urllib in CPython
     try:
