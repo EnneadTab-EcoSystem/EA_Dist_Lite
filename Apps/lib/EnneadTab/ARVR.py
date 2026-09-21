@@ -7,6 +7,8 @@ Supports IronPython 2.7 (.NET WebRequest) and CPython 3.x (urllib).
 
 import os
 import random
+import time
+import json
 import webbrowser
 from EnneadTab import NOTIFICATION, FOLDER
 
@@ -73,33 +75,117 @@ def stage_and_upload(filepath, room_id=None, timeout_ms=90000, auto_open_browser
             open_web_hub()
         return False, room_id, None, err
 
+def _http_post_json(url, json_body, timeout_ms):
+    """POST a JSON string body. Returns (ok, response_text, error_message)."""
+    try:
+        from System.Net import WebRequest, ServicePointManager, SecurityProtocolType # pyright: ignore
+        from System.IO import StreamReader # pyright: ignore
+        import System # pyright: ignore
+        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12
+        request = WebRequest.Create(url)
+        request.Method = "POST"
+        request.ContentType = "application/json"
+        request.Timeout = timeout_ms
+
+        body_bytes = System.Text.Encoding.UTF8.GetBytes(json_body)
+        request.ContentLength = body_bytes.Length
+        stream = request.GetRequestStream()
+        stream.Write(body_bytes, 0, body_bytes.Length)
+        stream.Close()
+
+        response = request.GetResponse()
+        reader = StreamReader(response.GetResponseStream())
+        text = reader.ReadToEnd()
+        reader.Close()
+        response.Close()
+        return True, text, None
+    except ImportError:
+        import urllib.request
+        req = urllib.request.Request(
+            url, data=json_body.encode("utf-8"), headers={"Content-Type": "application/json"})
+        try:
+            with urllib.request.urlopen(req, timeout=timeout_ms // 1000) as resp:
+                return True, resp.read().decode("utf-8"), None
+        except Exception as e:
+            return False, None, str(e)
+    except Exception as e:
+        return False, None, str(e)
+
+def _http_put_bytes(url, body_bytes, headers, timeout_ms):
+    """PUT raw bytes with custom headers. Returns (ok, response_text, error_message)."""
+    try:
+        from System.Net import WebRequest, ServicePointManager, SecurityProtocolType # pyright: ignore
+        from System.IO import StreamReader # pyright: ignore
+        import System # pyright: ignore
+        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12
+        request = WebRequest.Create(url)
+        request.Method = "PUT"
+        request.Timeout = timeout_ms
+        for key, value in headers.items():
+            if key.lower() == "content-type":
+                request.ContentType = value
+            else:
+                request.Headers.Add(key, value)
+
+        dotnet_bytes = System.Array[System.Byte](bytearray(body_bytes))
+        request.ContentLength = dotnet_bytes.Length
+        stream = request.GetRequestStream()
+        stream.Write(dotnet_bytes, 0, dotnet_bytes.Length)
+        stream.Close()
+
+        response = request.GetResponse()
+        reader = StreamReader(response.GetResponseStream())
+        text = reader.ReadToEnd()
+        reader.Close()
+        response.Close()
+        return True, text, None
+    except ImportError:
+        import urllib.request
+        req = urllib.request.Request(url, data=body_bytes, headers=headers, method="PUT")
+        try:
+            with urllib.request.urlopen(req, timeout=timeout_ms // 1000) as resp:
+                return True, resp.read().decode("utf-8"), None
+        except Exception as e:
+            return False, None, str(e)
+    except Exception as e:
+        return False, None, str(e)
+
 def upload_model_file(filepath, room_id=None, timeout_ms=60000):
     """Upload a 3D model (.glb / .gltf / .usdz) to the ARVR room session.
-    
+
+    Uploads directly to Vercel Blob storage in two steps (request a
+    short-lived client token, then PUT the bytes straight to Blob),
+    bypassing the web app's own serverless function for the upload
+    itself. A single POST straight to the room API hit Vercel's hard,
+    non-configurable ~4.5MB request-body cap on any real architectural
+    model; only the small token-request and room-registration calls still
+    go through that function now. Wire protocol (endpoint, headers,
+    x-api-version) verified against @vercel/blob's own installed package
+    source in EnneadTab-ARVR (node_modules/@vercel/blob/dist/chunk-*.js),
+    not guessed -- there is no JS runtime here to run the SDK itself.
+
     Args:
         filepath (str): Absolute path to model file.
         room_id (str, optional): Target room id. If None, a new one is generated.
         timeout_ms (int): Network timeout in milliseconds.
-        
+
     Returns:
         tuple: (success, room_id, web_url, error_message)
     """
     if not os.path.exists(filepath):
         return False, None, None, "File does not exist: " + str(filepath)
-        
+
     if not room_id:
         room_id = generate_room_id()
     else:
         room_id = room_id.upper().strip()
-        
-    url = "{}/api/room/{}".format(ARVR_URL_BASE, room_id)
-    
+
     try:
         with open(filepath, "rb") as f:
             file_bytes = f.read()
     except Exception as e:
         return False, room_id, None, "Failed to read file: " + str(e)
-        
+
     filename = os.path.basename(filepath)
     ext = os.path.splitext(filename)[1].lower()
     content_type = {
@@ -107,33 +193,69 @@ def upload_model_file(filepath, room_id=None, timeout_ms=60000):
         ".glb": "model/gltf-binary",
         ".gltf": "model/gltf+json",
     }.get(ext, "application/octet-stream")
-    
-    # Send request using .NET if in IronPython, or urllib in CPython
+
+    pathname = "rooms/{}/{}".format(room_id, filename)
+
+    # Step 1: request a short-lived client token. Request shape matches
+    # exactly what @vercel/blob/client's upload() sends to a handleUpload()
+    # route (EnneadTab-ARVR app/api/room/[roomId]/upload-token/route.ts).
+    token_url = "{}/api/room/{}/upload-token".format(ARVR_URL_BASE, room_id)
+    token_payload = json.dumps({
+        "type": "blob.generate-client-token",
+        "payload": {
+            "pathname": pathname,
+            "multipart": False,
+            "clientPayload": None,
+        },
+    })
+    ok, token_response, err = _http_post_json(token_url, token_payload, timeout_ms)
+    if not ok:
+        return False, room_id, None, "Failed to get upload token: " + str(err)
+
     try:
-        from System.Net import WebRequest, ServicePointManager, SecurityProtocolType # pyright: ignore
-        import System # pyright: ignore
-        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12
-        request = WebRequest.Create(url)
-        request.Method = "POST"
-        request.ContentType = content_type
-        request.Timeout = timeout_ms
-        
-        dotnet_bytes = System.Array[System.Byte](bytearray(file_bytes))
-        request.ContentLength = dotnet_bytes.Length
-        stream = request.GetRequestStream()
-        stream.Write(dotnet_bytes, 0, dotnet_bytes.Length)
-        stream.Close()
-        
-        response = request.GetResponse()
-        response.Close()
-    except ImportError:
-        import urllib.request
-        req = urllib.request.Request(url, data=file_bytes, headers={"Content-Type": content_type})
-        with urllib.request.urlopen(req, timeout=timeout_ms // 1000) as resp:
-            pass
+        token_data = json.loads(token_response)
+        client_token = token_data["clientToken"]
+        store_id = token_data["storeId"]
     except Exception as e:
-        return False, room_id, None, "Upload failed: " + str(e)
-        
+        return False, room_id, None, "Malformed upload-token response: " + str(e)
+
+    # Step 2: PUT the bytes directly to Vercel Blob storage.
+    request_id = "{}:{}:{:x}".format(store_id, int(time.time() * 1000), random.randint(0, 0xFFFFFF))
+    blob_headers = {
+        "authorization": "Bearer " + client_token,
+        "x-vercel-blob-store-id": store_id,
+        "x-api-version": "12",
+        "x-api-blob-request-id": request_id,
+        "x-api-blob-request-attempt": "0",
+        "x-vercel-blob-access": "private",
+        "x-content-type": content_type,
+        "x-add-random-suffix": "0",
+        "x-allow-overwrite": "1",
+    }
+    blob_put_url = "https://vercel.com/api/blob/?pathname=" + _url_quote(pathname)
+    ok, put_response, err = _http_put_bytes(blob_put_url, file_bytes, blob_headers, timeout_ms)
+    if not ok:
+        return False, room_id, None, "Blob upload failed: " + str(err)
+
+    try:
+        blob_data = json.loads(put_response)
+        blob_url = blob_data["url"]
+    except Exception as e:
+        return False, room_id, None, "Malformed blob upload response: " + str(e)
+
+    # Step 3: register the room with the resulting blob URL -- a few bytes
+    # of metadata, never the model itself.
+    register_url = "{}/api/room/{}".format(ARVR_URL_BASE, room_id)
+    register_payload = json.dumps({
+        "blobUrl": blob_url,
+        "filename": filename,
+        "contentType": content_type,
+        "size": len(file_bytes),
+    })
+    ok, _, err = _http_post_json(register_url, register_payload, timeout_ms)
+    if not ok:
+        return False, room_id, None, "Room registration failed: " + str(err)
+
     web_url = "{}?room={}".format(ARVR_URL_BASE, room_id)
     return True, room_id, web_url, None
 
