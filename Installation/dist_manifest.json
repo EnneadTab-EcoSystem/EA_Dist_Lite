@@ -384,7 +384,7 @@
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/ennead_printer.bad_pushbutton/OLD_ennead_printer_script.py": "baa9eb0600fdabb3d94134506a2f1ababc793431809db3f01ba19352bcf998c0",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/export isolated walltype.pushbutton/isolated export walltype_script.py": "29d3061a8b3630658250c7f86b36c8bbca48c534aa0d55798923bdac2eea7b41",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/export_ost_material_table.pushbutton/export_ost_material_table_script.py": "cc6292f02fc7f6178ac82fc582dba9d20cd9fef3c7b9a99567404843f942ff5d",
-        "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/publish_to_bimrunner.pushbutton/publish_to_bimrunner_script.py": "41a5a7198e4060392457ce8c907e221e70d77b6aa7171fea361f95191c3b5697",
+        "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/publish_to_bimrunner.pushbutton/publish_to_bimrunner_script.py": "b8a119d6512bd09a857326bfe9f104d0627b9893361b4fd739ffb91b4326601b",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/schedule2excel.pushbutton/schedule2excel_script.py": "a487a06de62f6832fe371ec2c7d0027d91ab0f1c79348fa4ea0c95709aeccdda",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/update_miro.pushbutton/update_miro_script.py": "a6043f1771303c73246d221a9eef14718789112bd38e9db5fc0a33a5301375cc",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Manage.panel/Keynote Tags.pulldown/wrong type of TAGS.pushbutton/identy wrong keynote_script.py": "1a56e1afe2a04f6af2fe4dc1aa240e31d64cc6ddadd2d2c128d344622f7db918",
@@ -711,11 +711,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-09-21T15:05:27",
-    "source_commit": "30ba9892001af3462dda5c0a55a4741ef65c2f96",
+    "published_at": "2026-09-21T15:06:48",
+    "source_commit": "4270097ed484c85981419be00bc5c64c1f03c965",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.09.21.1505"
+    "version": "2026.09.21.1506"
 }
