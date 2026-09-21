@@ -21,6 +21,10 @@ Usage:
 __title__ = "Publish to\nBimRunner"
 __author__ = "EnneadTab"
 
+import clr
+clr.AddReference("System.Windows.Forms")
+from System.Windows.Forms import Application as WinFormsApplication
+
 from Autodesk.Revit.UI import IExternalEventHandler, ExternalEvent
 from Autodesk.Revit.Exceptions import InvalidOperationException
 from pyrevit.forms import WPFWindow
@@ -331,10 +335,24 @@ class publish_to_bimrunner_ModelessForm(WPFWindow):
             # mirrors the "give it a beat" idiom other modeless forms in
             # this repo use around ExternalEvent -- NOT a substitute for a
             # real completion signal, which pyRevit's ExternalEvent does
-            # not expose. Flagged as a spot to revisit if sheets ever start
-            # reporting a false failure under load.
+            # not expose.
+            #
+            # This modeless form shares Revit's own UI thread (Show(), not a
+            # separate STA thread), and Revit only services a raised
+            # ExternalEvent during its Idling loop, which requires this same
+            # thread to return to its message pump. A bare time.sleep() here
+            # blocks that pump completely, so the very message that would end
+            # the wait can never be processed -- the loop is then guaranteed
+            # to ride out its full per-sheet timeout, and Revit's main window
+            # reports Not Responding for the whole wait (confirmed live
+            # incident #6396, 2026-09-21: Revit hung with near-zero CPU for
+            # 9+ minutes and had to be force-killed). WinFormsApplication.
+            # DoEvents() pumps the message queue each tick so the Idling
+            # callback -- and the rest of the UI -- can actually run while we
+            # wait.
             waited = 0.0
             while self.publish_event_handler.OUT is None and waited < 300.0:
+                WinFormsApplication.DoEvents()
                 time.sleep(0.25)
                 waited += 0.25
 
