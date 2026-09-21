@@ -3,9 +3,11 @@ __title__ = "ARVROverlay"
 __doc__ = """EnneadTab-ARVR: Zero-Install Mobile Camera AR Overlay for 3D Models.
 
 Beam your 3D models onto your smartphone camera in augmented reality:
+- Pick objects in the viewport right from this dialog if nothing is preselected
 - Export selected Rhino objects to .GLB
 - Stage model in local temp folder
 - Direct upload to cloud room session
+- Shows the phone-ready QR code and link right here, no browser hop needed
 - Pick existing local .GLB / .GLTF / .USDZ file to beam
 - Launch Web Hub (https://enneadtab.com/arvr)
 """
@@ -35,7 +37,7 @@ class ARVRExportDialog(object):
         self.dialog.Resizable = False
         self.dialog.Padding = Eto.Drawing.Padding(16)
         self.dialog.Width = 560
-        self.dialog.Height = 440
+        self.dialog.Height = 660
 
         # Colors
         self.col_bg = RHINO_UI.hex_to_eto_color("#0A0E1A")
@@ -84,14 +86,20 @@ class ARVRExportDialog(object):
         status_layout.Spacing = Eto.Drawing.Size(6, 6)
 
         self.status_lbl = Eto.Forms.Label()
-        if sel_count > 0:
-            self.status_lbl.Text = ">> {} object(s) selected ready to export".format(sel_count)
-            self.status_lbl.TextColor = self.col_green
-        else:
-            self.status_lbl.Text = ">> No objects selected (select objects first, or use Browse below)"
-            self.status_lbl.TextColor = self.col_yellow
         self.status_lbl.Font = Eto.Drawing.Font("Consolas", 9)
         status_layout.AddRow(self.status_lbl)
+        self._refresh_selection_status()
+
+        # Pick objects directly from this dialog when nothing is preselected,
+        # instead of forcing a Cancel-reselect-reopen round trip.
+        self.btn_pick = Eto.Forms.Button()
+        self.btn_pick.Text = "PICK OBJECTS IN VIEWPORT"
+        self.btn_pick.Font = Eto.Drawing.Font("Arial", 8)
+        self.btn_pick.BackgroundColor = self.col_bg
+        self.btn_pick.TextColor = self.col_green
+        self.btn_pick.Height = 26
+        self.btn_pick.Click += self.on_pick_click
+        status_layout.AddRow(self.btn_pick)
 
         # Room ID input
         room_row = Eto.Forms.DynamicLayout()
@@ -140,19 +148,86 @@ class ARVRExportDialog(object):
         self.btn_web.Click += self.on_web_click
         layout.AddRow(self.btn_web)
 
-        # Footer close button
+        # Share Link / inline QR -- populated after a successful send so the
+        # phone can scan right here, instead of the user hopping to the web
+        # hub in a browser just to find the QR code shown there.
+        result_box = Eto.Forms.GroupBox()
+        result_box.Text = "Share Link"
+        result_box.TextColor = self.col_green
+        result_box.BackgroundColor = self.col_panel
+        result_box.Padding = Eto.Drawing.Padding(10)
+
+        result_layout = Eto.Forms.DynamicLayout()
+        result_layout.Spacing = Eto.Drawing.Size(6, 6)
+
+        self.qr_view = Eto.Forms.ImageView()
+        self.qr_view.Size = Eto.Drawing.Size(150, 150)
+        result_layout.AddRow(None, self.qr_view, None)
+
+        self.link_tb = Eto.Forms.TextBox()
+        self.link_tb.ReadOnly = True
+        self.link_tb.PlaceholderText = "Send or browse a model above to get a phone-ready link"
+        self.link_tb.TextColor = self.col_cyan
+        self.link_tb.BackgroundColor = self.col_bg
+        result_layout.AddRow(self.link_tb)
+
+        result_box.Content = result_layout
+        layout.AddRow(result_box)
+
+        # Footer close button (same full-width treatment as the buttons above,
+        # so the button block presents one consistent left/right edge)
         btn_close = Eto.Forms.Button()
         btn_close.Text = "CLOSE"
         btn_close.Font = Eto.Drawing.Font("Arial", 9)
         btn_close.BackgroundColor = self.col_bg
         btn_close.TextColor = self.col_dim
+        btn_close.Height = 32
         btn_close.Click += lambda s, e: self.dialog.Close(False)
-        layout.AddRow(None, btn_close)
+        layout.AddRow(btn_close)
 
         self.dialog.Content = layout
 
     def show(self):
         return self.dialog.ShowModal(Rhino.UI.RhinoEtoApp.MainWindow)
+
+    def _refresh_selection_status(self):
+        sel_count = len(self.sel_objs) if self.sel_objs else 0
+        if sel_count > 0:
+            self.status_lbl.Text = ">> {} object(s) selected ready to export".format(sel_count)
+            self.status_lbl.TextColor = self.col_green
+        else:
+            self.status_lbl.Text = ">> No objects selected (use Pick below, or Browse a local file)"
+            self.status_lbl.TextColor = self.col_yellow
+
+    def on_pick_click(self, sender, e):
+        # Hide the modal dialog so the Rhino viewport can accept clicks;
+        # ShowModal's nested message loop keeps pumping underneath, so
+        # re-showing after GetObjects() returns resumes right where we left off.
+        self.dialog.Visible = False
+        try:
+            objs = rs.GetObjects("Select objects to beam to AR/VR", preselect=False, select=True)
+        finally:
+            self.dialog.Visible = True
+
+        self.sel_objs = objs if objs else []
+        self._refresh_selection_status()
+
+    def _handle_upload_result(self, ok, room_id, url, err):
+        if not ok:
+            self.status_lbl.Text = ">> Upload failed: {}".format(err or "unknown error")
+            self.status_lbl.TextColor = self.col_magenta
+            return
+
+        self.status_lbl.Text = ">> Beamed to Room {} - scan the QR below on your phone".format(room_id)
+        self.status_lbl.TextColor = self.col_green
+        self.link_tb.Text = url
+
+        qr_path = ARVR.download_qr_code(url)
+        if qr_path:
+            try:
+                self.qr_view.Image = Eto.Drawing.Bitmap(qr_path)
+            except Exception:
+                pass
 
     def on_export_click(self, sender, e):
         objs = rs.SelectedObjects()
@@ -160,7 +235,7 @@ class ARVRExportDialog(object):
             rs.Command("-_SelAll ")
             objs = rs.SelectedObjects()
             if not objs:
-                NOTIFICATION.messenger("No objects found to export. Please select objects in Rhino first.")
+                NOTIFICATION.messenger("No objects found to export. Please select objects in Rhino first, or use Pick Objects above.")
                 return
 
         # Prepare export target path in staging folder
@@ -198,9 +273,8 @@ class ARVRExportDialog(object):
             return
 
         room_input = self.room_tb.Text.strip() if self.room_tb.Text else None
-        ok, room_id, url, err = ARVR.stage_and_upload(out_path, room_id=room_input, auto_open_browser=True)
-        if ok:
-            self.dialog.Close(True)
+        ok, room_id, url, err = ARVR.stage_and_upload(out_path, room_id=room_input, auto_open_browser=False)
+        self._handle_upload_result(ok, room_id, url, err)
 
     def on_browse_click(self, sender, e):
         filter_str = "3D Models (*.glb;*.gltf;*.usdz)|*.glb;*.gltf;*.usdz|All Files (*.*)|*.*"
@@ -209,9 +283,8 @@ class ARVRExportDialog(object):
             return
 
         room_input = self.room_tb.Text.strip() if self.room_tb.Text else None
-        ok, room_id, url, err = ARVR.stage_and_upload(filepath, room_id=room_input, auto_open_browser=True)
-        if ok:
-            self.dialog.Close(True)
+        ok, room_id, url, err = ARVR.stage_and_upload(filepath, room_id=room_input, auto_open_browser=False)
+        self._handle_upload_result(ok, room_id, url, err)
 
     def on_web_click(self, sender, e):
         room_input = self.room_tb.Text.strip() if self.room_tb.Text else None

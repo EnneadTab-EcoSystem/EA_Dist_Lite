@@ -372,7 +372,7 @@
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/apply_doh_sheet_number.pushbutton/apply_doh_sheet_number_script.py": "09accf05f46520f62bb3352b1856430645cb2d96b3e033c99881ca239c47f01c",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/apply_doh_sheet_number.pushbutton/apply_logic.py": "cb20461d963912c7eb64af0a8a15e49233fd8256fa6968169faeb5462e97a7c9",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/apply_doh_sheet_number.pushbutton/test_apply_logic.py": "8608691973bc790d8805687ceb4390bd06327990a769403405e495c7c479124b",
-        "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/arvr_overlay.pushbutton/arvr_overlay_script.py": "84737bb4829f94a83b39c7d27aeb035fa11c754f5b87f44b6a216f59afdd7718",
+        "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/arvr_overlay.pushbutton/arvr_overlay_script.py": "098ef0ab10e3c36e95501f8e72916b828e9fd52a915869746c3a09adf8a18c08",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/content_transfer.pushbutton/content_transfer_script.py": "777b3e0186982bd60573f7bb31aae7e0ffa72db83f4c7e20ba1409d14ca738af",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/ennead_exporter.pushbutton/HELPER.py": "eef5599ac1f94f2014214c49e8a67f4b0b1775958bdae3f45d82d00a9e0f8707",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/ennead_exporter.pushbutton/data_grid_id_map_obj.py": "e9e05f6e275218bbc68d7cb6b07c2efa7c9ed2cb148573d380db02eb41a0cb04",
@@ -539,7 +539,7 @@
         "Apps/lib/EnneadTab/AI/_common.py": "554ec660261432514ff124e1a556f844aaebdd2f10ff90607cf618a8ea688d0d",
         "Apps/lib/EnneadTab/AI/_gate_translate.py": "b35338be86d8beae3d59bd28b978f65276ec5698069eb6ab342273f14d0f257d",
         "Apps/lib/EnneadTab/ARCADE.py": "b85946ed379b7fe6e95888202694dc6f0c7cf2862e9dc2a7dd5edda183514a9a",
-        "Apps/lib/EnneadTab/ARVR.py": "5dad4bb6bd88df3ea8796944362eadea97309fcd02311c216b5fcb682827eedf",
+        "Apps/lib/EnneadTab/ARVR.py": "3dc61c0ce46bf1decbf2955b05b17d6d6fae0d848b9bf76ce02cf26832faf305",
         "Apps/lib/EnneadTab/ASYNC.py": "a3eeb0d2ec327cb8e5f40e42d52c58f6a725075ada5e613ff8657aa46e6d9c76",
         "Apps/lib/EnneadTab/AUTH.py": "0692c15ada1e067eb8114cd2d069b66f6e3272565d945327ceba45281487c29b",
         "Apps/lib/EnneadTab/CODE.py": "676deee7d01e878e906f7b6fe2299eb20838e22a87803aa1da37e8629b64250b",
@@ -711,11 +711,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-09-21T15:06:48",
-    "source_commit": "4270097ed484c85981419be00bc5c64c1f03c965",
+    "published_at": "2026-09-21T15:15:44",
+    "source_commit": "5c0d0748c9f4da32dbc81e55db1b9816dac62e19",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.09.21.1506"
+    "version": "2026.09.21.1515"
 }

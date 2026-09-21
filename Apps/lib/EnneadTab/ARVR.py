@@ -137,6 +137,58 @@ def upload_model_file(filepath, room_id=None, timeout_ms=60000):
     web_url = "{}?room={}".format(ARVR_URL_BASE, room_id)
     return True, room_id, web_url, None
 
+def _url_quote(text):
+    """Percent-encode a URL for embedding in a query string, across Py2/Py3."""
+    try:
+        import urllib
+        return urllib.quote(text, safe="")
+    except AttributeError:
+        from urllib.parse import quote
+        return quote(text, safe="")
+
+def download_qr_code(data_url, size=220):
+    """Fetch a QR code PNG (encoding data_url) from a public QR image API and
+    save it locally, so Rhino/Revit can display it inline in the dialog
+    instead of sending the user to a browser page to see the code.
+
+    Args:
+        data_url (str): the URL the QR code should encode (the room's web_url).
+        size (int): QR image edge length in pixels.
+
+    Returns:
+        str or None: local PNG file path, or None if the fetch failed.
+    """
+    if not data_url:
+        return None
+
+    qr_api_url = "https://api.qrserver.com/v1/create-qr-code/?size={0}x{0}&data={1}".format(
+        size, _url_quote(data_url))
+    out_path = os.path.join(get_staging_directory(), "arvr_qr_{}.png".format(size))
+
+    try:
+        from System.Net import WebRequest, ServicePointManager, SecurityProtocolType # pyright: ignore
+        from System.IO import FileStream, FileMode # pyright: ignore
+        ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12
+        request = WebRequest.Create(qr_api_url)
+        request.Method = "GET"
+        request.Timeout = 15000
+        response = request.GetResponse()
+        response_stream = response.GetResponseStream()
+        file_stream = FileStream(out_path, FileMode.Create)
+        response_stream.CopyTo(file_stream)
+        file_stream.Close()
+        response_stream.Close()
+        response.Close()
+    except ImportError:
+        import urllib.request
+        urllib.request.urlretrieve(qr_api_url, out_path)
+    except Exception:
+        return None
+
+    if os.path.exists(out_path) and os.path.getsize(out_path) > 0:
+        return out_path
+    return None
+
 def open_web_hub(room_id=None):
     """Open the ARVR web app in default browser."""
     if room_id:

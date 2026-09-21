@@ -2,7 +2,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="EnneadTab-ARVR Mobile Camera Overlay"
         Width="480"
-        Height="420"
+        Height="560"
         WindowStartupLocation="CenterScreen"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
@@ -17,6 +17,7 @@
 
     <Grid Margin="20">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -114,8 +115,42 @@
                     Click="on_open_web_clicked" />
         </StackPanel>
 
+        <!-- Share Link / inline QR: populated after a successful send so the
+             phone can scan right here, instead of hopping to the web hub in a
+             browser just to find the QR code shown there. -->
+        <Border x:Name="share_link_card"
+                Grid.Row="3"
+                Background="#121829"
+                BorderBrush="#1E293B"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="12"
+                Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock Text="SHARE LINK"
+                           FontFamily="Consolas"
+                           FontSize="10"
+                           Foreground="#00FF66"
+                           Margin="0,0,0,8" />
+                <Image x:Name="qr_image"
+                       Width="140"
+                       Height="140"
+                       HorizontalAlignment="Center" />
+                <TextBox x:Name="link_textbox"
+                         IsReadOnly="True"
+                         Height="26"
+                         Margin="0,10,0,0"
+                         Background="#0A0E1A"
+                         Foreground="#00F0FF"
+                         BorderBrush="#334155"
+                         Padding="6,2"
+                         FontFamily="Consolas"
+                         FontSize="11" />
+            </StackPanel>
+        </Border>
+
         <!-- Footer -->
-        <Grid Grid.Row="4" Margin="0,10,0,0">
+        <Grid Grid.Row="5" Margin="0,10,0,0">
             <TextBlock Text="enneadtab.com/arvr"
                        FontFamily="Consolas"
                        FontSize="10"
