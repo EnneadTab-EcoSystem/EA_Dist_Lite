@@ -28,6 +28,9 @@ clr.AddReference("PresentationFramework")
 clr.AddReference("WindowsBase")
 
 import Microsoft.Win32 # pyright: ignore
+from System import Uri, UriKind # pyright: ignore
+from System.Windows import Visibility # pyright: ignore
+from System.Windows.Media.Imaging import BitmapImage, BitmapCacheOption # pyright: ignore
 from pyrevit.forms import WPFWindow # pyright: ignore
 
 import proDUCKtion # pyright: ignore 
@@ -66,6 +69,30 @@ class ARVROverlayWindow(WPFWindow):
             txt = self.default_room_id
         return txt.upper()
 
+    def _handle_upload_result(self, ok, room_id, url, err):
+        if not ok:
+            self.status_text.Text = ">> Upload failed: {}".format(err or "unknown error")
+            return
+
+        self.status_text.Text = ">> Beamed to Room {} - scan the QR below on your phone".format(room_id)
+        self.link_textbox.Text = url
+
+        # Inline QR here saves the round trip of opening the web hub in a
+        # browser just to find the QR code it would otherwise show.
+        qr_path = ARVR.download_qr_code(url)
+        if qr_path:
+            try:
+                bmp = BitmapImage()
+                bmp.BeginInit()
+                bmp.CacheOption = BitmapCacheOption.OnLoad
+                bmp.UriSource = Uri(qr_path, UriKind.Absolute)
+                bmp.EndInit()
+                self.qr_image.Source = bmp
+            except Exception:
+                pass
+
+        self.share_link_card.Visibility = Visibility.Visible
+
     def on_export_view_clicked(self, sender, e):
         active_view = self.doc.ActiveView if self.doc else None
         if not active_view or active_view.ViewType != DB.ViewType.ThreeD:
@@ -82,9 +109,8 @@ class ARVROverlayWindow(WPFWindow):
         out_glb = out_base + ".glb"
         if os.path.exists(out_glb) and os.path.getsize(out_glb) > 0:
             room_id = self.get_room_id()
-            ok, r, u, err = ARVR.stage_and_upload(out_glb, room_id=room_id, auto_open_browser=True)
-            if ok:
-                self.Close()
+            ok, r, u, err = ARVR.stage_and_upload(out_glb, room_id=room_id, auto_open_browser=False)
+            self._handle_upload_result(ok, r, u, err)
             return
 
         # Guide user to pick / confirm exported glb
@@ -100,9 +126,8 @@ class ARVROverlayWindow(WPFWindow):
             filepath = dlg.FileName
             if filepath and os.path.exists(filepath):
                 room_id = self.get_room_id()
-                ok, r, u, err = ARVR.stage_and_upload(filepath, room_id=room_id, auto_open_browser=True)
-                if ok:
-                    self.Close()
+                ok, r, u, err = ARVR.stage_and_upload(filepath, room_id=room_id, auto_open_browser=False)
+                self._handle_upload_result(ok, r, u, err)
 
     def on_open_web_clicked(self, sender, e):
         room_id = self.get_room_id()
