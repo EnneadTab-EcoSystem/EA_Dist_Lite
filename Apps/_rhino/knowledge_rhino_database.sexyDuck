@@ -500,7 +500,7 @@
     "File.tab\\external_trimmer.button\\external_trimmer_right.py": {
         "script": "File.tab\\external_trimmer.button\\external_trimmer_right.py",
         "icon": "File.tab\\external_trimmer.button\\icon.png",
-        "alias": "ExternalTrimmer",
+        "alias": "RefreshExternalLink",
         "doc": "Update external linked references.\n\nKey Features:\n- External block updating\n- Link synchronization\n- Reference management\n- File dependency tracking\n- Automatic refresh handling",
         "tab": "File.tab",
         "tab_icon": "File.tab\\icon.png",

@@ -4661,7 +4661,7 @@ EA_ExternalTrimmer</script>
     </macro_item>
     <macro_item guid="f0092274-0f9e-4a59-9d8c-50e358d7b51f" bitmap_id="aeab6fdd-17bd-4667-92ef-e07da55beb27">
       <text>
-        <locale_1033>ExternalTrimmer</locale_1033>
+        <locale_1033>RefreshExternalLink</locale_1033>
       </text>
       <tooltip>
         <locale_1033>Update external linked references.
@@ -4684,13 +4684,13 @@ Key Features:
 - Automatic refresh handling</locale_1033>
       </help_text>
       <button_text>
-        <locale_1033>ExternalTrimmer</locale_1033>
+        <locale_1033>RefreshExternalLink</locale_1033>
       </button_text>
       <menu_text>
-        <locale_1033>ExternalTrimmer</locale_1033>
+        <locale_1033>RefreshExternalLink</locale_1033>
       </menu_text>
       <script>EA_ActivateEnneadTab
-EA_ExternalTrimmer</script>
+EA_RefreshExternalLink</script>
     </macro_item>
     <macro_item guid="352e73f2-3dc3-4e20-b49c-03eac768b879" bitmap_id="28564a23-c114-4a3e-a9c8-6532fb5b3a70">
       <text>
