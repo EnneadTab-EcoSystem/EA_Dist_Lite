@@ -15,12 +15,28 @@ class DocsWikiStage(PublishStage):
 
     @property
     def description(self):
-        return "Builds toolbars, compiles Wiki HTML, updates READMEs, and scans path lengths."
+        return "Generates PDF handbooks, compiles Wiki HTML, updates READMEs, and scans path lengths."
 
     def execute(self, context):
+        self._generate_pdf_handbooks(context)
         self._build_wiki(context)
         self._generate_readmes(context)
         self._check_path_lengths(context)
+
+    def _generate_pdf_handbooks(self, context):
+        """Generate PDF handbooks (Revit and Rhino) in Installation folder."""
+        apps_lib = os.path.join(context.os_repo_folder, "Apps", "lib")
+        if apps_lib not in sys.path:
+            sys.path.insert(0, apps_lib)
+
+        print("Generating PDF handbooks (Revit & Rhino)...")
+        try:
+            from EnneadTab import DOCUMENTATION
+            DOCUMENTATION.generate_documentation(debug=False)
+            print("[OK] PDF handbooks generated successfully.")
+        except Exception as e:
+            raise PublishStageError("Documentation PDF generation failed: {}".format(e))
+
 
     def _build_wiki(self, context):
         """Invoke WikiBuilder if present."""

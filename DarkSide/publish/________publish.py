@@ -1323,6 +1323,8 @@ class RepoPublisher:
         "EnneadTab_OS_UnInstaller.exe",
         "EnneadTab_For_Revit_Installer.exe",
         "EnneadTab_For_Revit_UnInstaller.exe",
+        "EnneadTab_For_Rhino_Installer.exe",
+        "EnneadTab_For_Rhino_UnInstaller.exe",
     )
 
     # 2026-08-07: emptied. AccFileOpenner.exe was the only entry, and PR #110
