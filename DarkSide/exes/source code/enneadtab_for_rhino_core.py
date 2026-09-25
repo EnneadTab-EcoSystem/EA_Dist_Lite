@@ -23,6 +23,8 @@ from __future__ import annotations
 import ctypes
 import json
 import os
+import re
+import shutil
 import subprocess
 import threading
 import time
@@ -343,6 +345,123 @@ class EnneadTabRhinoInstallationManager:
         return ok
 
     # ------------------------------------------------------------------
+    # Rhino 8 workspace persistence (containers.xml)
+    # ------------------------------------------------------------------
+    def _update_rhino8_containers_xml(self) -> bool:
+        """Register or unregister EnneadTab Modern RUI in Rhino 8 containers.xml.
+
+        Rhino 8 changed toolbar persistence: rs.OpenToolbarCollection only affects the
+        live session, and does not persist across restarts unless registered in
+        %APPDATA%/McNeel/Rhinoceros/8.0/settings/Scheme__*/containers.xml under <files>.
+        Directly updating this file guarantees persistence without needing headless Rhino.
+        """
+        dump_folder = _Exe_Util.DUMP_FOLDER
+        if not os.path.exists(dump_folder):
+            try:
+                os.makedirs(dump_folder)
+            except Exception:
+                pass
+
+        rui_filename = "{}_For_Rhino_Modern.rui".format(_Exe_Util.PLUGIN_NAME)
+        target_rui_path = os.path.join(dump_folder, rui_filename)
+
+        if self.is_installing:
+            main_repo = _Exe_Util.find_main_repo()
+            candidates = [
+                os.path.join(main_repo, "Apps", "_rhino", rui_filename),
+                os.path.join(_Exe_Util.DIST_FOLDER, "Apps", "_rhino", rui_filename),
+            ]
+            for cand in candidates:
+                if os.path.isfile(cand):
+                    try:
+                        shutil.copy2(cand, target_rui_path)
+                        self.log("Staged RUI: {}".format(target_rui_path))
+                    except Exception as e:
+                        self.log("(RUI copy warning: {})".format(e))
+                    break
+
+        appdata = os.environ.get("APPDATA")
+        if not appdata:
+            return False
+
+        rhino8_settings_dir = os.path.join(appdata, "McNeel", "Rhinoceros", "8.0", "settings")
+        if not os.path.isdir(rhino8_settings_dir):
+            return False
+
+        rui_guid = "9d3c8a78-27a1-4c03-b74d-508554dcef36"
+        plugin_guid = "02bf604d-799c-4cc2-830e-8d72f21b14b7"
+        entry_line = '    <file_name guid="{}" plug_in_guid="{}" source="File">{}</file_name>'.format(
+            rui_guid, plugin_guid, target_rui_path
+        )
+
+        modified_any = False
+        for item in os.listdir(rhino8_settings_dir):
+            scheme_dir = os.path.join(rhino8_settings_dir, item)
+            if not os.path.isdir(scheme_dir) or not item.startswith("Scheme__"):
+                continue
+            xml_path = os.path.join(scheme_dir, "containers.xml")
+            if not os.path.isfile(xml_path):
+                continue
+
+            try:
+                with open(xml_path, "r", encoding="utf-8-sig") as f:
+                    content = f.read()
+            except Exception:
+                try:
+                    with open(xml_path, "r") as f:
+                        content = f.read()
+                except Exception:
+                    continue
+
+            has_entry = (target_rui_path.lower() in content.lower()) or (rui_guid.lower() in content.lower())
+
+            if self.is_installing:
+                if has_entry:
+                    self.log("Rhino 8 workspace ({}) already links EnneadTab RUI.".format(item))
+                    modified_any = True
+                    continue
+                if "<files>" in content and "</files>" in content:
+                    content = content.replace("  <files>\n", "  <files>\n{}\n".format(entry_line), 1)
+                elif "<files/>" in content:
+                    content = content.replace("<files/>", "<files>\n{}\n  </files>".format(entry_line), 1)
+                else:
+                    files_block = "  <!--Open RUI files-->\n  <files>\n{}\n  </files>\n".format(entry_line)
+                    if "<!--Plug-in associated files-->" in content:
+                        content = content.replace("  <!--Plug-in associated files-->", files_block + "  <!--Plug-in associated files-->", 1)
+                    elif "<plug_in_files>" in content:
+                        content = content.replace("  <plug_in_files>", files_block + "  <plug_in_files>", 1)
+                    elif "<dock_bars" in content:
+                        content = content.replace("  <dock_bars", files_block + "  <dock_bars", 1)
+                    else:
+                        idx = content.find("</name>")
+                        if idx != -1:
+                            insert_pos = idx + len("</name>\n")
+                            content = content[:insert_pos] + files_block + content[insert_pos:]
+                        else:
+                            continue
+            else:
+                if not has_entry:
+                    modified_any = True
+                    continue
+                lines = content.splitlines(True)
+                new_lines = [l for l in lines if (rui_guid.lower() not in l.lower()) and (target_rui_path.lower() not in l.lower()) and (rui_filename.lower() not in l.lower())]
+                content = "".join(new_lines)
+                content = re.sub(r"[ \t]*<!--Open RUI files-->\s*<files>\s*</files>\s*", "", content)
+                content = re.sub(r"[ \t]*<files>\s*</files>\s*", "", content)
+
+            try:
+                bak_path = xml_path + ".bak"
+                shutil.copy2(xml_path, bak_path)
+                with open(xml_path, "w", encoding="utf-8-sig") as f:
+                    f.write(content)
+                self.log("Updated Rhino 8 toolbar layout in {}/containers.xml".format(item))
+                modified_any = True
+            except Exception as e:
+                self.log("Failed to update {}: {}".format(xml_path, e))
+
+        return modified_any
+
+    # ------------------------------------------------------------------
     # status file (monitored by other processes)
     # ------------------------------------------------------------------
     def _update_status(self, status: str, details: str, end_time: Optional[str] = None) -> None:
@@ -409,6 +528,16 @@ class EnneadTabRhinoInstallationManager:
         self._update_status("running", "Starting EnneadTab for Rhino {}".format(verb))
 
         ok = self._run_bootstrap()
+
+        # Update Rhino 8 containers.xml directly (Option A persistence fix).
+        # In Rhino 8, rs.OpenToolbarCollection during bootstrap only loads the RUI in-memory
+        # for that session and is not persisted. Writing to containers.xml guarantees persistence.
+        try:
+            r8_ok = self._update_rhino8_containers_xml()
+            if r8_ok:
+                ok = True
+        except Exception as e:
+            self.log("(Rhino 8 containers.xml update warning: {})".format(e))
 
         if ok:
             self._update_status(

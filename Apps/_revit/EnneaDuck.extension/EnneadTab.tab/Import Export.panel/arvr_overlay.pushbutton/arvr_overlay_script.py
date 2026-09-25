@@ -69,27 +69,57 @@ class ARVROverlayWindow(WPFWindow):
             txt = self.default_room_id
         return txt.upper()
 
+    def _load_qr_image(self, image_control, file_path):
+        if not file_path or not os.path.exists(file_path):
+            return
+        try:
+            bmp = BitmapImage()
+            bmp.BeginInit()
+            bmp.CacheOption = BitmapCacheOption.OnLoad
+            bmp.UriSource = Uri(file_path, UriKind.Absolute)
+            bmp.EndInit()
+            image_control.Source = bmp
+        except Exception:
+            pass
+
+    def on_copy_mobile_clicked(self, sender, e):
+        txt = self.mobile_link_textbox.Text
+        if txt:
+            try:
+                from System.Windows import Clipboard # pyright: ignore
+                Clipboard.SetText(txt)
+                self.btn_copy_mobile.Content = "COPIED!"
+                NOTIFICATION.messenger("Mobile AR Link copied to clipboard:\n{}".format(txt))
+            except Exception:
+                pass
+
+    def on_copy_room_clicked(self, sender, e):
+        txt = self.room_link_textbox.Text
+        if txt:
+            try:
+                from System.Windows import Clipboard # pyright: ignore
+                Clipboard.SetText(txt)
+                self.btn_copy_room.Content = "COPIED!"
+                NOTIFICATION.messenger("Desktop Room Hub Link copied to clipboard:\n{}".format(txt))
+            except Exception:
+                pass
+
     def _handle_upload_result(self, ok, room_id, url, err):
         if not ok:
             self.status_text.Text = ">> Upload failed: {}".format(err or "unknown error")
             return
 
-        self.status_text.Text = ">> Beamed to Room {} - scan the QR below on your phone".format(room_id)
-        self.link_textbox.Text = url
+        self.status_text.Text = ">> Beamed to Room {} - scan the BIG QR on your phone".format(room_id)
+        
+        mobile_url = ARVR.get_mobile_viewer_url(room_id)
+        self.mobile_link_textbox.Text = mobile_url
+        self.room_link_textbox.Text = url
 
-        # Inline QR here saves the round trip of opening the web hub in a
-        # browser just to find the QR code it would otherwise show.
-        qr_path = ARVR.download_qr_code(url)
-        if qr_path:
-            try:
-                bmp = BitmapImage()
-                bmp.BeginInit()
-                bmp.CacheOption = BitmapCacheOption.OnLoad
-                bmp.UriSource = Uri(qr_path, UriKind.Absolute)
-                bmp.EndInit()
-                self.qr_image.Source = bmp
-            except Exception:
-                pass
+        large_qr, small_qr = ARVR.download_qr_code_pair(room_id, url)
+        if large_qr:
+            self._load_qr_image(self.qr_mobile_image, large_qr)
+        if small_qr:
+            self._load_qr_image(self.qr_room_image, small_qr)
 
         self.share_link_card.Visibility = Visibility.Visible
 

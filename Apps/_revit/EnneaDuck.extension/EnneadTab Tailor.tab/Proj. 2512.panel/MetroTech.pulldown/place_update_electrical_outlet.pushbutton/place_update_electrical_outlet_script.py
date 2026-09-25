@@ -8,15 +8,19 @@ link for any furniture family that carries a `_para_map` marker, lets you
 multi-select which of those discovered families to process, then creates or
 corrects every outlet automatically.
 
-Each marker instance names its own outlet family/type and mount height via its
-`_para_map` JSON parameter, so markers nested in the same furniture instance can
-each place a different outlet at a different height. The outlet instance itself is
-always placed at its host level with zero elevation offset -- mount height is
-instead written onto the outlet's Placement Height parameter (see
+Each marker instance names its own outlet family/type, mount height, AND search
+target (see `target` in PARA_MAP_TEMPLATE -- "wall"/"floor"/"furniture_vertical"/
+"furniture_horizontal", all four keys required) via its `_para_map` JSON parameter,
+so markers nested in the same furniture instance can each place a different outlet
+at a different height searching a different kind of host. The outlet instance
+itself is always placed at its host level with zero elevation offset -- mount
+height is instead written onto the outlet's Placement Height parameter (see
 PLACEMENT_HEIGHT_PARAMETER_NAME), and the outlet family's own internal geometry
-does the visual raising. The marker's raw position is never used directly either
-(markers are modeled above the furniture body on purpose, to stay visible/pickable
--- see the comment above PARA_MAP_TEMPLATE).
+does the visual raising. For a wall/floor target the marker's raw position is never
+used directly (markers are modeled above the furniture body on purpose, to stay
+visible/pickable -- see the comment above PARA_MAP_TEMPLATE); a furniture target
+DOES use the marker's raw position, since the target face can sit at any height on
+the furniture body itself (see find_nearest_furniture_face).
 
 Every outlet this tool creates is tagged with the marker that generated it (see
 SOURCE_MARKER_TAG_PARAMETER_NAME), so a later run finds it by exact lookup instead
@@ -31,7 +35,15 @@ run gets stuck to see exactly what happened. If many markers of the SAME furnitu
 family in a row fail for the identical reason, that family's remaining markers are
 skipped (other selected families are unaffected) instead of grinding through a
 doomed setup; a per-marker error (e.g. a hand-edited _para_map typo) never aborts
-more than that one marker."""
+more than that one marker.
+
+A run only counts as fully successful when EVERY marker found resolved AND applied
+cleanly -- any unresolved marker, apply-phase failure, missing-required-param
+instance, or user cancellation means no. Only then does the tool offer (see
+offer_save_run_selection) to save this run's touched outlets as a named Revit
+selection, prefixed `EnneadTab-OutletRunner_<timestamp>_<your typed run intent>` --
+the furniture family name is never a usable default here (one family commonly
+carries more than one marker), so the run's intent must be typed by hand."""
 __title__ = "Place/Update\nElectrical Outlet"
 
 import datetime
@@ -50,7 +62,7 @@ from System.Windows.Forms import Application  # pyright: ignore
 from pyrevit import forms
 
 from EnneadTab import ERROR_HANDLE, FOLDER, LOG, NOTIFICATION
-from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_SELECTION, REVIT_FAMILY
+from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_SELECTION, REVIT_FAMILY, REVIT_FILTER
 
 from outlet_conflict_row import OutletPlacementTarget
 
@@ -135,7 +147,29 @@ PARA_MAP_TEMPLATE = {
     "family_name": None,
     "type_name": None,
     "mount_height": None,
+    "target": None,
 }
+
+# Which category of host geometry this marker's search is allowed to match --
+# REQUIRED, same enforcement as family_name/type_name/mount_height (see
+# _resolve_one_marker). Search direction is no longer inferred from the outlet
+# family's own FamilyPlacementType -- target now drives that rule directly. "wall"/
+# "floor" search the project-wide wall/floor intersector (find_nearest_host_face,
+# unchanged); "furniture_vertical"/"furniture_horizontal" search the marker's OWN
+# host furniture instance's geometry instead (find_nearest_furniture_face) -- never
+# a neighboring furniture instance, even one that happens to be closer.
+TARGET_WALL = "wall"
+TARGET_FLOOR = "floor"
+TARGET_FURNITURE_VERTICAL = "furniture_vertical"
+TARGET_FURNITURE_HORIZONTAL = "furniture_horizontal"
+VALID_TARGETS = (TARGET_WALL, TARGET_FLOOR, TARGET_FURNITURE_VERTICAL, TARGET_FURNITURE_HORIZONTAL)
+
+# A furniture face counts as "horizontal" when its normal's Z component magnitude is
+# at least this; "vertical" when at most FURNITURE_FACE_VERTICAL_NORMAL_Z_MAX. A
+# sloped face in between matches neither furniture target -- see
+# find_nearest_furniture_face.
+FURNITURE_FACE_HORIZONTAL_NORMAL_Z_MIN = 0.9
+FURNITURE_FACE_VERTICAL_NORMAL_Z_MAX = 0.1
 
 # Written onto every OUTLET this tool creates (never onto the marker -- a marker can
 # live inside a read-only link, so it can never be written to; the outlet always
@@ -889,20 +923,28 @@ def set_progress_title(pb, verb, level_name, family_name=None, type_name=None, m
 
 
 def get_search_scopes(doc):
-    """Return every (search_doc, link_transform) scope to search for furniture/markers:
-    the host document itself (link_transform=None), plus one entry per loaded,
-    resolvable RevitLinkInstance PLACEMENT in the host document -- not one per unique
-    linked file, since the same link file placed more than once (e.g. a repeated
-    site/context link) needs its own transform applied to each placement separately.
-    An unloaded link (GetLinkDocument() returns None) is skipped.
+    """Return every (search_doc, link_transform, link_instance) scope to search for
+    furniture/markers: the host document itself (link_transform=None,
+    link_instance=None), plus one entry per loaded, resolvable RevitLinkInstance
+    PLACEMENT in the host document -- not one per unique linked file, since the same
+    link file placed more than once (e.g. a repeated site/context link) needs its own
+    transform applied to each placement separately. An unloaded link
+    (GetLinkDocument() returns None) is skipped.
+
+    `link_instance` (the placement element itself, not just its transform) is needed
+    by find_nearest_furniture_face's caller to build a combined link Reference
+    (Reference.CreateLinkReference) when a furniture_vertical/furniture_horizontal
+    target's host furniture instance lives inside a link -- a bare Reference obtained
+    from geometry inside the link document is not resolvable against the HOST
+    document on its own.
     """
-    scopes = [(doc, None)]
+    scopes = [(doc, None, None)]
     link_instances = DB.FilteredElementCollector(doc).OfClass(DB.RevitLinkInstance).WhereElementIsNotElementType().ToElements()
     for link_instance in link_instances:
         link_doc = link_instance.GetLinkDocument()
         if link_doc is None:
             continue
-        scopes.append((link_doc, link_instance.GetTotalTransform()))
+        scopes.append((link_doc, link_instance.GetTotalTransform(), link_instance))
     return scopes
 
 
@@ -994,9 +1036,174 @@ def resolve_outlet_symbol(doc, family_name, type_name, cache):
     return cache[key]
 
 
-def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_level, marker, intersector,
-                         symbol_cache, tag_support_cache):
+def get_instance_solid_faces(instance):
+    """Yield tuple (face, transform) for every Face of every Solid in `instance`'s
+    own geometry.
+
+    Uses GetSymbolGeometry() on GeometryInstance objects so that face.Reference
+    points to the true original symbol geometry (required by Revit API for
+    face-based hosting and CreateLinkReference), and accumulates the spatial
+    transform so callers can evaluate positions in scope_doc space.
+    """
+    options = DB.Options()
+    options.ComputeReferences = True
+    options.IncludeNonVisibleObjects = False
+    options.DetailLevel = DB.ViewDetailLevel.Fine
+    geometry = instance.get_Geometry(options)
+    if geometry is None:
+        return
+    stack = [(geometry, DB.Transform.Identity)]
+    while stack:
+        current_elem, current_transform = stack.pop()
+        for geom_object in current_elem:
+            if isinstance(geom_object, DB.Solid):
+                if geom_object.Faces.Size == 0 or getattr(geom_object, "Volume", 1.0) <= 0.0001:
+                    continue
+                for face in geom_object.Faces:
+                    if face.Reference is not None:
+                        yield (face, current_transform)
+            elif isinstance(geom_object, DB.GeometryInstance):
+                try:
+                    inst_transform = current_transform.Multiply(geom_object.Transform)
+                    symbol_geom = geom_object.GetSymbolGeometry()
+                    if symbol_geom is not None:
+                        stack.append((symbol_geom, inst_transform))
+                except Exception:
+                    pass
+
+
+def find_nearest_furniture_face(furniture, point, want_vertical):
+    """Scan `furniture`'s own solid geometry for the nearest face whose normal is
+    vertical (`want_vertical=True`) or horizontal (`False`), within
+    MARKER_RAYCAST_MAX_DISTANCE of `point` (in scope_doc space).
+
+    Uses GetSymbolGeometry() via get_instance_solid_faces to preserve original
+    symbol face references for NewFamilyInstance hosting, while transforming test
+    points into local symbol coordinates for geometric projection. For vertical
+    faces, automatically clamps the probe Z to within the face's vertical limits so
+    markers modeled above the furniture body do not miss the face due to boundary loops.
+
+    Returns:
+        tuple (DB.Face, DB.XYZ nearest_point_on_face) or (None, None) if nothing
+        qualifying is within range. `nearest_point_on_face` is in scope_doc space.
+    """
+    best_face = None
+    best_point = None
+    best_distance = None
+    best_is_planar = False
+    evaluated_count = 0
+    for face, transform in get_instance_solid_faces(furniture):
+        evaluated_count += 1
+        try:
+            inv_transform = transform.Inverse
+            pt_local = inv_transform.OfPoint(point)
+        except Exception:
+            continue
+
+        is_planar = isinstance(face, DB.PlanarFace)
+        scope_normal = None
+        if is_planar:
+            try:
+                local_normal = face.FaceNormal
+                scope_normal = transform.OfVector(local_normal).Normalize()
+            except Exception:
+                scope_normal = None
+
+        if scope_normal is not None:
+            normal_z = abs(scope_normal.Z)
+            if want_vertical and normal_z > FURNITURE_FACE_VERTICAL_NORMAL_Z_MAX:
+                continue
+            if not want_vertical and normal_z < FURNITURE_FACE_HORIZONTAL_NORMAL_Z_MIN:
+                continue
+
+        test_pt = pt_local
+        if want_vertical:
+            try:
+                mesh = face.Triangulate()
+                if mesh is not None and mesh.Vertices.Count > 0:
+                    min_z = min(v.Z for v in mesh.Vertices)
+                    max_z = max(v.Z for v in mesh.Vertices)
+                    if max_z - min_z > 0.02:
+                        clamped_z = max(min_z + 0.01, min(max_z - 0.01, pt_local.Z))
+                        test_pt = DB.XYZ(pt_local.X, pt_local.Y, clamped_z)
+            except Exception:
+                test_pt = pt_local
+
+        candidate_local = None
+        try:
+            proj = face.Project(test_pt)
+            if proj is not None:
+                candidate_local = proj.XYZPoint
+        except Exception:
+            proj = None
+
+        if candidate_local is None:
+            best_edge_dist = None
+            try:
+                for edge_loop in face.EdgeLoops:
+                    for edge in edge_loop.Edges:
+                        eproj = edge.Project(test_pt)
+                        if eproj is not None:
+                            edist = test_pt.DistanceTo(eproj.XYZPoint)
+                            if best_edge_dist is None or edist < best_edge_dist:
+                                best_edge_dist = edist
+                                candidate_local = eproj.XYZPoint
+            except Exception:
+                pass
+            if candidate_local is None or (best_edge_dist is not None and best_edge_dist > 1.0):
+                continue
+
+        if scope_normal is None:
+            try:
+                proj_uv = face.Project(candidate_local)
+                uv = proj_uv.UVPoint if proj_uv else DB.UV(0.5, 0.5)
+                local_normal = face.ComputeNormal(uv)
+                scope_normal = transform.OfVector(local_normal).Normalize()
+            except Exception:
+                continue
+            normal_z = abs(scope_normal.Z)
+            if want_vertical and normal_z > FURNITURE_FACE_VERTICAL_NORMAL_Z_MAX:
+                continue
+            if not want_vertical and normal_z < FURNITURE_FACE_HORIZONTAL_NORMAL_Z_MIN:
+                continue
+
+        candidate_scope = transform.OfPoint(candidate_local)
+        distance = point.DistanceTo(candidate_scope)
+        if distance > MARKER_RAYCAST_MAX_DISTANCE:
+            continue
+
+        if best_distance is None:
+            better = True
+        elif is_planar and not best_is_planar:
+            better = True
+        elif not is_planar and best_is_planar:
+            better = False
+        else:
+            better = distance < best_distance
+
+        if better:
+            best_face = face
+            best_point = candidate_scope
+            best_distance = distance
+            best_is_planar = is_planar
+
+    if best_face is not None:
+        debug_log(
+            "  (furniture [{}] {} face match: evaluated {} faces, best planar={}, distance={} ft, hit_point={})".format(
+                furniture.Id, "vertical" if want_vertical else "horizontal", evaluated_count,
+                best_is_planar, round(best_distance, 3),
+                (round(best_point.X, 2), round(best_point.Y, 2), round(best_point.Z, 2))))
+    return best_face, best_point
+
+
+def _resolve_one_marker(doc, scope_doc, link_transform, link_instance, furniture, furniture_level, marker,
+                         intersector, symbol_cache, tag_support_cache):
     """Resolve one marker to its outlet symbol and host face, or the reason it can't be.
+
+    `link_instance` is the RevitLinkInstance PLACEMENT `furniture` was found under, or
+    None when `furniture` lives directly in the host document (see get_search_scopes).
+    Needed only by the furniture_vertical/furniture_horizontal branch, to build a
+    combined link Reference when the target face itself lives inside a link.
 
     Isolated into its own function so resolve_marker_targets can wrap a single call in
     try/except: a per-marker error (e.g. a hand-edited _para_map with a non-numeric
@@ -1004,8 +1211,9 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
 
     Returns:
         tuple (reason, host, face, hit_point, stable_ref, family, family_type,
-        mount_height, level_name). `reason` is None on success; every other field is
-        None when `reason` is set.
+        mount_height, level_name, is_horizontal, host_level_elevation).
+        `reason` is None on success; every other field is None (or False) when
+        `reason` is set.
     """
     para_map = get_marker_para_map(marker)
     if any(value is not None for value in para_map.values()):
@@ -1014,14 +1222,19 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
     outlet_family_name = para_map.get("family_name")
     outlet_type_name = para_map.get("type_name")
     mount_height = para_map.get("mount_height")
-    if not outlet_family_name or not outlet_type_name or mount_height is None:
-        return ("{} needs family_name, type_name, and mount_height all set".format(PARA_MAP_PARAMETER_NAME),
-                None, None, None, None, None, None, None, None)
+    target = para_map.get("target")
+    def _fail(reason):
+        return (reason, None, None, None, None, None, None, None, None, False, None)
+
+    if not outlet_family_name or not outlet_type_name or mount_height is None or not target:
+        return _fail("{} needs family_name, type_name, mount_height, and target all set".format(PARA_MAP_PARAMETER_NAME))
+    if target not in VALID_TARGETS:
+        return _fail("{} has invalid target {!r} -- must be one of {}".format(
+            PARA_MAP_PARAMETER_NAME, target, VALID_TARGETS))
 
     family, family_type = resolve_outlet_symbol(doc, outlet_family_name, outlet_type_name, symbol_cache)
     if not family or not family_type:
-        return ("outlet [{}] - [{}] is not loaded".format(outlet_family_name, outlet_type_name),
-                None, None, None, None, None, None, None, None)
+        return _fail("outlet [{}] - [{}] is not loaded".format(outlet_family_name, outlet_type_name))
 
     # SOURCE_MARKER_TAG_PARAMETER_NAME and PLACEMENT_HEIGHT_PARAMETER_NAME are both
     # required, no silent fallback. If an outlet of this exact type already exists,
@@ -1032,21 +1245,27 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
         supported = check_outlet_type_supports_parameter(
             doc, outlet_family_name, outlet_type_name, required_param_name, tag_support_cache)
         if supported is False:
-            return ("outlet [{}] - [{}] is missing the required {} parameter -- add it to the family in the "
-                     "Family Editor, then rerun".format(outlet_family_name, outlet_type_name, required_param_name),
-                     None, None, None, None, None, None, None, None)
+            return _fail("outlet [{}] - [{}] is missing the required {} parameter -- add it to the family in the "
+                         "Family Editor, then rerun".format(outlet_family_name, outlet_type_name, required_param_name))
 
     if family.FamilyPlacementType not in (DB.FamilyPlacementType.WorkPlaneBased, DB.FamilyPlacementType.OneLevelBasedHosted):
-        return ("outlet [{}] is neither face-based nor wall-hosted".format(outlet_family_name),
-                None, None, None, None, None, None, None, None)
+        return _fail("outlet [{}] is neither face-based nor wall-hosted".format(outlet_family_name))
+
+    # target drives the search rule, but it must still be mechanically possible for
+    # THIS outlet family to be placed that way. Only a wall-hosted (OneLevelBasedHosted)
+    # family is placed via place_instance_by_wall (do_create) -- every other target
+    # (floor, and both furniture targets) needs a face Reference, which only a
+    # face-based (WorkPlaneBased) family can use.
+    if target != TARGET_WALL and family.FamilyPlacementType != DB.FamilyPlacementType.WorkPlaneBased:
+        return _fail("outlet [{}] target {!r} needs a face-based (WorkPlaneBased) family, but it is wall-hosted "
+                     "(OneLevelBasedHosted)".format(outlet_family_name, target))
 
     if furniture_level is None:
-        return ("host furniture [{}] has no level".format(furniture.Id),
-                None, None, None, None, None, None, None, None)
+        return _fail("host furniture [{}] has no level".format(furniture.Id))
 
     local_point, _orientation = REVIT_FAMILY.get_nested_instance_placement(marker)
     if local_point is None:
-        return ("no location available", None, None, None, None, None, None, None, None)
+        return _fail("no location available")
 
     # The outlet is placed AT its host level, zero elevation offset -- mount_height is
     # never baked into the instance's real Z. Instead it gets written onto the
@@ -1080,23 +1299,59 @@ def _resolve_one_marker(doc, scope_doc, link_transform, furniture, furniture_lev
                  round(furniture_point_in_host.Z, 2)),
                 round(furniture_point_in_host.DistanceTo(corrected_point), 2)))
 
-    required_host_type = DB.Wall if family.FamilyPlacementType == DB.FamilyPlacementType.OneLevelBasedHosted else None
-    # Face-based placement always uses DB.XYZ.BasisZ as its reference_direction (do_create
-    # -- Place on Vertical Face), which Revit rejects if it's parallel to the matched
-    # face's own normal (a horizontal face -- floor/ceiling/soffit). Nothing else
-    # restricts a WorkPlaneBased family's ray-cast to walls only, so reject those hits
-    # here instead of letting one win the fan-cast and crash placement downstream.
-    avoid_normal_parallel_to = (
-        DB.XYZ.BasisZ if family.FamilyPlacementType == DB.FamilyPlacementType.WorkPlaneBased else None)
-    host, face, hit_point, stable_ref = find_nearest_host_face(
-        doc, intersector, corrected_point, required_host_type=required_host_type,
-        avoid_normal_parallel_to=avoid_normal_parallel_to)
-    if host is None:
-        needed = "wall" if required_host_type is not None else "wall/floor"
-        return ("no {} within {} ft in any direction".format(needed, MARKER_RAYCAST_MAX_DISTANCE),
-                None, None, None, None, None, None, None, None)
+    if target in (TARGET_WALL, TARGET_FLOOR):
+        required_host_type = DB.Wall if target == TARGET_WALL else DB.Floor
+        # Face-based placement always uses DB.XYZ.BasisZ as its reference_direction
+        # (do_create -- Place on Vertical Face), which Revit rejects if it's parallel
+        # to the matched face's own normal (a horizontal face -- floor/ceiling/soffit).
+        # Only guards the wall search: a floor target WANTS a horizontal face.
+        avoid_normal_parallel_to = DB.XYZ.BasisZ if target == TARGET_WALL else None
+        host, face, hit_point, stable_ref = find_nearest_host_face(
+            doc, intersector, corrected_point, required_host_type=required_host_type,
+            avoid_normal_parallel_to=avoid_normal_parallel_to)
+        if host is None:
+            return _fail("no {} within {} ft in any direction".format(target, MARKER_RAYCAST_MAX_DISTANCE))
+    else:
+        # furniture_vertical / furniture_horizontal: search the marker's OWN host
+        # furniture instance's geometry only (find_nearest_furniture_face), never a
+        # neighboring instance even if closer.
+        want_vertical = target == TARGET_FURNITURE_VERTICAL
+        search_point = local_point
+        if want_vertical and furniture_level is not None:
+            # Markers are deliberately modeled above furniture geometry (for visibility
+            # and pickability). For vertical faces, projecting a point whose Z is above the
+            # top edge of the face results in Face.Project returning None (outside face
+            # boundary). We probe at the intended mount height (furniture_level.Elevation + mount_height)
+            # which is within the vertical face's Z bounds.
+            probe_z = furniture_level.Elevation + (mount_height or 0.0)
+            search_point = DB.XYZ(local_point.X, local_point.Y, probe_z)
 
-    return (None, host, face, hit_point, stable_ref, family, family_type, mount_height, furniture_level.Name)
+        face, local_hit_point = find_nearest_furniture_face(furniture, search_point, want_vertical)
+        if face is None and search_point != local_point:
+            face, local_hit_point = find_nearest_furniture_face(furniture, local_point, want_vertical)
+
+        if face is None:
+            return _fail("no {} furniture face within {} ft on host furniture [{}]".format(
+                "vertical" if want_vertical else "horizontal", MARKER_RAYCAST_MAX_DISTANCE, furniture.Id))
+        host = furniture
+        hit_point = local_hit_point if link_transform is None else link_transform.OfPoint(local_hit_point)
+        # A bare face.Reference is only resolvable against the document it was
+        # computed in. When `furniture` lives inside a link, that reference must be
+        # wrapped into a combined link reference (valid against the HOST doc) before
+        # it can ever be parsed back and used for NewFamilyInstance placement.
+        if face.Reference is None:
+            return _fail("host furniture [{}] face has no valid Revit reference".format(furniture.Id))
+        elif link_instance is None:
+            stable_ref = face.Reference.ConvertToStableRepresentation(doc)
+        else:
+            stable_ref = face.Reference.CreateLinkReference(link_instance).ConvertToStableRepresentation(doc)
+
+    is_horizontal = (target in (TARGET_FLOOR, TARGET_FURNITURE_HORIZONTAL))
+    host_level_elevation = to_host_point(
+        DB.XYZ(0, 0, furniture_level.Elevation), link_transform).Z if furniture_level else None
+
+    return (None, host, face, hit_point, stable_ref, family, family_type, mount_height,
+            furniture_level.Name, is_horizontal, host_level_elevation)
 
 
 def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, scopes):
@@ -1134,14 +1389,15 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
     Returns:
         tuple (resolved, unresolved):
           resolved   -- list of (marker, marker_tag, host, face, hit_point, stable_ref,
-                        family, family_type, mount_height, level_name)
+                        family, family_type, mount_height, level_name, is_horizontal,
+                        host_level_elevation)
           unresolved -- list of (marker, reason) for markers that can't be placed
     """
     entries_by_family = {}
     for family_name in furniture_family_names:
         entries_by_family[family_name] = []
 
-    for scope_doc, link_transform in scopes:
+    for scope_doc, link_transform, link_instance in scopes:
         furniture_instances = get_furniture_instances(scope_doc, furniture_family_names)
         markers_by_furniture_id = build_para_map_markers_by_furniture_id(scope_doc)
         debug_log("Found {} furniture instance(s) of {} in [{}]".format(
@@ -1156,7 +1412,7 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
             entries_by_family.setdefault(furniture_family_name, [])
             for marker in markers:
                 entries_by_family[furniture_family_name].append(
-                    (furniture, furniture_level, marker, scope_doc, link_transform))
+                    (furniture, furniture_level, marker, scope_doc, link_transform, link_instance))
 
     intersector = build_wall_floor_intersector(view3d)
     tag_support_cache = {}
@@ -1184,15 +1440,17 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
             streak_reason = None
             streak_count = 0
 
-            for index, (furniture, furniture_level, marker, scope_doc, link_transform) in enumerate(entries):
+            for index, (furniture, furniture_level, marker, scope_doc, link_transform, link_instance) in enumerate(entries):
                 try:
-                    reason, host, face, hit_point, stable_ref, family, family_type, mount_height, level_name = \
-                        _resolve_one_marker(
-                            doc, scope_doc, link_transform, furniture, furniture_level, marker, intersector,
-                            symbol_cache, tag_support_cache)
+                    reason, host, face, hit_point, stable_ref, family, family_type, mount_height, level_name, \
+                        is_horizontal, host_level_elevation = _resolve_one_marker(
+                            doc, scope_doc, link_transform, link_instance, furniture, furniture_level, marker,
+                            intersector, symbol_cache, tag_support_cache)
                 except Exception as e:
                     reason = "internal error: {}".format(e)
-                    host = face = hit_point = stable_ref = family = family_type = mount_height = level_name = None
+                    host = face = hit_point = stable_ref = family = family_type = mount_height = level_name = \
+                        host_level_elevation = None
+                    is_horizontal = False
 
                 processed += 1
                 set_progress_title(
@@ -1204,17 +1462,17 @@ def resolve_marker_targets(doc, furniture_family_names, view3d, symbol_cache, sc
                     furniture_point = get_instance_point(furniture)
                     if furniture_point is not None and furniture_level is not None:
                         host_furniture_point = to_host_point(furniture_point, link_transform)
-                        host_level_elevation = to_host_point(
+                        host_level_elev_for_zoom = host_level_elevation if host_level_elevation is not None else to_host_point(
                             DB.XYZ(0, 0, furniture_level.Elevation), link_transform).Z
                         host_level = find_host_level_by_elevation(
-                            doc, host_level_elevation, level_by_elevation_cache)
+                            doc, host_level_elev_for_zoom, level_by_elevation_cache)
                         zoom_active_view_to_point(host_furniture_point, level=host_level, fallback_view=view3d)
 
                 if reason is None:
                     marker_tag = build_marker_tag(scope_doc, marker)
                     resolved.append(
                         (marker, marker_tag, host, face, hit_point, stable_ref, family, family_type, mount_height,
-                         level_name))
+                         level_name, is_horizontal, host_level_elevation))
                     streak_reason = None
                     streak_count = 0
                 else:
@@ -1300,6 +1558,15 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag, view3d):
 
     `level_name` (the HOST FURNITURE's level, e.g. "4TH FLOOR") is carried purely for
     the per-level summary this function returns -- see level_stats below.
+
+    Returns:
+        tuple (result, stats):
+          result -- the human-readable summary string (also written to the debug log).
+          stats  -- dict {"touched_ids": [int, ...], "failed_count": int,
+                    "required_param_failed": int, "user_cancelled": bool}, used by
+                    place_from_markers to decide whether the run counts as fully
+                    successful and, if so, what to offer saving as a Revit selection
+                    (see offer_save_run_selection).
     """
     doc = DOC
     symbol_cache = {}
@@ -1353,11 +1620,15 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag, view3d):
             # that Face's internal .Reference isn't reliably populated for every host
             # face type, which fails with "The Reference of the input face is null"
             # even though the Face DID come from a Reference (see
-            # REVIT_FAMILY.place_instance_by_reference's docstring). DB.XYZ.BasisZ as
-            # reference_direction is the API equivalent of the Revit UI's "Place on
-            # Vertical Face" tool: keeps the instance plumb regardless of face tilt.
+            # REVIT_FAMILY.place_instance_by_reference's docstring).
+            # For vertical faces (walls, furniture panels), DB.XYZ.BasisZ keeps the
+            # instance plumb ("Place on Vertical Face"). For horizontal faces (floors,
+            # desk tops), BasisZ is parallel to the face normal and Revit throws:
+            # "Reference direction is parallel to face normal at insertion point."
+            # Passing BasisX avoids this crash while keeping the instance aligned on the plane.
+            ref_dir = DB.XYZ.BasisX if getattr(item, "is_horizontal", False) else DB.XYZ.BasisZ
             return REVIT_FAMILY.place_instance_by_reference(
-                family_type, reference, point, reference_direction=DB.XYZ.BasisZ, doc=doc)
+                family_type, reference, point, reference_direction=ref_dir, doc=doc)
         if isinstance(host, DB.Wall):
             level = doc.GetElement(host.LevelId)
             return REVIT_FAMILY.place_instance_by_wall(family_type, point, host, level=level, doc=doc)
@@ -1392,6 +1663,12 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag, view3d):
     # cannot exist (_resolve_one_marker already fails that marker), so this key is
     # never None in practice, but "(no level)" is the fallback just in case.
     level_stats = {}
+
+    # Every instance id actually touched (created/replaced/updated/retagged) this
+    # run -- used by place_from_markers to build the post-run save-selection set (see
+    # offer_save_run_selection). Never includes already_placed (a true no-op) or
+    # anything in `failed`.
+    touched_ids = []
 
     def bump_level_stat(level_name, key):
         stats = level_stats.setdefault(level_name or "(no level)", {
@@ -1457,9 +1734,11 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag, view3d):
                     try:
                         instance = do_create(item)
                         if instance and apply_required_params_or_delete(instance, marker_tag, item.mount_height, item):
-                            host_level = apply_schedule_level(instance, item.point[2])
+                            level_elev = getattr(item, "level_elevation", None)
+                            host_level = apply_schedule_level(instance, level_elev if level_elev is not None else item.point[2])
                             created += 1
                             bump_level_stat(item.level_name, "created")
+                            touched_ids.append(element_int_id(instance))
                             debug_log("Placed outlet [{}] - [{}]/[{}] on host [{}] at {} (height {}), tagged.".format(
                                 instance.Id, item.family_name, item.type_name, item.host_id, item.point,
                                 item.mount_height))
@@ -1489,12 +1768,15 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag, view3d):
                         break
                     host_level = None
                     try:
-                        doc.Delete(DB.ElementId(old_instance_id))
                         instance = do_create(item)
                         if instance and apply_required_params_or_delete(instance, marker_tag, item.mount_height, item):
-                            host_level = apply_schedule_level(instance, item.point[2])
+                            doc.Delete(DB.ElementId(old_instance_id))
+                            level_elev = getattr(item, "level_elevation", None)
+                            host_level = apply_schedule_level(
+                                instance, level_elev if level_elev is not None else item.point[2])
                             replaced += 1
                             bump_level_stat(item.level_name, "replaced")
+                            touched_ids.append(element_int_id(instance))
                             debug_log("Replaced outlet [{}] with [{}] - [{}]/[{}] at {} (height {}), tagged.".format(
                                 old_instance_id, instance.Id, item.family_name, item.type_name, item.point,
                                 item.mount_height))
@@ -1549,6 +1831,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag, view3d):
                         host_level = apply_schedule_level(existing, target_point_tuple[2])
                         updated += 1
                         bump_level_stat(level_name, "updated")
+                        touched_ids.append(instance_id)
                         if not (tag_ok and height_ok):
                             required_param_failed += 1
                             bump_level_stat(level_name, "needs_attention")
@@ -1600,6 +1883,7 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag, view3d):
                         existing_point_for_level = get_instance_point(existing)
                         host_level = apply_schedule_level(
                             existing, existing_point_for_level.Z if existing_point_for_level else None)
+                        touched_ids.append(instance_id)
                         if tag_ok and height_ok:
                             retagged += 1
                             bump_level_stat(level_name, "retagged")
@@ -1669,14 +1953,104 @@ def apply_marker_outlets(to_create, to_replace, to_update, to_retag, view3d):
 
     result = "\n".join(lines)
     debug_log(result)
-    return result
+    stats = {
+        "touched_ids": touched_ids,
+        "failed_count": len(failed),
+        "required_param_failed": required_param_failed,
+        "user_cancelled": user_cancelled,
+    }
+    return result, stats
+
+
+RUN_SELECTION_NAME_PREFIX = "EnneadTab-OutletRunner"
+
+# Revit rejects any element name containing these characters -- validated up front so
+# a bad name is caught before create_selection_filter ever runs, not surfaced as a
+# raw API exception.
+_INVALID_SELECTION_NAME_CHARS = set("\\:{}[]|;<>?`~")
+
+
+def _is_valid_selection_name_suffix(suffix):
+    if not suffix or not suffix.strip():
+        return False
+    return not any(char in _INVALID_SELECTION_NAME_CHARS for char in suffix)
+
+
+def offer_save_run_selection(doc, touched_ids):
+    """After a run counts as FULLY successful (see run_fully_successful in
+    place_from_markers -- every marker found this run resolved AND applied cleanly,
+    no failures, no missing-required-param instances, no user cancellation), ask for
+    a short run-intent suffix and save this run's touched outlets as a named Revit
+    selection (DB.SelectionFilterElement -- see REVIT_FILTER.create_selection_filter),
+    plus set them as the live selection (REVIT_SELECTION.set_selection).
+
+    A furniture family name is NOT a usable default here: one furniture family
+    commonly carries more than one marker per instance (each naming a different
+    outlet -- see PARA_MAP_TEMPLATE), so there is no single reliable auto-derived
+    name for "this run's intent" (which floors/rooms/pass this was) -- the user must
+    type it. The full saved name is always RUN_SELECTION_NAME_PREFIX + a
+    yyyymmdd-hhmmss timestamp + that typed suffix.
+
+    Never blocks or fails the run itself -- this runs strictly AFTER the run's own
+    NOTIFICATION.messenger summary, as a nicety. Cancelling the prompt (Escape/Cancel,
+    forms.ask_for_string returns None) skips saving with no error. Submitting empty,
+    invalid-character, or already-used text re-prompts instead -- every saved
+    selection here must have a valid, non-overlapping name, never a silently broken
+    or silently overwritten one.
+    """
+    timestamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    default_suffix = ""
+    full_name = None
+    while True:
+        suffix = forms.ask_for_string(
+            default=default_suffix,
+            prompt="Save this run's {} outlet(s) as a Revit selection?\n\n"
+                   "Full name will be: {}_{}_<your text below>\n\n"
+                   "Describe this run's intent (e.g. which floors/rooms/pass) -- "
+                   "Cancel to skip saving.".format(len(touched_ids), RUN_SELECTION_NAME_PREFIX, timestamp),
+            title="Save Run As Selection")
+        if suffix is None:
+            debug_log("Run selection not saved (user cancelled the save-selection prompt).")
+            return
+        suffix = suffix.strip()
+        if not _is_valid_selection_name_suffix(suffix):
+            forms.alert(
+                "Name must be non-empty and cannot contain any of: {}".format(
+                    " ".join(sorted(_INVALID_SELECTION_NAME_CHARS))),
+                title="Invalid Name")
+            default_suffix = suffix
+            continue
+        candidate_name = "{}_{}_{}".format(RUN_SELECTION_NAME_PREFIX, timestamp, suffix)
+        if REVIT_FILTER.get_selection_filter_by_name(doc, candidate_name) is not None:
+            forms.alert(
+                "A selection named '{}' already exists -- choose a different name.".format(candidate_name),
+                title="Name Already Used")
+            default_suffix = suffix
+            continue
+        full_name = candidate_name
+        break
+
+    elements = [doc.GetElement(DB.ElementId(element_id)) for element_id in touched_ids]
+    elements = [element for element in elements if element is not None]
+
+    t = DB.Transaction(doc, "Save MetroTech Outlet Run Selection")
+    t.Start()
+    try:
+        REVIT_FILTER.create_selection_filter(doc, full_name, elements)
+        t.Commit()
+    except Exception:
+        t.RollBack()
+        raise
+    REVIT_SELECTION.set_selection(elements)
+    debug_log("Saved {} outlet(s) to selection [{}].".format(len(elements), full_name))
+    NOTIFICATION.messenger("Saved {} outlet(s) to selection '{}'.".format(len(elements), full_name))
 
 
 def place_from_markers(doc):
     scopes = get_search_scopes(doc)
 
     qualified_names = set()
-    for scope_doc, _link_transform in scopes:
+    for scope_doc, _link_transform, _link_instance in scopes:
         qualified_names.update(discover_qualified_furniture_family_names(scope_doc))
     qualified_names = sorted(qualified_names)
     if not qualified_names:
@@ -1739,13 +2113,14 @@ def place_from_markers(doc):
         to_retag = []         # (instance_id, marker_tag, mount_height, level_name)
         already_placed = []   # existing instance, no action needed
         skipped_foreign = []  # existing instance nearby but owned by another user
-        for marker, marker_tag, host, face, hit_point, stable_ref, family, family_type, mount_height, level_name \
-                in resolved:
+        for marker, marker_tag, host, face, hit_point, stable_ref, family, family_type, mount_height, level_name, \
+                is_horizontal, host_level_elev in resolved:
             point_tuple = (hit_point.X, hit_point.Y, hit_point.Z)
             type_name = type_name_of(family_type)
             use_stable_ref = stable_ref if family.FamilyPlacementType == DB.FamilyPlacementType.WorkPlaneBased else None
             target = OutletPlacementTarget(
-                element_int_id(host), point_tuple, family.Name, type_name, mount_height, level_name, use_stable_ref)
+                element_int_id(host), point_tuple, family.Name, type_name, mount_height, level_name, use_stable_ref,
+                is_horizontal=is_horizontal, level_elevation=host_level_elev)
 
             existing = outlets_by_marker_tag.get(marker_tag)
             if existing is None:
@@ -1781,7 +2156,10 @@ def place_from_markers(doc):
             existing_height = get_outlet_placement_height(existing)
             same_height = existing_height is not None and abs(existing_height - mount_height) < 0.001
 
-            if existing_family_name != family.Name:
+            existing_host = getattr(existing, "Host", None)
+            host_changed = existing_host is not None and element_int_id(existing_host) != target.host_id
+
+            if existing_family_name != family.Name or host_changed:
                 to_replace.append((element_int_id(existing), target, marker_tag))
             elif existing_type_name == type_name and same_position and same_height:
                 already_placed.append(existing)
@@ -1791,7 +2169,7 @@ def place_from_markers(doc):
                 to_update.append(
                     (element_int_id(existing), point_tuple, type_name, marker_tag, mount_height, level_name))
 
-        result = apply_marker_outlets(to_create, to_replace, to_update, to_retag, view3d)
+        result, apply_stats = apply_marker_outlets(to_create, to_replace, to_update, to_retag, view3d)
         lines = ["Furniture: [{}]".format(furniture_label), result]
         if already_placed:
             lines.append("{} outlet(s) already sat exactly on their marker, left untouched".format(len(already_placed)))
@@ -1801,6 +2179,19 @@ def place_from_markers(doc):
         if unresolved:
             lines.append("{} marker(s) could not be placed, see output for detail".format(len(unresolved)))
         NOTIFICATION.messenger(main_text="\n".join(lines))
+
+        # Strict success gate for the save-selection offer below: every marker found
+        # this run must have resolved AND applied cleanly -- a marker left unresolved,
+        # an apply-phase failure, an incompletely-configured (missing required param)
+        # instance, or a user cancellation all count as NOT successful, even if most
+        # of the run went fine. "Found 100 markers, placed 100 outlets" is the bar.
+        run_fully_successful = (
+            not unresolved
+            and not apply_stats["user_cancelled"]
+            and apply_stats["failed_count"] == 0
+            and apply_stats["required_param_failed"] == 0)
+        if run_fully_successful and apply_stats["touched_ids"]:
+            offer_save_run_selection(doc, apply_stats["touched_ids"])
     finally:
         log_path = save_run_log()
         if log_path:

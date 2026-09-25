@@ -194,6 +194,56 @@ try {
     }
     $env:ENNEADTAB_PUBLISH_SHA = $resolvedSha
 
+    # Sync sibling dist repos: if a clean dist repo is behind origin/main, fast-forward it
+    # so publish builds on top of any remote commits rather than failing on STALE_CLONE.
+    # Relax $ErrorActionPreference around native git commands on PS 5.1 to prevent NativeCommandError on stderr.
+    Write-Host "Sync sibling dist repos:" -ForegroundColor Cyan
+    $parentDir = Split-Path -Parent $clone
+    $prevSyncEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        Get-ChildItem -LiteralPath $parentDir -Directory | Where-Object { $_.Name -like 'EA_Dist*' } | ForEach-Object {
+            $distPath = $_.FullName
+            Write-Host "  Checking $distPath ..."
+            Push-Location $distPath
+            try {
+                $isGit = (git rev-parse --is-inside-work-tree 2>&1 | Out-String).Trim()
+                if ($LASTEXITCODE -eq 0 -and $isGit -eq "true") {
+                    $status = (git status --porcelain 2>&1 | Out-String).Trim()
+                    if (-not $status) {
+                        git -c gc.auto=0 fetch origin main 2>&1 | Out-Null
+                        if ($LASTEXITCODE -eq 0) {
+                            $diffCount = (git rev-list --left-right --count origin/main...HEAD 2>&1 | Out-String).Trim()
+                            if ($LASTEXITCODE -eq 0 -and $diffCount -match '^\s*(\d+)\s+(\d+)\s*$') {
+                                $behind = [int]$matches[1]
+                                $ahead = [int]$matches[2]
+                                if ($behind -gt 0 -and $ahead -eq 0) {
+                                    Write-Host "    Fast-forwarding $behind commit(s) from origin/main..." -ForegroundColor Yellow
+                                    git merge --ff-only origin/main 2>&1 | Out-Null
+                                    if ($LASTEXITCODE -ne 0) {
+                                        Write-Host "    Warning: git merge --ff-only failed (exit $LASTEXITCODE)" -ForegroundColor Yellow
+                                    } else {
+                                        Write-Host "    Successfully fast-forwarded to $(git rev-parse --short HEAD)" -ForegroundColor Green
+                                    }
+                                } else {
+                                    Write-Host "    Already up to date (behind=$behind, ahead=$ahead)"
+                                }
+                            }
+                        }
+                    } else {
+                        Write-Host "    Skipping sync: working tree is dirty" -ForegroundColor Yellow
+                    }
+                }
+            } finally {
+                Pop-Location
+            }
+        }
+    } finally {
+        $ErrorActionPreference = $prevSyncEAP
+    }
+    Write-Host ""
+
+
     if ($Production) {
         # Runs against the RESET clone, so it reads the siblings this publish
         # will actually force-push -- not whatever the caller believed. The
