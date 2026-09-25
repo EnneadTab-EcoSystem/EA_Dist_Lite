@@ -34,10 +34,10 @@ class ARVRExportDialog(object):
     def __init__(self):
         self.dialog = Eto.Forms.Dialog[bool]()
         self.dialog.Title = "EnneadTab-ARVR :: Mobile AR Overlay Hub"
-        self.dialog.Resizable = False
+        self.dialog.Resizable = True
         self.dialog.Padding = Eto.Drawing.Padding(16)
-        self.dialog.Width = 560
-        self.dialog.Height = 660
+        self.dialog.Width = 640
+        self.dialog.Height = 780
 
         # Colors
         self.col_bg = RHINO_UI.hex_to_eto_color("#0A0E1A")
@@ -148,28 +148,96 @@ class ARVRExportDialog(object):
         self.btn_web.Click += self.on_web_click
         layout.AddRow(self.btn_web)
 
-        # Share Link / inline QR -- populated after a successful send so the
-        # phone can scan right here, instead of the user hopping to the web
-        # hub in a browser just to find the QR code shown there.
+        # Share Link / inline Dual QR Codes:
+        # 1. Big QR: Mobile AR viewer directly in space
+        # 2. Small QR: Desktop Room Hub
         result_box = Eto.Forms.GroupBox()
-        result_box.Text = "Share Link"
+        result_box.Text = "Share Links & QR Codes"
         result_box.TextColor = self.col_green
         result_box.BackgroundColor = self.col_panel
         result_box.Padding = Eto.Drawing.Padding(10)
 
         result_layout = Eto.Forms.DynamicLayout()
-        result_layout.Spacing = Eto.Drawing.Size(6, 6)
+        result_layout.Spacing = Eto.Drawing.Size(12, 8)
 
-        self.qr_view = Eto.Forms.ImageView()
-        self.qr_view.Size = Eto.Drawing.Size(150, 150)
-        result_layout.AddRow(None, self.qr_view, None)
+        # 2-column layout for the two QR codes
+        qr_cols = Eto.Forms.DynamicLayout()
+        qr_cols.Spacing = Eto.Drawing.Size(16, 6)
 
-        self.link_tb = Eto.Forms.TextBox()
-        self.link_tb.ReadOnly = True
-        self.link_tb.PlaceholderText = "Send or browse a model above to get a phone-ready link"
-        self.link_tb.TextColor = self.col_cyan
-        self.link_tb.BackgroundColor = self.col_bg
-        result_layout.AddRow(self.link_tb)
+        # Left Column: Big QR for Mobile AR
+        mobile_box = Eto.Forms.DynamicLayout()
+        mobile_box.Spacing = Eto.Drawing.Size(4, 4)
+        m_title = Eto.Forms.Label()
+        m_title.Text = "[ 1. MOBILE AR VIEWER ]"
+        m_title.Font = Eto.Drawing.Font("Consolas", 10, Eto.Drawing.FontStyle.Bold)
+        m_title.TextColor = self.col_green
+        m_desc = Eto.Forms.Label()
+        m_desc.Text = "Big QR - scan with phone camera"
+        m_desc.Font = Eto.Drawing.Font("Arial", 8)
+        m_desc.TextColor = self.col_dim
+        mobile_box.AddRow(m_title)
+        mobile_box.AddRow(m_desc)
+
+        self.qr_mobile_view = Eto.Forms.ImageView()
+        self.qr_mobile_view.Size = Eto.Drawing.Size(180, 180)
+        mobile_box.AddRow(None, self.qr_mobile_view, None)
+
+        self.mobile_link_tb = Eto.Forms.TextBox()
+        self.mobile_link_tb.ReadOnly = True
+        self.mobile_link_tb.PlaceholderText = "Mobile AR Viewer URL..."
+        self.mobile_link_tb.TextColor = self.col_cyan
+        self.mobile_link_tb.BackgroundColor = self.col_bg
+        self.mobile_link_tb.Font = Eto.Drawing.Font("Consolas", 8)
+
+        self.btn_copy_mobile = Eto.Forms.Button()
+        self.btn_copy_mobile.Text = "COPY MOBILE AR LINK"
+        self.btn_copy_mobile.Font = Eto.Drawing.Font("Arial", 8)
+        self.btn_copy_mobile.BackgroundColor = self.col_bg
+        self.btn_copy_mobile.TextColor = self.col_green
+        self.btn_copy_mobile.Height = 24
+        self.btn_copy_mobile.Click += self.on_copy_mobile_click
+
+        mobile_box.AddRow(self.mobile_link_tb)
+        mobile_box.AddRow(self.btn_copy_mobile)
+
+        # Right Column: Small QR for Room Page
+        room_box = Eto.Forms.DynamicLayout()
+        room_box.Spacing = Eto.Drawing.Size(4, 4)
+        r_title = Eto.Forms.Label()
+        r_title.Text = "[ 2. ROOM CONTROL PAGE ]"
+        r_title.Font = Eto.Drawing.Font("Consolas", 10, Eto.Drawing.FontStyle.Bold)
+        r_title.TextColor = self.col_yellow
+        r_desc = Eto.Forms.Label()
+        r_desc.Text = "Small QR - desktop browser hub"
+        r_desc.Font = Eto.Drawing.Font("Arial", 8)
+        r_desc.TextColor = self.col_dim
+        room_box.AddRow(r_title)
+        room_box.AddRow(r_desc)
+
+        self.qr_room_view = Eto.Forms.ImageView()
+        self.qr_room_view.Size = Eto.Drawing.Size(100, 100)
+        room_box.AddRow(None, self.qr_room_view, None)
+
+        self.room_link_tb = Eto.Forms.TextBox()
+        self.room_link_tb.ReadOnly = True
+        self.room_link_tb.PlaceholderText = "Desktop Room Hub URL..."
+        self.room_link_tb.TextColor = self.col_yellow
+        self.room_link_tb.BackgroundColor = self.col_bg
+        self.room_link_tb.Font = Eto.Drawing.Font("Consolas", 8)
+
+        self.btn_copy_room = Eto.Forms.Button()
+        self.btn_copy_room.Text = "COPY ROOM PAGE LINK"
+        self.btn_copy_room.Font = Eto.Drawing.Font("Arial", 8)
+        self.btn_copy_room.BackgroundColor = self.col_bg
+        self.btn_copy_room.TextColor = self.col_yellow
+        self.btn_copy_room.Height = 24
+        self.btn_copy_room.Click += self.on_copy_room_click
+
+        room_box.AddRow(self.room_link_tb)
+        room_box.AddRow(self.btn_copy_room)
+
+        qr_cols.AddRow(mobile_box, room_box)
+        result_layout.AddRow(qr_cols)
 
         result_box.Content = result_layout
         layout.AddRow(result_box)
@@ -212,79 +280,143 @@ class ARVRExportDialog(object):
         self.sel_objs = objs if objs else []
         self._refresh_selection_status()
 
+    def _set_image(self, image_view, file_path):
+        """Safely load an image into an Eto ImageView without locking the file handle."""
+        if not file_path or not os.path.exists(file_path):
+            return
+        try:
+            from System.IO import File, MemoryStream # pyright: ignore
+            data_bytes = File.ReadAllBytes(file_path)
+            ms = MemoryStream(data_bytes)
+            image_view.Image = Eto.Drawing.Bitmap(ms)
+        except:
+            try:
+                image_view.Image = Eto.Drawing.Bitmap(file_path)
+            except:
+                pass
+
+    def _copy_text(self, text):
+        """Copy text to clipboard across IronPython and CPython."""
+        if not text:
+            return
+        try:
+            from System.Windows.Forms import Clipboard # pyright: ignore
+            Clipboard.SetText(text)
+        except:
+            try:
+                import subprocess
+                p = subprocess.Popen(['clip'], stdin=subprocess.PIPE)
+                p.communicate(text.encode('utf-8'))
+            except:
+                pass
+
+    def on_copy_mobile_click(self, sender, e):
+        txt = self.mobile_link_tb.Text
+        if txt:
+            self._copy_text(txt)
+            self.btn_copy_mobile.Text = "COPIED TO CLIPBOARD!"
+            NOTIFICATION.messenger("Mobile AR Link copied to clipboard:\n{}".format(txt))
+
+    def on_copy_room_click(self, sender, e):
+        txt = self.room_link_tb.Text
+        if txt:
+            self._copy_text(txt)
+            self.btn_copy_room.Text = "COPIED TO CLIPBOARD!"
+            NOTIFICATION.messenger("Desktop Room Hub Link copied to clipboard:\n{}".format(txt))
+
     def _handle_upload_result(self, ok, room_id, url, err):
         if not ok:
             self.status_lbl.Text = ">> Upload failed: {}".format(err or "unknown error")
             self.status_lbl.TextColor = self.col_magenta
             return
 
-        self.status_lbl.Text = ">> Beamed to Room {} - scan the QR below on your phone".format(room_id)
+        self.status_lbl.Text = ">> Beamed to Room {} - scan the BIG QR on your phone".format(room_id)
         self.status_lbl.TextColor = self.col_green
-        self.link_tb.Text = url
 
-        qr_path = ARVR.download_qr_code(url)
-        if qr_path:
-            try:
-                self.qr_view.Image = Eto.Drawing.Bitmap(qr_path)
-            except Exception:
-                pass
+        mobile_url = ARVR.get_mobile_viewer_url(room_id)
+        self.mobile_link_tb.Text = mobile_url
+        self.room_link_tb.Text = url
+
+        try:
+            self.btn_web.Text = "OPEN ROOM {} IN BROWSER".format(room_id)
+        except:
+            pass
+
+        try:
+            large_qr, small_qr = ARVR.download_qr_code_pair(room_id, url)
+            if large_qr:
+                self._set_image(self.qr_mobile_view, large_qr)
+            if small_qr:
+                self._set_image(self.qr_room_view, small_qr)
+        except Exception as e:
+            pass
 
     def on_export_click(self, sender, e):
-        objs = rs.SelectedObjects()
-        if not objs:
-            rs.Command("-_SelAll ")
+        try:
             objs = rs.SelectedObjects()
             if not objs:
-                NOTIFICATION.messenger("No objects found to export. Please select objects in Rhino first, or use Pick Objects above.")
+                rs.Command("-_SelAll ")
+                objs = rs.SelectedObjects()
+                if not objs:
+                    NOTIFICATION.messenger("No objects found to export. Please select objects in Rhino first, or use Pick Objects above.")
+                    return
+
+            # Prepare export target path in staging folder
+            doc_name = rs.DocumentName()
+            if doc_name:
+                clean_name = os.path.splitext(doc_name)[0]
+            else:
+                clean_name = "Rhino_Model"
+
+            staging_dir = ARVR.get_staging_directory()
+            out_path = os.path.join(staging_dir, clean_name + ".glb")
+
+            # Delete any leftover file from a previous run first. Without this, a
+            # failed export here would silently re-upload a stale .glb from an
+            # earlier successful export instead of reporting failure.
+            if os.path.exists(out_path):
+                try:
+                    os.remove(out_path)
+                except Exception:
+                    pass
+
+            # Use RhinoDoc.ExportSelected directly (same proven pattern as
+            # File.tab/external_trimmer.button) instead of scripting -_Export
+            # with blind _Enter presses -- that macro approach has no way to
+            # know how many dialogs a given selection will trigger.
+            rs.SelectObjects(objs)
+            try:
+                exported = sc.doc.ExportSelected(out_path)
+            except Exception as export_err:
+                exported = False
+                NOTIFICATION.messenger("Export raised an error: {}".format(export_err))
+
+            if not exported or not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+                NOTIFICATION.messenger("Could not export geometry to .GLB. Please check Rhino export formats or use Browse.")
                 return
 
-        # Prepare export target path in staging folder
-        doc_name = rs.DocumentName()
-        if doc_name:
-            clean_name = os.path.splitext(doc_name)[0]
-        else:
-            clean_name = "Rhino_Model"
-
-        staging_dir = ARVR.get_staging_directory()
-        out_path = os.path.join(staging_dir, clean_name + ".glb")
-
-        # Delete any leftover file from a previous run first. Without this, a
-        # failed export here would silently re-upload a stale .glb from an
-        # earlier successful export instead of reporting failure.
-        if os.path.exists(out_path):
-            try:
-                os.remove(out_path)
-            except Exception:
-                pass
-
-        # Use RhinoDoc.ExportSelected directly (same proven pattern as
-        # File.tab/external_trimmer.button) instead of scripting -_Export
-        # with blind _Enter presses -- that macro approach has no way to
-        # know how many dialogs a given selection will trigger.
-        rs.SelectObjects(objs)
-        try:
-            exported = sc.doc.ExportSelected(out_path)
-        except Exception as export_err:
-            exported = False
-            NOTIFICATION.messenger("Export raised an error: {}".format(export_err))
-
-        if not exported or not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
-            NOTIFICATION.messenger("Could not export geometry to .GLB. Please check Rhino export formats or use Browse.")
-            return
-
-        room_input = self.room_tb.Text.strip() if self.room_tb.Text else None
-        ok, room_id, url, err = ARVR.stage_and_upload(out_path, room_id=room_input, auto_open_browser=False)
-        self._handle_upload_result(ok, room_id, url, err)
+            room_input = self.room_tb.Text.strip() if self.room_tb.Text else None
+            ok, room_id, url, err = ARVR.stage_and_upload(out_path, room_id=room_input, auto_open_browser=False)
+            self._handle_upload_result(ok, room_id, url, err)
+        except Exception as ex:
+            NOTIFICATION.messenger("Export error: {}".format(ex))
+        except:
+            NOTIFICATION.messenger("Unexpected error during export.")
 
     def on_browse_click(self, sender, e):
-        filter_str = "3D Models (*.glb;*.gltf;*.usdz)|*.glb;*.gltf;*.usdz|All Files (*.*)|*.*"
-        filepath = rs.OpenFileName("Select 3D Model to Beam to AR/VR", filter_str)
-        if not filepath or not os.path.exists(filepath):
-            return
+        try:
+            filter_str = "3D Models (*.glb;*.gltf;*.usdz)|*.glb;*.gltf;*.usdz|All Files (*.*)|*.*"
+            filepath = rs.OpenFileName("Select 3D Model to Beam to AR/VR", filter_str)
+            if not filepath or not os.path.exists(filepath):
+                return
 
-        room_input = self.room_tb.Text.strip() if self.room_tb.Text else None
-        ok, room_id, url, err = ARVR.stage_and_upload(filepath, room_id=room_input, auto_open_browser=False)
-        self._handle_upload_result(ok, room_id, url, err)
+            room_input = self.room_tb.Text.strip() if self.room_tb.Text else None
+            ok, room_id, url, err = ARVR.stage_and_upload(filepath, room_id=room_input, auto_open_browser=False)
+            self._handle_upload_result(ok, room_id, url, err)
+        except Exception as ex:
+            NOTIFICATION.messenger("Browse error: {}".format(ex))
+        except:
+            NOTIFICATION.messenger("Unexpected error during browse.")
 
     def on_web_click(self, sender, e):
         room_input = self.room_tb.Text.strip() if self.room_tb.Text else None

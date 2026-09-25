@@ -1,11 +1,11 @@
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="EnneadTab-ARVR Mobile Camera Overlay"
-        Width="480"
-        Height="560"
+        Width="580"
+        Height="760"
         WindowStartupLocation="CenterScreen"
         WindowStyle="SingleBorderWindow"
-        ResizeMode="NoResize"
+        ResizeMode="CanResizeWithGrip"
         Background="#0A0E1A"
         Foreground="#E2E8F0">
     <Window.Resources>
@@ -84,7 +84,7 @@
         <StackPanel Grid.Row="2">
             <!-- Export / Beam Current View Button -->
             <Button x:Name="btn_export_view"
-                    Content="⚡ EXPORT CURRENT 3D VIEW &amp; BEAM TO AR"
+                    Content="EXPORT CURRENT 3D VIEW &amp; BEAM TO AR"
                     Height="40"
                     Background="#FF007F"
                     Foreground="#FFFFFF"
@@ -94,7 +94,7 @@
 
             <!-- Browse & Beam Button -->
             <Button x:Name="btn_browse_model"
-                    Content="📁 BROWSE 3D MODEL (.GLB/.GLTF/.USDZ) &amp; BEAM"
+                    Content="BROWSE 3D MODEL (.GLB/.GLTF/.USDZ) &amp; BEAM"
                     Height="34"
                     Background="#1E293B"
                     Foreground="#00F0FF"
@@ -105,7 +105,7 @@
 
             <!-- Open Web Hub Button -->
             <Button x:Name="btn_open_web"
-                    Content="🌐 OPEN AR/VR WEB HUB (BROWSER)"
+                    Content="OPEN AR/VR WEB HUB (BROWSER)"
                     Height="34"
                     Background="#121829"
                     Foreground="#FFE600"
@@ -115,7 +115,7 @@
                     Click="on_open_web_clicked" />
         </StackPanel>
 
-        <!-- Share Link / inline QR: populated after a successful send so the
+        <!-- Share Link / inline Dual QR: populated after a successful send so the
              phone can scan right here, instead of hopping to the web hub in a
              browser just to find the QR code shown there. -->
         <Border x:Name="share_link_card"
@@ -127,25 +127,113 @@
                 Padding="12"
                 Visibility="Collapsed">
             <StackPanel>
-                <TextBlock Text="SHARE LINK"
+                <TextBlock Text="[ SCAN QR CODES &amp; SHARE LINKS ]"
                            FontFamily="Consolas"
-                           FontSize="10"
+                           FontSize="11"
+                           FontWeight="Bold"
                            Foreground="#00FF66"
-                           Margin="0,0,0,8" />
-                <Image x:Name="qr_image"
-                       Width="140"
-                       Height="140"
-                       HorizontalAlignment="Center" />
-                <TextBox x:Name="link_textbox"
-                         IsReadOnly="True"
-                         Height="26"
-                         Margin="0,10,0,0"
-                         Background="#0A0E1A"
-                         Foreground="#00F0FF"
-                         BorderBrush="#334155"
-                         Padding="6,2"
-                         FontFamily="Consolas"
-                         FontSize="11" />
+                           Margin="0,0,0,10"
+                           HorizontalAlignment="Center" />
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="12" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Left: Big QR for Mobile AR -->
+                    <Border Grid.Column="0"
+                            Background="#0A0E1A"
+                            BorderBrush="#1E293B"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="8">
+                        <StackPanel>
+                            <TextBlock Text="[ 1. MOBILE AR VIEW ]"
+                                       FontFamily="Consolas"
+                                       FontSize="10"
+                                       FontWeight="Bold"
+                                       Foreground="#00FF66"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock Text="Big QR - scan on phone"
+                                       FontFamily="Segoe UI"
+                                       FontSize="9"
+                                       Foreground="#8A99AD"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,2,0,6" />
+                            <Image x:Name="qr_mobile_image"
+                                   Width="160"
+                                   Height="160"
+                                   HorizontalAlignment="Center" />
+                            <TextBox x:Name="mobile_link_textbox"
+                                     IsReadOnly="True"
+                                     Height="24"
+                                     Margin="0,6,0,4"
+                                     Background="#121829"
+                                     Foreground="#00F0FF"
+                                     BorderBrush="#334155"
+                                     Padding="4,2"
+                                     FontFamily="Consolas"
+                                     FontSize="9" />
+                            <Button x:Name="btn_copy_mobile"
+                                    Content="COPY AR LINK"
+                                    Height="24"
+                                    Background="#0A0E1A"
+                                    Foreground="#00FF66"
+                                    BorderBrush="#334155"
+                                    BorderThickness="1"
+                                    FontSize="9"
+                                    Click="on_copy_mobile_clicked" />
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Right: Small QR for Room Page -->
+                    <Border Grid.Column="2"
+                            Background="#0A0E1A"
+                            BorderBrush="#1E293B"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="8">
+                        <StackPanel>
+                            <TextBlock Text="[ 2. ROOM CONTROL PAGE ]"
+                                       FontFamily="Consolas"
+                                       FontSize="10"
+                                       FontWeight="Bold"
+                                       Foreground="#FFE600"
+                                       HorizontalAlignment="Center" />
+                            <TextBlock Text="Small QR - desktop hub"
+                                       FontFamily="Segoe UI"
+                                       FontSize="9"
+                                       Foreground="#8A99AD"
+                                       HorizontalAlignment="Center"
+                                       Margin="0,2,0,6" />
+                            <Image x:Name="qr_room_image"
+                                   Width="100"
+                                   Height="100"
+                                   Margin="0,30,0,30"
+                                   HorizontalAlignment="Center" />
+                            <TextBox x:Name="room_link_textbox"
+                                     IsReadOnly="True"
+                                     Height="24"
+                                     Margin="0,6,0,4"
+                                     Background="#121829"
+                                     Foreground="#FFE600"
+                                     BorderBrush="#334155"
+                                     Padding="4,2"
+                                     FontFamily="Consolas"
+                                     FontSize="9" />
+                            <Button x:Name="btn_copy_room"
+                                    Content="COPY ROOM LINK"
+                                    Height="24"
+                                    Background="#0A0E1A"
+                                    Foreground="#FFE600"
+                                    BorderBrush="#334155"
+                                    BorderThickness="1"
+                                    FontSize="9"
+                                    Click="on_copy_room_clicked" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
             </StackPanel>
         </Border>
 

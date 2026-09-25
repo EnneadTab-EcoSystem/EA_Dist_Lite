@@ -11,12 +11,12 @@ Features:
 - Dynamic merging of coplanar surfaces at same elevation
 - Support for single surfaces and polysurfaces
 - Live comparison of how much is off from target.
-- Customizable HUD font size for long layer trees
+- Customizable on-screen text size for long layer trees
 
 Usage:
 - Add [GFA] to layer names to include in calculation
 - Optional \{factor\} at end of layer name for area multipliers (e.g. \{0.5\})
-- Right-click to export to Excel, generate checking surfaces, set target areas, or adjust HUD font size.
+- Right-click to export to Excel, generate checking surfaces, set target areas, or change text size.
 """
 __is_popular__ = True
 
@@ -301,7 +301,7 @@ class EA_GFA_Conduit(Rhino.Display.DisplayConduit):
         pt = Rhino.Geometry.Point2d(pt[0], pt[1] + 10)
         e.Display.Draw2dText("Accepting single surface(Z+ or Z- normal) and polysurface(open or enclosed, only check the face with Z- normal). ", color, pt, False, 10)
         pt = Rhino.Geometry.Point2d(pt[0], pt[1] + 10)
-        e.Display.Draw2dText("Target area and HUD font size can be set in the right-click menu.", color_hightlight, pt, False, 10)
+        e.Display.Draw2dText("Target area and text size can be set in the right-click menu.", color_hightlight, pt, False, 10)
 
 
         pt = Rhino.Geometry.Point2d(pt[0], pt[1] + 10)

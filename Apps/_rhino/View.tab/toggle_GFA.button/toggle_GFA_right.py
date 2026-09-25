@@ -1,12 +1,12 @@
 __title__ = "BakeGFADataToExcel"
-__doc__ = """Export GFA (Gross Floor Area) data to Excel and manage area targets and HUD settings.
+__doc__ = """Export GFA (Gross Floor Area) data to Excel and manage area targets and display settings.
 
 Features:
 - Export area calculations to formatted Excel spreadsheet
 - Generate checking surfaces for visual verification 
 - Set and manage target areas for different GFA categories
 - Compare actual vs target areas with variance analysis
-- Set HUD font size for layer row display
+- Change on-screen text size for layer display
 
 Usage:
 - Click to export current GFA data to Excel
@@ -14,7 +14,7 @@ Usage:
   - Generate checking surfaces
   - Set target areas for GFA categories
   - Edit existing target values
-  - Set HUD layer row font size
+  - Change on-screen text size
 """
 
 
@@ -348,10 +348,10 @@ def get_hud_font_size():
 
 @ERROR_HANDLE.try_catch_error()
 def set_hud_font_size():
-    """Prompt user to set the font size for the HUD layer row display."""
+    """Prompt user to set the text size for the on-screen display."""
     current_size = get_hud_font_size()
     options = [
-        "8 (Tiny - for very deep / dense layer trees)",
+        "8 (Smallest)",
         "10 (Extra Small)",
         "12 (Small)",
         "14 (Medium Small)",
@@ -369,8 +369,8 @@ def set_hud_font_size():
 
     selected = rs.ListBox(
         options,
-        "Select font size for the HUD layer row display:\n(Current size: {})\n\nSmaller font sizes reduce both text size and line spacing\nto fit long layer tree names on screen.".format(current_size),
-        "GFA HUD Layer Row Font Size",
+        "Select text size for the on-screen display:\n(Current size: {})\n\nTip: Choose a smaller size if long layer names overflow your screen.".format(current_size),
+        "On-Screen Text Size",
         default=default_opt
     )
     if not selected:
@@ -378,9 +378,9 @@ def set_hud_font_size():
 
     if selected == "Custom...":
         custom = rs.RealBox(
-            message="Enter custom font size (6 - 40):",
+            message="Enter custom text size (6 - 40):",
             default_number=current_size,
-            title="GFA HUD Font Size"
+            title="Custom Text Size"
         )
         if custom is None:
             return None
@@ -418,7 +418,7 @@ def set_hud_font_size():
             conduit.font_size = new_size
             sc.doc.Views.Redraw()
 
-    NOTIFICATION.messenger(main_text="HUD layer row font size set to {}.".format(new_size))
+    NOTIFICATION.messenger(main_text="On-screen text size set to {}.".format(new_size))
     return new_size
 
 
@@ -436,7 +436,7 @@ def toggle_GFA():
         ("Export Current GFA Numbers To Excel.", False),
         ("Bake Current GFA Calc Surfaces.", False),
         ("Set Target Dict.", False),
-        ("Set HUD Layer Row Font Size (Current: {}).".format(current_font_size), False)
+        ("Change On-Screen Text Size (Current: {}).".format(current_font_size), False)
         ]
     results  = rs.CheckListBox(items, "What do you want to do?", "Bake GFA Massing Data")
     if not results:
