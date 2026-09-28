@@ -1,15 +1,17 @@
-__doc__ = """Force every User Keynote tag in the model to re-pull its displayed text
-from the current keynote table.
+__doc__ = """Find User Keynote tags whose Keynote Text is blank and force Revit to
+re-pull it from the current keynote table.
 
-Some keynote tags go blank even though their key still resolves fine in the keynote
-table -- a known Revit caching issue. Reassigning a tag's Key Value parameter is the
-only thing that makes Revit redraw the tag; reloading the keynote table alone does not
-touch tags that are already placed. A temp-then-restore round trip inside a single
-transaction ends on the same value it started with, so Revit's tag-text cache can
-treat it as a net no-op and skip the redraw -- exactly like a manual Properties-palette
-edit, each tag is toggled through two separately COMMITTED transactions (grouped into
-one Undo step) so the temporary value is a real, distinct edit before the key is
-restored.
+Key Value (KEY_VALUE) is the key a tag points at; Keynote Text (KEYNOTE_TEXT) is what
+actually renders on screen -- confirmed live, the two can drift apart even though the
+key still resolves fine in the table, a known Revit caching issue. Only tags with a
+blank Keynote Text are touched; tags that already display fine are left alone. A
+temp-then-restore round trip inside a single transaction ends on the same value it
+started with, so Revit's tag-text cache can treat it as a net no-op and skip the
+redraw -- exactly like a manual Properties-palette edit, each broken tag is toggled
+through two separately COMMITTED transactions (grouped into one Undo step) so the
+temporary value is a real, distinct edit before the key is restored. The document
+model updates before the view graphics do, so UpdateAllOpenViews() runs afterward to
+force the actual redraw.
 
 Only User Keynote tags are touched. Element Keynote and Material Keynote tags derive
 their Key Value from the tagged element/material, so Revit reports that parameter as
@@ -17,7 +19,8 @@ read-only on them (confirmed live) -- they are skipped rather than left to throw
 
 Features:
 - Choose current view only (for testing) or the entire project
-- Sweeps the chosen scope's keynote tags in a single undo step
+- Diagnostic table of every keynote-related parameter, printed before any edit
+- Only touches tags with a blank Keynote Text, in a single undo step
 - Count of refreshed and skipped tags shown when it finishes"""
 __title__ = "UserKeynote Refresher"
 __tip__ = True
@@ -99,6 +102,7 @@ def main():
     skipped_owned_count = 0
     skipped_no_key_count = 0
     skipped_element_or_material_count = 0
+    skipped_already_has_text_count = 0
 
     for tag in key_note_tags:
         if not REVIT_SELECTION.is_changable(tag):
@@ -128,6 +132,16 @@ def main():
             skipped_element_or_material_count += 1
             continue
 
+        # KEY_VALUE is the key; KEYNOTE_TEXT is what the tag actually renders on screen
+        # (confirmed live via the diagnostic table). Only tags whose Keynote Text is
+        # blank are the broken ones -- skip tags that already display fine so a run
+        # doesn't touch (and risk) tags that don't need it.
+        text_param = tag.Parameter[DB.BuiltInParameter.KEYNOTE_TEXT]
+        current_text = text_param.AsString() if text_param else None
+        if current_text:
+            skipped_already_has_text_count += 1
+            continue
+
         refreshable.append((tag, key_param, original_key))
 
     print_diagnostic_table(script.get_output(), [tag for tag, _, _ in refreshable])
@@ -155,7 +169,7 @@ def main():
     if refreshable:
         uidoc.UpdateAllOpenViews()
 
-    NOTIFICATION.messenger(main_text="{} User Keynote tags refreshed.\n{} skipped due to ownership.\n{} skipped (no key value).\n{} skipped (Element/Material Keynote, not User Keynote).\nSee output for details".format(len(refreshable), skipped_owned_count, skipped_no_key_count, skipped_element_or_material_count))
+    NOTIFICATION.messenger(main_text="{} User Keynote tags refreshed (blank Keynote Text).\n{} already had text, left alone.\n{} skipped due to ownership.\n{} skipped (no key value).\n{} skipped (Element/Material Keynote, not User Keynote).\nSee output for details".format(len(refreshable), skipped_already_has_text_count, skipped_owned_count, skipped_no_key_count, skipped_element_or_material_count))
 ################## main code below #####################
 if __name__ == "__main__":
 
