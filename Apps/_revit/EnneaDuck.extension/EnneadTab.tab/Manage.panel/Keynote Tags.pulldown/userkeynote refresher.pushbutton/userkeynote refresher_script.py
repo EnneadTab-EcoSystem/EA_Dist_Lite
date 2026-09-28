@@ -1,27 +1,18 @@
-__doc__ = """Find User Keynote tags whose Keynote Text is blank and force Revit to
-re-pull it from the current keynote table.
+__doc__ = """Fix blank keynote text on User Keynote tags by re-linking them to the keynote file.
 
-Key Value (KEY_VALUE) is the key a tag points at; Keynote Text (KEYNOTE_TEXT) is what
-actually renders on screen -- confirmed live, the two can drift apart even though the
-key still resolves fine in the table, a known Revit caching issue. Only tags with a
-blank Keynote Text are touched; tags that already display fine are left alone. A
-temp-then-restore round trip inside a single transaction ends on the same value it
-started with, so Revit's tag-text cache can treat it as a net no-op and skip the
-redraw -- exactly like a manual Properties-palette edit, each broken tag is toggled
-through two separately COMMITTED transactions (grouped into one Undo step) so the
-temporary value is a real, distinct edit before the key is restored. The document
-model updates before the view graphics do, so UpdateAllOpenViews() runs afterward to
-force the actual redraw.
-
-Only User Keynote tags are touched. Element Keynote and Material Keynote tags derive
-their Key Value from the tagged element/material, so Revit reports that parameter as
-read-only on them (confirmed live) -- they are skipped rather than left to throw.
+Some tags keep a valid key but Revit stops showing the text next to it, a known
+display bug. This finds the blank ones and re-links them so the text reappears,
+without changing the key. Tags that already show text, or were placed with the
+Element or Material Keynote tool, are left alone.
 
 Features:
 - Choose current view only (for testing) or the entire project
-- Diagnostic table of every keynote-related parameter, printed before any edit
-- Only touches tags with a blank Keynote Text, in a single undo step
-- Count of refreshed and skipped tags shown when it finishes"""
+- Skips tags and views owned by someone else in a shared model
+- Summary of fixed and skipped tags shown when finished
+
+Usage:
+1. Run, pick "Add temporary marker", then pick a scope
+2. Run again, pick "Remove temporary marker", then the same scope"""
 __title__ = "UserKeynote Refresher"
 __tip__ = True
 
@@ -35,7 +26,10 @@ from pyrevit import DB, revit, script, forms
 uidoc = REVIT_APPLICATION.get_uidoc()
 doc = REVIT_APPLICATION.get_doc()
 
-TEMP_KEY_VALUE = "__ENNEADTAB_KEYNOTE_REFRESH_TEMP__"
+TEMP_KEY_PREFIX = "__ENNEADTAB_TEMP__"
+
+OPTION_ADD_PREFIX = "Add temporary marker (step 1)"
+OPTION_REMOVE_PREFIX = "Remove temporary marker (step 2)"
 
 OPTION_CURRENT_VIEW = "Current view only (test run)"
 OPTION_ENTIRE_PROJECT = "Entire project"
@@ -82,36 +76,28 @@ def print_diagnostic_table(output, tags):
                         formats=['{}'] * (len(DIAGNOSTIC_PARAMS) + 1))
 
 
-@LOG.log(__file__, __title__)
-@ERROR_HANDLE.try_catch_error()
-def main():
-    scope = forms.SelectFromList.show([OPTION_CURRENT_VIEW, OPTION_ENTIRE_PROJECT],
-                                       button_name="Run",
-                                       multiselect=False,
-                                       title="Refresh keynote tags in...")
-    if not scope:
-        return
+def _is_changable_tag_and_view(tag):
+    if not REVIT_SELECTION.is_changable(tag):
+        print ("---tag being owned, skip")
+        return False
+    view = revit.doc.GetElement(tag.OwnerViewId)
+    if not REVIT_SELECTION.is_changable(view):
+        print ("---view [{}] being owned, skip".format(view.Name))
+        return False
+    return True
 
-    key_note_tags = DB.FilteredElementCollector(revit.doc).OfCategory(DB.BuiltInCategory.OST_KeynoteTags).WhereElementIsNotElementType().ToElements()
 
-    if scope == OPTION_CURRENT_VIEW:
-        active_view = REVIT_APPLICATION.get_active_view()
-        key_note_tags = [tag for tag in key_note_tags if tag.OwnerViewId == active_view.Id]
-
-    refreshable = []  # (tag, key_param, original_key)
+def _collect_broken_user_keynotes(key_note_tags):
+    """Tags to prefix in step 1: writable Key Value, blank Keynote Text, not already prefixed."""
+    touchable = []  # (tag, key_param, new_value)
     skipped_owned_count = 0
     skipped_no_key_count = 0
     skipped_element_or_material_count = 0
     skipped_already_has_text_count = 0
+    skipped_already_prefixed_count = 0
 
     for tag in key_note_tags:
-        if not REVIT_SELECTION.is_changable(tag):
-            print ("---tag being owned, skip refresh")
-            skipped_owned_count += 1
-            continue
-        view = revit.doc.GetElement(tag.OwnerViewId)
-        if not REVIT_SELECTION.is_changable(view):
-            print ("---view [{}] being owned, skip refresh".format(view.Name))
+        if not _is_changable_tag_and_view(tag):
             skipped_owned_count += 1
             continue
 
@@ -132,6 +118,10 @@ def main():
             skipped_element_or_material_count += 1
             continue
 
+        if original_key.startswith(TEMP_KEY_PREFIX):
+            skipped_already_prefixed_count += 1
+            continue
+
         # KEY_VALUE is the key; KEYNOTE_TEXT is what the tag actually renders on screen
         # (confirmed live via the diagnostic table). Only tags whose Keynote Text is
         # blank are the broken ones -- skip tags that already display fine so a run
@@ -142,34 +132,99 @@ def main():
             skipped_already_has_text_count += 1
             continue
 
-        refreshable.append((tag, key_param, original_key))
+        touchable.append((tag, key_param, TEMP_KEY_PREFIX + original_key))
 
-    print_diagnostic_table(script.get_output(), [tag for tag, _, _ in refreshable])
+    skip_counts = {
+        "owned": skipped_owned_count,
+        "no_key": skipped_no_key_count,
+        "element_or_material": skipped_element_or_material_count,
+        "already_has_text": skipped_already_has_text_count,
+        "already_prefixed": skipped_already_prefixed_count,
+    }
+    return touchable, skip_counts
 
-    # A manual edit in the Properties palette works because each edit commits as its
-    # own transaction. A temp-then-restore round trip inside a SINGLE transaction ends
-    # on the same value it started with, so Revit's tag-text cache can treat it as a
-    # net no-op at commit time and skip the redraw. Two separate committed transactions
-    # (grouped into one Undo step) force each Set() to be a real, distinct edit.
-    with revit.TransactionGroup("refresh keynote tags"):
-        with revit.Transaction("keynote refresh - temp key"):
-            for tag, key_param, original_key in refreshable:
-                key_param.Set(TEMP_KEY_VALUE)
 
-        with revit.Transaction("keynote refresh - restore key"):
-            for tag, key_param, original_key in refreshable:
-                key_param.Set(original_key)
+def _collect_prefixed_user_keynotes(key_note_tags):
+    """Tags to restore in step 2: Key Value currently holds a temp-prefixed value."""
+    touchable = []  # (tag, key_param, new_value)
+    skipped_owned_count = 0
+    skipped_not_prefixed_count = 0
 
-    # Confirmed live: the Key Value parameter is correctly restored by the transactions
-    # above, but the tag's on-screen glyph can still stay stale -- Regenerate() only
-    # updates the document model, not view graphics. UpdateAllOpenViews() (2018+) forces
-    # a full graphics redraw regardless of what changed, unlike RefreshActiveView(),
-    # which several Revit API reports say can still miss tags. Must run outside any
-    # open transaction.
-    if refreshable:
+    for tag in key_note_tags:
+        if not _is_changable_tag_and_view(tag):
+            skipped_owned_count += 1
+            continue
+
+        key_param = tag.Parameter[DB.BuiltInParameter.KEY_VALUE]
+        current_key = key_param.AsString() if key_param else None
+        if not key_param or not current_key or not current_key.startswith(TEMP_KEY_PREFIX):
+            skipped_not_prefixed_count += 1
+            continue
+
+        touchable.append((tag, key_param, current_key[len(TEMP_KEY_PREFIX):]))
+
+    skip_counts = {
+        "owned": skipped_owned_count,
+        "not_prefixed": skipped_not_prefixed_count,
+    }
+    return touchable, skip_counts
+
+
+@LOG.log(__file__, __title__)
+@ERROR_HANDLE.try_catch_error()
+def main():
+    operation = forms.SelectFromList.show([OPTION_ADD_PREFIX, OPTION_REMOVE_PREFIX],
+                                           button_name="Next",
+                                           multiselect=False,
+                                           title="Step 1 of 2: which operation?")
+    if not operation:
+        return
+
+    scope = forms.SelectFromList.show([OPTION_CURRENT_VIEW, OPTION_ENTIRE_PROJECT],
+                                       button_name="Run",
+                                       multiselect=False,
+                                       title="Step 2 of 2: which tags?")
+    if not scope:
+        return
+
+    key_note_tags = DB.FilteredElementCollector(revit.doc).OfCategory(DB.BuiltInCategory.OST_KeynoteTags).WhereElementIsNotElementType().ToElements()
+
+    if scope == OPTION_CURRENT_VIEW:
+        active_view = REVIT_APPLICATION.get_active_view()
+        key_note_tags = [tag for tag in key_note_tags if tag.OwnerViewId == active_view.Id]
+
+    if operation == OPTION_ADD_PREFIX:
+        touchable, skip_counts = _collect_broken_user_keynotes(key_note_tags)
+    else:
+        touchable, skip_counts = _collect_prefixed_user_keynotes(key_note_tags)
+
+    print_diagnostic_table(script.get_output(), [tag for tag, _, _ in touchable])
+
+    # A manual edit in the Properties palette works because each edit commits as its own
+    # transaction, with Revit's UI free to repaint before the next edit happens. Doing the
+    # temp-then-restore round trip as two Transactions inside one script run does not give
+    # the UI that idle/paint cycle, so this tool is split into two separate button clicks
+    # (this run only does ONE Set() pass) to test whether the real handoff between clicks
+    # is what actually triggers the redraw.
+    with revit.Transaction("keynote refresh"):
+        for tag, key_param, new_value in touchable:
+            key_param.Set(new_value)
+
+    # Confirmed live: the Key Value parameter can be written correctly while the tag's
+    # on-screen glyph stays stale -- Regenerate() only updates the document model, not
+    # view graphics. UpdateAllOpenViews() (2018+) forces a full graphics redraw regardless
+    # of what changed, unlike RefreshActiveView(), which several Revit API reports say can
+    # still miss tags. Must run outside any open transaction.
+    if touchable:
         uidoc.UpdateAllOpenViews()
 
-    NOTIFICATION.messenger(main_text="{} User Keynote tags refreshed (blank Keynote Text).\n{} already had text, left alone.\n{} skipped due to ownership.\n{} skipped (no key value).\n{} skipped (Element/Material Keynote, not User Keynote).\nSee output for details".format(len(refreshable), skipped_already_has_text_count, skipped_owned_count, skipped_no_key_count, skipped_element_or_material_count))
+    if operation == OPTION_ADD_PREFIX:
+        NOTIFICATION.messenger(main_text="{} tags marked with a temporary key (blank Keynote Text).\n{} already had text, left alone.\n{} already marked from a prior run.\n{} skipped due to ownership.\n{} skipped (no key value).\n{} skipped (Element/Material Keynote, not User Keynote).\nNow run again and pick 'Remove temporary marker' to finish.".format(
+            len(touchable), skip_counts["already_has_text"], skip_counts["already_prefixed"],
+            skip_counts["owned"], skip_counts["no_key"], skip_counts["element_or_material"]))
+    else:
+        NOTIFICATION.messenger(main_text="{} tags restored to their real key.\n{} skipped (not currently marked).\n{} skipped due to ownership.\nSee output for details".format(
+            len(touchable), skip_counts["not_prefixed"], skip_counts["owned"]))
 ################## main code below #####################
 if __name__ == "__main__":
 
