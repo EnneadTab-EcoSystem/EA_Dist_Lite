@@ -1961,6 +1961,15 @@
         "tab": "Proj. 2135",
         "tab_icon": null
     },
+    "EnneadTab Tailor.tab\\archive\\Proj. 2512.panel\\MetroTech.pulldown\\userkeynote refresher.pushbutton\\userkeynote refresher_script.py": {
+        "alias": "UserKeynote Refresher",
+        "doc": "Attempt to fix blank keynote text on User Keynote tags by re-linking the key.\n\nSome tags keep a valid key but Revit stops showing the text next to it, a known\ndisplay bug. This tool retries several ways of re-linking the key, but none of\nthem reliably brought the text back in testing. The only thing confirmed to\nwork is manually re-assigning the key value for each tag in the Properties\npanel -- kept here for reference, not for regular use.",
+        "icon": "EnneadTab Tailor.tab\\archive\\Proj. 2512.panel\\MetroTech.pulldown\\userkeynote refresher.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab Tailor.tab\\archive\\Proj. 2512.panel\\MetroTech.pulldown\\userkeynote refresher.pushbutton\\userkeynote refresher_script.py",
+        "tab": "Proj. 2512",
+        "tab_icon": null
+    },
     "EnneadTab Tailor.tab\\archive\\check_design_option.pushbutton\\check_design_option_script.py": {
         "alias": "Check Design Option(Depreciated)",
         "doc": "See what is inside your design option by colorize them.",
@@ -2643,15 +2652,6 @@
         "is_popular": false,
         "script": "EnneadTab.tab\\Import Export.panel\\update_miro.pushbutton\\update_miro_script.py",
         "tab": "Import Export",
-        "tab_icon": null
-    },
-    "EnneadTab.tab\\Manage.panel\\Keynote Tags.pulldown\\userkeynote refresher.pushbutton\\userkeynote refresher_script.py": {
-        "alias": "UserKeynote Refresher",
-        "doc": "Fix blank keynote text on User Keynote tags by re-linking them to the keynote file.\n\nSome tags keep a valid key but Revit stops showing the text next to it, a known\ndisplay bug. This finds the blank ones and re-links them so the text reappears,\nwithout changing the key. Tags that already show text, or were placed with the\nElement or Material Keynote tool, are left alone.\n\nFeatures:\n- Choose current view only (for testing) or the entire project\n- Skips tags and views owned by someone else in a shared model\n- Summary of fixed and skipped tags shown when finished\n\nUsage:\n1. Run, pick \"Add temporary marker\", then pick a scope\n2. Run again, pick \"Remove temporary marker\", then the same scope",
-        "icon": "EnneadTab.tab\\Manage.panel\\Keynote Tags.pulldown\\userkeynote refresher.pushbutton\\icon.png",
-        "is_popular": false,
-        "script": "EnneadTab.tab\\Manage.panel\\Keynote Tags.pulldown\\userkeynote refresher.pushbutton\\userkeynote refresher_script.py",
-        "tab": "Manage",
         "tab_icon": null
     },
     "EnneadTab.tab\\Manage.panel\\Keynote Tags.pulldown\\wrong type of TAGS.pushbutton\\identy wrong keynote_script.py": {
