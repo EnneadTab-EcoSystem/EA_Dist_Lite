@@ -37,6 +37,47 @@ TEMP_KEY_VALUE = "__ENNEADTAB_KEYNOTE_REFRESH_TEMP__"
 OPTION_CURRENT_VIEW = "Current view only (test run)"
 OPTION_ENTIRE_PROJECT = "Entire project"
 
+# https://www.revitapidocs.com/2018.2/fb011c91-be7e-f737-28c7-3f1e1917a0e0.htm
+# Every BuiltInParameter that could plausibly drive the "Key Value" / "Keynote Text"
+# shown in the Revit UI -- printed side by side per tag to pin down which one the UI
+# actually reads from vs which one this tool has been writing to.
+DIAGNOSTIC_PARAMS = [
+    ("KEY_SOURCE_PARAM", DB.BuiltInParameter.KEY_SOURCE_PARAM),
+    ("KEYNOTE_PARAM", DB.BuiltInParameter.KEYNOTE_PARAM),
+    ("KEYNOTE_NUMBER", DB.BuiltInParameter.KEYNOTE_NUMBER),
+    ("SHEET_KEY_NUMBER", DB.BuiltInParameter.SHEET_KEY_NUMBER),
+    ("KEYNOTE_TEXT", DB.BuiltInParameter.KEYNOTE_TEXT),
+    ("KEY_VALUE", DB.BuiltInParameter.KEY_VALUE),
+]
+
+
+def _param_as_string(element, bip):
+    try:
+        param = element.Parameter[bip]
+    except Exception:
+        return "<no such param on this element>"
+    if not param:
+        return "<none>"
+    value = param.AsString()
+    if value is None:
+        value = param.AsValueString()
+    if value is None:
+        value = ""
+    return "'{}'{}".format(value, " (RO)" if param.IsReadOnly else "")
+
+
+def print_diagnostic_table(output, tags):
+    table_data = []
+    for tag in tags:
+        row = [output.linkify(tag.Id)]
+        row.extend(_param_as_string(tag, bip) for _, bip in DIAGNOSTIC_PARAMS)
+        table_data.append(row)
+
+    output.print_table(table_data=table_data,
+                        title="User Keynote parameter diagnostic (before refresh)",
+                        columns=["Tag Id"] + [name for name, _ in DIAGNOSTIC_PARAMS],
+                        formats=['{}'] * (len(DIAGNOSTIC_PARAMS) + 1))
+
 
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
@@ -88,6 +129,8 @@ def main():
             continue
 
         refreshable.append((tag, key_param, original_key))
+
+    print_diagnostic_table(script.get_output(), [tag for tag, _, _ in refreshable])
 
     # A manual edit in the Properties palette works because each edit commits as its
     # own transaction. A temp-then-restore round trip inside a SINGLE transaction ends
