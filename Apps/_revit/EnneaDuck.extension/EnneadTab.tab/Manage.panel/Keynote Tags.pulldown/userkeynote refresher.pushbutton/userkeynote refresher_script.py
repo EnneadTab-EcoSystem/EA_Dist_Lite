@@ -4,9 +4,12 @@ from the current keynote table.
 Some keynote tags go blank even though their key still resolves fine in the keynote
 table -- a known Revit caching issue. Reassigning a tag's Key Value parameter is the
 only thing that makes Revit redraw the tag; reloading the keynote table alone does not
-touch tags that are already placed. A same-value Parameter.Set() can silently no-op on
-some Revit versions, so each tag is toggled through a temporary key and back, with a
-single batched regenerate in between to guarantee the redraw actually happens.
+touch tags that are already placed. A temp-then-restore round trip inside a single
+transaction ends on the same value it started with, so Revit's tag-text cache can
+treat it as a net no-op and skip the redraw -- exactly like a manual Properties-palette
+edit, each tag is toggled through two separately COMMITTED transactions (grouped into
+one Undo step) so the temporary value is a real, distinct edit before the key is
+restored.
 
 Only User Keynote tags are touched. Element Keynote and Material Keynote tags derive
 their Key Value from the tagged element/material, so Revit reports that parameter as
@@ -86,17 +89,19 @@ def main():
 
         refreshable.append((tag, key_param, original_key))
 
-    with revit.Transaction("refresh keynote tags"):
-        # first pass: bump every tag to a temp key so Revit forgets its cached display text
-        for tag, key_param, original_key in refreshable:
-            key_param.Set(TEMP_KEY_VALUE)
+    # A manual edit in the Properties palette works because each edit commits as its
+    # own transaction. A temp-then-restore round trip inside a SINGLE transaction ends
+    # on the same value it started with, so Revit's tag-text cache can treat it as a
+    # net no-op at commit time and skip the redraw. Two separate committed transactions
+    # (grouped into one Undo step) force each Set() to be a real, distinct edit.
+    with revit.TransactionGroup("refresh keynote tags"):
+        with revit.Transaction("keynote refresh - temp key"):
+            for tag, key_param, original_key in refreshable:
+                key_param.Set(TEMP_KEY_VALUE)
 
-        # one regenerate for the whole batch, not one per tag
-        doc.Regenerate()
-
-        # second pass: restore each tag's real key so it re-resolves against the current keynote table
-        for tag, key_param, original_key in refreshable:
-            key_param.Set(original_key)
+        with revit.Transaction("keynote refresh - restore key"):
+            for tag, key_param, original_key in refreshable:
+                key_param.Set(original_key)
 
     NOTIFICATION.messenger(main_text="{} User Keynote tags refreshed.\n{} skipped due to ownership.\n{} skipped (no key value).\n{} skipped (Element/Material Keynote, not User Keynote).\nSee output for details".format(len(refreshable), skipped_owned_count, skipped_no_key_count, skipped_element_or_material_count))
 ################## main code below #####################
