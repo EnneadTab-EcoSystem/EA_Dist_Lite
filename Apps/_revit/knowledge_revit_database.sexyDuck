@@ -2645,12 +2645,12 @@
         "tab": "Import Export",
         "tab_icon": null
     },
-    "EnneadTab.tab\\Manage.panel\\Keynote Tags.pulldown\\refresh keynote tags.pushbutton\\refresh keynote tags_script.py": {
+    "EnneadTab.tab\\Manage.panel\\Keynote Tags.pulldown\\userkeynote refresher.pushbutton\\userkeynote refresher_script.py": {
         "alias": "KeynoteTAG Refresher",
         "doc": "Force every keynote tag in the model to re-pull its displayed text from the\ncurrent keynote table.\n\nSome keynote tags go blank even though their key still resolves fine in the keynote\ntable -- a known Revit caching issue. Reassigning a tag's Key Value parameter is the\nonly thing that makes Revit redraw the tag; reloading the keynote table alone does not\ntouch tags that are already placed. A same-value Parameter.Set() can silently no-op on\nsome Revit versions, so each tag is toggled through a temporary key and back, with a\nsingle batched regenerate in between to guarantee the redraw actually happens.\n\nFeatures:\n- Sweeps every keynote tag in the model in a single undo step\n- Count of refreshed and skipped tags shown when it finishes",
-        "icon": "EnneadTab.tab\\Manage.panel\\Keynote Tags.pulldown\\refresh keynote tags.pushbutton\\icon.png",
+        "icon": "EnneadTab.tab\\Manage.panel\\Keynote Tags.pulldown\\userkeynote refresher.pushbutton\\icon.png",
         "is_popular": false,
-        "script": "EnneadTab.tab\\Manage.panel\\Keynote Tags.pulldown\\refresh keynote tags.pushbutton\\refresh keynote tags_script.py",
+        "script": "EnneadTab.tab\\Manage.panel\\Keynote Tags.pulldown\\userkeynote refresher.pushbutton\\userkeynote refresher_script.py",
         "tab": "Manage",
         "tab_icon": null
     },
