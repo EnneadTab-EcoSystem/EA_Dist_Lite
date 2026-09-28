@@ -35,6 +35,7 @@ def main():
     refreshable = []  # (tag, key_param, original_key)
     skipped_owned_count = 0
     skipped_no_key_count = 0
+    skipped_read_only_count = 0
 
     for tag in key_note_tags:
         if not REVIT_SELECTION.is_changable(tag):
@@ -53,6 +54,13 @@ def main():
             skipped_no_key_count += 1
             continue
 
+        # Some placed keynote tags (observed: Element/Material Keynote) come
+        # back with a read-only Key Value parameter -- Set() throws on those,
+        # so skip rather than toggle.
+        if key_param.IsReadOnly:
+            skipped_read_only_count += 1
+            continue
+
         refreshable.append((tag, key_param, original_key))
 
     with revit.Transaction("refresh keynote tags"):
@@ -67,7 +75,7 @@ def main():
         for tag, key_param, original_key in refreshable:
             key_param.Set(original_key)
 
-    NOTIFICATION.messenger(main_text="{} keynote tags refreshed.\n{} skipped due to ownership.\n{} skipped (no key value).\nSee output for details".format(len(refreshable), skipped_owned_count, skipped_no_key_count))
+    NOTIFICATION.messenger(main_text="{} keynote tags refreshed.\n{} skipped due to ownership.\n{} skipped (no key value).\n{} skipped (key value read-only).\nSee output for details".format(len(refreshable), skipped_owned_count, skipped_no_key_count, skipped_read_only_count))
 ################## main code below #####################
 if __name__ == "__main__":
 
