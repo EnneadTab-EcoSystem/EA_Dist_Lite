@@ -9,9 +9,10 @@ some Revit versions, so each tag is toggled through a temporary key and back, wi
 single batched regenerate in between to guarantee the redraw actually happens.
 
 Features:
-- Sweeps every keynote tag in the model in a single undo step
+- Choose current view only (for testing) or the entire project
+- Sweeps the chosen scope's keynote tags in a single undo step
 - Count of refreshed and skipped tags shown when it finishes"""
-__title__ = "KeynoteTAG Refresher"
+__title__ = "UserKeynote Refresher"
 __tip__ = True
 
 
@@ -19,18 +20,32 @@ import proDUCKtion # pyright: ignore
 proDUCKtion.validify()
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_SELECTION
 from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION
-from pyrevit import DB, revit, script
+from pyrevit import DB, revit, script, forms
 
 uidoc = REVIT_APPLICATION.get_uidoc()
 doc = REVIT_APPLICATION.get_doc()
 
 TEMP_KEY_VALUE = "__ENNEADTAB_KEYNOTE_REFRESH_TEMP__"
 
+OPTION_CURRENT_VIEW = "Current view only (test run)"
+OPTION_ENTIRE_PROJECT = "Entire project"
+
 
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def main():
+    scope = forms.SelectFromList.show([OPTION_CURRENT_VIEW, OPTION_ENTIRE_PROJECT],
+                                       button_name="Run",
+                                       multiselect=False,
+                                       title="Refresh keynote tags in...")
+    if not scope:
+        return
+
     key_note_tags = DB.FilteredElementCollector(revit.doc).OfCategory(DB.BuiltInCategory.OST_KeynoteTags).WhereElementIsNotElementType().ToElements()
+
+    if scope == OPTION_CURRENT_VIEW:
+        active_view = REVIT_APPLICATION.get_active_view()
+        key_note_tags = [tag for tag in key_note_tags if tag.OwnerViewId == active_view.Id]
 
     refreshable = []  # (tag, key_param, original_key)
     skipped_owned_count = 0
