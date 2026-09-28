@@ -951,6 +951,15 @@
         "tab_icon": "Render.tab\\icon.png",
         "is_popular": true
     },
+    "Render.tab\\fly_through.button\\fly_through_left.py": {
+        "script": "Render.tab\\fly_through.button\\fly_through_left.py",
+        "icon": "Render.tab\\fly_through.button\\icon.png",
+        "alias": "FlyThrough",
+        "doc": "Precise fly-through content pipeline (senzhang-todo #452).\n\nLocks a camera path in the LIVE Rhino 3D viewport (operator-controlled, not\nAI-guessed), exports keyframe stills for debug/approval, then renders a final\nimage set + optional video. Progress and failures land in Dump/FlyThrough/\nmonitor.log + job_status.json.\n\nHow to run\n----------\n1. Frame the start pose in a Perspective viewport.\n2. Click this button -> Lock keyframe. Orbit/walk, lock again. Repeat.\n   (Or Import named views to reuse cameras you already saved.)\n3. Export keyframe stills and review before spending time on a full render.\n4. Render final video + images. Opens the job folder when done.\n\nAlias: FlyThrough / EA_FlyThrough\n\nNote: This is EnneadTab-OS Rhino tooling. It is NOT the RenderPolisher\nAI-from-stills / Veo path (deliberately repointed off RenderPolisher).\n",
+        "tab": "Render.tab",
+        "tab_icon": "Render.tab\\icon.png",
+        "is_popular": true
+    },
     "Render.tab\\assign_empty_material.button\\assign_empty_material_left.py": {
         "script": "Render.tab\\assign_empty_material.button\\assign_empty_material_left.py",
         "icon": "Render.tab\\assign_empty_material.button\\icon.png",
