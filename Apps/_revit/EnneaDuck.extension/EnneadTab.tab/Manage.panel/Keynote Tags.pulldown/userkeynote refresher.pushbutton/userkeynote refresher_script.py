@@ -103,6 +103,15 @@ def main():
             for tag, key_param, original_key in refreshable:
                 key_param.Set(original_key)
 
+    # Confirmed live: the Key Value parameter is correctly restored by the transactions
+    # above, but the tag's on-screen glyph can still stay stale -- Regenerate() only
+    # updates the document model, not view graphics. UpdateAllOpenViews() (2018+) forces
+    # a full graphics redraw regardless of what changed, unlike RefreshActiveView(),
+    # which several Revit API reports say can still miss tags. Must run outside any
+    # open transaction.
+    if refreshable:
+        uidoc.UpdateAllOpenViews()
+
     NOTIFICATION.messenger(main_text="{} User Keynote tags refreshed.\n{} skipped due to ownership.\n{} skipped (no key value).\n{} skipped (Element/Material Keynote, not User Keynote).\nSee output for details".format(len(refreshable), skipped_owned_count, skipped_no_key_count, skipped_element_or_material_count))
 ################## main code below #####################
 if __name__ == "__main__":
