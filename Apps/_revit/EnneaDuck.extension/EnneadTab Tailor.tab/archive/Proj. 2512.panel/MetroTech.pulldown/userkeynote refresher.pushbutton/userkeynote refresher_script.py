@@ -1,20 +1,11 @@
-__doc__ = """Fix blank keynote text on User Keynote tags by re-linking them to the keynote file.
+__doc__ = """Attempt to fix blank keynote text on User Keynote tags by re-linking the key.
 
 Some tags keep a valid key but Revit stops showing the text next to it, a known
-display bug. This finds the blank ones and re-links them so the text reappears,
-without changing the key. Tags that already show text, or were placed with the
-Element or Material Keynote tool, are left alone.
-
-Features:
-- Choose current view only (for testing) or the entire project
-- Skips tags and views owned by someone else in a shared model
-- Summary of fixed and skipped tags shown when finished
-
-Usage:
-1. Run, pick "Add temporary marker", then pick a scope
-2. Run again, pick "Remove temporary marker", then the same scope"""
+display bug. This tool retries several ways of re-linking the key, but none of
+them reliably brought the text back in testing. The only thing confirmed to
+work is manually re-assigning the key value for each tag in the Properties
+panel -- kept here for reference, not for regular use."""
 __title__ = "UserKeynote Refresher"
-__tip__ = True
 
 
 import proDUCKtion # pyright: ignore
