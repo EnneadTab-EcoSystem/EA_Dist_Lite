@@ -2645,6 +2645,15 @@
         "tab": "Import Export",
         "tab_icon": null
     },
+    "EnneadTab.tab\\Manage.panel\\Keynote Tags.pulldown\\refresh keynote tags.pushbutton\\refresh keynote tags_script.py": {
+        "alias": "KeynoteTAG Refresher",
+        "doc": "Force every keynote tag in the model to re-pull its displayed text from the\ncurrent keynote table.\n\nSome keynote tags go blank even though their key still resolves fine in the keynote\ntable -- a known Revit caching issue. Reassigning a tag's Key Value parameter is the\nonly thing that makes Revit redraw the tag; reloading the keynote table alone does not\ntouch tags that are already placed. A same-value Parameter.Set() can silently no-op on\nsome Revit versions, so each tag is toggled through a temporary key and back, with a\nsingle batched regenerate in between to guarantee the redraw actually happens.\n\nFeatures:\n- Sweeps every keynote tag in the model in a single undo step\n- Count of refreshed and skipped tags shown when it finishes",
+        "icon": "EnneadTab.tab\\Manage.panel\\Keynote Tags.pulldown\\refresh keynote tags.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\Manage.panel\\Keynote Tags.pulldown\\refresh keynote tags.pushbutton\\refresh keynote tags_script.py",
+        "tab": "Manage",
+        "tab_icon": null
+    },
     "EnneadTab.tab\\Manage.panel\\Keynote Tags.pulldown\\wrong type of TAGS.pushbutton\\identy wrong keynote_script.py": {
         "alias": "Identify Wrong Type Of KeynoteTAG",
         "doc": "Find keynote tags that use the wrong tag family or point at a user keynote.\n\nA tag whose family or type name says material but that reads element keynote data\nis flagged, and the reverse case is flagged too. User keynotes, which the office\nstandard steers away from, are called out separately.\n\nFeatures:\n- Mismatched tags are color overridden in the view they sit in\n- User keynote tags are highlighted in blue\n- Run KeynoteTAG Reset Color afterwards to clear all the highlights",

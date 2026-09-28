@@ -387,6 +387,7 @@
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/publish_to_bimrunner.pushbutton/publish_to_bimrunner_script.py": "b8a119d6512bd09a857326bfe9f104d0627b9893361b4fd739ffb91b4326601b",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/schedule2excel.pushbutton/schedule2excel_script.py": "a487a06de62f6832fe371ec2c7d0027d91ab0f1c79348fa4ea0c95709aeccdda",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Import Export.panel/update_miro.pushbutton/update_miro_script.py": "a6043f1771303c73246d221a9eef14718789112bd38e9db5fc0a33a5301375cc",
+        "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Manage.panel/Keynote Tags.pulldown/refresh keynote tags.pushbutton/refresh keynote tags_script.py": "861b283a1ffb8fa32efa0be24c7f1b0fa6facd8832231f15e09a9ddd74c58101",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Manage.panel/Keynote Tags.pulldown/wrong type of TAGS.pushbutton/identy wrong keynote_script.py": "1a56e1afe2a04f6af2fe4dc1aa240e31d64cc6ddadd2d2c128d344622f7db918",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Manage.panel/Keynote Tags.pulldown/z_reset all tag to default color.pushbutton/reset tag color_script.py": "77254bf6ae5476a7d2f75d354f008158aa85e239a83ec6ef0b900d0a344174b6",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Manage.panel/Merge Family.pushbutton/Merge_Family_script.py": "40b010aab80b0387e6a581d233309e017b31c6d056926b0ac38ae4a2216e4d89",
@@ -634,6 +635,7 @@
         "Apps/lib/EnneadTab/RHINO/RHINO_CLEANUP.py": "b9c244a536d1afb22a565e5b9f6b2f2a4283f76c1ad4f8e6abf26b8fa493a645",
         "Apps/lib/EnneadTab/RHINO/RHINO_CONDUIT.py": "42892c805c59e4edb80f191285332c85fe6f114186abe2f9874d2bcda7545ace",
         "Apps/lib/EnneadTab/RHINO/RHINO_EXTERNAL.py": "0e944de88ad39f9761bbeac4bb24a4d1c6c109c07e90b14b4c76761329fed3fa",
+        "Apps/lib/EnneadTab/RHINO/RHINO_FLYTHROUGH.py": "e4b50cd96b8b37b2cfedf2d9ab3638778ace294951d16f200d46f0dd7e7a6a85",
         "Apps/lib/EnneadTab/RHINO/RHINO_FORMS.py": "77182d4aa8351f6becabae7a79e24316ceea964b40e791388e6ee9c829f274c7",
         "Apps/lib/EnneadTab/RHINO/RHINO_GRASSHOPPER.py": "93f1704facc860324714b3b4cbe3368d3af3150f938bb7d9ba6e5c506fef652c",
         "Apps/lib/EnneadTab/RHINO/RHINO_LAYER.py": "a1a1f2f67237824f3d48b5ac04986ec0bd4f51d826569853cb97a76499814f37",
@@ -711,11 +713,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-09-27T19:50:29",
-    "source_commit": "88ee7a406110b72957fc3caba6912ce01c5b5569",
+    "published_at": "2026-09-28T12:43:20",
+    "source_commit": "cc7e8ef32efc122f5466d4f3efdae8d7ea3d5571",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.09.27.1950"
+    "version": "2026.09.28.1243"
 }
