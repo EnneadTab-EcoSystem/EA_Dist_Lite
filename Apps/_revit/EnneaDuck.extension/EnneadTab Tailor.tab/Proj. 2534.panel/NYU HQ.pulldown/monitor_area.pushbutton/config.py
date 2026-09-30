@@ -89,6 +89,12 @@ COLOR_SCHEME_NAMES = {
 # REPORT CONFIGURATION
 # =============================================================================
 
+# Website data sync settings
+# Local clone of the EnneadTab-TailorProject-NYU-HQ repo. The exporter writes
+# docs/data/report-data.json and docs/data/geometry.json there.
+# Leave empty to write to a "website_data" folder next to this script.
+WEBSITE_DATA_DIR = ""
+
 # Report settings
 REPORTS_DIR = "reports"
 LATEST_REPORT_FILENAME = "latest_report.html"
