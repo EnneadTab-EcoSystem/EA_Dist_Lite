@@ -42,7 +42,7 @@ DOC = REVIT_APPLICATION.get_doc()
 # Import consolidated modules
 from excel_data import get_excel_data
 from revit_data import get_revit_area_data_by_scheme
-from html_export import HTMLReportGenerator
+from website_data_export import WebsiteDataExporter
 from color_scheme_updater import update_all_color_schemes
 from parameter_updater import update_area_parameters
 from excel_writeback import write_design_values_to_excel
@@ -156,9 +156,10 @@ def monitor_area(doc):
     
     revit_data_by_scheme = get_revit_area_data_by_scheme()
 
-    # Generate consolidated HTML report with all schemes and open automatically
-    generator = HTMLReportGenerator()
-    filepaths, all_matches, all_unmatched = generator.generate_html_report(excel_data, revit_data_by_scheme, color_hierarchy)
+    # Sync data JSON for the website-owned webapp (no HTML builder).
+    # The NYU HQ repo owns all presentation; Revit only exports data.
+    exporter = WebsiteDataExporter()
+    filepaths, all_matches, all_unmatched = exporter.export_website_data(excel_data, revit_data_by_scheme, color_hierarchy)
     
     # Update Revit area parameters with suggestions
     param_stats = update_area_parameters(doc, all_matches, all_unmatched)
