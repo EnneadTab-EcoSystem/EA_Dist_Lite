@@ -699,6 +699,13 @@ class HTMLReportGenerator:
                     Show Target Overlay
                 </label>
             </div>
+            <div id="target-overlay-legend-{safe_scheme_name}" class="target-overlay-legend">
+                <span class="legend-title">🎯 Target Overlay (DGSF vs Excel program):</span>
+                <span><span class="legend-swatch" style="background: #10b981;"></span>On Target (±{target_tolerance}%)</span>
+                <span><span class="legend-swatch" style="background: #f59e0b;"></span>Over Target</span>
+                <span><span class="legend-swatch" style="background: #ef4444;"></span>Under Target</span>
+                <span><span class="legend-swatch" style="background: #6b7280;"></span>No Requirement</span>
+            </div>
             <div class="control-group">
                 <button onclick="resetCamera('{safe_scheme_name}')">Reset Camera</button>
                 <button onclick="zoomToFit('{safe_scheme_name}')">Zoom to Fit</button>
@@ -733,7 +740,8 @@ class HTMLReportGenerator:
             department_summary_table=self._create_department_summary_table(matches),
             department_by_level_viz=self._create_department_by_level_visualization(matches, unmatched_areas),
             matrix_html=matrix_html,
-            tree_view_html=self._create_tree_view_html(matches)
+            tree_view_html=self._create_tree_view_html(matches),
+            target_tolerance=config.AREA_TOLERANCE_PERCENTAGE
         )
         
         return content
@@ -888,6 +896,12 @@ class HTMLReportGenerator:
         // Area Geometry Data for 3D Visualization
         const AREA_GEOMETRY_DATA = {geometry_data};
         
+        // Per-department Excel program targets (Target DGSF / Target Count) for the target overlay
+        const AREA_TARGET_DATA = {target_data};
+        
+        // Tolerance (%) used by the target overlay to decide on/under/over target
+        const TARGET_OVERLAY_TOLERANCE = {target_tolerance};
+        
         {javascript}
     </script>
 </body>
@@ -900,6 +914,8 @@ class HTMLReportGenerator:
             combined_scheme_content=combined_scheme_content,
             scheme_nav_items=combined_nav_items,
             geometry_data=self._generate_geometry_data_json(self.revit_data),
+            target_data=self._generate_target_data_json(all_matches_dict),
+            target_tolerance=float(config.AREA_TOLERANCE_PERCENTAGE),
             javascript=self._get_javascript(),
             report_creator=report_creator
         )
@@ -4218,6 +4234,40 @@ class HTMLReportGenerator:
             color: #f8fafc;
         }
         
+        /* Target overlay legend (target-vs-actual DGSF coloring) */
+        .target-overlay-legend {
+            display: none;
+            width: 100%;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 4px;
+            padding: 12px 16px;
+            background: #111827;
+            border-radius: 6px;
+            box-shadow: inset 3px 0 0 #60a5fa;
+            font-size: 0.8rem;
+            color: #d1d5db;
+            align-items: center;
+        }
+        
+        .target-overlay-legend.visible {
+            display: flex;
+        }
+        
+        .target-overlay-legend .legend-title {
+            color: #9ca3af;
+            font-weight: 600;
+        }
+        
+        .target-overlay-legend .legend-swatch {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        
         .viewer-container {
             position: relative;
             width: 100%;
@@ -6439,6 +6489,10 @@ class HTMLReportGenerator:
         // Global storage for geometry viewers (one per scheme)
         var geometryViewers = {};
         
+        // Explode view animation settings
+        var EXPLODE_DURATION_MS = 1600;
+        var EXPLODE_DISTANCE_FACTOR = 40; // Max travel (world units) for the farthest mesh
+        
         /**
          * Initialize all geometry viewers after Three.js loads
          */
@@ -6520,7 +6574,11 @@ class HTMLReportGenerator:
                 mouse: new THREE.Vector2(),
                 selectedArea: null,
                 isAnimating: false,
-                animationFrame: null
+                animationFrame: null,
+                targetOverlayEnabled: false,
+                explodeItems: null,
+                explodeMaxDist: 0,
+                explodeStart: 0
             };
             
             // Initialize renderer
@@ -6548,9 +6606,23 @@ class HTMLReportGenerator:
         }
         
         /**
+         * Reset explode animation state. Called when the scene is rebuilt
+         * (view-mode switch or camera reset), which recreates all meshes at
+         * their original positions.
+         */
+        function resetExplodeState(viewer) {
+            viewer.isAnimating = false;
+            viewer.explodeItems = null;
+            viewer.explodeMaxDist = 0;
+            viewer.explodeStart = 0;
+        }
+        
+        /**
          * Setup 2D floor plan viewer (orthographic top-down view)
          */
         function setup2DViewer(viewer) {
+            // Meshes are recreated here, so any running explode animation is invalid
+            resetExplodeState(viewer);
             
             // Create scene
             viewer.scene = new THREE.Scene();
@@ -6577,6 +6649,11 @@ class HTMLReportGenerator:
             // Create area geometries
             createAreaGeometries2D(viewer);
             
+            // Re-apply target overlay on the rebuilt meshes if it is enabled
+            if (viewer.targetOverlayEnabled && typeof applyTargetOverlay === 'function') {
+                applyTargetOverlay(viewer);
+            }
+            
             // Setup controls (no OrbitControls for 2D, use pan/zoom instead)
             setupPanZoomControls(viewer);
         }
@@ -6585,6 +6662,8 @@ class HTMLReportGenerator:
          * Setup 3D extrusion viewer
          */
         function setup3DViewer(viewer) {
+            // Meshes are recreated here, so any running explode animation is invalid
+            resetExplodeState(viewer);
             
             // Create scene
             viewer.scene = new THREE.Scene();
@@ -6690,6 +6769,11 @@ class HTMLReportGenerator:
                 viewer.controls.update();
             } else {
                 console.warn('OrbitControls not available');
+            }
+            
+            // Re-apply target overlay on the rebuilt meshes if it is enabled
+            if (viewer.targetOverlayEnabled && typeof applyTargetOverlay === 'function') {
+                applyTargetOverlay(viewer);
             }
         }
         
@@ -7304,11 +7388,113 @@ class HTMLReportGenerator:
         }
         
         /**
-         * Toggle target overlay (placeholder - to be implemented with Excel data)
+         * Resolve per-department Excel target data for a scheme.
+         * Mirrors the AREA_GEOMETRY_DATA key fallback logic (exact -> spaces -> fuzzy).
+         */
+        function getTargetDataForScheme(schemeName) {
+            if (typeof AREA_TARGET_DATA === 'undefined' || !AREA_TARGET_DATA) {
+                return null;
+            }
+            
+            if (AREA_TARGET_DATA[schemeName]) {
+                return AREA_TARGET_DATA[schemeName];
+            }
+            
+            var schemeNameWithSpaces = schemeName.replace(/_/g, ' ');
+            if (AREA_TARGET_DATA[schemeNameWithSpaces]) {
+                return AREA_TARGET_DATA[schemeNameWithSpaces];
+            }
+            
+            var normalized = schemeName.toLowerCase().replace(/[_\s-]/g, '');
+            for (var key in AREA_TARGET_DATA) {
+                if (key.toLowerCase().replace(/[_\s-]/g, '') === normalized) {
+                    return AREA_TARGET_DATA[key];
+                }
+            }
+            
+            return null;
+        }
+        
+        /**
+         * Toggle target overlay: color-code meshes by department target-vs-actual
+         * DGSF, based on the Excel program requirements ("Hospital Program
+         * TARGET_DESIGN" worksheet). Actual DGSF is aggregated from the meshes;
+         * targets come from AREA_TARGET_DATA embedded at export time.
          */
         function toggleTargetOverlay(schemeName, enabled) {
+            var viewer = geometryViewers[schemeName];
+            if (!viewer) return;
+            
+            viewer.targetOverlayEnabled = enabled;
             console.log('Toggle target overlay:', enabled);
-            // TODO: Implement target overlay based on Excel requirements
+            
+            applyTargetOverlay(viewer);
+            
+            var legend = document.getElementById('target-overlay-legend-' + schemeName);
+            if (legend) {
+                if (enabled) {
+                    legend.classList.add('visible');
+                } else {
+                    legend.classList.remove('visible');
+                }
+            }
+        }
+        
+        /**
+         * Apply target overlay coloring to viewer meshes (applyFilters-style loop).
+         * Green = on target (within tolerance), amber = over target, red = under
+         * target, gray = no Excel requirement for the department. With the overlay
+         * off (or no target data), restores the original department colors.
+         */
+        function applyTargetOverlay(viewer) {
+            var targetData = viewer.targetOverlayEnabled ? getTargetDataForScheme(viewer.schemeName) : null;
+            
+            // Aggregate actual DGSF per department from the meshes
+            var actualByDept = {};
+            viewer.areaMeshes.forEach(function(mesh) {
+                var areaData = mesh.userData;
+                if (!areaData || !areaData.area_id) {
+                    return; // Skip non-area meshes
+                }
+                
+                var dept = areaData.department || 'Unknown';
+                actualByDept[dept] = (actualByDept[dept] || 0) + (parseFloat(areaData.area_sf) || 0);
+            });
+            
+            var tolerance = (typeof TARGET_OVERLAY_TOLERANCE === 'number' ? TARGET_OVERLAY_TOLERANCE : 5.0) / 100.0;
+            
+            viewer.areaMeshes.forEach(function(mesh) {
+                var areaData = mesh.userData;
+                if (!areaData || !areaData.area_id) {
+                    return; // Skip non-area meshes
+                }
+                
+                if (!targetData) {
+                    // Overlay off (or no target data): restore department color
+                    mesh.material.color.set(areaData.color || '#6b7280');
+                    mesh.material.opacity = viewer.viewMode === '2d' ? 0.7 : 0.8;
+                    return;
+                }
+                
+                var dept = areaData.department || 'Unknown';
+                var deptTarget = targetData[dept];
+                var targetDgsf = deptTarget ? (parseFloat(deptTarget.target_dgsf) || 0) : 0;
+                var actualDgsf = actualByDept[dept] || 0;
+                
+                var color;
+                if (targetDgsf <= 0) {
+                    color = '#6b7280'; // No Excel requirement for this department
+                } else if (actualDgsf < targetDgsf * (1 - tolerance)) {
+                    color = '#ef4444'; // Under target (shortfall)
+                } else if (actualDgsf > targetDgsf * (1 + tolerance)) {
+                    color = '#f59e0b'; // Over target (excess)
+                } else {
+                    color = '#10b981'; // On target (within tolerance)
+                }
+                
+                mesh.material.color.set(color);
+                mesh.material.opacity = viewer.viewMode === '2d' ? 0.85 : 0.9;
+            });
         }
         
         /**
@@ -7543,7 +7729,7 @@ class HTMLReportGenerator:
         }
         
         /**
-         * Toggle animation (explode view / fly-through)
+         * Toggle explode view animation
          */
         function toggleAnimation(schemeName) {
             var viewer = geometryViewers[schemeName];
@@ -7552,11 +7738,100 @@ class HTMLReportGenerator:
             viewer.isAnimating = !viewer.isAnimating;
             
             if (viewer.isAnimating) {
-                console.log('Starting animation');
-                // TODO: Implement explode view animation
+                console.log('Starting explode view animation');
+                startExplodeAnimation(viewer);
             } else {
-                console.log('Stopping animation');
+                console.log('Stopping explode view animation');
+                stopExplodeAnimation(viewer);
             }
+        }
+        
+        /**
+         * Start the explode view animation: each area mesh moves outward from the
+         * model center along (meshCenter - modelCenter). Original positions are
+         * stored per mesh so stopping restores the model exactly.
+         */
+        function startExplodeAnimation(viewer) {
+            if (!viewer.scene) return;
+            
+            viewer.scene.updateMatrixWorld(true);
+            var modelCenter = calculateSceneCenter(viewer);
+            
+            var explodeItems = [];
+            var maxDist = 0;
+            
+            viewer.areaMeshes.forEach(function(mesh) {
+                var areaData = mesh.userData;
+                if (!areaData || !areaData.area_id) {
+                    return; // Skip non-area meshes
+                }
+                
+                // Store original position on the mesh instance (meshes are recreated
+                // on view-mode switch, so stale entries never survive a rebuild)
+                if (!mesh._explodeOriginal) {
+                    mesh._explodeOriginal = mesh.position.clone();
+                }
+                
+                var meshCenter = getMeshCenter(mesh);
+                var dir = new THREE.Vector3(
+                    meshCenter.x - modelCenter.x,
+                    meshCenter.y - modelCenter.y,
+                    meshCenter.z - modelCenter.z
+                );
+                var dist = dir.length();
+                if (dist < 0.001) {
+                    dir.set(0, 1, 0); // Degenerate: push straight up
+                    dist = 0.001;
+                } else {
+                    dir.normalize();
+                }
+                
+                if (dist > maxDist) maxDist = dist;
+                explodeItems.push({ mesh: mesh, dir: dir, dist: dist });
+            });
+            
+            viewer.explodeItems = explodeItems;
+            viewer.explodeMaxDist = maxDist || 1;
+            viewer.explodeStart = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+            
+            function stepExplode(now) {
+                if (!viewer.isAnimating) return; // Stopped mid-flight: nothing more to do
+                
+                var elapsed = now - viewer.explodeStart;
+                var t = Math.min(elapsed / EXPLODE_DURATION_MS, 1);
+                // Ease in-out quadratic
+                var eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+                
+                viewer.explodeItems.forEach(function(item) {
+                    var travel = (item.dist / viewer.explodeMaxDist) * EXPLODE_DISTANCE_FACTOR * eased;
+                    item.mesh.position.set(
+                        item.mesh._explodeOriginal.x + item.dir.x * travel,
+                        item.mesh._explodeOriginal.y + item.dir.y * travel,
+                        item.mesh._explodeOriginal.z + item.dir.z * travel
+                    );
+                });
+                
+                if (t < 1) {
+                    requestAnimationFrame(stepExplode);
+                }
+            }
+            
+            requestAnimationFrame(stepExplode);
+        }
+        
+        /**
+         * Stop the explode view animation and restore original mesh positions
+         */
+        function stopExplodeAnimation(viewer) {
+            viewer.areaMeshes.forEach(function(mesh) {
+                if (mesh._explodeOriginal) {
+                    mesh.position.copy(mesh._explodeOriginal);
+                    mesh._explodeOriginal = null;
+                }
+            });
+            
+            viewer.explodeItems = null;
+            viewer.explodeMaxDist = 0;
         }
         
         // Auto-initialize geometry viewers when Three.js is available
@@ -7699,6 +7974,57 @@ class HTMLReportGenerator:
             print("Error generating geometry JSON: {}".format(str(e)))
             import traceback
             traceback.print_exc()
+            return "{}"
+    
+    def _generate_target_data_json(self, all_matches_dict):
+        """
+        Build per-scheme, per-department Excel program target data for the target overlay
+        
+        Aggregates the Excel requirements ("Hospital Program TARGET_DESIGN" worksheet)
+        from the comparison matches so the JavaScript viewer can color-code meshes by
+        department target-vs-actual DGSF.
+        
+        Args:
+            all_matches_dict: Dictionary {scheme_name: {'matches': [...], ...}}
+        
+        Returns:
+            str: JSON string {scheme_name: {department: {'target_dgsf': float, 'target_count': int}}}
+        """
+        import json
+        
+        target_data = {}
+        
+        for scheme_name, scheme_data in all_matches_dict.items():
+            matches = []
+            if isinstance(scheme_data, dict):
+                matches = scheme_data.get('matches', []) or []
+            
+            dept_targets = {}
+            for match in matches:
+                if not isinstance(match, dict):
+                    continue
+                
+                department = match.get('department') or 'Unknown'
+                entry = dept_targets.get(department)
+                if entry is None:
+                    entry = {'target_dgsf': 0.0, 'target_count': 0}
+                    dept_targets[department] = entry
+                
+                target_dgsf = match.get('target_dgsf')
+                if target_dgsf:
+                    entry['target_dgsf'] += float(target_dgsf)
+                
+                target_count = match.get('target_count')
+                if target_count:
+                    entry['target_count'] += int(float(target_count))
+            
+            target_data[scheme_name] = dept_targets
+        
+        try:
+            # ensure_ascii=True keeps Python 2.7 / IronPython JSON safe for embedding
+            return json.dumps(target_data, ensure_ascii=True)
+        except Exception as e:
+            print("Error generating target JSON: {}".format(str(e)))
             return "{}"
     
     def open_report_in_browser(self, filepath=None):
