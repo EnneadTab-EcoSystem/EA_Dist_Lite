@@ -456,7 +456,7 @@
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Tools.panel/inspect_cutter.pushbutton/inspect_cutter_script.py": "439cf2925a5d4a6e28b88c5a28af13bffb33b0ecd31ea53070f6962023644a3a",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Tools.panel/join_all_coln_floor.pushbutton/join_all_coln_floor_script.py": "547fd5b8cc48aa80f72d4f0385af7b291dfe89753f2abee94498eda3509ba7f3",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Tools.panel/make_template_from_current_view.pushbutton/make_template_from_current_view_script.py": "86f847a516c777611bdb94fe5b9697c8ae909b4ad5ecf5b1e4b53208de9e847a",
-        "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Tools.panel/mcp_server.smartbutton/mcp_server_script.py": "5341a2569fe81df15505a1d821a4a93f6677db77c405f7509839f54a50096da8",
+        "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Tools.panel/mcp_server.smartbutton/mcp_server_script.py": "a17642a5e813560cb515413a0edeca734fe29c032f0b866cf3bc3332791a8aab",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Tools.panel/move_curtain_grids.stack/move_curtain_grid_hori.pushbutton/move_curtain_grid_hori_script.py": "f1bc361850f7c8b6a2ebe25630848156946ea8a22c9dd11e7ddec2e17e76be2d",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Tools.panel/move_curtain_grids.stack/move_curtain_grid_verti.pushbutton/move_curtain_grid_verti_script.py": "f26c176e6a14c0bf4e4db9b9c308982c0e7246b1f61637a700af9b6ae7fc6f46",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/Tools.panel/nyu_export_mapping.pushbutton/nyu_export_mapping_script.py": "0527b6b5a2bef7f29c0ecc37cd1dc3ab1e58499bfd28ed7ccadb3576927494b5",
@@ -713,11 +713,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-09-28T15:46:18",
-    "source_commit": "ef961c010f3c45445577f60cec000682f69e59b6",
+    "published_at": "2026-09-30T16:33:47",
+    "source_commit": "cadd7649a4027b2081248fa85de9bf8e8434cede",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.09.28.1546"
+    "version": "2026.09.30.1633"
 }
