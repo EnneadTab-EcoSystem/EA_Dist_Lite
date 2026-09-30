@@ -154,7 +154,7 @@
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/excel_data.py": "ed2a6d3f83a9757fd0b0d099ad50c8ade53a363825951c4ccc5baff7329ad724",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/excel_writeback.py": "51341a4aa72d98519e8530d8b767bb96eec564d5d72295c53a3d644c2e41d466",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/geometry_extractor.py": "77d48c84c25adead44c137b7ab400169fccf51f9b6a38d546daed5f79e0faac8",
-        "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/html_export.py": "9ed72f361197d5269ec8b95d9eed8f5614d0a7234dcabae90bb2b14b0fdd5e85",
+        "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/html_export.py": "cf042e797a07628929130277d38266c0f369f6f0bdf345cc405d3fc55f1a9b6e",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/monitor_area_script.py": "2bbf0260d556fa73d722f8170529818922936d6425f7e5a6efecf65923a7bd7f",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/parameter_updater.py": "ec1bec97c1ec8747b80b209d20557ec999acd592d93c74b985f95366f335f970",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/revit_data.py": "6279555fd719ebbdfde08986a197463a517146b263597578743f2f078076c23c",
@@ -328,7 +328,7 @@
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/get_model_guids.pushbutton/get_model_guids_script.py": "79fb1c9149b6b3e84faf17ad5a4e802f809b5bb66c1dde8e50a504cf20fe7751",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/inspect_local_graphic_override.pushbutton/inspect_local_graphic_override_script.py": "019374df31dbdb1b3ff641dc1d888e87b810351879cd56bcf0f4305108e4dbd8",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/keynote_assistant.pushbutton/additional_util.py": "6e1b1b634b689919eb79627f2292b3b7f47731fee2d7dabcfb0aaf458f580fe6",
-        "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/keynote_assistant.pushbutton/keynote_assistant_script.py": "cc48ff1cc74cf0fc007a0ecfdd203979004e8f5fd0ae453fa4be322e2129f9c5",
+        "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/keynote_assistant.pushbutton/keynote_assistant_script.py": "dcddefd3fca5421e5bca204101e7394901e3f0f777f88ff6617916803d415dfe",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/keynote_assistant.pushbutton/keynotesdb.py": "877995ab6d61e2f088bbe70ccc93795eda5aef633b2a6b8d8219cf7de82b043b",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/lines_in_view_locator.pushbutton/lines_in_view_locator_script.py": "efc5847c3d0a40c13e6224baa45f92a77634525dfd6bdd2a95e6384630e32925",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/ACE.panel/merge_ost.pushbutton/merge_ost_script.py": "797fef617ce28c3c66d18c67f8ba9369b378ca086dfd640209532c817b1e0158",
@@ -563,7 +563,7 @@
         "Apps/lib/EnneadTab/DOCUMENTATION.py": "974752a6f771611c308f6e1397bc5fe782bfee71e5b9c5c868844eb86194ceca",
         "Apps/lib/EnneadTab/DUCK.py": "b712e251e616dcaa21c47d438b5888d85285273297c94934ae73f5d85e4dcd57",
         "Apps/lib/EnneadTab/EARTH_MODEL.py": "228316dd7d7850886a5a8b4c8e21e83239527ef39b8ac98ad93f76c385ef2474",
-        "Apps/lib/EnneadTab/EMAIL.py": "3eba2073ce5f844eb6bd9f172f0251e88791142eb37fb19fc62b1a8b8747b3f7",
+        "Apps/lib/EnneadTab/EMAIL.py": "5dc1837670b76d57e32b3fe2dd40a6ddf0b596206f7acee5cbb5ed6731830083",
         "Apps/lib/EnneadTab/EMOJI.py": "ef5ac0d4170d3c1553d028a4da3fca0fc9c7b12e77d8071bb06abe41dd2b030f",
         "Apps/lib/EnneadTab/ENCODING.py": "39b907e1824d41b6114a186405117a9a4506ea91020a94771b0c24b04f1e9019",
         "Apps/lib/EnneadTab/ENCOURAGING.py": "79d6bb24f1f48bb5d0e0f51e3d19965cdcbb9a6a9275b3dcbca695d42a04b7c7",
@@ -713,11 +713,11 @@
         "Apps/lib/EnneadTab/scripts/TimeSheetMiniApp/ui.py": "97ad45f79c63053f07cf5def3f34c00939ca3ec3a84a3110e09ac897a126829b",
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80"
     },
-    "published_at": "2026-09-30T16:39:56",
-    "source_commit": "b13a68f69d738633b52d5c7aa8ee08f60ab41d25",
+    "published_at": "2026-09-30T16:41:39",
+    "source_commit": "cd3f375372ce3df8727495ae6ad68bb182c647f9",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.09.30.1639"
+    "version": "2026.09.30.1641"
 }
