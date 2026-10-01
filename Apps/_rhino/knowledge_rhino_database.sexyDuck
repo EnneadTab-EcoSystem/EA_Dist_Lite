@@ -578,6 +578,15 @@
         "tab_icon": "Knowledge.tab\\icon.png",
         "is_popular": false
     },
+    "Knowledge.tab\\library_sort.button\\library_sort_left.py": {
+        "script": "Knowledge.tab\\library_sort.button\\library_sort_left.py",
+        "icon": "Knowledge.tab\\library_sort.button\\icon.png",
+        "alias": "LibrarySort",
+        "doc": "Sort the local library catalog by title, category, or path.\n\nKey Features:\n- Ascending / descending sort on title, category, or path\n- Remembers the last sort choice in the library settings\n- Shows the sorted catalog in a pick list\n\nPorts EnneadTab-For-Grasshopper#13 (SortBy/SortDirection).",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
     "Knowledge.tab\\perforation_ratio.button\\perforation_ratio_left.py": {
         "script": "Knowledge.tab\\perforation_ratio.button\\perforation_ratio_left.py",
         "icon": "Knowledge.tab\\perforation_ratio.button\\icon.png",
