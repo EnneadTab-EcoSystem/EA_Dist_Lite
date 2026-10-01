@@ -2521,7 +2521,7 @@
     },
     "EnneadTab.tab\\Import Export.panel\\Rhino.pulldown\\revit2rhino.pushbutton\\revit2rhino_script.py": {
         "alias": "Revit2Rhino",
-        "doc": "\nScript for exporting Revit Family Instances to Rhino.\nIt converts each FamilyInstance's geometry into a Rhino block containing all its Breps\n(or fallback Meshes). \n\nBlock names in Rhino follow the format: \"FamilyName_TypeName\"\nEach export includes a timestamp in the filename.\n",
+        "doc": "Export the Revit elements of your choice to a Rhino file.\n\nPick the categories to export (walls, floors, windows, furniture, curtain panels...), then choose which family / type combinations to include. Each element is converted into a Rhino block instance placed at its original location, with the geometry (Breps, or Meshes as fallback) organized on layers by Category / Family / Subcategory.\n\nBlocks are named after the family and type (a short suffix is added when the same type differs by parameters, or for system families such as walls). The export file name contains a timestamp, and Rhino opens when the export finishes.\n\nTip: Rhino.Inside must be running, and an architectural view (such as a 3D view) must be active. Only elements visible in the active view are listed. Elements from linked models are not exported.\n",
         "icon": "EnneadTab.tab\\Import Export.panel\\Rhino.pulldown\\revit2rhino.pushbutton\\icon.png",
         "is_popular": false,
         "script": "EnneadTab.tab\\Import Export.panel\\Rhino.pulldown\\revit2rhino.pushbutton\\revit2rhino_script.py",
