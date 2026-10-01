@@ -1481,5 +1481,14 @@
         "tab": null,
         "tab_icon": null,
         "is_popular": false
+    },
+    "Knowledge.tab\\library_search.button\\library_search_left.py": {
+        "script": "Knowledge.tab\\library_search.button\\library_search_left.py",
+        "icon": "Knowledge.tab\\library_search.button\\icon.png",
+        "alias": "LibrarySearch",
+        "doc": "Search the local library catalog with faceted chips.\n\nKey Features:\n- One search box: free text plus tag:/category:/author: facet chips\n- Quoted values supported, e.g. tag:\"panel unit\"\n- Unknown key:value tokens are kept as free text, never dropped\n- author: chips match the sidecar author (the shared lib has no author facet)\n\nPorts EnneadTab-For-Grasshopper#35 (faceted search).",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": true
     }
 }
