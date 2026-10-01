@@ -7,6 +7,7 @@ Single source of truth for all configuration settings
 """
 
 from EnneadTab import SHAREPOINT
+import os
 
 # =============================================================================
 # PARAMETER MAPPING (Excel ↔ Revit)
@@ -89,11 +90,26 @@ COLOR_SCHEME_NAMES = {
 # REPORT CONFIGURATION
 # =============================================================================
 
-# Website data sync settings
-# Local clone of the EnneadTab-TailorProject-NYU-HQ repo. The exporter writes
-# docs/data/report-data.json and docs/data/geometry.json there.
-# Leave empty to write to a "website_data" folder next to this script.
-WEBSITE_DATA_DIR = ""
+# =============================================================================
+# NYU HQ WEBAPP API (zero-data architecture)
+# =============================================================================
+# The NYU HQ website repo holds ZERO data: Postgres is the system of record
+# and the webapp's /api/* endpoints are the only gateway. Revit syncs through
+# the API -- it READS clean targets (GET /api/targets) and PUBLISHES report +
+# geometry (POST /api/report, POST /api/geometry). No repo clone, no JSON
+# data files, no GitHub writes from Revit.
+#
+# Configure via environment variables on the machine running Revit:
+#   NYU_HQ_API_URL        webapp origin, e.g. https://enneadtab.com
+#   NYU_HQ_SERVICE_TOKEN  service token (sent as Authorization: Bearer ...)
+#   NYU_HQ_WEBAPP_URL      dashboard URL opened in the browser after a sync
+#   NYU_HQ_ACTOR           audit label for the edit log (default: revit-...)
+# The service token lives on the user's machine only -- never commit it.
+NYU_HQ_API_URL = os.environ.get("NYU_HQ_API_URL", "").strip()
+NYU_HQ_SERVICE_TOKEN = os.environ.get("NYU_HQ_SERVICE_TOKEN", "").strip()
+NYU_HQ_WEBAPP_URL = os.environ.get(
+    "NYU_HQ_WEBAPP_URL", "https://enneadtab.com/projects/nyu-hq").strip()
+NYU_HQ_ACTOR = os.environ.get("NYU_HQ_ACTOR", "").strip()
 
 # Report settings
 REPORTS_DIR = "reports"
