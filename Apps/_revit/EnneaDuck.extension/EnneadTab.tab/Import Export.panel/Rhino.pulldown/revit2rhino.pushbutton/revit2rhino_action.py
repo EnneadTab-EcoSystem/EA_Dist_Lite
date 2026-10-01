@@ -39,7 +39,7 @@ except Exception:
     print(traceback.format_exc())
 
 
-from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION, UI, ENVIRONMENT, USER
+from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION, UI, ENVIRONMENT, USER, DATA_FILE, REVIT2RHINO
 from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_UNIT, REVIT_RHINO, REVIT_FORMS
 from Autodesk.Revit import DB  # pyright: ignore
 
@@ -51,13 +51,15 @@ DOC = REVIT_APPLICATION.get_doc()
 MAX_CONSECUTIVE_ERRORS = 10
 
 
-def export_elements_to_rhino(doc, selected_instances):
+def export_elements_to_rhino(doc, selected_instances, open_in_rhino=False):
     """
     Export selected elements to Rhino with options.
 
     Args:
         doc (DB.Document): The Revit document.
         selected_instances (list): List of Revit elements to export
+        open_in_rhino (bool): Also open the exported file in a new Rhino window when done.
+            Off by default: the Rhino import button (Revit2RhinoImport) is the normal way in.
 
     Returns:
         str: Path to the exported Rhino file or None if failed
@@ -72,6 +74,7 @@ def export_elements_to_rhino(doc, selected_instances):
     # Initialize exporter with options
     exporter = RevitToRhinoExporter(doc)
     exporter.family_instances = selected_instances
+    exporter.open_in_rhino = open_in_rhino
     exporter.preserve_family_layers = True  # Always preserve family layers
     exporter.setup_document()
 
@@ -117,8 +120,12 @@ def export_elements_to_rhino(doc, selected_instances):
     time_str += "{:.1f} seconds".format(secs)
 
     if export_result:
+        _record_handoff(doc, exporter, export_result)
         success_message = "Successfully exported to: {}\nTotal time: {}".format(export_result, time_str)
-        success_message += "\nYour new Rhino will start soon."
+        if open_in_rhino:
+            success_message += "\nYour new Rhino will start soon."
+        else:
+            success_message += "\nIn Rhino, run Revit2RhinoImport."
         success_message += "\n" + exporter.get_stats_summary()
         NOTIFICATION.messenger(success_message)
         return export_result
@@ -130,12 +137,33 @@ def export_elements_to_rhino(doc, selected_instances):
         return None
 
 
+def _record_handoff(doc, exporter, exported_file):
+    """Tell the Rhino side what was exported (same convention as rhino2revit_out_paths).
+
+    Never fails the export: the Rhino import button falls back to the newest export file.
+    """
+    try:
+        view_name = doc.ActiveView.Name if doc.ActiveView else None
+        entry = REVIT2RHINO.build_entry([exported_file],
+                                        exporter.revit_unit,
+                                        exporter.stamp,
+                                        project=doc.Title,
+                                        view=view_name)
+        DATA_FILE.set_data(entry, REVIT2RHINO.KEY)
+        # set_data returns nothing on its local path, so read it back to be sure.
+        if not REVIT2RHINO.recorded_ok(DATA_FILE.get_data, entry):
+            logger.warning("The export record could not be confirmed; the Rhino import button will use the newest file.")
+    except Exception:
+        logger.warning("Could not record the export for the Rhino import button: {}".format(traceback.format_exc()))
+
+
 class RevitToRhinoExporter(object):
     def __init__(self, revit_doc):
         self.revit_doc = revit_doc
 
         # Generate timestamp for filename
         timestamp = time.strftime("%Y%m%d_%H%M%S", time.localtime())
+        self.stamp = timestamp
         self.output_file = os.path.join(ENVIRONMENT.DUMP_FOLDER, "{}_Revit2Rhino_{}.3dm".format(ENVIRONMENT.PLUGIN_NAME, timestamp))
 
         self.rhino_doc = None
@@ -152,6 +180,7 @@ class RevitToRhinoExporter(object):
         self.error_count = 0
         self.consecutive_error_count = 0
         self.nothing_exported = False
+        self.open_in_rhino = False
         self.layer_dict = {}
 
         # Cache for block definitions
@@ -1075,11 +1104,12 @@ class RevitToRhinoExporter(object):
                 print(traceback.format_exc())
             return False
 
-        # Open the file
-        try:
-            os.startfile(self.output_file)
-        except Exception:
-            print(traceback.format_exc())
+        # Open the file (only when asked: the Rhino import button is the normal way in)
+        if self.open_in_rhino:
+            try:
+                os.startfile(self.output_file)
+            except Exception:
+                print(traceback.format_exc())
         return True
 
 

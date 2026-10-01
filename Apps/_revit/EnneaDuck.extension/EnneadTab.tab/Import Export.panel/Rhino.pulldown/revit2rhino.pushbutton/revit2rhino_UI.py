@@ -16,6 +16,7 @@ from EnneadTab.REVIT import REVIT_APPLICATION
 from Autodesk.Revit import DB  # pyright: ignore
 import logging
 import revit2rhino_action
+import revit2rhino_dwg
 
 # Same shared logger the script and action modules use (looked up by name so
 # this module does not need to re-import the launcher script).
@@ -170,7 +171,18 @@ class Revit2RhinoUI(forms.WPFWindow):
             self.selected_instances = None
             self.export_button.IsEnabled = False
             return
-        revit2rhino_action.export_elements_to_rhino(self.doc, valid_instances)
+        open_in_rhino = bool(self.open_rhino_checkbox.IsChecked)
+        revit2rhino_action.export_elements_to_rhino(self.doc, valid_instances, open_in_rhino=open_in_rhino)
+
+
+    @ERROR_HANDLE.try_catch_error()
+    def export_dwg_click(self, sender, args):
+        """Export everything visible in the active 3D view as a DWG (no element selection needed)."""
+        self.export_dwg_button.IsEnabled = False
+        try:
+            revit2rhino_dwg.export_active_view_to_dwg(self.doc)
+        finally:
+            self.export_dwg_button.IsEnabled = True
 
 
     @ERROR_HANDLE.try_catch_error()
