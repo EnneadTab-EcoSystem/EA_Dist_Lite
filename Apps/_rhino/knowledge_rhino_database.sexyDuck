@@ -627,6 +627,15 @@
         "tab_icon": "Knowledge.tab\\icon.png",
         "is_popular": false
     },
+    "Knowledge.tab\\open_grasshopper_library.button\\open_grasshopper_library_left.py": {
+        "script": "Knowledge.tab\\open_grasshopper_library.button\\open_grasshopper_library_left.py",
+        "icon": "Knowledge.tab\\open_grasshopper_library.button\\icon.png",
+        "alias": "EnneadTabGrasshopper",
+        "doc": "Launch the EnneadTab Grasshopper Library Explorer from inside Rhino.",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": true
+    },
     "Lab.tab\\anything.button\\anything_left.py": {
         "script": "Lab.tab\\anything.button\\anything_left.py",
         "icon": "Lab.tab\\anything.button\\icon.png",
