@@ -7,11 +7,11 @@ Revit syncs data only; the website repo owns all presentation (no HTML builder).
 """
 
 import os
-import io
 import json
 import time
 from datetime import datetime
 import config
+import nyu_hq_api
 from EnneadTab import ENVIRONMENT
 
 try:
@@ -412,20 +412,17 @@ class HTMLReportGenerator:
     
 
 class WebsiteDataExporter:
-    """Syncs NYU HQ area data as JSON for the website-owned webapp.
+    """Publishes NYU HQ area data to the website-owned webapp via its API.
 
     The website repo (EnneadTab-TailorProject-NYU-HQ) owns all presentation
-    (HTML shell, CSS, JS renderers). This class only writes data files:
-    docs/data/report-data.json and docs/data/geometry.json.
+    (HTML shell, CSS, JS renderers) and holds ZERO data: Postgres is the
+    system of record. This class only PUBLISHES data documents through the
+    webapp's API -- POST /api/report and POST /api/geometry -- authenticated
+    with the NYU_HQ_SERVICE_TOKEN environment variable.
     See docs/DATA_CONTRACT.md in the website repo for the schema.
     """
 
-    def __init__(self, output_dir=None):
-        self.output_dir = (
-            output_dir
-            or config.WEBSITE_DATA_DIR
-            or os.path.join(os.path.dirname(os.path.abspath(__file__)), "website_data")
-        )
+    def __init__(self):
         self.color_hierarchy = {
             'department': {},
             'division': {},
@@ -437,15 +434,22 @@ class WebsiteDataExporter:
         return self.color_hierarchy.get(level, {}).get(name, fallback)
 
     def export_website_data(self, excel_data, revit_data, color_hierarchy=None):
-        """Match areas and write JSON data files for the website.
+        """Match areas and publish the data documents to the webapp API.
 
         Args:
-            excel_data: Dictionary of Excel data with RowData objects
+            excel_data: Dictionary of target data with RowData objects
+                (from target_data.get_target_data -- clean API targets,
+                same shape as the legacy Excel data)
             revit_data: Dictionary with scheme names as keys and list of area objects
             color_hierarchy: Dict with color mappings at department/division/room levels
 
         Returns:
-            tuple: (list of written filepaths, all_matches, all_unmatched_areas)
+            tuple: (sync_result dict, all_matches, all_unmatched_areas).
+                sync_result describes the two POSTs that were made.
+
+        Raises:
+            nyu_hq_api.NyuHqApiError: if the API cannot be reached or
+                rejects the publish (auth, validation, database).
         """
         self.color_hierarchy = color_hierarchy or {
             'department': {},
@@ -493,21 +497,22 @@ class WebsiteDataExporter:
                 ]
             }
 
-        # Build geometry.json
+        # Build geometry document
         geometry_data = self._generate_geometry_data(revit_data)
 
-        # Write files
-        if not os.path.isdir(self.output_dir):
-            os.makedirs(self.output_dir)
-        report_path = os.path.join(self.output_dir, 'report-data.json')
-        geometry_path = os.path.join(self.output_dir, 'geometry.json')
+        # Publish both documents to the webapp API (Postgres is the system
+        # of record; the website repo holds zero data). Auth via
+        # NYU_HQ_SERVICE_TOKEN.
+        report_resp = nyu_hq_api.post_report(report_data)
+        geometry_resp = nyu_hq_api.post_geometry(geometry_data)
+        sync_result = {
+            'report': report_resp,
+            'geometry': geometry_resp,
+            'api_origin': config.NYU_HQ_API_URL,
+        }
+        print("Published report + geometry to {}".format(config.NYU_HQ_API_URL))
 
-        with io.open(report_path, 'w', encoding='utf-8') as f:
-            f.write(json.dumps(report_data, ensure_ascii=False))
-        with io.open(geometry_path, 'w', encoding='utf-8') as f:
-            f.write(json.dumps(geometry_data, ensure_ascii=False))
-
-        return [report_path, geometry_path], all_matches, all_unmatched_areas
+        return sync_result, all_matches, all_unmatched_areas
 
     def _clean(self, value):
         """JSON-safe value: preserve None (null), sanitize strings, pass through numbers."""
