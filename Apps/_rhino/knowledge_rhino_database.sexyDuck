@@ -1485,7 +1485,10 @@
     "Knowledge.tab\\library_search.button\\library_search_left.py": {
         "script": "Knowledge.tab\\library_search.button\\library_search_left.py",
         "icon": "Knowledge.tab\\library_search.button\\icon.png",
-        "alias": "LibrarySearch",
+        "alias": [
+            "ET_LIB",
+            "LibrarySearch"
+        ],
         "doc": "Search the local library catalog with faceted chips.\n\nKey Features:\n- One search box: free text plus tag:/category:/author: facet chips\n- Quoted values supported, e.g. tag:\"panel unit\"\n- Unknown key:value tokens are kept as free text, never dropped\n- author: chips match the sidecar author (the shared lib has no author facet)\n\nPorts EnneadTab-For-Grasshopper#35 (faceted search).",
         "tab": "Knowledge.tab",
         "tab_icon": "Knowledge.tab\\icon.png",
@@ -1534,6 +1537,514 @@
         "doc": "Audit and clean stale attribute user-text keys in the active model.\n\nKey Features:\n- Audits object + document user-text keys before changing anything\n- Flags stale 'Grasshopper Bake Data' leftovers (known file-bloat cause)\n- Flags empty-valued orphaned keys no definition reads anymore\n- Checklist UI: you pick exactly which keys to remove\n- Reports how many objects each key was removed from\n\nMirrors the community 'Grasshopper Bake Data' hygiene scripts and\nElefront's Remove User Text.",
         "tab": "Modify.tab",
         "tab_icon": "Modify.tab\\icon.png",
+        "is_popular": false
+    },
+    "Modify.tab\\bake_with_attributes.button\\bake_with_attributes_left.py": {
+        "script": "Modify.tab\\bake_with_attributes.button\\bake_with_attributes_left.py",
+        "icon": "Modify.tab\\bake_with_attributes.button\\icon.png",
+        "alias": "BakeWithAttributes",
+        "doc": "Bake selected objects with an explicit name / layer / color mapping.\n\nKey Features:\n- One dialog for the full attribute mapping, no hidden defaults\n- Name template with {i} index token (e.g. 'Panel_{i}')\n- Layer path with '::' nesting, created on demand\n- Display color applied per object (color source = object)\n- Copies the selection; originals are untouched\n\nRhino-side equivalent of the Grasshopper ModelObject -> ObjectAttributes\ntranslation fallback: name, layer path and display color are documented\nin the contract before anything is baked.",
+        "tab": "Modify.tab",
+        "tab_icon": "Modify.tab\\icon.png",
+        "is_popular": false
+    },
+    "Material.tab\\layer_material_swatch_report.button\\layer_material_swatch_report_left.py": {
+        "script": "Material.tab\\layer_material_swatch_report.button\\layer_material_swatch_report_left.py",
+        "icon": "Material.tab\\layer_material_swatch_report.button\\icon.png",
+        "alias": "LayerMaterialSwatchReport",
+        "doc": "Per-layer material swatch report with optional assignment.\n\nKey Features:\n- Lists every layer with its material name\n- Shows diffuse color hex per material\n- Flags layers falling back to the default material\n- Optional one-click material assignment to layers",
+        "tab": "Material.tab",
+        "tab_icon": "Material.tab\\icon.png",
+        "is_popular": false
+    },
+    "Drafting.tab\\tag_annotation_objects.button\\tag_annotation_objects_left.py": {
+        "script": "Drafting.tab\\tag_annotation_objects.button\\tag_annotation_objects_left.py",
+        "icon": "Drafting.tab\\tag_annotation_objects.button\\icon.png",
+        "alias": "TagAnnotationObjects",
+        "doc": "Count and tag annotation objects (dimensions, hatches, text, leaders, text dots) in the active document.",
+        "tab": "Drafting.tab",
+        "tab_icon": "Drafting.tab\\icon.png",
+        "is_popular": false
+    },
+    "Selection.tab\\pick_selection_contract.button\\pick_selection_contract_left.py": {
+        "script": "Selection.tab\\pick_selection_contract.button\\pick_selection_contract_left.py",
+        "icon": "Selection.tab\\pick_selection_contract.button\\icon.png",
+        "alias": "PickSelectionContract",
+        "doc": "Pick-selection contract: capture viewport picks as GUIDs under a name.\n\nKey Features:\n- Prompts viewport selection at run time\n- Captures picked object GUIDs into a named contract\n- Re-select a stored contract in one click\n- Skips deleted or missing objects on re-select",
+        "tab": "Selection.tab",
+        "tab_icon": "Selection.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_favorites.button\\library_favorites_left.py": {
+        "script": "Knowledge.tab\\library_favorites.button\\library_favorites_left.py",
+        "icon": "Knowledge.tab\\library_favorites.button\\icon.png",
+        "alias": "LibraryFavorites",
+        "doc": "Pin and unpin catalog definitions as favorites.\n\nKey Features:\n- Pin entries so favorites sort first in pin order\n- Pin order is preserved across sessions\n- Stored in the shared library-settings.json (favoriteEntryIds)",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Modify.tab\\quick_bake_text_dots.button\\quick_bake_text_dots_left.py": {
+        "script": "Modify.tab\\quick_bake_text_dots.button\\quick_bake_text_dots_left.py",
+        "icon": "Modify.tab\\quick_bake_text_dots.button\\icon.png",
+        "alias": "QuickBakeTextDots",
+        "doc": "Quick-bake selected objects with text-dot labels.\n\nKey Features:\n- One-click bake of the current selection\n- Text dots carry object names at bbox centers\n- Dedicated quick-bake layer, no dialog digging\n- Remembers the target layer between runs",
+        "tab": "Modify.tab",
+        "tab_icon": "Modify.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\group_objects_by_key.button\\group_objects_by_key_left.py": {
+        "script": "Knowledge.tab\\group_objects_by_key.button\\group_objects_by_key_left.py",
+        "icon": "Knowledge.tab\\group_objects_by_key.button\\icon.png",
+        "alias": "GroupObjectsByKey",
+        "doc": "Group sample objects by a property key (Layer, Name, or user-text key) and preview the one-branch-per-value map.",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Modify.tab\\replace_in_place.button\\replace_in_place_left.py": {
+        "script": "Modify.tab\\replace_in_place.button\\replace_in_place_left.py",
+        "icon": "Modify.tab\\replace_in_place.button\\icon.png",
+        "alias": "ReplaceInPlace",
+        "doc": "Replace-in-place: swap same-named objects instead of duplicating.\n\nKey Features:\n- Matches incoming objects to existing by name\n- Shows diff count before committing\n- Deletes replaced originals, keeps newcomers\n- Untouched objects and layers are never modified",
+        "tab": "Modify.tab",
+        "tab_icon": "Modify.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\model_contract.button\\model_contract_left.py": {
+        "script": "Knowledge.tab\\model_contract.button\\model_contract_left.py",
+        "icon": "Knowledge.tab\\model_contract.button\\icon.png",
+        "alias": "ModelContract",
+        "doc": "Edit the living model-contract description for a model context key, and propagate it to every Grasshopper catalog sidecar referencing that context.\n\nA model contract describes what a definition expects from the model (for example which layers and user-text keys it reads). Catalog entries carry a modelContextKey; this tool edits the shared description once and writes it into every *.gh.ennead.json / *.ghx.ennead.json sidecar in your library folder whose modelContextKey matches, and stores it in this document's user text too.\n\nFeatures:\n- Pick an existing context key or create a new one\n- Multiline editor for the contract description\n- Stores the description in the document (user text key ET_ModelContract:<key>)\n- Propagates to every matching catalog sidecar in a library folder\n- Remembers the library folder between sessions\n\nRhino-side companion to the GH library's model-contract propagation (feature 17).\n",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_recent.button\\library_recent_left.py": {
+        "script": "Knowledge.tab\\library_recent.button\\library_recent_left.py",
+        "icon": "Knowledge.tab\\library_recent.button\\icon.png",
+        "alias": "LibraryRecent",
+        "doc": "Recently-opened catalog definitions (MRU list).\n\nKey Features:\n- Newest-first list of opened definitions, capped at 10\n- Opening an entry re-records it at the front\n- Stored in the shared library-settings.json (recentEntryIds)",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Modify.tab\\explicit_bake.button\\explicit_bake_left.py": {
+        "script": "Modify.tab\\explicit_bake.button\\explicit_bake_left.py",
+        "icon": "Modify.tab\\explicit_bake.button\\icon.png",
+        "alias": "ExplicitBake",
+        "doc": "Bake with an explicit Push/Pull/Bake/Purge action mode and a required unique base name.",
+        "tab": "Modify.tab",
+        "tab_icon": "Modify.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_ai_badges.button\\library_ai_badges_left.py": {
+        "script": "Knowledge.tab\\library_ai_badges.button\\library_ai_badges_left.py",
+        "icon": "Knowledge.tab\\library_ai_badges.button\\icon.png",
+        "alias": "LibraryAiBadges",
+        "doc": "Show the AI enrichment badge for a catalog entry.\n\nKey Features:\n- AI description, tags, category and confidence from the sidecar\n- Display only: never calls an AI service\n- Flags low-confidence entries queued for human review",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Block.tab\\block_fidelity.button\\block_fidelity_left.py": {
+        "script": "Block.tab\\block_fidelity.button\\block_fidelity_left.py",
+        "icon": "Block.tab\\block_fidelity.button\\icon.png",
+        "alias": "BlockFidelity",
+        "doc": "Classify every block definition in this document as embedded, linked, or proxy (linked but its source file is missing), and stamp the result into document user text.\n\nWhy this matters: Grasshopper definitions behave very differently against block-heavy models depending on whether their components round-trip blocks (names, materials, user strings, GUIDs preserved) or silently explode instances to raw geometry. This tool gives you the block side of that picture: which definitions are safe to edit here, and which are proxies pointing at missing files.\n\nFeatures:\n- Classifies all block definitions (embedded / linked / proxy)\n- Shows a report with counts per class\n- Stamps each block's fidelity into document user text (ET_BlockFidelity:<name>) so the GH library catalog can read it\n\nRhino-side companion to the GH library's block-fidelity badge (feature 19).\n",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_lint.button\\library_lint_left.py": {
+        "script": "Knowledge.tab\\library_lint.button\\library_lint_left.py",
+        "icon": "Knowledge.tab\\library_lint.button\\icon.png",
+        "alias": "LibraryLint",
+        "doc": "Validate every catalog sidecar and report unknown or mistyped fields.\n\nRhino port of the Grasshopper library sidecar field warnings\n(EnneadTab-For-Grasshopper PR #23): sidecars whose fields have the wrong\ntype or are unknown no longer fail silently - each problem is collected\nas a structured warning so typos (e.g. 'catagory') surface instead of\nbeing dropped.\n\nKey Features:\n- Checks all catalog entries through the shared Library catalog module\n- Reports unknown sidecar fields\n- Reports mistyped values (wrong JSON type for a known field)\n- Full per-entry report printed to the command line",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": true
+    },
+    "Knowledge.tab\\library_why.button\\library_why_left.py": {
+        "script": "Knowledge.tab\\library_why.button\\library_why_left.py",
+        "icon": "Knowledge.tab\\library_why.button\\icon.png",
+        "alias": "LibraryWhy",
+        "doc": "Explain why a catalog search hit matches.\n\nKey Features:\n- Shows which fields and terms matched each hit\n- One line per hit, e.g. matches via tag 'nesting' and title 'panel'\n- Mirrors the Grasshopper match-explanation wording",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Layer.tab\\snapshot_layer_state.button\\snapshot_layer_state_left.py": {
+        "script": "Layer.tab\\snapshot_layer_state.button\\snapshot_layer_state_left.py",
+        "icon": "Layer.tab\\snapshot_layer_state.button\\icon.png",
+        "alias": "LayerStateSnapshot",
+        "doc": "Snapshot and restore layer visibility states (session-scoped named snapshots).",
+        "tab": "Layer.tab",
+        "tab_icon": "Layer.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_popular.button\\library_popular_left.py": {
+        "script": "Knowledge.tab\\library_popular.button\\library_popular_left.py",
+        "icon": "Knowledge.tab\\library_popular.button\\icon.png",
+        "alias": "LibraryPopular",
+        "doc": "Catalog definitions ranked by usage.\n\nKey Features:\n- Reads the Grasshopper usage store (library-usage.json)\n- Ranked by opens, then solves\n- Display only: never writes usage data",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_dupes.button\\library_dupes_left.py": {
+        "script": "Knowledge.tab\\library_dupes.button\\library_dupes_left.py",
+        "icon": "Knowledge.tab\\library_dupes.button\\icon.png",
+        "alias": "LibraryDupes",
+        "doc": "Find duplicate file content across catalog entries and report the groups.\n\nRhino port of the Grasshopper library duplicate-content report\n(EnneadTab-For-Grasshopper PR #27): entries whose files are byte-identical\nbut stored at different paths are grouped by content hash so the copies\ncan be cleaned up.\n\nKey Features:\n- SHA-256 content hash per entry file (no mtime/size fingerprints)\n- Same-path repeats are collapsed, never reported as duplicates\n- Groups ordered by hash; entries within a group ordered by path\n- Pick a group to see every copy's path; full report on the command line",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": true
+    },
+    "Selection.tab\\library_attr_filter.button\\library_attr_filter_left.py": {
+        "script": "Selection.tab\\library_attr_filter.button\\library_attr_filter_left.py",
+        "icon": "Selection.tab\\library_attr_filter.button\\icon.png",
+        "alias": "LibraryAttrFilter",
+        "doc": "Select model objects by Elefront-style key/value user-text attributes.\n\nRhino port of the Grasshopper library attribute filtering\n(EnneadTab-For-Grasshopper PR #39): pick user-text key/value criteria and\nevery model object whose attributes match ALL criteria gets selected.\n\nKey Features:\n- Key picker lists every user-text key already in the document\n- '(key present)' matches any value for a key (Elefront-style presence check)\n- Stack multiple criteria (AND); values compare case-insensitively\n- Reports how many objects were selected",
+        "tab": "Selection.tab",
+        "tab_icon": "Selection.tab\\icon.png",
+        "is_popular": true
+    },
+    "Knowledge.tab\\library_assert.button\\library_assert_left.py": {
+        "script": "Knowledge.tab\\library_assert.button\\library_assert_left.py",
+        "icon": "Knowledge.tab\\library_assert.button\\icon.png",
+        "alias": [
+            "LibraryAssert"
+        ],
+        "doc": "Run contract assertions for a catalog definition.\n\nKey Features:\n- Pick a Grasshopper definition from the shared library catalog\n- Runs the author-declared red/green contract checks (PancakeContract-style)\n- Uses live slider values when the definition is open in Grasshopper, else catalog defaults\n- Warns before opening a definition whose checks fail",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_dry_run.button\\library_dry_run_left.py": {
+        "script": "Knowledge.tab\\library_dry_run.button\\library_dry_run_left.py",
+        "icon": "Knowledge.tab\\library_dry_run.button\\icon.png",
+        "alias": [
+            "LibraryDryRun"
+        ],
+        "doc": "Preview a catalog refresh without writing anything.\n\nKey Features:\n- Reports what a refresh would do: reuse / reindex / drop / error previews\n- Scans the configured roots read-only (no Rhino open, no index write)\n- Flags missing or unreadable roots before a real refresh hits them",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_scan_roots.button\\library_scan_roots_left.py": {
+        "script": "Knowledge.tab\\library_scan_roots.button\\library_scan_roots_left.py",
+        "icon": "Knowledge.tab\\library_scan_roots.button\\icon.png",
+        "alias": [
+            "LibraryScanRoots"
+        ],
+        "doc": "Validate the catalog scan roots.\n\nKey Features:\n- Checks every configured scan root for missing or unreadable paths\n- Warn-and-continue: reports all problems at once, flags possibly-offline shares",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_param_preview.button\\library_param_preview_left.py": {
+        "script": "Knowledge.tab\\library_param_preview.button\\library_param_preview_left.py",
+        "icon": "Knowledge.tab\\library_param_preview.button\\icon.png",
+        "alias": "LibraryParamPreview",
+        "doc": "Show a library definition's parameter contract, grouped by parameter group.\n\nPick a catalog entry to see its parameter summary header (total plus per-group\ncounts) followed by one name/type/default table per group, in first-seen group\norder. Ports the grouped parameter preview from the Grasshopper library\nexplorer (EnneadTab-For-Grasshopper PR #15).\n\nReads the shared Grasshopper definition catalog through\nApps/_rhino/Library/catalog.py; parameters come from the catalog index.",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_input_summary.button\\library_input_summary_left.py": {
+        "script": "Knowledge.tab\\library_input_summary.button\\library_input_summary_left.py",
+        "icon": "Knowledge.tab\\library_input_summary.button\\icon.png",
+        "alias": "LibraryInputSummary",
+        "doc": "Summarize a library definition's inputs, grouped by control type.\n\nPick a catalog entry to see its Inputs-group parameters grouped as sliders,\ntoggles, value lists, panels, referenced geometry, or other, with counts and\nmember names \u2014 the \"drive 3 sliders\" view from the Grasshopper library\nexplorer (EnneadTab-For-Grasshopper PR #42). The picker list itself shows the\ncompact summary (e.g. \"2 sliders \u00b7 1 toggle\") next to each entry.\n\nReads the shared Grasshopper definition catalog through\nApps/_rhino/Library/catalog.py; inputs come from the catalog index.",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Modify.tab\\audit_usertext_keys.button\\audit_usertext_keys_left.py": {
+        "script": "Modify.tab\\audit_usertext_keys.button\\audit_usertext_keys_left.py",
+        "icon": null,
+        "alias": "AuditUsertextKeys",
+        "doc": "Audit user-text keys on the selected objects (or the whole document) and report per-key object counts.\n\nShows how many objects carry each key plus the number of distinct values, so missing, misspelled, or inconsistently filled keys surface before baking.\n",
+        "tab": "Modify.tab",
+        "tab_icon": "Modify.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_contract.button\\library_contract_left.py": {
+        "script": "Knowledge.tab\\library_contract.button\\library_contract_left.py",
+        "icon": "Knowledge.tab\\library_contract.button\\icon.png",
+        "alias": "LibraryContract",
+        "doc": "Show a library definition's Hops-style input/output contract.\n\nPick a catalog entry to see the contract the Grasshopper plugin derived at\nindex time: inputs grouped by control kind (sliders, toggles, value lists,\npanels, referenced geometry, Get components) with type, default, domain, and\nrequired/optional flags, followed by terminal outputs. Ports the auto-derived\nparameter contract from the Grasshopper library explorer\n(EnneadTab-For-Grasshopper PR #37).\n\nThe live Grasshopper derivation needs a running Grasshopper document, so from\nRhino this button shows the contract stored in the catalog index; entries\nindexed before contract derivation report that none is stored.",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_readme.button\\library_readme_left.py": {
+        "script": "Knowledge.tab\\library_readme.button\\library_readme_left.py",
+        "icon": "Knowledge.tab\\library_readme.button\\icon.png",
+        "alias": "LibraryReadme",
+        "doc": "Show a library definition's version-agnostic README.md docs.\n\nPick a catalog entry to read the <definition>.gh.README.md sidecar sitting next\nto the definition file \u2014 usage notes, input explanations, and known\nlimitations, exactly as the Grasshopper library explorer renders them\n(EnneadTab-For-Grasshopper PR #30). The docs live outside the .gh file, so\nupdating the definition never wipes them; files over 256 KiB are not loaded.\n\nReads the shared Grasshopper definition catalog through\nApps/_rhino/Library/catalog.py to resolve each entry's definition path.",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Layer.tab\\validate_layer_patterns.button\\validate_layer_patterns_left.py": {
+        "script": "Layer.tab\\validate_layer_patterns.button\\validate_layer_patterns_left.py",
+        "icon": null,
+        "alias": "ValidateLayerPatterns",
+        "doc": "Validate Elefront-style layer patterns (with :: full paths and * wildcards) against the document's layer table.\n\nReports per-pattern match counts and, for patterns that match nothing, suggests the closest real layer names \u2014 catching renamed layers before a definition fails silently.\n",
+        "tab": "Layer.tab",
+        "tab_icon": "Layer.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_address.button\\library_address_left.py": {
+        "script": "Knowledge.tab\\library_address.button\\library_address_left.py",
+        "icon": "Knowledge.tab\\library_address.button\\icon.png",
+        "alias": "LibraryAddress",
+        "doc": "Show a library entry's address stamp and check it for updates.\n\nPick a catalog entry to see its library address (entry id plus catalog\nversion \u2014 the revision entry the Grasshopper importer stamps onto documents)\nand run update recognition: the catalog's recorded file hash is compared\nagainst the file on disk, flagging local changes with an asterisk, and an\noptional \"version you have\" answer produces the \"v3 available \u2014 you have v2*\"\nreport. Ports the address stamp from the Grasshopper library explorer\n(EnneadTab-For-Grasshopper PR #46).\n\nReads the shared Grasshopper definition catalog through\nApps/_rhino/Library/catalog.py.",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\harvest_model_context.button\\harvest_model_context_left.py": {
+        "script": "Knowledge.tab\\harvest_model_context.button\\harvest_model_context_left.py",
+        "icon": "Knowledge.tab\\harvest_model_context.button\\icon.png",
+        "alias": "HarvestModelContext",
+        "doc": "Inventory the active model's context for catalog tagging.\n\nFeatures:\n- Per-layer object counts with layer colors\n- Block definitions with instance counts\n- User-text key frequencies across objects\n- Object type frequencies\n\nUsage:\n1. Run in a model\n2. Copy the reported layer/block/user-text patterns into a GH catalog sidecar \"modelContext\" tag",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Selection.tab\\resolve_model_binding.button\\resolve_model_binding_left.py": {
+        "script": "Selection.tab\\resolve_model_binding.button\\resolve_model_binding_left.py",
+        "icon": "Selection.tab\\resolve_model_binding.button\\icon.png",
+        "alias": "ResolveModelBinding",
+        "doc": "Select model objects by layer or block-name wildcard pattern.\n\nFeatures:\n- Layer patterns with * wildcards and :: sublayer paths (e.g. FACADE::*)\n- Block-name patterns (e.g. Panel_*)\n- Remembers the last pattern used\n\nUsage:\n1. Choose layer or block-name matching\n2. Enter a wildcard pattern\n3. Matching objects are selected",
+        "tab": "Selection.tab",
+        "tab_icon": "Selection.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\model_footprint.button\\model_footprint_left.py": {
+        "script": "Knowledge.tab\\model_footprint.button\\model_footprint_left.py",
+        "icon": "Knowledge.tab\\model_footprint.button\\icon.png",
+        "alias": "ModelFootprint",
+        "doc": "Live footprint of layer patterns against the current model.\n\nFeatures:\n- One or more layer wildcard patterns, comma-separated (e.g. FACADE::*, *_Annotation)\n- Per-pattern live object counts with layer color swatches (hex)\n- Remembers the last patterns used\n\nUsage:\n1. Enter layer wildcard patterns\n2. See the live match count per pattern",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Modify.tab\\bakename_clean.button\\bakename_clean_left.py": {
+        "script": "Modify.tab\\bakename_clean.button\\bakename_clean_left.py",
+        "icon": "Modify.tab\\bakename_clean.button\\icon.png",
+        "alias": "BakeNameClean",
+        "doc": "Delete previous bake outputs by bake-name pattern (idempotent bakes).\n\nFeatures:\n- Matches object names and/or the \"BakeName\" user-text key\n- Wildcard patterns (e.g. BriseSoleil_*)\n- Preview count with explicit Yes/No confirmation before deleting\n\nUsage:\n1. Enter a bake-name wildcard pattern\n2. Choose the match source (name, BakeName user-text, or both)\n3. Confirm the deletion",
+        "tab": "Modify.tab",
+        "tab_icon": "Modify.tab\\icon.png",
+        "is_popular": false
+    },
+    "File.tab\\harvest_folder_report.button\\harvest_folder_report_left.py": {
+        "script": "File.tab\\harvest_folder_report.button\\harvest_folder_report_left.py",
+        "icon": "File.tab\\harvest_folder_report.button\\icon.png",
+        "alias": "HarvestFolderReport",
+        "doc": "Scan a folder of .3dm files and report aggregated model context.\n\nKey Features:\n- Resolves a folder + file pattern (e.g. *.3dm), top folder or subfolders\n- Lists every matched file before reading anything\n- Aggregates layer paths found across all files\n- Aggregates attribute user-text keys found across all files\n- Prints a copy-paste-ready report to the command line\n\nRhino-side equivalent of the Rhino 8 Query Directory + Import Content\nharvest pattern: batch-read model context without importing anything\ninto the active document.",
+        "tab": "File.tab",
+        "tab_icon": "File.tab\\icon.png",
+        "is_popular": false
+    },
+    "File.tab\\model_snapshot.button\\model_snapshot_left.py": {
+        "script": "File.tab\\model_snapshot.button\\model_snapshot_left.py",
+        "icon": "File.tab\\model_snapshot.button\\icon.png",
+        "alias": "ModelSnapshot",
+        "doc": "Versioned snapshots of model geometry, with Speckle-style branch/commit vocabulary, kept local.\n\nSnapshot mode: capture the objects on chosen layers into a versioned store - a .3dm export plus a JSON manifest recording a fingerprint per object - on a named branch, with a commit message.\nDiff mode: pick any past commit and compare it against the current document; added, removed, and modified objects are listed.\n\nManifests and exports live in <chosen folder>/model_snapshots/<branch>/.\n\nRhino-side companion to the GH library's model snapshot workflow (feature 18).\n",
+        "tab": "File.tab",
+        "tab_icon": "File.tab\\icon.png",
+        "is_popular": false
+    },
+    "File.tab\\check_worksession_files.button\\check_worksession_files_left.py": {
+        "script": "File.tab\\check_worksession_files.button\\check_worksession_files_left.py",
+        "icon": null,
+        "alias": "CheckWorksessionFiles",
+        "doc": "Check an expected list of model files against the disk and the active worksession.\n\nReports which expected files are missing on disk, which are not attached to the worksession, and which attached models were not expected \u2014 then offers to attach the missing ones.\n",
+        "tab": "File.tab",
+        "tab_icon": "File.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\expected_host.button\\expected_host_left.py": {
+        "script": "Knowledge.tab\\expected_host.button\\expected_host_left.py",
+        "icon": "Knowledge.tab\\expected_host.button\\icon.png",
+        "alias": "ExpectedHost",
+        "doc": "Record which host document this Rhino model expects Grasshopper definitions to run against.\n\nDefinitions that drive the active Rhino document, a linked file (worksession attachment or model link), or an external host (Rhino.Inside.Revit) are not interchangeable. This tool stores the expectation in the document's user text (key ET_ExpectedHost) so the GH library explorer can hide definitions that don't match the current session.\n\nChoices: activeRhinoDocument, linkedFile, externalHost, hostAgnostic.\n\nRhino-side companion to the GH library's host-model driver mode (feature 20).\n",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_open_with_inputs.button\\library_open_with_inputs_left.py": {
+        "script": "Knowledge.tab\\library_open_with_inputs.button\\library_open_with_inputs_left.py",
+        "icon": "Knowledge.tab\\library_open_with_inputs.button\\icon.png",
+        "alias": [
+            "LibraryOpenWithInputs"
+        ],
+        "doc": "Open a catalog definition with its annotated inputs.\n\nKey Features:\n- Pick a Grasshopper definition from the shared library catalog\n- Fill Player-style annotated inputs (min/max clamp, presets) in a Rhino form\n- Opens the definition in Grasshopper and applies the values to matching sliders",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_refresh.button\\library_refresh_left.py": {
+        "script": "Knowledge.tab\\library_refresh.button\\library_refresh_left.py",
+        "icon": "Knowledge.tab\\library_refresh.button\\icon.png",
+        "alias": [
+            "LibraryRefresh"
+        ],
+        "doc": "Refresh the Grasshopper definition catalog (throttled).\n\nKey Features:\n- Re-scans the configured roots and rebuilds the catalog index\n- Throttled: skips the re-scan while the last refresh is still fresh\n- Interval is configurable in the library settings; 0 disables throttling",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Block.tab\\block_dependency_map.button\\block_dependency_map_left.py": {
+        "script": "Block.tab\\block_dependency_map.button\\block_dependency_map_left.py",
+        "icon": null,
+        "alias": "BlockDependencyMap",
+        "doc": "Report per-definition instance counts, embedded vs linked status, and the recursive nesting tree with max depth for every block definition in the document.\n\nHelps answer \"what uses this block?\" and \"how deep does this nesting go?\" before editing or exploding a definition.\n",
+        "tab": "Block.tab",
+        "tab_icon": "Block.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_publishers.button\\library_publishers_left.py": {
+        "script": "Knowledge.tab\\library_publishers.button\\library_publishers_left.py",
+        "icon": "Knowledge.tab\\library_publishers.button\\icon.png",
+        "alias": "LibraryPublishers",
+        "doc": "List named publishers harvested from catalog sidecars and rename one everywhere.\n\nCatalog entries can expose contract parameters as named publishers (the\nsidecar \"publishers\" map: publisher name -> contract parameter name, borrowed\nfrom Telepathy by EnneadTab-For-Grasshopper PR #47). Pick a publisher, enter\na new name, and the rename propagates across every sidecar that references\nit, the version-agnostic markdown docs (<definition>.gh.ennead.md), and any\nsaved contract presets (contract-presets.json) -- one rename, everywhere\nconsistent.\n\nAdditive-only: sidecar files keep every existing field; only the publisher\nkey is renamed. Depends on PR #283 (shared catalog lib); degrades gracefully\nif unmerged.",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_examine.button\\library_examine_left.py": {
+        "script": "Knowledge.tab\\library_examine.button\\library_examine_left.py",
+        "icon": "Knowledge.tab\\library_examine.button\\icon.png",
+        "alias": "LibraryExamine",
+        "doc": "Read-only detail view of one catalog entry -- opens nothing, changes nothing.\n\nPick a Grasshopper library catalog entry to see a read-only summary: title,\ncategory, tags, parameter contract summary, provenance (scan root, index\ntime, file hash, convention check), and the purpose note from its sidecar.\n\nPorts the read-only \"Examine\" preview idea from EnneadTab-For-Grasshopper\nPR #48. On the Rhino side the preview is a single detail dialog instead of a\nlocked Grasshopper canvas: a definition is never opened and nothing is\nmodified. Depends on PR #283 (shared catalog lib); degrades gracefully if\nunmerged.",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_insert_modes.button\\library_insert_modes_left.py": {
+        "script": "Knowledge.tab\\library_insert_modes.button\\library_insert_modes_left.py",
+        "icon": "Knowledge.tab\\library_insert_modes.button\\icon.png",
+        "alias": "LibraryInsertModes",
+        "doc": "Open a catalog definition in Grasshopper -- three open modes.\n\nPorts EnneadTab-For-Grasshopper PR #53 (insert as loose / group / cluster).\nThe Rhino-side equivalent of inserting into a canvas is opening the\ndefinition in Grasshopper:\n\n- Loose: open the .gh normally in Grasshopper.\n- Grouped with model: copy the .gh into the current .3dm's folder, then open\n  the copy (keeps the definition next to the model it belongs to).\n- Pinned version: open a chosen pinned/versioned copy of the definition\n  (sidecar \"pinnedVersion\", or versioned sibling files such as Foo.v2.gh).\n\nInvocation: the Grasshopper plugin's explorer is a canvas component and\nexposes no Rhino command entry point, so this button opens documents through\nGrasshopper.Instances.DocumentServer.AddDocument(path, True) from Rhino\nIronPython, loading the Grasshopper plug-in first with the _Grasshopper\ncommand when it is not already loaded.\n\nDepends on PR #283 (shared catalog lib); degrades gracefully if unmerged.",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_backup.button\\library_backup_left.py": {
+        "script": "Knowledge.tab\\library_backup.button\\library_backup_left.py",
+        "icon": "Knowledge.tab\\library_backup.button\\icon.png",
+        "alias": "LibraryBackup",
+        "doc": "Back up the catalog's sidecar/metadata files to a timestamped zip on demand.\n\nKey Features:\n- Snapshots every *.ennead.json sidecar under each catalog scan root\n- Stores a backup-interval preference in library-settings.json (backupIntervalMinutes)\n- Offers 'back up now' when the newest backup is older than the interval\n- Prunes old backups, keeps the newest 10\n\nPorts EnneadTab-For-Grasshopper#57 (interval auto-backup of sidecars/metadata).",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_palette.button\\library_palette_left.py": {
+        "script": "Knowledge.tab\\library_palette.button\\library_palette_left.py",
+        "icon": "Knowledge.tab\\library_palette.button\\icon.png",
+        "alias": [
+            "ET_PAL",
+            "LibraryPalette"
+        ],
+        "doc": "Keyboard-first quick launcher for the library catalog.\n\nKey Features:\n- One filter-as-you-type list combining pinned favorites and recently-opened definitions\n- Favorites carry their one-keystroke shelf labels [1]..[9],[0] (GH feature 30)\n- Enter opens the chosen definition in Grasshopper; Esc dismisses\n- Opened entries are recorded at the front of the recent list\n\nPorts EnneadTab-For-Grasshopper#60 (keyboard-first palette + favorites shelf).",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_purpose_notes.button\\library_purpose_notes_left.py": {
+        "script": "Knowledge.tab\\library_purpose_notes.button\\library_purpose_notes_left.py",
+        "icon": "Knowledge.tab\\library_purpose_notes.button\\icon.png",
+        "alias": "LibraryPurposeNotes",
+        "doc": "View and edit purpose notes for library definitions, keyed by document GUID.\n\nKey Features:\n- Pick a catalog entry and view its stored purpose note\n- Edit the note; it is saved back into the entry's .ennead.json sidecar under an\n  additive \"purposeNotes\" key, keyed by document GUID (\"doc:<guid>\" when the\n  definition file is readable, \"file:<path>\" fallback) -- existing sidecar keys\n  are never renamed or touched\n- Note schema mirrors the GH definition-notes.json format:\n  {\"purposeNotes\": {\"doc:<guid>\": {\"text\": \"...\", \"updatedAt\": \"...\"}}}\n\nPorts EnneadTab-For-Grasshopper#55 (purpose notes keyed by document GUID).",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_versions.button\\library_versions_left.py": {
+        "script": "Knowledge.tab\\library_versions.button\\library_versions_left.py",
+        "icon": "Knowledge.tab\\library_versions.button\\icon.png",
+        "alias": "LibraryVersions",
+        "doc": "Version history for a library definition: update check + roll back.\n\nKey Features:\n- Pick a catalog entry and list its version history from the .ennead.json sidecar\n  (\"versions\": [{version, diffNote, publishedAt, sourcePath, fileHash}, ...]);\n  the live version is marked [current]\n- Roll back: restores a versioned backup copy of the .gh + its sidecar over the\n  live files; the live files are first backed up to .bak copies, and the button\n  asks for confirmation before overwriting anything\n- Update check: compares the live file's last-modified time against the latest\n  version's publishedAt / recorded file and reports whether it looks current\n\nPorts EnneadTab-For-Grasshopper#50 (version history + Update / Roll back).",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_pinned_import.button\\library_pinned_import_left.py": {
+        "script": "Knowledge.tab\\library_pinned_import.button\\library_pinned_import_left.py",
+        "icon": "Knowledge.tab\\library_pinned_import.button\\icon.png",
+        "alias": "LibraryPinnedImport",
+        "doc": "Import a library definition at a pinned version.\n\nKey Features:\n- Pick a catalog entry and one pinned version from its sidecar history\n  (\"versions\": [{version, diffNote, publishedAt, sourcePath, fileHash}, ...])\n- Copy that version's .gh file to a user-chosen folder (file name stamped with\n  the version), or open it in Grasshopper\n- Rhino-side equivalent of the GH pinned import (cluster/Hops/snippet): the copy\n  is a frozen snapshot -- library updates never change it\n\nPorts EnneadTab-For-Grasshopper#52 (pinned-version import as cluster/Hops/snippet).",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_insights.button\\library_insights_left.py": {
+        "script": "Knowledge.tab\\library_insights.button\\library_insights_left.py",
+        "icon": "Knowledge.tab\\library_insights.button\\icon.png",
+        "alias": "LibraryInsights",
+        "doc": "Show a read-only Insights dashboard for the Grasshopper definition catalog.\n\nRhino port of the Grasshopper catalog analytics dashboard\n(EnneadTab-For-Grasshopper PR #49): entry counts per category and tag,\nmost-used plugins, sidecar completeness (how many entries have a\n*.ennead.json and how many are clean), and -- when a library-usage.json\nfile is present -- a usage section with the most-opened entries and the\nstale-entry cleanup hit-list (no opens in 90 days). Pure report; nothing\nis modified.",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_canvas_preview.button\\library_canvas_preview_left.py": {
+        "script": "Knowledge.tab\\library_canvas_preview.button\\library_canvas_preview_left.py",
+        "icon": "Knowledge.tab\\library_canvas_preview.button\\icon.png",
+        "alias": "LibraryCanvasPreview",
+        "doc": "Show a static summary of a Grasshopper definition's canvas without opening Grasshopper.\n\nRhino port of the static canvas preview (EnneadTab-For-Grasshopper PR\n#33): a .ghx file is plain XML, so its canvas is summarized directly --\ncomponent type counts and names, group and scribble counts, document id,\nand canvas bounds -- plus the plugin assemblies the catalog index knows\nabout. Binary .gh files cannot be parsed this way and are skipped with a\nnote. Read-only; nothing is opened or modified.",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_provenance.button\\library_provenance_left.py": {
+        "script": "Knowledge.tab\\library_provenance.button\\library_provenance_left.py",
+        "icon": "Knowledge.tab\\library_provenance.button\\icon.png",
+        "alias": "LibraryProvenance",
+        "doc": "Show provenance for a catalog entry: will this definition open on my machine?\n\nRhino port of the Grasshopper provenance tab (EnneadTab-For-Grasshopper\nPR #51): component count and component kinds (parsed from the .ghx XML\nwhen available), the plugin assemblies the definition needs (from the\ncatalog index), and a best-effort check flagging required plugins that\nare not installed (scans loaded assemblies plus the Grasshopper\nLibraries folders for .gha files). Read-only; nothing is modified.",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_publish.button\\library_publish_left.py": {
+        "script": "Knowledge.tab\\library_publish.button\\library_publish_left.py",
+        "icon": "Knowledge.tab\\library_publish.button\\icon.png",
+        "alias": "LibraryPublish",
+        "doc": "Stage a Grasshopper catalog entry for publishing (ports EnneadTab-For-Grasshopper PR #69).\n\nPicks a library catalog entry (or browses for a .gh/.ghx file), collects the\npublish metadata (title, version, description, tags, category), validates the\nrequest the same way the Grasshopper publish dialogs do, writes the versioned\n*.ennead.json sidecar, then stages the definition + sidecar (+README if one\nsits next to the definition) into a publish/staging folder under the catalog\ndirectory.\n\nKey Features:\n- Entry picker over the shared catalog index, or browse for a file\n- Next-version suggestion (\"1.2.0\" -> \"1.2.1\", \"v3\" -> \"v4\", \"3beta\" -> \"4beta\")\n- Request validation (source file exists, title, dotted-numeric version, no blank tags)\n- Sidecar field warnings through catalog.validate_sidecar\n- Full staging report printed to the command line",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_portability.button\\library_portability_left.py": {
+        "script": "Knowledge.tab\\library_portability.button\\library_portability_left.py",
+        "icon": "Knowledge.tab\\library_portability.button\\icon.png",
+        "alias": "LibraryPortability",
+        "doc": "Audit a catalog definition for portability problems (ports EnneadTab-For-Grasshopper PR #72).\n\nChecks one library entry for the things that break when a definition moves to\nanother machine: absolute paths hiding in the sidecar or in indexed parameter\nvalues, plugin assemblies the entry needs but this machine does not have\ninstalled (\"Name|secret\" wire format, cross-checked against the Grasshopper\nLibraries / yak package folders and the entry's pluginsKnown provenance flag),\nand Windows-only assumptions (registry keys, drive-letter paths, Program\nFiles references).\n\nKey Features:\n- Pass / warn / fail verdict per entry with fix hints\n- Absolute-path scan over sidecar fields and parameter values\n- Missing-plugin detection with yak install hints\n- Full report printed to the command line",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_package_restore.button\\library_package_restore_left.py": {
+        "script": "Knowledge.tab\\library_package_restore.button\\library_package_restore_left.py",
+        "icon": "Knowledge.tab\\library_package_restore.button\\icon.png",
+        "alias": "LibraryPackageRestore",
+        "doc": "Show the Yak install commands for a catalog entry's missing plugins (ports EnneadTab-For-Grasshopper PR #74).\n\nReads the entry's required plugin packages (\"DisplayName|secret\" wire format,\nsame as the Grasshopper plugin), compares them against the plugins installed\non this machine, and emits the `yak install <name>` commands needed to restore\nthe missing ones.\n\nRead-only helper: it never runs installs itself. Copy the commands to the\nclipboard or open the Rhino PackageManager from the prompt.\n\nKey Features:\n- Missing vs already-installed plugin report per entry\n- Install hints prefer the secret GUID (unambiguous on the package server)\n- Copyable command list (clipboard + command line)\n- One-click open of the Rhino PackageManager",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_yak_restore.button\\library_yak_restore_left.py": {
+        "script": "Knowledge.tab\\library_yak_restore.button\\library_yak_restore_left.py",
+        "icon": "Knowledge.tab\\library_yak_restore.button\\icon.png",
+        "alias": "LibraryYakRestore",
+        "doc": "Install missing Grasshopper plugins for a library entry via Yak. Reads the entry's required plugins (\"Name|secret\" format), detects installed plugins from the Grasshopper Libraries folder and Rhino Yak package folders, offers to run `yak install` for the missing ones and reports results.\n\nPorts EnneadTab-For-Grasshopper#74 (missing-plugin package restore via Yak).",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
         "is_popular": false
     }
 }

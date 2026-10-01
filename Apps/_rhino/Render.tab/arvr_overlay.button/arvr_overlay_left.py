@@ -36,8 +36,9 @@ class ARVRExportDialog(object):
         self.dialog.Title = "EnneadTab-ARVR :: Mobile AR Overlay Hub"
         self.dialog.Resizable = True
         self.dialog.Padding = Eto.Drawing.Padding(16)
-        self.dialog.Width = 640
-        self.dialog.Height = 780
+        self.dialog.Width = 700
+        self.dialog.Height = 820
+        self.dialog.MinimumSize = Eto.Drawing.Size(560, 480)
 
         # Colors
         self.col_bg = RHINO_UI.hex_to_eto_color("#0A0E1A")
@@ -157,30 +158,46 @@ class ARVRExportDialog(object):
         result_box.BackgroundColor = self.col_panel
         result_box.Padding = Eto.Drawing.Padding(10)
 
-        result_layout = Eto.Forms.DynamicLayout()
-        result_layout.Spacing = Eto.Drawing.Size(12, 8)
-
-        # 2-column layout for the two QR codes
-        qr_cols = Eto.Forms.DynamicLayout()
+        # One shared TableLayout for both QR columns. Because both columns live
+        # in the SAME rows, each title / QR slot / link box / copy button is
+        # automatically aligned across columns (the old two nested
+        # DynamicLayouts had independent row heights, so the 100px QR sat
+        # higher than the 180px one and its link + button drifted off).
+        qr_cols = Eto.Forms.TableLayout()
         qr_cols.Spacing = Eto.Drawing.Size(16, 6)
 
-        # Left Column: Big QR for Mobile AR
-        mobile_box = Eto.Forms.DynamicLayout()
-        mobile_box.Spacing = Eto.Drawing.Size(4, 4)
+        QR_SLOT = 180  # both QRs sit centered in an identical square slot
+
         m_title = Eto.Forms.Label()
         m_title.Text = "[ 1. MOBILE AR VIEWER ]"
         m_title.Font = Eto.Drawing.Font("Consolas", 10, Eto.Drawing.FontStyle.Bold)
         m_title.TextColor = self.col_green
+        r_title = Eto.Forms.Label()
+        r_title.Text = "[ 2. ROOM CONTROL PAGE ]"
+        r_title.Font = Eto.Drawing.Font("Consolas", 10, Eto.Drawing.FontStyle.Bold)
+        r_title.TextColor = self.col_yellow
+
         m_desc = Eto.Forms.Label()
         m_desc.Text = "Big QR - scan with phone camera"
         m_desc.Font = Eto.Drawing.Font("Arial", 8)
         m_desc.TextColor = self.col_dim
-        mobile_box.AddRow(m_title)
-        mobile_box.AddRow(m_desc)
+        r_desc = Eto.Forms.Label()
+        r_desc.Text = "Small QR - desktop browser hub"
+        r_desc.Font = Eto.Drawing.Font("Arial", 8)
+        r_desc.TextColor = self.col_dim
 
         self.qr_mobile_view = Eto.Forms.ImageView()
-        self.qr_mobile_view.Size = Eto.Drawing.Size(180, 180)
-        mobile_box.AddRow(None, self.qr_mobile_view, None)
+        self.qr_mobile_view.Size = Eto.Drawing.Size(QR_SLOT, QR_SLOT)
+        self.qr_room_view = Eto.Forms.ImageView()
+        self.qr_room_view.Size = Eto.Drawing.Size(100, 100)
+
+        def _qr_slot(image_view):
+            # Fixed-size slot, QR centered both ways, so link + button below
+            # start at the same y in both columns.
+            slot = Eto.Forms.TableLayout()
+            slot.Size = Eto.Drawing.Size(-1, QR_SLOT)
+            slot.Rows.Add(Eto.Forms.TableRow(Eto.Forms.TableCell(None, True), Eto.Forms.TableCell(image_view, False), Eto.Forms.TableCell(None, True)))
+            return slot
 
         self.mobile_link_tb = Eto.Forms.TextBox()
         self.mobile_link_tb.ReadOnly = True
@@ -189,35 +206,6 @@ class ARVRExportDialog(object):
         self.mobile_link_tb.BackgroundColor = self.col_bg
         self.mobile_link_tb.Font = Eto.Drawing.Font("Consolas", 8)
 
-        self.btn_copy_mobile = Eto.Forms.Button()
-        self.btn_copy_mobile.Text = "COPY MOBILE AR LINK"
-        self.btn_copy_mobile.Font = Eto.Drawing.Font("Arial", 8)
-        self.btn_copy_mobile.BackgroundColor = self.col_bg
-        self.btn_copy_mobile.TextColor = self.col_green
-        self.btn_copy_mobile.Height = 24
-        self.btn_copy_mobile.Click += self.on_copy_mobile_click
-
-        mobile_box.AddRow(self.mobile_link_tb)
-        mobile_box.AddRow(self.btn_copy_mobile)
-
-        # Right Column: Small QR for Room Page
-        room_box = Eto.Forms.DynamicLayout()
-        room_box.Spacing = Eto.Drawing.Size(4, 4)
-        r_title = Eto.Forms.Label()
-        r_title.Text = "[ 2. ROOM CONTROL PAGE ]"
-        r_title.Font = Eto.Drawing.Font("Consolas", 10, Eto.Drawing.FontStyle.Bold)
-        r_title.TextColor = self.col_yellow
-        r_desc = Eto.Forms.Label()
-        r_desc.Text = "Small QR - desktop browser hub"
-        r_desc.Font = Eto.Drawing.Font("Arial", 8)
-        r_desc.TextColor = self.col_dim
-        room_box.AddRow(r_title)
-        room_box.AddRow(r_desc)
-
-        self.qr_room_view = Eto.Forms.ImageView()
-        self.qr_room_view.Size = Eto.Drawing.Size(100, 100)
-        room_box.AddRow(None, self.qr_room_view, None)
-
         self.room_link_tb = Eto.Forms.TextBox()
         self.room_link_tb.ReadOnly = True
         self.room_link_tb.PlaceholderText = "Desktop Room Hub URL..."
@@ -225,18 +213,34 @@ class ARVRExportDialog(object):
         self.room_link_tb.BackgroundColor = self.col_bg
         self.room_link_tb.Font = Eto.Drawing.Font("Consolas", 8)
 
+        self.btn_copy_mobile = Eto.Forms.Button()
+        self.btn_copy_mobile.Text = "COPY MOBILE AR LINK"
+        self.btn_copy_mobile.Font = Eto.Drawing.Font("Arial", 8)
+        self.btn_copy_mobile.BackgroundColor = self.col_bg
+        self.btn_copy_mobile.TextColor = self.col_green
+        self.btn_copy_mobile.Height = 26
+        self.btn_copy_mobile.Click += self.on_copy_mobile_click
+
         self.btn_copy_room = Eto.Forms.Button()
         self.btn_copy_room.Text = "COPY ROOM PAGE LINK"
         self.btn_copy_room.Font = Eto.Drawing.Font("Arial", 8)
         self.btn_copy_room.BackgroundColor = self.col_bg
         self.btn_copy_room.TextColor = self.col_yellow
-        self.btn_copy_room.Height = 24
+        self.btn_copy_room.Height = 26
         self.btn_copy_room.Click += self.on_copy_room_click
 
-        room_box.AddRow(self.room_link_tb)
-        room_box.AddRow(self.btn_copy_room)
+        # Each row: (left cell, right cell), both columns scale equally.
+        for left, right in (
+            (m_title, r_title),
+            (m_desc, r_desc),
+            (_qr_slot(self.qr_mobile_view), _qr_slot(self.qr_room_view)),
+            (self.mobile_link_tb, self.room_link_tb),
+            (self.btn_copy_mobile, self.btn_copy_room),
+        ):
+            qr_cols.Rows.Add(Eto.Forms.TableRow(Eto.Forms.TableCell(left, True), Eto.Forms.TableCell(right, True)))
 
-        qr_cols.AddRow(mobile_box, room_box)
+        result_layout = Eto.Forms.DynamicLayout()
+        result_layout.Spacing = Eto.Drawing.Size(12, 8)
         result_layout.AddRow(qr_cols)
 
         result_box.Content = result_layout
@@ -253,7 +257,19 @@ class ARVRExportDialog(object):
         btn_close.Click += lambda s, e: self.dialog.Close(False)
         layout.AddRow(btn_close)
 
-        self.dialog.Content = layout
+        # DynamicLayout stretches its last row to fill spare height (that is
+        # what blew CLOSE up into a giant block). Trailing spacer absorbs it.
+        layout.Add(None, False, True)
+
+        # Scrollable: on small screens / high DPI the form scrolls instead of
+        # being cropped by the modal frame.
+        scroller = Eto.Forms.Scrollable()
+        scroller.Border = getattr(Eto.Forms.BorderType, "None")
+        scroller.ExpandContentWidth = True
+        scroller.ExpandContentHeight = True
+        scroller.BackgroundColor = self.col_bg
+        scroller.Content = layout
+        self.dialog.Content = scroller
 
     def show(self):
         return self.dialog.ShowModal(Rhino.UI.RhinoEtoApp.MainWindow)
