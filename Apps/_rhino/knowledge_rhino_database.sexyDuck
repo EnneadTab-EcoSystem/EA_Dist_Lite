@@ -1122,6 +1122,15 @@
         "tab_icon": "Revit.tab\\icon.png",
         "is_popular": true
     },
+    "Revit.tab\\revit2rhino.button\\revit2rhino_left.py": {
+        "script": "Revit.tab\\revit2rhino.button\\revit2rhino_left.py",
+        "icon": "Revit.tab\\revit2rhino.button\\icon.png",
+        "alias": "Revit2RhinoImport",
+        "doc": "Brings the geometry exported by the Revit2Rhino button into this Rhino file.\n\nFinds the latest export by itself, so there is no file to browse for.\nThe new objects are grouped under one layer and selected so you can move them right away.\n\nFeatures:\n- Imports the newest export made by the Revit2Rhino button\n- Asks before importing an export that is more than half a day old\n- Warns when blocks with the same names already exist in this file\n\nUsage:\n1. In Revit, run Revit2Rhino on the view you want\n2. Come here and run this command",
+        "tab": "Revit.tab",
+        "tab_icon": "Revit.tab\\icon.png",
+        "is_popular": false
+    },
     "Revit.tab\\export_material_by_layer.button\\export_material_by_layer_left.py": {
         "script": "Revit.tab\\export_material_by_layer.button\\export_material_by_layer_left.py",
         "icon": "Revit.tab\\export_material_by_layer.button\\icon.png",

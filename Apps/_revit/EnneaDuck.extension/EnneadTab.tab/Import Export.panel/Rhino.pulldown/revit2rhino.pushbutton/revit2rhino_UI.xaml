@@ -199,6 +199,13 @@
                            Text="Select categories and click 'Select Families' to choose elements to export."
                            TextWrapping="Wrap"/>
                 
+                <!-- Open the export in a new Rhino window when done (off by default: use Revit2RhinoImport in Rhino) -->
+                <CheckBox x:Name="open_rhino_checkbox"
+                          Content="Open the export in a new Rhino when done"
+                          IsChecked="False"
+                          HorizontalAlignment="Center"
+                          Margin="5"/>
+
                 <!-- Action Buttons -->
                 <WrapPanel HorizontalAlignment="Center">
                     <Button Content="Select Families" 
@@ -210,6 +217,12 @@
                             x:Name="export_button"
                             Click="export_click"
                             IsEnabled="False"
+                            Margin="5"/>
+                            
+                    <Button Content="Export View as DWG" 
+                            x:Name="export_dwg_button"
+                            Click="export_dwg_click"
+                            ToolTip="Exports everything visible in the active 3D view as a DWG for the Rhino import button. No element selection needed."
                             Margin="5"/>
                             
                     <Button Content="Close" 

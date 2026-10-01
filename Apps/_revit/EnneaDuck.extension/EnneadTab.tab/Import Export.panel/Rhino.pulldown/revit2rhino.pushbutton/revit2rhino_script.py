@@ -5,9 +5,9 @@ __doc__ = """Export the Revit elements of your choice to a Rhino file.
 
 Pick the categories to export (walls, floors, windows, furniture, curtain panels...), then choose which family / type combinations to include. Each element is converted into a Rhino block instance placed at its original location, with the geometry (Breps, or Meshes as fallback) organized on layers by Category / Family / Subcategory.
 
-Blocks are named after the family and type (a short suffix is added when the same type differs by parameters, or for system families such as walls). The export file name contains a timestamp, and Rhino opens when the export finishes.
+Blocks are named after the family and type (a short suffix is added when the same type differs by parameters, or for system families such as walls). The export file name contains a timestamp, and Rhino opens when the export finishes. In Rhino, the Revit2RhinoImport command brings the same export into a file you already have open.
 
-Tip: Rhino.Inside must be running, and an architectural view (such as a 3D view) must be active. Only elements visible in the active view are listed. Elements from linked models are not exported.
+Tip: An architectural view (such as a 3D view) must be active. Only elements visible in the active view are listed. Elements from linked models are not exported. You can also export the whole 3D view as a DWG. If the block export is not available on your machine, the DWG export runs directly. Either way, the Revit2RhinoImport command in Rhino brings the result in.
 """
 
 __title__ = "Revit2Rhino"
@@ -53,21 +53,38 @@ import proDUCKtion  # pyright: ignore
 proDUCKtion.validify()
 
 from EnneadTab import ERROR_HANDLE, LOG, NOTIFICATION, USER
-from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_VIEW
+from EnneadTab.REVIT import REVIT_APPLICATION, REVIT_VIEW, REVIT_FORMS
 
 UIDOC = REVIT_APPLICATION.get_uidoc()
 DOC = REVIT_APPLICATION.get_doc()
+
+MODE_DWG = "Export the whole 3D view as DWG"
+MODE_BLOCKS = "Pick families, export as Rhino blocks"
+
+
+def choose_export_mode():
+    """Let the user choose how to send the model to Rhino. Returns "dwg", "blocks" or None (cancelled)."""
+    options = [
+        [MODE_DWG, "Quick and simple. Everything visible in the active 3D view, solids kept as solids. No extra setup."],
+        [MODE_BLOCKS, "Choose categories and families first. Each family type becomes a Rhino block placed at its original location."],
+    ]
+    result = REVIT_FORMS.dialogue(title="Revit2Rhino",
+                                  main_text="How do you want to send this to Rhino?",
+                                  sub_text="Then run Revit2RhinoImport in Rhino to bring it in.",
+                                  options=options,
+                                  icon="info")
+    choice = result[0] if isinstance(result, tuple) else result
+    if choice == MODE_DWG:
+        return "dwg"
+    if choice == MODE_BLOCKS:
+        return "blocks"
+    return None
+
 
 @LOG.log(__file__, __title__)
 @ERROR_HANDLE.try_catch_error()
 def revit2rhino(doc):
     """Main entry point for Revit to Rhino export."""
-    # Check if Rhino.Inside is available
-    if not IMPORT_OK:
-        logger.error("Rhino.Inside import failed: {}".format(IMPORT_ERROR))
-        NOTIFICATION.messenger("Please initiate [Rhino.Inside] First")
-        return
-
     if REVIT_VIEW.is_focused_on_system_view():
         NOTIFICATION.messenger("You are focused on either ProjectBrower or PropetyPanel. Please activate an Architectural View such as 3D View.")
         return
@@ -76,6 +93,23 @@ def revit2rhino(doc):
         NOTIFICATION.messenger("Please activate an Architectural View such as 3D View.")
         return
     
+    # Without Rhino.Inside the block exporter cannot run. The DWG path needs neither it
+    # nor Rhino, so export the active view that way instead of asking the user to set anything up.
+    if not IMPORT_OK:
+        logger.info("Rhino.Inside is not available ({}); using the DWG export.".format(IMPORT_ERROR))
+        import revit2rhino_dwg
+        revit2rhino_dwg.export_active_view_to_dwg(doc)
+        return
+
+    # Both ways work here, so let the user choose.
+    mode = choose_export_mode()
+    if mode is None:
+        return
+    if mode == "dwg":
+        import revit2rhino_dwg
+        revit2rhino_dwg.export_active_view_to_dwg(doc)
+        return
+
     # Launch the UI - everything else is handled by the UI.
     # Import first so the action module has attached its handler, then enable
     # debug logging so every handler on the shared logger is raised.
