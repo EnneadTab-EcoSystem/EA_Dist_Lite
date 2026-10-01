@@ -4,3 +4,4 @@ layout:
   - '---'
   - create_worksession
   - bind_worksession
+  - 'attach_refresh_worksession'

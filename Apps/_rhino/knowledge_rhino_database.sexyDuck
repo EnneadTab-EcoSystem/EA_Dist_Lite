@@ -1490,5 +1490,50 @@
         "tab": "Knowledge.tab",
         "tab_icon": "Knowledge.tab\\icon.png",
         "is_popular": true
+    },
+    "Knowledge.tab\\library_views.button\\library_views_left.py": {
+        "script": "Knowledge.tab\\library_views.button\\library_views_left.py",
+        "icon": "Knowledge.tab\\library_views.button\\icon.png",
+        "alias": "LibraryViews",
+        "doc": "Saved named filtered views of the local library catalog.\n\nKey Features:\n- Save the current search (free text + tag:/category:/author: chips) as a named view\n  (author: chips match the sidecar author; the shared lib has no author facet)\n- Apply a saved view to filter the catalog\n- Delete saved views; views persist in the library settings\n\nPorts EnneadTab-For-Grasshopper#32 (bookmarkable filtered views).",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_copy.button\\library_copy_left.py": {
+        "script": "Knowledge.tab\\library_copy.button\\library_copy_left.py",
+        "icon": "Knowledge.tab\\library_copy.button\\icon.png",
+        "alias": "LibraryCopy",
+        "doc": "Copy a catalog entry's path or JSON to the clipboard.\n\nKey Features:\n- Pick an entry from the library catalog\n- Copy Path: the entry's source path\n- Copy JSON: the entry's full JSON (id, title, description, path, tags,\n  category, parameters, sidecar)\n\nPorts EnneadTab-For-Grasshopper#19 (explorer copy actions).",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "File.tab\\attach_refresh_worksession.button\\attach_refresh_worksession_left.py": {
+        "script": "File.tab\\attach_refresh_worksession.button\\attach_refresh_worksession_left.py",
+        "icon": "File.tab\\attach_refresh_worksession.button\\icon.png",
+        "alias": "AttachRefreshWorksession",
+        "doc": "Attach worksession files or refresh the current worksession.\n\nKey Features:\n- Lists the files currently attached to the worksession\n- Attach one or more .3dm / .rws files to the current worksession\n- Refresh attached worksession files in one click\n- Skips files that are already attached\n\nMirrors the widely-shared dharman Discourse snippets\n('-Worksession Attach / Refresh' via rs.Command).",
+        "tab": "File.tab",
+        "tab_icon": "File.tab\\icon.png",
+        "is_popular": false
+    },
+    "Knowledge.tab\\library_export.button\\library_export_left.py": {
+        "script": "Knowledge.tab\\library_export.button\\library_export_left.py",
+        "icon": "Knowledge.tab\\library_export.button\\icon.png",
+        "alias": "LibraryExport",
+        "doc": "Export the filtered library catalog to a portable JSON file.\n\nKey Features:\n- Optional filter: free text plus tag:/category:/author: facet chips\n- Portable shape: id, title, sourcePath, tags, category, parameters\n- Save dialog; creates parent folders; UTF-8 JSON\n\nPorts EnneadTab-For-Grasshopper#16 (catalog export).",
+        "tab": "Knowledge.tab",
+        "tab_icon": "Knowledge.tab\\icon.png",
+        "is_popular": false
+    },
+    "Modify.tab\\clean_stale_usertext.button\\clean_stale_usertext_left.py": {
+        "script": "Modify.tab\\clean_stale_usertext.button\\clean_stale_usertext_left.py",
+        "icon": "Modify.tab\\clean_stale_usertext.button\\icon.png",
+        "alias": "CleanStaleUserText",
+        "doc": "Audit and clean stale attribute user-text keys in the active model.\n\nKey Features:\n- Audits object + document user-text keys before changing anything\n- Flags stale 'Grasshopper Bake Data' leftovers (known file-bloat cause)\n- Flags empty-valued orphaned keys no definition reads anymore\n- Checklist UI: you pick exactly which keys to remove\n- Reports how many objects each key was removed from\n\nMirrors the community 'Grasshopper Bake Data' hygiene scripts and\nElefront's Remove User Text.",
+        "tab": "Modify.tab",
+        "tab_icon": "Modify.tab\\icon.png",
+        "is_popular": false
     }
 }
