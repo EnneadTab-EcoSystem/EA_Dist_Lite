@@ -11,10 +11,12 @@ the webapp's /api/* endpoints are the only gateway. Revit syncs through them:
   - POST /api/report     matched area report (Revit PUBLISHES)
   - POST /api/geometry   extracted model geometry (Revit PUBLISHES)
 
-Auth is a service token sent as ``Authorization: Bearer <token>``. The token
-lives in the NYU_HQ_SERVICE_TOKEN environment variable on the machine running
-Revit -- it is never written to git, and the webapp never exposes GitHub
-writes.
+Auth is a bearer token sent as ``Authorization: Bearer <token>``. For
+interactive Revit sessions no env vars are required: the first sync runs a
+one-time EnneadTab-Home device flow (see home_auth.py) -- the browser opens
+for the user to approve the device on enneadtab.com, and the token is then
+cached DPAPI-protected on the machine. Set NYU_HQ_SERVICE_TOKEN only for
+headless/CI use, where it acts as an override.
 
 Python 2 / IronPython compatible (Revit).
 """
@@ -22,6 +24,7 @@ Python 2 / IronPython compatible (Revit).
 import json
 
 import config
+import home_auth
 
 try:
     # Python 3
@@ -48,32 +51,32 @@ def _api_origin():
     return origin
 
 
-def _service_token():
-    token = (config.NYU_HQ_SERVICE_TOKEN or "").strip()
-    if not token:
-        raise NyuHqApiError(
-            "NYU_HQ_SERVICE_TOKEN is not set.\n"
-            "Set the NYU_HQ_SERVICE_TOKEN environment variable to the "
-            "service token provisioned for the NYU HQ webapp and run again.")
-    return token
+def _auth_token():
+    """Return (token, from_env).
+
+    The NYU_HQ_SERVICE_TOKEN env var wins when set (headless/CI override);
+    otherwise the token comes from the EnneadTab-Home device flow
+    (home_auth.get_token()), which needs no configuration.
+    """
+    env_token = (config.NYU_HQ_SERVICE_TOKEN or "").strip()
+    if env_token:
+        return env_token, True
+    return home_auth.get_token(), False
 
 
 def _actor():
     return (config.NYU_HQ_ACTOR or "").strip() or "revit-monitor-area"
 
 
-def _call(path, payload=None, timeout=90):
-    """GET (payload None) or POST (payload given) a JSON API path.
-
-    Returns the decoded JSON body. Raises NyuHqApiError on any failure.
-    """
+def _do_request(path, payload, timeout, token):
+    """Single GET/POST attempt. Returns (http_status, decoded_body)."""
     url = _api_origin() + path
     data = None
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
     req = _request.Request(url, data=data)
     req.add_header("Content-Type", "application/json")
-    req.add_header("Authorization", "Bearer " + _service_token())
+    req.add_header("Authorization", "Bearer " + token)
     req.add_header("X-Actor", _actor())
     try:
         resp = _request.urlopen(req, timeout=timeout)
@@ -95,6 +98,24 @@ def _call(path, payload=None, timeout=90):
         body = json.loads(raw) if raw else None
     except ValueError:
         body = None
+    return status, body
+
+
+def _call(path, payload=None, timeout=90):
+    """GET (payload None) or POST (payload given) a JSON API path.
+
+    Returns the decoded JSON body. Raises NyuHqApiError on any failure.
+
+    When the token came from EnneadTab-Home (not the env override) and the
+    API answers 401, the cached token is forgotten and the request is
+    retried once with a fresh device-flow token before giving up.
+    """
+    token, from_env = _auth_token()
+    status, body = _do_request(path, payload, timeout, token)
+    if status == 401 and not from_env:
+        home_auth.forget_token()
+        token, _ = _auth_token()
+        status, body = _do_request(path, payload, timeout, token)
     if status >= 400:
         detail = ""
         if isinstance(body, dict) and body.get("error"):

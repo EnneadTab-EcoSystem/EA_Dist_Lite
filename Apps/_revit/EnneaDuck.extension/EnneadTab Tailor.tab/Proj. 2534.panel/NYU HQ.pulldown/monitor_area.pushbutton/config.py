@@ -99,13 +99,20 @@ COLOR_SCHEME_NAMES = {
 # geometry (POST /api/report, POST /api/geometry). No repo clone, no JSON
 # data files, no GitHub writes from Revit.
 #
-# Configure via environment variables on the machine running Revit:
-#   NYU_HQ_API_URL        webapp origin, e.g. https://enneadtab.com
-#   NYU_HQ_SERVICE_TOKEN  service token (sent as Authorization: Bearer ...)
+# Configure via environment variables on the machine running Revit
+# (all optional -- sensible production defaults are baked in):
+#   NYU_HQ_API_URL        webapp origin (default: https://nyu-hq.vercel.app,
+#                         the direct origin, which always serves /api)
+#   NYU_HQ_SERVICE_TOKEN  headless/CI override only. Interactive Revit
+#                         sessions authenticate through the user's
+#                         EnneadTab-Home sign-in instead (see home_auth.py):
+#                         the first sync opens the browser for a one-time
+#                         approval, then the token is cached DPAPI-protected.
 #   NYU_HQ_WEBAPP_URL      dashboard URL opened in the browser after a sync
 #   NYU_HQ_ACTOR           audit label for the edit log (default: revit-...)
 # The service token lives on the user's machine only -- never commit it.
-NYU_HQ_API_URL = os.environ.get("NYU_HQ_API_URL", "").strip()
+NYU_HQ_API_URL = os.environ.get(
+    "NYU_HQ_API_URL", "https://nyu-hq.vercel.app").strip()
 NYU_HQ_SERVICE_TOKEN = os.environ.get("NYU_HQ_SERVICE_TOKEN", "").strip()
 NYU_HQ_WEBAPP_URL = os.environ.get(
     "NYU_HQ_WEBAPP_URL", "https://enneadtab.com/projects/nyu-hq").strip()
