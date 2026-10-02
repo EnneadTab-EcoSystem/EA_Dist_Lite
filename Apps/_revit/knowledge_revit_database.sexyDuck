@@ -2591,6 +2591,15 @@
         "tab": "Import Export",
         "tab_icon": null
     },
+    "EnneadTab.tab\\Import Export.panel\\drawing_set_export.pushbutton\\drawing_set_export_script.py": {
+        "alias": "Drawing Set Export",
+        "doc": "Export a per-sheet drawing set for phone AR: sheet plan images + section-boxed 3D models (.glb), beamed to an ARVR room.",
+        "icon": "EnneadTab.tab\\Import Export.panel\\drawing_set_export.pushbutton\\icon.png",
+        "is_popular": false,
+        "script": "EnneadTab.tab\\Import Export.panel\\drawing_set_export.pushbutton\\drawing_set_export_script.py",
+        "tab": "Import Export",
+        "tab_icon": null
+    },
     "EnneadTab.tab\\Import Export.panel\\ennead_exporter.pushbutton\\super_exporter_script.py": {
         "alias": "Ennead Exporter",
         "doc": "Export sheets to PDF, DWG, and JPG in one pass with consistent names and folders.\n\nSet the issue up once and the exporter handles the rest: file names built from\nthe prefix you choose, a folder per format, color or black and white, and only\nthe sheets carrying the revision you are issuing.\n\nFeatures:\n- Preview every output file name before a single file is written\n- Time estimate so you know whether to go get a coffee\n- Optional sync before exporting, and an email notification when it finishes",

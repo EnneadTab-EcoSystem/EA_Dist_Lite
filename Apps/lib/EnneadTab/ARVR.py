@@ -15,6 +15,22 @@ from EnneadTab import NOTIFICATION, FOLDER
 ARVR_URL_BASE = "https://enneadtab.com/arvr"
 SUBDIR_STAGING = "ARVR_Exports"
 
+# Content types for files staged/uploaded to ARVR rooms.
+_CONTENT_TYPES = {
+    ".usdz": "model/vnd.usdz+zip",
+    ".glb": "model/gltf-binary",
+    ".gltf": "model/gltf+json",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".json": "application/json",
+}
+
+def content_type_for(filename):
+    """Return the upload content type for a filename, by extension."""
+    ext = os.path.splitext(filename)[1].lower()
+    return _CONTENT_TYPES.get(ext, "application/octet-stream")
+
 def generate_room_id():
     """Generate a friendly 6-char alphanumeric room code."""
     chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
@@ -150,6 +166,128 @@ def _http_put_bytes(url, body_bytes, headers, timeout_ms):
     except Exception as e:
         return False, None, str(e)
 
+def put_blob_file(filepath, room_id, blob_pathname, timeout_ms=60000):
+    """PUT a file's bytes directly to Vercel Blob storage (no room registration).
+
+    Steps 1-2 of the two-step direct-to-Blob protocol: request a short-lived
+    client token, then PUT the bytes straight to Blob, bypassing the web app's
+    serverless function (which has a hard ~4.5MB request-body cap). Wire
+    protocol (endpoint, headers, x-api-version) verified against
+    @vercel/blob's own installed package source in EnneadTab-ARVR
+    (node_modules/@vercel/blob/dist/chunk-*.js), not guessed.
+
+    Args:
+        filepath (str): Absolute path to the local file.
+        room_id (str): Target room code (used for the upload-token request).
+        blob_pathname (str): Destination pathname in the blob store, e.g.
+            "rooms/AB12CD/drawings/A101/A101.glb".
+        timeout_ms (int): Network timeout in milliseconds.
+
+    Returns:
+        tuple: (success, blob_url, error_message)
+    """
+    if not os.path.exists(filepath):
+        return False, None, "File does not exist: " + str(filepath)
+
+    if not room_id:
+        room_id = generate_room_id()
+    else:
+        room_id = room_id.upper().strip()
+
+    try:
+        with open(filepath, "rb") as f:
+            file_bytes = f.read()
+    except Exception as e:
+        return False, None, "Failed to read file: " + str(e)
+
+    if len(file_bytes) == 0:
+        return False, None, "File is empty (0 bytes): " + str(filepath)
+
+    filename = os.path.basename(filepath)
+    content_type = content_type_for(filename)
+
+    # Step 1: request a short-lived client token. Request shape matches
+    # exactly what @vercel/blob/client's upload() sends to a handleUpload()
+    # route (EnneadTab-ARVR app/api/room/[roomId]/upload-token/route.ts).
+    token_url = "{}/api/room/{}/upload-token".format(ARVR_URL_BASE, room_id)
+    token_payload = json.dumps({
+        "type": "blob.generate-client-token",
+        "payload": {
+            "pathname": blob_pathname,
+            "multipart": False,
+            "clientPayload": None,
+        },
+    })
+    ok, token_response, err = _http_post_json(token_url, token_payload, timeout_ms)
+    if not ok:
+        return False, None, "Failed to get upload token: " + str(err)
+
+    try:
+        token_data = json.loads(token_response)
+        client_token = token_data["clientToken"]
+        store_id = token_data["storeId"]
+    except Exception as e:
+        return False, None, "Malformed upload-token response: " + str(e)
+
+    # Step 2: PUT the bytes directly to Vercel Blob storage.
+    request_id = "{}:{}:{:x}".format(store_id, int(time.time() * 1000), random.randint(0, 0xFFFFFF))
+    blob_headers = {
+        "authorization": "Bearer " + client_token,
+        "x-vercel-blob-store-id": store_id,
+        "x-api-version": "12",
+        "x-api-blob-request-id": request_id,
+        "x-api-blob-request-attempt": "0",
+        "x-vercel-blob-access": "private",
+        "x-content-type": content_type,
+        "x-add-random-suffix": "0",
+        "x-allow-overwrite": "1",
+    }
+    blob_put_url = "https://vercel.com/api/blob/?pathname=" + _url_quote(blob_pathname)
+    ok, put_response, err = _http_put_bytes(blob_put_url, file_bytes, blob_headers, timeout_ms)
+    if not ok:
+        return False, None, "Blob upload failed: " + str(err)
+
+    try:
+        blob_data = json.loads(put_response)
+        blob_url = blob_data["url"]
+    except Exception as e:
+        return False, None, "Malformed blob upload response: " + str(e)
+
+    return True, blob_url, None
+
+
+def register_room(room_id, blob_url, filename, content_type, size, extra=None, timeout_ms=60000):
+    """Register a room with the ARVR web app (a few bytes of metadata).
+
+    Extra payload fields (e.g. manifestUrl, kind) are passed through to the
+    room API; the current route ignores fields it does not know, so this is
+    forward-compatible with the drawing-set viewer (epic TODO-6999).
+
+    Returns:
+        tuple: (success, web_url, error_message)
+    """
+    if not room_id:
+        room_id = generate_room_id()
+    else:
+        room_id = room_id.upper().strip()
+
+    register_url = "{}/api/room/{}".format(ARVR_URL_BASE, room_id)
+    register_payload = {
+        "blobUrl": blob_url,
+        "filename": filename,
+        "contentType": content_type,
+        "size": size,
+    }
+    if extra:
+        register_payload.update(extra)
+    ok, _, err = _http_post_json(register_url, json.dumps(register_payload), timeout_ms)
+    if not ok:
+        return False, None, "Room registration failed: " + str(err)
+
+    web_url = "{}?room={}".format(ARVR_URL_BASE, room_id)
+    return True, web_url, None
+
+
 def upload_model_file(filepath, room_id=None, timeout_ms=60000):
     """Upload a 3D model (.glb / .gltf / .usdz) to the ARVR room session.
 
@@ -180,84 +318,25 @@ def upload_model_file(filepath, room_id=None, timeout_ms=60000):
     else:
         room_id = room_id.upper().strip()
 
-    try:
-        with open(filepath, "rb") as f:
-            file_bytes = f.read()
-    except Exception as e:
-        return False, room_id, None, "Failed to read file: " + str(e)
-
     filename = os.path.basename(filepath)
-    ext = os.path.splitext(filename)[1].lower()
-    content_type = {
-        ".usdz": "model/vnd.usdz+zip",
-        ".glb": "model/gltf-binary",
-        ".gltf": "model/gltf+json",
-    }.get(ext, "application/octet-stream")
-
+    content_type = content_type_for(filename)
     pathname = "rooms/{}/{}".format(room_id, filename)
 
-    # Step 1: request a short-lived client token. Request shape matches
-    # exactly what @vercel/blob/client's upload() sends to a handleUpload()
-    # route (EnneadTab-ARVR app/api/room/[roomId]/upload-token/route.ts).
-    token_url = "{}/api/room/{}/upload-token".format(ARVR_URL_BASE, room_id)
-    token_payload = json.dumps({
-        "type": "blob.generate-client-token",
-        "payload": {
-            "pathname": pathname,
-            "multipart": False,
-            "clientPayload": None,
-        },
-    })
-    ok, token_response, err = _http_post_json(token_url, token_payload, timeout_ms)
+    # Steps 1-2: direct-to-Blob upload via the shared helper.
+    ok, blob_url, err = put_blob_file(filepath, room_id, pathname, timeout_ms)
     if not ok:
-        return False, room_id, None, "Failed to get upload token: " + str(err)
-
-    try:
-        token_data = json.loads(token_response)
-        client_token = token_data["clientToken"]
-        store_id = token_data["storeId"]
-    except Exception as e:
-        return False, room_id, None, "Malformed upload-token response: " + str(e)
-
-    # Step 2: PUT the bytes directly to Vercel Blob storage.
-    request_id = "{}:{}:{:x}".format(store_id, int(time.time() * 1000), random.randint(0, 0xFFFFFF))
-    blob_headers = {
-        "authorization": "Bearer " + client_token,
-        "x-vercel-blob-store-id": store_id,
-        "x-api-version": "12",
-        "x-api-blob-request-id": request_id,
-        "x-api-blob-request-attempt": "0",
-        "x-vercel-blob-access": "private",
-        "x-content-type": content_type,
-        "x-add-random-suffix": "0",
-        "x-allow-overwrite": "1",
-    }
-    blob_put_url = "https://vercel.com/api/blob/?pathname=" + _url_quote(pathname)
-    ok, put_response, err = _http_put_bytes(blob_put_url, file_bytes, blob_headers, timeout_ms)
-    if not ok:
-        return False, room_id, None, "Blob upload failed: " + str(err)
-
-    try:
-        blob_data = json.loads(put_response)
-        blob_url = blob_data["url"]
-    except Exception as e:
-        return False, room_id, None, "Malformed blob upload response: " + str(e)
+        return False, room_id, None, err
 
     # Step 3: register the room with the resulting blob URL -- a few bytes
     # of metadata, never the model itself.
-    register_url = "{}/api/room/{}".format(ARVR_URL_BASE, room_id)
-    register_payload = json.dumps({
-        "blobUrl": blob_url,
-        "filename": filename,
-        "contentType": content_type,
-        "size": len(file_bytes),
-    })
-    ok, _, err = _http_post_json(register_url, register_payload, timeout_ms)
+    size = os.path.getsize(filepath)
+    ok, web_url, err = register_room(
+        room_id, blob_url, filename, content_type, size, timeout_ms=timeout_ms)
     if not ok:
-        return False, room_id, None, "Room registration failed: " + str(err)
+        return False, room_id, None, err
 
-    web_url = "{}?room={}".format(ARVR_URL_BASE, room_id)
     return True, room_id, web_url, None
+
 
 def _url_quote(text):
     """Percent-encode a URL for embedding in a query string, across Py2/Py3."""
