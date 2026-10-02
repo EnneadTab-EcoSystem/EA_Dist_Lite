@@ -47,7 +47,8 @@ def _api_origin():
         raise NyuHqApiError(
             "NYU_HQ_API_URL is not set.\n"
             "Set the NYU_HQ_API_URL environment variable to the NYU HQ "
-            "webapp origin (e.g. https://enneadtab.com) and run again.")
+            "webapp origin (e.g. https://enneadtab.com/projects/nyu-hq) "
+            "and run again.")
     return origin
 
 

@@ -101,8 +101,13 @@ COLOR_SCHEME_NAMES = {
 #
 # Configure via environment variables on the machine running Revit
 # (all optional -- sensible production defaults are baked in):
-#   NYU_HQ_API_URL        webapp origin (default: https://nyu-hq.vercel.app,
-#                         the direct origin, which always serves /api)
+#   NYU_HQ_API_URL        webapp origin (default:
+#                         https://enneadtab.com/projects/nyu-hq, the
+#                         EnneadTab-Home proxy. Home validates the Bearer
+#                         desktop token and adds the identity and proxy
+#                         secret NYU-HQ requires. The direct host
+#                         nyu-hq.vercel.app answers 404 to requests without
+#                         Home's x-proxy-secret, see NYU-HQ middleware.js.)
 #   NYU_HQ_SERVICE_TOKEN  headless/CI override only. Interactive Revit
 #                         sessions authenticate through the user's
 #                         EnneadTab-Home sign-in instead (see home_auth.py):
@@ -112,7 +117,7 @@ COLOR_SCHEME_NAMES = {
 #   NYU_HQ_ACTOR           audit label for the edit log (default: revit-...)
 # The service token lives on the user's machine only -- never commit it.
 NYU_HQ_API_URL = os.environ.get(
-    "NYU_HQ_API_URL", "https://nyu-hq.vercel.app").strip()
+    "NYU_HQ_API_URL", "https://enneadtab.com/projects/nyu-hq").strip()
 NYU_HQ_SERVICE_TOKEN = os.environ.get("NYU_HQ_SERVICE_TOKEN", "").strip()
 NYU_HQ_WEBAPP_URL = os.environ.get(
     "NYU_HQ_WEBAPP_URL", "https://enneadtab.com/projects/nyu-hq").strip()
