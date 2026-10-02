@@ -165,9 +165,13 @@ def upload_bytes(url, data_bytes, token=None, headers=None,
 
 
 def download(url, dest_path, token=None, headers=None, timeout_ms=30000):
-    """Download to `dest_path` atomically (temp file + os.rename). Returns a
-    Result whose `etag` is the server ETag when present. Transport failures set
-    transport_failed=True and leave no partial file behind."""
+    """Download to `dest_path` via temp file + os.rename. Returns a Result
+    whose `etag` is the server ETag when present. Transport failures set
+    transport_failed=True and leave no partial file behind.
+
+    NOT atomic: the destination is removed BEFORE the rename (Windows rename
+    will not overwrite), so there is a window where it does not exist. Do not
+    build on an atomicity guarantee here. senzhang-todo #3896."""
     full_headers = _headers_with_auth(headers, token, None)
     tmp = dest_path + ".part"
     if _common._USE_DOTNET:
@@ -175,8 +179,9 @@ def download(url, dest_path, token=None, headers=None, timeout_ms=30000):
     else:
         result = _download_urllib(url, tmp, full_headers, timeout_ms)
     if result.ok():
-        # Atomic publish: rename only after a complete write. os.rename is
-        # atomic within a volume on both Windows and POSIX.
+        # Publish only after a complete write. This is NOT atomic: the
+        # destination is removed before the rename, so there is a window where
+        # it does not exist. senzhang-todo #3896.
         try:
             if os.path.exists(dest_path):
                 os.remove(dest_path)      # Windows rename won't overwrite

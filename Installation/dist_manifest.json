@@ -554,7 +554,7 @@
         "Apps/lib/EnneadTab/COPY.py": "85e71d4f54b1b4735550f70396f0e609fdb39c4db2596fbd7f762ce65f826285",
         "Apps/lib/EnneadTab/CRASH_DETECTIVE.py": "e7a648da320e171b16cff338e8daaa793d0a1f044a1e17d4f473a1a1ad235993",
         "Apps/lib/EnneadTab/DATA_CONVERSION.py": "fb91cf52b5219c7f0c4f7c7fdd619cb41f12c1aa3f74cfa41684b0394185d991",
-        "Apps/lib/EnneadTab/DATA_FILE.py": "72b876822d0fe417e62b2d4560bc396b205a6e8cea69abe88ee057b5edfb99c8",
+        "Apps/lib/EnneadTab/DATA_FILE.py": "1cefab779988f0bf3412f39aee272be24c204f1b0f26241b8fb6a22606bc2cb2",
         "Apps/lib/EnneadTab/DATA_VIZ.py": "62cb4e2514867b47c03e958c67fd3dbeaf9919d8c03f5bbd42c0398e1bbac152",
         "Apps/lib/EnneadTab/DEPOT/ASSET.py": "d4731ba8dc8792a2549f4d26402eaeeb9d6198d204745eb456f7a2c2b0299674",
         "Apps/lib/EnneadTab/DEPOT/LIBRARY_CATALOG.py": "a84697e2d8b2c7b4a4f039f155761a8c449ed4f30b38d89218de3ddf8b5a1369",
@@ -562,8 +562,8 @@
         "Apps/lib/EnneadTab/DEPOT/STATE.py": "942af7659f2f26f2e6a3c0a9b0d1d22f1f454441fb0be17e323261d344106266",
         "Apps/lib/EnneadTab/DEPOT/__init__.py": "8b63f8c512478fce2a0324f2ed88c65d6cedb2a72167bfecfac46a38df17b4b5",
         "Apps/lib/EnneadTab/DEPOT/_alarm.py": "fac4719bac872e13e21a4659e5defe6eb38415220c79646244bf56fb7edfa26b",
-        "Apps/lib/EnneadTab/DEPOT/_cache.py": "a9cab52e8c5e7a5a2ca292a9ce2027aaacf4db329d1a4e3a28c1e316dd2a559b",
-        "Apps/lib/EnneadTab/DEPOT/_transport.py": "32b3afbf18d370d6ebc4ea65b7fc7ea1e94bd0243b5d8697af96eb1bf736c00b",
+        "Apps/lib/EnneadTab/DEPOT/_cache.py": "c3db9e8c106f887416c6b84e6dc6ff1680c15aaa22ca5353c5596357019db5f5",
+        "Apps/lib/EnneadTab/DEPOT/_transport.py": "b4fb84b10be9848575e8e218de020154eb5ad2414946b46caa96b1cca7f10820",
         "Apps/lib/EnneadTab/DOCUMENTATION.py": "1bf5994000fa98501e519eb830796881ea9542e415658623ed16ea6d8a253446",
         "Apps/lib/EnneadTab/DUCK.py": "b712e251e616dcaa21c47d438b5888d85285273297c94934ae73f5d85e4dcd57",
         "Apps/lib/EnneadTab/EARTH_MODEL.py": "228316dd7d7850886a5a8b4c8e21e83239527ef39b8ac98ad93f76c385ef2474",
@@ -719,11 +719,11 @@
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80",
         "Apps/lib/EnneadTab/tests/test_documentation_sanitize.py": "782d2dd40e77cab7912031f0dae0ac6b66d0c2fee8ee3d567d71b917a880a9a9"
     },
-    "published_at": "2026-10-02T10:52:58",
-    "source_commit": "d6dc9a9bc2634ac37a5b36ffc1d216f378c40777",
+    "published_at": "2026-10-02T12:21:13",
+    "source_commit": "55da40a457985aef4f1eaa214c3dd055aebedb96",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.10.02.1052"
+    "version": "2026.10.02.1221"
 }
