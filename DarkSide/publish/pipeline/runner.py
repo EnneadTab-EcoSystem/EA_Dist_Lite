@@ -72,7 +72,47 @@ class PipelineRunner(object):
         self._print_summary(pipeline_failed, failed_stage)
 
         if pipeline_failed:
+            err_details = None
+            for r in self.context.results:
+                if not r.is_success and r.error:
+                    err_details = r.error
+                    break
+            self._report_failure_to_errordump(failed_stage, err_details or "Pipeline failed")
             sys.exit(1)
+
+    def _report_failure_to_errordump(self, failed_stage, error_detail):
+        """Post pipeline failure to ErrorDump so publish failures are recorded in telemetry."""
+        try:
+            import urllib.request
+            import json
+            stage_name = failed_stage.name if failed_stage else "Unknown Stage"
+            error_message = "[Publish Failure] Stage [{}]: {}".format(stage_name, error_detail)
+            payload = json.dumps({
+                "source_app": "EnneadTab-OS",
+                "environment": "ci" if getattr(self.context, "is_ci", False) else "terminal",
+                "error_message": error_message[:2000],
+                "stack_trace": str(error_detail)[:10000],
+                "function_name": "publish_pipeline",
+                "user_name": os.environ.get("USERNAME", "ci_runner"),
+                "machine_name": os.environ.get("COMPUTERNAME", "unknown"),
+                "context": {
+                    "stage": stage_name,
+                    "is_production": getattr(self.context, "is_production", False),
+                    "publish_mode": getattr(self.context, "publish_mode", "unknown"),
+                    "target_sha": getattr(self.context, "target_sha", "") or os.environ.get("GITHUB_SHA", ""),
+                    "github_run_id": os.environ.get("GITHUB_RUN_ID", ""),
+                    "github_repository": os.environ.get("GITHUB_REPOSITORY", ""),
+                }
+            }).encode("utf-8")
+            req = urllib.request.Request(
+                "https://error-dump-ennead-projects.vercel.app/error-dump/api/ingest",
+                data=payload,
+                headers={"Content-Type": "application/json"},
+            )
+            urllib.request.urlopen(req, timeout=5)
+            print(" [ErrorDump] Reported publish failure to ErrorDump service.")
+        except Exception as exc:
+            print(" [ErrorDump] Notice: could not report to ErrorDump (non-fatal): {}".format(exc))
 
     def _announce_degraded(self, degraded):
         """Tell GITHUB ITSELF, not just the log, that this publish degraded.
