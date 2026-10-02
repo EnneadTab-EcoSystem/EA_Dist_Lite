@@ -37,8 +37,18 @@ class ARVRExportDialog(object):
         self.dialog.Resizable = True
         self.dialog.Padding = Eto.Drawing.Padding(16)
         self.dialog.Width = 700
-        self.dialog.Height = 820
         self.dialog.MinimumSize = Eto.Drawing.Size(560, 480)
+        # Cap height to the working area so laptop screens do not push the
+        # bottom (QR links / CLOSE) off-screen. Scrollable below covers the rest.
+        dialog_h = 820
+        try:
+            work = Eto.Forms.Screen.PrimaryScreen.WorkingArea
+            max_h = int(work.Height * 0.9)
+            if max_h > 0 and max_h < dialog_h:
+                dialog_h = max(self.dialog.MinimumSize.Height, max_h)
+        except Exception:
+            pass
+        self.dialog.Height = dialog_h
 
         # Colors
         self.col_bg = RHINO_UI.hex_to_eto_color("#0A0E1A")
@@ -192,12 +202,36 @@ class ARVRExportDialog(object):
         self.qr_room_view.Size = Eto.Drawing.Size(100, 100)
 
         def _qr_slot(image_view):
-            # Fixed-size slot, QR centered both ways, so link + button below
-            # start at the same y in both columns.
-            slot = Eto.Forms.TableLayout()
-            slot.Size = Eto.Drawing.Size(-1, QR_SLOT)
-            slot.Rows.Add(Eto.Forms.TableRow(Eto.Forms.TableCell(None, True), Eto.Forms.TableCell(image_view, False), Eto.Forms.TableCell(None, True)))
-            return slot
+            # Fixed-height panel + vertical ScaleHeight spacers center the
+            # smaller Room QR in the same 180px band as the Mobile QR, so the
+            # link TextBox and COPY button rows below stay Y-aligned.
+            # (A single-row TableLayout only centered horizontally - the 100px
+            # QR sat at the top of the slot and the CTAs still lined up via the
+            # shared parent rows, but looked vertically unbalanced.)
+            table = Eto.Forms.TableLayout()
+            table.Spacing = Eto.Drawing.Size(0, 0)
+
+            top = Eto.Forms.TableRow()
+            top.ScaleHeight = True
+            top.Cells.Add(Eto.Forms.TableCell(None, True))
+            table.Rows.Add(top)
+
+            mid = Eto.Forms.TableRow()
+            mid.ScaleHeight = False
+            mid.Cells.Add(Eto.Forms.TableCell(None, True))
+            mid.Cells.Add(Eto.Forms.TableCell(image_view, False))
+            mid.Cells.Add(Eto.Forms.TableCell(None, True))
+            table.Rows.Add(mid)
+
+            bot = Eto.Forms.TableRow()
+            bot.ScaleHeight = True
+            bot.Cells.Add(Eto.Forms.TableCell(None, True))
+            table.Rows.Add(bot)
+
+            wrap = Eto.Forms.Panel()
+            wrap.Height = QR_SLOT
+            wrap.Content = table
+            return wrap
 
         self.mobile_link_tb = Eto.Forms.TextBox()
         self.mobile_link_tb.ReadOnly = True
@@ -257,16 +291,15 @@ class ARVRExportDialog(object):
         btn_close.Click += lambda s, e: self.dialog.Close(False)
         layout.AddRow(btn_close)
 
-        # DynamicLayout stretches its last row to fill spare height (that is
-        # what blew CLOSE up into a giant block). Trailing spacer absorbs it.
-        layout.Add(None, False, True)
-
-        # Scrollable: on small screens / high DPI the form scrolls instead of
-        # being cropped by the modal frame.
+        # Scrollable with ExpandContentHeight=False so the layout keeps its
+        # natural preferred height. ExpandContentHeight=True + a trailing
+        # yscale spacer (the previous attempt) made PreferredHeight track the
+        # viewport, so scrollbars never appeared and the QR/CTA block was
+        # still cropped on short screens. Width still expands to fill.
         scroller = Eto.Forms.Scrollable()
         scroller.Border = getattr(Eto.Forms.BorderType, "None")
         scroller.ExpandContentWidth = True
-        scroller.ExpandContentHeight = True
+        scroller.ExpandContentHeight = False
         scroller.BackgroundColor = self.col_bg
         scroller.Content = layout
         self.dialog.Content = scroller
