@@ -149,14 +149,14 @@
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/MakeFloatingBox.panelbutton/floating_script.py": "40187de1c5059b7956a485469d97ad28f6fc2c95bf9b6cf2f2a80dbd9c58ddf0",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/_check_excel_order.py": "36a9e7f1c95b82ffb99743e0c5c4ce95d83c9a430aac59f84ef3cbfab6145068",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/color_scheme_updater.py": "0d072e2943f431202e65db9e0780b8fa7d2902dfbfbe3a6ea8f676a115b5da91",
-        "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/config.py": "5c7889e74438b7b31bb7974dbf07d0ed0f97ce210f2f00c1f31608638a07f7db",
+        "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/config.py": "ac8a330e60336841d435d68444729ad2f1ac905c6c125c0f67fd6ce3f9789e58",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/department_matrix.py": "adf8971095728c558b4714a41afe0532dd029a49661afffdd4f70928226835d3",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/excel_data.py": "ed2a6d3f83a9757fd0b0d099ad50c8ade53a363825951c4ccc5baff7329ad724",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/excel_writeback.py": "51341a4aa72d98519e8530d8b767bb96eec564d5d72295c53a3d644c2e41d466",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/geometry_extractor.py": "77d48c84c25adead44c137b7ab400169fccf51f9b6a38d546daed5f79e0faac8",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/home_auth.py": "a461d1618a62205f6860ed61d6e1e84de29ce55213f08e08f9cc35fe90ff04ba",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/monitor_area_script.py": "8752941cd6b9bfd900a41bc8496b49add6cd1beb20ccebb53f39e4948051493b",
-        "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/nyu_hq_api.py": "14f963c5d17780ca10e3421bf59f1c5816487892a89dd299e490bcf0de15a267",
+        "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/nyu_hq_api.py": "85c80bbf5d5a3e06ca0109605a1fc40b585e11803e0070badbd49edbe87e4a9f",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/parameter_updater.py": "ec1bec97c1ec8747b80b209d20557ec999acd592d93c74b985f95366f335f970",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/revit_data.py": "6279555fd719ebbdfde08986a197463a517146b263597578743f2f078076c23c",
         "Apps/_revit/EnneaDuck.extension/EnneadTab Tailor.tab/Proj. 2534.panel/NYU HQ.pulldown/monitor_area.pushbutton/suggestion_logic.py": "c5f22f63d673d078d425f7a1d3ce249a010ea58e7003ad8159cddef3684fc320",
@@ -719,11 +719,11 @@
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80",
         "Apps/lib/EnneadTab/tests/test_documentation_sanitize.py": "782d2dd40e77cab7912031f0dae0ac6b66d0c2fee8ee3d567d71b917a880a9a9"
     },
-    "published_at": "2026-10-02T07:00:34",
-    "source_commit": "fc697f121411f98b05a20c9af14c6b6863081f1e",
+    "published_at": "2026-10-02T10:52:58",
+    "source_commit": "d6dc9a9bc2634ac37a5b36ffc1d216f378c40777",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.10.02.0700"
+    "version": "2026.10.02.1052"
 }
