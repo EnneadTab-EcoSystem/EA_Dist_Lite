@@ -596,7 +596,7 @@
         "Apps/lib/EnneadTab/PDF.py": "d9254e37fc31d900319b254090047697350f2085a022bc2c71af507be41db003",
         "Apps/lib/EnneadTab/PHONE_SCANNER.py": "8f304cb57d3d8a150dba2f2fe92d8ee4a862f9f2f08e3de5f3124a35ea818ca0",
         "Apps/lib/EnneadTab/POWERSHELL.py": "eb956f6a56cc821a3f07fdb1c8df066d511656837cbfd669574851e06141817c",
-        "Apps/lib/EnneadTab/RECAP.py": "deff843196a2233281672e9fd436b5bc3804442281fc0b253666953d7dd140dc",
+        "Apps/lib/EnneadTab/RECAP.py": "f2190ad96a04fd0b60a421120e49783ee46997f917331dfca6df49ef014e5afc",
         "Apps/lib/EnneadTab/REVIT/REVIT_ACC.py": "e49be979a6773c2c35252c334dd8c2f26584c0e9957ca72b2e1b844c18de4d00",
         "Apps/lib/EnneadTab/REVIT/REVIT_APPLICATION.py": "b97cdfb21476332e92c38bdec6f56cb0bb84731b33ae51cabc9dac101a2129e8",
         "Apps/lib/EnneadTab/REVIT/REVIT_AREA_SCHEME.py": "18e8e651469ae4dc0d0ef6cc64ec99ffdf7681b5409cc6200d3041cd0c420fb7",
@@ -719,11 +719,11 @@
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80",
         "Apps/lib/EnneadTab/tests/test_documentation_sanitize.py": "782d2dd40e77cab7912031f0dae0ac6b66d0c2fee8ee3d567d71b917a880a9a9"
     },
-    "published_at": "2026-10-02T12:21:13",
-    "source_commit": "55da40a457985aef4f1eaa214c3dd055aebedb96",
+    "published_at": "2026-10-02T12:24:49",
+    "source_commit": "56f91c4f0e5fb2a73c805ea3dbe1b7e2c0078236",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.10.02.1221"
+    "version": "2026.10.02.1224"
 }
