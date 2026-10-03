@@ -17,6 +17,11 @@ Architecture ruling 2026-08-05 (see docs/plans/2026-08-05-getearth-earth-model-s
   * The service is its own repo + Vercel project, proxied at
     enneadtab.com/earth-model. Not a route inside EnneadTabHome (tile merging is
     a bad tenant in the portal that fronts everything else).
+  * NOT a service-factory desktop product. There is no Electron/NSIS installer
+    and nothing for electron-updater to ship. Do NOT add earth-model to
+    DarkSide/publish/service_factory_products.json (listed under that file's
+    _excluded on purpose; Wiki #517 / TODO-7264). Portal/wiki catalog visibility
+    is owned by EnneadTab-Home (apps-config), not the ExeProducts mirror roster.
 
 Control plane and data plane are split: POST returns JSON with a download URL and
 a sha256, then the binary is fetched separately. That keeps a multi-megabyte GLB
