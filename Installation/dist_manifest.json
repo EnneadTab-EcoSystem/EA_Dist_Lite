@@ -517,7 +517,7 @@
         "Apps/_revit/EnneaDuck.extension/routes/documents.py": "1de98c2f970ea6145847b0987535e8b720ed78420c4c671d916dda4341196ac0",
         "Apps/_revit/EnneaDuck.extension/routes/element_params.py": "f6c56700adcb2877fe04bd698a4562bb28074fcdf13ee40bd073d26d131460a7",
         "Apps/_revit/EnneaDuck.extension/routes/element_set_param.py": "64bf6841697097bda75a784d50dc142c82583b32bfe685818f72c39f4d10ec34",
-        "Apps/_revit/EnneaDuck.extension/routes/elements.py": "6f36e8db58caf9f037754075337afe8ee1a6edc83d5f763501ef1f5cf518e159",
+        "Apps/_revit/EnneaDuck.extension/routes/elements.py": "68b4ba1bc51b371991097d388ef5d4a6444c3d6db93c95eccbcb624970f48a66",
         "Apps/_revit/EnneaDuck.extension/routes/enneadtab_tools.py": "3365565b1d3f87e9bf0279692174f6b6c83a872d9a98ff63ebbfe2514a99bb23",
         "Apps/_revit/EnneaDuck.extension/routes/execute_code.py": "d42b384e1bd2b81e1e0d8fe9142f57c7c2a2e9742bb1dc72bc80f029e54fe001",
         "Apps/_revit/EnneaDuck.extension/routes/families.py": "7584f17244722c9ca7527191d19d9939f61839c16fb08037bcbf1355eeaba6cf",
@@ -526,7 +526,7 @@
         "Apps/_revit/EnneaDuck.extension/routes/links.py": "dd336a453bc7671b84ff1fcf61d15df738548b66f4c4755c5deb1890d9955afc",
         "Apps/_revit/EnneaDuck.extension/routes/model_info.py": "89725b762e53a24649de2ed52ae817fd52cb53da82991258a122793fddca3273",
         "Apps/_revit/EnneaDuck.extension/routes/place_family.py": "40b8a5abfa972a98d94ea809a29ad3c0c802913e249044b9f32e41cb40474793",
-        "Apps/_revit/EnneaDuck.extension/routes/rooms.py": "723d0237d1843d2827bc4eaedf2823f6fd07116adc1526444bc04e71bd764dd3",
+        "Apps/_revit/EnneaDuck.extension/routes/rooms.py": "8a11926116500309c79b774184bc00de349d786658eaf0700f8b8abfcf34655d",
         "Apps/_revit/EnneaDuck.extension/routes/selection.py": "292f3f03112fba998b37c9ddb348be417adfc6cffc354d7aa9a6d4110df94183",
         "Apps/_revit/EnneaDuck.extension/routes/sheets.py": "52f13f7068171c93afbf25772d6d5d19efd3bc53b5c85dc23139444fab04e2aa",
         "Apps/_revit/EnneaDuck.extension/routes/startup.py": "f097808d9f03eb13712e8dd65efe165960028f317b25fff23d8ebdef364f7fff",
@@ -719,11 +719,11 @@
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80",
         "Apps/lib/EnneadTab/tests/test_documentation_sanitize.py": "782d2dd40e77cab7912031f0dae0ac6b66d0c2fee8ee3d567d71b917a880a9a9"
     },
-    "published_at": "2026-10-03T09:06:41",
-    "source_commit": "82bbd2318958488d2b39a49d733e52a6e6849b83",
+    "published_at": "2026-10-04T20:34:15",
+    "source_commit": "b94aa7d02c7bc172c7afdc70fa3f27420d9d5376",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.10.03.0906"
+    "version": "2026.10.04.2034"
 }
