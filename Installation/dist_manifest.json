@@ -719,11 +719,11 @@
         "Apps/lib/EnneadTab/scripts/display_pc_spec.py": "603fa5ccea2f60b0405a469696328edf697f6e589f1ac392a74b9f74fe334f80",
         "Apps/lib/EnneadTab/tests/test_documentation_sanitize.py": "782d2dd40e77cab7912031f0dae0ac6b66d0c2fee8ee3d567d71b917a880a9a9"
     },
-    "published_at": "2026-10-04T22:10:15",
-    "source_commit": "499655196f99248bd8d5bc5029460270d999aa04",
+    "published_at": "2026-10-04T22:45:35",
+    "source_commit": "719948bbcb2720b0fefd4a9e8426d67a8bce59f5",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.10.04.2210"
+    "version": "2026.10.04.2245"
 }
