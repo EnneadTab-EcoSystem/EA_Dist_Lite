@@ -31,6 +31,21 @@ def content_type_for(filename):
     ext = os.path.splitext(filename)[1].lower()
     return _CONTENT_TYPES.get(ext, "application/octet-stream")
 
+# Model formats the web viewer (<model-viewer>) can actually render.
+VIEWABLE_MODEL_EXTENSIONS = (".glb", ".gltf", ".usdz")
+
+def unsupported_model_reason(filename):
+    """Return an error string if filename is not a viewer-renderable model, else None.
+
+    The web viewer only renders glTF/GLB (plus USDZ for iOS Quick Look).
+    Uploading anything else (e.g. .obj) would report success on the desktop
+    and show a blank model on the phone.
+    """
+    ext = os.path.splitext(filename)[1].lower()
+    if ext in VIEWABLE_MODEL_EXTENSIONS:
+        return None
+    return "Unsupported model format '{}'. The AR/VR viewer only renders .glb, .gltf or .usdz. Export as GLB and try again.".format(ext or filename)
+
 def generate_room_id():
     """Generate a friendly 6-char alphanumeric room code."""
     chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
@@ -62,6 +77,11 @@ def stage_and_upload(filepath, room_id=None, timeout_ms=90000, auto_open_browser
         msg = "File does not exist: {}".format(filepath)
         NOTIFICATION.messenger(msg)
         return False, None, None, msg
+
+    bad_format = unsupported_model_reason(os.path.basename(filepath))
+    if bad_format:
+        NOTIFICATION.messenger(bad_format)
+        return False, None, None, bad_format
 
     file_size = os.path.getsize(filepath)
     if file_size == 0:
@@ -313,6 +333,10 @@ def upload_model_file(filepath, room_id=None, timeout_ms=60000):
     if not os.path.exists(filepath):
         return False, None, None, "File does not exist: " + str(filepath)
 
+    bad_format = unsupported_model_reason(os.path.basename(filepath))
+    if bad_format:
+        return False, None, None, bad_format
+
     if not room_id:
         room_id = generate_room_id()
     else:
@@ -422,15 +446,15 @@ def get_mobile_viewer_url(room_id):
 
 def download_qr_code_pair(room_id, hub_url):
     """Download both QR codes needed for the share dialog:
-      - Large QR  (240px) → mobile AR viewer URL  (https://enneadtab.com/arvr/view/<room>)
-      - Small QR  (80px)  → desktop hub room URL   (https://enneadtab.com/arvr?room=<room>)
+      - Large QR  (240px) -> mobile AR viewer URL  (https://enneadtab.com/arvr/view/<room>)
+      - Small QR  (80px)  -> desktop hub room URL   (https://enneadtab.com/arvr?room=<room>)
 
     Args:
         room_id (str): The room code.
         hub_url (str): The desktop hub URL (already computed by stage_and_upload).
 
     Returns:
-        tuple: (large_qr_path, small_qr_path) — either may be None if fetch failed.
+        tuple: (large_qr_path, small_qr_path) - either may be None if fetch failed.
     """
     mobile_url = get_mobile_viewer_url(room_id)
     large_path = download_qr_code(mobile_url, size=240)
