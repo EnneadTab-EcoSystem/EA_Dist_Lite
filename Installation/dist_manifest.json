@@ -481,6 +481,7 @@
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/UI.panel/BIM_Client.pushbutton/compatibility.py": "bb6b233c9486fcb0e350ba3ec49327e04a046483aa1bd6cfe83e796f00357852",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/UI.panel/MakeFloatingBox.panelbutton/floating_script.py": "bcae19c7d790563ae776c2ce39d9e1957d3bad80f368066950c69d208147eab2",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/UI.panel/Search.pushbutton/search_script.py": "309e9f7ab8bdd7ad1154700e3e8581e89735a04b82cafdf4a45868782c8c5dae",
+        "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/UI.panel/next_action.pushbutton/next_action_script.py": "3f6b9cd5a2e15f995ce65f9762e37976d1f625fececf526380e0789a11ee31bd",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/UI.panel/open_app_store.pushbutton/open_app_store_script.py": "7fee214047c3691d2b5b868948641ebc1f22fbb64280887c4a3069ef804850c7",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/UI.panel/ownership_inspect.pushbutton/ownership_data.py": "d768a19c0757175d6c9ca3011aa1dc9d7c7e3f8f5342d93b95c99904bb74efa3",
         "Apps/_revit/EnneaDuck.extension/EnneadTab.tab/UI.panel/ownership_inspect.pushbutton/ownership_inspect_script.py": "7aa1e4a8639b1e8e4e011c92743c1131b6ff04546ea1c25f996d79ffa9576003",
@@ -721,11 +722,11 @@
         "Apps/lib/EnneadTab/tests/test_color_scheme_orphans.py": "b989bc14dd3762fa9b1e8d07c720e43466554e63827f51573afb00136fa519c1",
         "Apps/lib/EnneadTab/tests/test_documentation_sanitize.py": "782d2dd40e77cab7912031f0dae0ac6b66d0c2fee8ee3d567d71b917a880a9a9"
     },
-    "published_at": "2026-10-05T02:34:53",
-    "source_commit": "1f28e41fac8afcfa0588adcffcb6c09a3186a992",
+    "published_at": "2026-10-07T01:51:27",
+    "source_commit": "a89e757a3cee264e673101f691a6ee91d9af93e3",
     "trees": [
         "Apps/lib/EnneadTab",
         "Apps/_revit/EnneaDuck.extension"
     ],
-    "version": "2026.10.05.0234"
+    "version": "2026.10.07.0151"
 }
