@@ -1,7 +1,7 @@
 # EnneadTab Distribution Repository
 
 ## 📅 Last Updated
-2026-10-07 10:37:18
+2026-10-07 11:40:59
 
 # LITE VERSION
 
@@ -9,14 +9,14 @@ This is the **LITE VERSION** of the distribution repository, optimized for quick
 
 ## Excluded Content
 The following content has been removed to reduce size:
-- Most executable files (.exe), **except installer files**
+- Most executable files (.exe), **except installers, uninstallers and a few core utilities**
 - Dynamic link libraries (.dll)
 - CAD-related files and folders
 - Engine files and folders
 - Dump scripts
 - Dependency files
 
-## Included Installer Files
+## Included Executable Files
 - EnneadTab_OS_Installer.exe
 - EnneadTab_OS_UnInstaller.exe
 - EnneadTab_For_Revit_Installer.exe
@@ -40,7 +40,7 @@ This repository contains:
 - Special thanks to Ehsan and the pyRevit team for providing the foundation for the Revit Extension
 
 ## 💭 Wisdom of the Day
-When you have a bladder infection, urine trouble.
+Have you heard about the film "Constipation", you probably haven't because it's not out yet.
 
 ---
 *Have a nice day! Hope you enjoy using this product.*
