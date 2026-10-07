@@ -468,8 +468,19 @@ class ARVRExportDialog(object):
         # excluded (the site-plan picture) must be cleared first.
         rs.UnselectAllObjects()
         rs.SelectObjects(objs)
+        # Force the glTF exporter to write empty parent nodes named after the
+        # layers, so the build/explode manifest (matched against each mesh's
+        # ancestor node names) actually lines up. FileGltfWriteOptions.ExportLayers
+        # exists only in Rhino >= 8.3; if the type, the property, or the options
+        # overload is missing (older Rhino) the inner fallback exports the selection
+        # the plain way, so this never breaks an older install.
         try:
-            exported = sc.doc.ExportSelected(out_path)
+            try:
+                gltf_options = Rhino.FileIO.FileGltfWriteOptions()
+                gltf_options.ExportLayers = True
+                exported = sc.doc.Export(out_path, gltf_options.ToDictionary())
+            except Exception:
+                exported = sc.doc.ExportSelected(out_path)
         except Exception as export_err:
             exported = False
             NOTIFICATION.messenger("Export raised an error: {}".format(export_err))
