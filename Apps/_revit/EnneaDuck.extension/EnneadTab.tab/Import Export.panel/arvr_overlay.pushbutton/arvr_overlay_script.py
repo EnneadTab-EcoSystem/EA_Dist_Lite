@@ -36,6 +36,7 @@ from System.Windows.Shapes import Line # pyright: ignore
 from System.Windows.Media import Brushes # pyright: ignore
 from System.Windows.Media.Imaging import BitmapImage, BitmapCacheOption # pyright: ignore
 from pyrevit.forms import WPFWindow # pyright: ignore
+from pyrevit import forms # pyright: ignore
 
 import proDUCKtion # pyright: ignore 
 proDUCKtion.validify()
@@ -164,6 +165,71 @@ class ARVROverlayWindow(WPFWindow):
                 room_id = self.get_room_id()
                 ok, r, u, err = ARVR.stage_and_upload(filepath, room_id=room_id, auto_open_browser=False)
                 self._handle_upload_result(ok, r, u, err)
+
+    # ---- Explode / build sequence (mirrors the Rhino layer sequence) ----
+    # Revit has no layers, so the build axis is Levels or Phases. The result is the
+    # same rooms/<id>/sequence/sequence.json sidecar the camera viewers already play;
+    # it matches mesh ancestor node names against the level/phase names. NOTE: that
+    # match only hits if the GLB you beamed was exported with grouping nodes named
+    # after the levels/phases (same caveat as Rhino layers); otherwise the viewer
+    # falls back to its own top-level parts.
+    def on_sequence_clicked(self, sender, e):
+        from EnneadTab import ARVR_SEQUENCE
+        doc = self.doc
+        if not doc:
+            self.status_text.Text = ">> No open Revit document."
+            return
+        room = self.get_room_id()
+
+        axis = forms.SelectFromList.show(
+            ["By Level", "By Phase"],
+            multiselect=False,
+            title="Explode / build sequence grouped by:",
+            button_name="Group By")
+        if not axis:
+            return
+
+        try:
+            if axis.lower().startswith("by level"):
+                levels = (DB.FilteredElementCollector(doc).OfClass(DB.Level)
+                          .WhereElementIsNotElementType().ToElements())
+                if not levels:
+                    NOTIFICATION.messenger("No levels found in this model.")
+                    return
+                picked = forms.SelectFromList.show(
+                    levels, multiselect=True, name_attr="Name",
+                    title="Pick the levels in your sequence (ordered bottom to top automatically):",
+                    button_name="Pick Levels")
+                if not picked:
+                    return
+                pairs = [(lv.Name, float(lv.Elevation)) for lv in picked]
+                manifest = ARVR_SEQUENCE.build_revit_level_manifest(pairs)
+            else:
+                phases = DB.FilteredElementCollector(doc).OfClass(DB.Phase).ToElements()
+                if not phases:
+                    NOTIFICATION.messenger("No phases found in this model.")
+                    return
+                picked = forms.SelectFromList.show(
+                    phases, multiselect=True, name_attr="Name",
+                    title="Pick the phases in build order (oldest construction -> newest):",
+                    button_name="Pick Phases")
+                if not picked:
+                    return
+                # The pick order from the dialog is not authoritative; sort into true
+                # build order (oldest -> newest) by phase creation id.
+                ordered = sorted(picked, key=lambda p: p.Id.IntegerValue)
+                manifest = ARVR_SEQUENCE.build_revit_phase_manifest([p.Name for p in ordered])
+        except Exception as ex:
+            self.status_text.Text = ">> Sequence read failed: {}".format(ex)
+            return
+
+        ok, err = ARVR.upload_sequence(room, manifest)
+        if ok:
+            self.status_text.Text = (
+                ">> Sequence of {} groups added to Room {}: EXPLODE and BUILD appear in the camera viewers".format(
+                    len(manifest["groups"]), room))
+        else:
+            self.status_text.Text = ">> Sequence upload failed: {}".format(err)
 
     # ---- Compose model + site plan on one sheet (mirrors the Rhino composer) ----
     # Revit has no picture-surface pick, so the plan always comes from an image

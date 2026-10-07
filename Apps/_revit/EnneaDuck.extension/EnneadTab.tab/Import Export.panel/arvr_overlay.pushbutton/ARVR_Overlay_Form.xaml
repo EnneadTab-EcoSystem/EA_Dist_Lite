@@ -108,6 +108,16 @@
                         Margin="0,0,0,10"
                         Click="on_browse_model_clicked" />
 
+                <Button x:Name="btn_sequence"
+                        Content="ADD EXPLODE / BUILD SEQUENCE (LEVELS OR PHASES)"
+                        Height="34"
+                        Background="#1E293B"
+                        Foreground="#FFE600"
+                        BorderThickness="1"
+                        BorderBrush="#334155"
+                        Margin="0,0,0,10"
+                        Click="on_sequence_clicked" />
+
                 <Border x:Name="compose_card" Background="#121829" BorderBrush="#334155" BorderThickness="1"
                         Padding="10" Margin="0,0,0,10">
                     <StackPanel>

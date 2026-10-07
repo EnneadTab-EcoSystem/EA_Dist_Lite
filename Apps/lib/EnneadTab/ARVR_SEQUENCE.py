@@ -59,3 +59,26 @@ def build_manifest(ordered_layers, explode_distance=1.0, source="rhino-layers"):
         "groups": groups,
         "explode": {"distance": float(explode_distance)},
     }
+
+
+def build_revit_level_manifest(level_pairs, explode_distance=1.0):
+    """Revit Levels -> manifest, mirroring build_manifest for Rhino layers.
+
+    level_pairs: [(level_name, elevation)] for the levels the user picked, in any
+    order. Revit has no layers; Levels are the build axis. They are ordered bottom
+    to top by elevation (explode order) automatically, exactly like Rhino layers.
+    A Revit level name carries no '::' path, so each group matches its own name.
+    Raises ValueError on bad input.
+    """
+    ordered = order_by_elevation(level_pairs)
+    return build_manifest(ordered, explode_distance=explode_distance, source="revit-levels")
+
+
+def build_revit_phase_manifest(phase_names_in_order, explode_distance=1.0):
+    """Revit Phases -> manifest. phase_names_in_order: names oldest build phase -> newest.
+
+    Phases are the alternative build axis. Revit exposes no elevation for a phase, so
+    the caller supplies the already-ordered names (oldest construction -> newest); this
+    does not reorder them. Raises ValueError on bad input.
+    """
+    return build_manifest(list(phase_names_in_order), explode_distance=explode_distance, source="revit-phases")
