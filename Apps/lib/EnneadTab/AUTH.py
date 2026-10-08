@@ -2,17 +2,24 @@
 # -*- coding: utf-8 -*-
 """Shared authentication module for EnneadTab desktop tools.
 
-Provides lazy browser-based OAuth authentication with enneadtab.com.
+Provides lazy browser-based sign-in with enneadtab.com.
 Tokens are cached locally and only requested when an AI tool is used.
 
 Non-blocking design for WPF/XAML forms:
 - get_token() returns instantly (cached token or None)
-- request_auth() opens browser + starts background listener (non-blocking)
+- request_auth() opens browser + starts a background poller (non-blocking)
 - Next call to get_token() finds the cached token after user signs in
 
-Uses .NET HttpListener for the localhost callback (Python's BaseHTTPServer
-is unreliable in IronPython inside Revit). Falls back to Python HTTPServer
-for CPython environments.
+Sign-in uses the EnneadTab-Home device flow (TODO-7915). The token never
+travels in a URL:
+  1. POST {ENNEADTAB_URL}/api/desktop-auth/start {"app": "revit"|"rhino"}
+     -> {"sessionId", "authUrl"}
+  2. The authUrl opens in the browser; the user approves there.
+  3. Poll GET {ENNEADTAB_URL}/api/desktop-auth/poll?session=<id> every 2 s
+     until {"status": "ready", "token": ...} (HTTP 202 while pending).
+The old localhost HttpListener callback (/callback?token=) is gone.
+
+Python 2 / IronPython compatible (Revit, Rhino 7) and CPython 3.
 """
 
 import os
@@ -20,6 +27,17 @@ import json
 import time
 import webbrowser
 import threading
+
+try:
+    # Python 3
+    import urllib.request as _request
+    import urllib.error as _error
+    from urllib.parse import quote as _quote
+except ImportError:
+    # Python 2 / IronPython
+    import urllib2 as _request
+    _error = _request
+    from urllib import quote as _quote
 
 import NOTIFICATION
 
@@ -46,9 +64,6 @@ _HAS_DOTNET = False
 try:
     import clr
     clr.AddReference("System")
-    from System.Net import HttpListener
-    from System.IO import StreamReader as DotNetStreamReader
-    from System.Text import Encoding as DotNetEncoding
     from System.Threading import Thread as DotNetThread, ThreadStart
     _HAS_DOTNET = True
 except Exception:
@@ -115,8 +130,8 @@ def get_token_blocking():
 def request_auth():
     """Start browser auth flow in the background. Non-blocking.
 
-    Opens the browser for SSO and starts a local HTTP listener
-    in a background thread to receive the token callback.
+    Starts a device-flow session, opens the browser for SSO, and polls for
+    the approved token in a background thread.
     Call get_token() after the user completes sign-in.
     """
     global _auth_in_progress
@@ -130,7 +145,7 @@ def request_auth():
         # Use .NET Thread for IronPython (more reliable in Revit)
         def _run_dotnet():
             try:
-                _do_auth_flow_dotnet()
+                _do_auth_flow()
             except Exception as e:
                 print("AUTH .NET flow error: {}".format(e))
             finally:
@@ -144,7 +159,7 @@ def request_auth():
         # Use Python threading for CPython
         def _run():
             try:
-                _do_auth_flow_python()
+                _do_auth_flow()
             except Exception as e:
                 print("AUTH Python flow error: {}".format(e))
             finally:
@@ -328,20 +343,6 @@ def _save_token(token, exp):
     _fire_auth_complete_listeners()
 
 
-def _extract_token_from_query(query_string):
-    """Extract token from URL query string like '/callback?token=xxx'."""
-    # Manual parse since we might not have urlparse in .NET path
-    if "token=" not in query_string:
-        return None
-    for part in query_string.split("&"):
-        if part.startswith("token="):
-            return part[6:]
-        # Handle case where it's after ?
-        if "?token=" in part:
-            return part.split("?token=")[1]
-    return None
-
-
 def _decode_token_expiry(token):
     """Decode expiry from token payload (base64url JSON)."""
     exp = time.time() + 30 * 24 * 3600  # default 30 days
@@ -361,8 +362,14 @@ def _decode_token_expiry(token):
 
 
 # ============================================================
-# .NET HttpListener flow (IronPython in Revit/Rhino)
+# Device flow: POST /start -> open browser -> poll /poll
 # ============================================================
+
+_AUTH_START_URL = ENNEADTAB_URL + "/api/desktop-auth/start"
+_AUTH_POLL_URL = ENNEADTAB_URL + "/api/desktop-auth/poll"
+_POLL_INTERVAL_SECONDS = 2
+_POLL_TIMEOUT_SECONDS = 120
+
 
 def _desktop_host_app():
     """Host app key Home shows on its sign-in pages ("rhino"/"revit"), or None."""
@@ -377,135 +384,85 @@ def _desktop_host_app():
     return None
 
 
-def _desktop_auth_url(port, app=None):
-    """Legacy port flow URL. Passes app= so Home names the right source app (TODO-6034)."""
-    app = app or _desktop_host_app()
-    url = "{}/api/desktop-auth?port={}".format(ENNEADTAB_URL, port)
-    if app:
-        url += "&app={}".format(app)
-    return url
+def _to_text(raw):
+    if isinstance(raw, bytes):
+        return raw.decode("utf-8")
+    return raw
 
 
-def _do_auth_flow_dotnet():
-    """Auth flow using .NET HttpListener. Runs in .NET background thread."""
-    import random
-    port = random.randint(49152, 65535)
+def _http_post_json(url, payload, timeout=30):
+    """POST JSON and return the decoded JSON body. Raises on any failure."""
+    req = _request.Request(url, data=json.dumps(payload).encode("utf-8"))
+    req.add_header("Content-Type", "application/json")
+    resp = _request.urlopen(req, timeout=timeout)
+    return json.loads(_to_text(resp.read()))
 
-    listener = HttpListener()
-    prefix = "http://localhost:{}/".format(port)
-    listener.Prefixes.Add(prefix)
 
+def _http_get_json(url, timeout=30):
+    """GET JSON. Returns (http_status, decoded_body_or_None).
+
+    HTTP error statuses (404 session gone, ...) are returned, not raised.
+    Network failures raise.
+    """
+    req = _request.Request(url)
+    req.add_header("Accept", "application/json")
     try:
-        listener.Start()
-    except Exception as e:
-        print("AUTH: Failed to start listener on port {}: {}".format(port, e))
-        return
-
-    url = _desktop_auth_url(port)
-    webbrowser.open(url)
-
-    # Wait for one request (the callback from enneadtab.com)
-    token = None
-    deadline = time.time() + 120
-
-    while time.time() < deadline:
-        # Non-blocking check with short timeout
-        result = listener.BeginGetContext(None, None)
-        got_request = result.AsyncWaitHandle.WaitOne(2000)  # 2 sec timeout
-
-        if got_request:
-            try:
-                context = listener.EndGetContext(result)
-                raw_url = context.Request.RawUrl  # e.g. /callback?token=xxx
-
-                # Send success page
-                response_body = "<html><body style='font-family:sans-serif;text-align:center;padding:60px;background:#050505;color:#fff'><h2>Authentication successful</h2><p style='color:#a1a1aa'>You can close this window and return to Revit.</p><script>setTimeout(function(){window.close()},2000)</script></body></html>"
-                buf = DotNetEncoding.UTF8.GetBytes(response_body)
-                context.Response.ContentType = "text/html"
-                context.Response.ContentLength64 = buf.Length
-                context.Response.OutputStream.Write(buf, 0, buf.Length)
-                context.Response.OutputStream.Close()
-
-                # Extract token
-                token = _extract_token_from_query(raw_url)
-                if token:
-                    # URL-decode the token (% encoding from redirect)
-                    try:
-                        from System.Net import WebUtility
-                        token = WebUtility.UrlDecode(token)
-                    except Exception:
-                        token = token.replace("%2B", "+").replace("%2F", "/").replace("%3D", "=").replace("%2E", ".")
-                    break
-            except Exception as e:
-                print("AUTH: Error handling callback: {}".format(e))
-                break
-
-    try:
-        listener.Stop()
-        listener.Close()
-    except Exception:
-        pass
-
-    if token:
-        exp = _decode_token_expiry(token)
-        _save_token(token, exp)
-
-
-# ============================================================
-# Python HTTPServer flow (CPython fallback)
-# ============================================================
-
-def _do_auth_flow_python():
-    """Auth flow using Python HTTPServer. Runs in Python background thread."""
-    try:
-        from http.server import HTTPServer, BaseHTTPRequestHandler
-        from urllib.parse import urlparse, parse_qs
-    except ImportError:
-        from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
-        from urlparse import urlparse, parse_qs
-
-    received_token = [None]  # mutable container for closure
-
-    class CallbackHandler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            parsed = urlparse(self.path)
-            params = parse_qs(parsed.query)
-            if parsed.path == "/callback" and "token" in params:
-                received_token[0] = params["token"][0]
-                body = b"<html><body style='font-family:sans-serif;text-align:center;padding:60px;background:#050505;color:#fff'><h2>Authentication successful</h2><p style='color:#a1a1aa'>You can close this window.</p><script>setTimeout(function(){window.close()},2000)</script></body></html>"
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html")
-                self.end_headers()
-                self.wfile.write(body)
-            else:
-                self.send_response(404)
-                self.end_headers()
-
-        def log_message(self, format, *args):
+        resp = _request.urlopen(req, timeout=timeout)
+        status = resp.getcode()
+        raw = resp.read()
+    except _error.HTTPError as e:
+        status = e.code
+        try:
+            raw = e.read()
+        except Exception:
+            raw = b""
+        try:
+            e.close()
+        except Exception:
             pass
+    try:
+        body = json.loads(_to_text(raw)) if raw else None
+    except ValueError:
+        body = None
+    return status, body
 
-    server = HTTPServer(("127.0.0.1", 0), CallbackHandler)
-    port = server.server_address[1]
 
-    server_thread = threading.Thread(target=server.serve_forever)
-    server_thread.daemon = True
-    server_thread.start()
-
-    url = _desktop_auth_url(port)
-    webbrowser.open(url)
-
-    deadline = time.time() + 120
+def _poll_for_token(session_id):
+    """Poll until the user approves the sign-in. Returns the token string."""
+    url = _AUTH_POLL_URL + "?session=" + _quote(session_id)
+    deadline = time.time() + _POLL_TIMEOUT_SECONDS
     while time.time() < deadline:
-        if received_token[0]:
-            break
-        time.sleep(0.5)
+        status, body = _http_get_json(url)
+        if status == 404:
+            raise Exception("sign-in session expired before approval")
+        if status >= 400:
+            raise Exception("sign-in poll failed (HTTP {})".format(status))
+        if isinstance(body, dict) and body.get("status") == "ready" and body.get("token"):
+            return body["token"]
+        time.sleep(_POLL_INTERVAL_SECONDS)  # pending (HTTP 202)
+    raise Exception("sign-in timed out after {} s".format(_POLL_TIMEOUT_SECONDS))
 
-    server.shutdown()
 
-    token = received_token[0]
-    if token:
-        exp = _decode_token_expiry(token)
-        _save_token(token, exp)
+def _do_auth_flow(app=None):
+    """Run the browser device flow and cache the token. Raises on failure.
+
+    The caller (request_auth) prints the error, so a failed sign-in is
+    visible, and always clears _auth_in_progress.
+    """
+    app = app or _desktop_host_app()
+    started = _http_post_json(_AUTH_START_URL, {"app": app} if app else {})
+    session_id = started.get("sessionId") if isinstance(started, dict) else None
+    auth_url = started.get("authUrl") if isinstance(started, dict) else None
+    if not session_id or not auth_url:
+        raise Exception("sign-in start returned no session")
+    # The server picks what the browser opens; only follow our own origin.
+    if not auth_url.startswith(ENNEADTAB_URL + "/"):
+        raise Exception("sign-in start returned an unexpected URL")
+
+    webbrowser.open(auth_url)
+
+    token = _poll_for_token(session_id)
+    _save_token(token, _decode_token_expiry(token))
 
 
 def unit_test():
