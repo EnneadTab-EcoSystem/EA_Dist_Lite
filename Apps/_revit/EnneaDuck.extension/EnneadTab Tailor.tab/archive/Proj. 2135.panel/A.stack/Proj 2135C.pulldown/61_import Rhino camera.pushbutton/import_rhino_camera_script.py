@@ -91,7 +91,7 @@ def import_camera_action(view_info):
 
 
 def import_rhino_camera():
-    #filepath = r"C:\Users\szhang\Desktop\temp1.3dm"
+    #filepath = r"C:\Users\<user>\Desktop\temp1.3dm"
     filepath = forms.pick_file(file_ext = "3dm")
     #print filepath
     file3dm = Rhino.FileIO.File3dm()

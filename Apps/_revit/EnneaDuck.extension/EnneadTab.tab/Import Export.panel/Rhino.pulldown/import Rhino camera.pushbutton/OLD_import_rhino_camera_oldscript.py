@@ -93,7 +93,7 @@ def import_camera_action(view_info):
 
 @ERROR_HANDLE.try_catch_error()
 def import_rhino_camera():
-    #filepath = r"C:\Users\szhang\Desktop\temp1.3dm"
+    #filepath = r"C:\Users\<user>\Desktop\temp1.3dm"
     filepath = FOLDER.get_local_dump_folder_file("EA_CAMERA_TRANSFER.3dm")
     #filepath = forms.pick_file(file_ext = "3dm")
     #print filepath
